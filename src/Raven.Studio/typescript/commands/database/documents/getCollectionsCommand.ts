@@ -18,7 +18,7 @@ class getCollectionsCommand extends commandBase {
     execute(): JQueryPromise<collection[]> {
         var finalResult = $.Deferred<collection[]>();
         // TODO: Someone that actually knows TypeScript need to look at this and see how bad I messed up
-        this.query("/databases/" + this.ownerDb.name + "/collections/stats", null, null)
+        this.query<any>("/databases/" + this.ownerDb.name + "/collections/stats", null, null)
             .done( results => {
                 var collections = results.Collections.map(result => new collection(result.Name, this.ownerDb, result.Count));
                 finalResult.resolve(collections);

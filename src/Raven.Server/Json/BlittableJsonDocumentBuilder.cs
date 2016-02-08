@@ -18,6 +18,7 @@ namespace Raven.Server.Json
         private UnmanagedBuffersPool.AllocatedMemoryData _buffer, _compressionBuffer;
 
         private int _position;
+        private int _depth;
         public int DiscardedCompressions, Compressed;
 
         [Flags]
@@ -30,13 +31,15 @@ namespace Raven.Server.Json
             ToDisk = ValidateDouble | CompressStrings |  CompressSmallStrings
         }
 
-        internal BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string documentId, IJsonParser reader, JsonParserState state)
+       
+        public BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state, int depth = 0)
         {
             _reader = reader;
-            _stream = context.GetStream(documentId);
+            _stream = context.GetStream(debugTag);
             _context = context;
             _mode = mode;
             _state = state;
+            _depth = depth;
         }
 
         public int SizeInBytes => _stream.SizeInBytes;
@@ -78,12 +81,12 @@ namespace Raven.Server.Json
             return _stream.CopyTo(ptr);
         }
 
-        public unsafe BlittableJsonReaderObject CreateReader()
+        public unsafe BlittableJsonReaderObject CreateReader(CachedProperties cachedProperties = null)
         {
             byte* ptr;
             int size;
             _stream.EnsureSingleChunk(out ptr, out size);
-            return new BlittableJsonReaderObject(ptr, size, _context, this);
+            return new BlittableJsonReaderObject(ptr, size, _context, this, cachedProperties);
         }
 
         public unsafe BlittableJsonReaderArray CreateArrayReader()
@@ -100,14 +103,20 @@ namespace Raven.Server.Json
         /// </summary>
         public async Task ReadObject()
         {
+            var writeToken = await ReadPartialObject();
+
+            FinalizeDocument(writeToken);
+        }
+
+        public async Task<WriteToken> ReadPartialObject()
+        {
             await _reader.ReadAsync();
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
 
             // Write the whole object recursively
             var writeToken = await BuildObject();
-
-            FinalizeDocument(writeToken);
+            return writeToken;
         }
 
         /// <summary>
@@ -147,7 +156,30 @@ namespace Raven.Server.Json
             var token = writeToken.WrittenToken;
             var rootOffset = writeToken.ValuePos;
 
-            // Write the property names and register it's positions
+            var propertiesStart = WritePropertyNames(rootOffset);
+
+            WriteVariableSizeIntInReverse(rootOffset);
+            WriteVariableSizeIntInReverse(propertiesStart);
+            WriteNumber((int) token, sizeof (byte));
+        }
+
+
+        public void FinalizeDocumentWithoutProperties(WriteToken writeToken, int propertiesChemaVersion)
+        {
+            if(propertiesChemaVersion <= 0)
+                throw new ArgumentException("Properties schema version must be a positive number", nameof(propertiesChemaVersion));
+
+            var token = writeToken.WrittenToken;
+            var rootOffset = writeToken.ValuePos;
+
+            WriteVariableSizeIntInReverse(rootOffset);
+            WriteVariableSizeIntInReverse(propertiesChemaVersion);
+            WriteNumber((int)token, sizeof(byte));
+        }
+
+        private int WritePropertyNames(int rootOffset)
+        {
+            // Write the property names and register their positions
             var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
             for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
@@ -169,9 +201,7 @@ namespace Raven.Server.Json
             {
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
-            WriteNumber(rootOffset, sizeof (int));
-            WriteNumber(propertiesStart, sizeof (int));
-            WriteNumber((int) token, sizeof (byte));
+            return propertiesStart;
         }
 
 
@@ -574,6 +604,28 @@ namespace Raven.Server.Json
                 v >>= 7;
             }
             buffer[count++] = (byte)(v);
+            _stream.Write(buffer, count);
+            return count;
+        }
+
+        public unsafe int WriteVariableSizeIntInReverse(int value)
+        {
+            // assume that we don't use negative values very often
+            var buffer = stackalloc byte[5];
+            var count = 0;
+            var v = (uint)value;
+            while (v >= 0x80)
+            {
+                buffer[count++] = (byte)(v | 0x80);
+                v >>= 7;
+            }
+            buffer[count++] = (byte)(v);
+            for (int i = count - 1; i >= count/2; i--)
+            {
+                var tmp = buffer[i];
+                buffer[i] = buffer[count - 1 - i];
+                buffer[count - 1 - i] = tmp;
+            }
             _stream.Write(buffer, count);
             return count;
         }

@@ -26,14 +26,14 @@ namespace Raven.Server.Json.Parsing
 
 
 
-        public unsafe UnmanagedJsonParserAbstract(RavenOperationContext ctx, JsonParserState state, string documentId)
+        public unsafe UnmanagedJsonParserAbstract(RavenOperationContext ctx, JsonParserState state, string debugTag)
         {
             _state = state;
             _buffer = ctx.GetManagedBuffer();
             _bufferHandle = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
             try
             {
-                _stringBuffer = ctx.GetStream(documentId);
+                _stringBuffer = ctx.GetStream(debugTag);
                 _bufferPtr = (byte*)_bufferHandle.AddrOfPinnedObject();
             }
             catch (Exception)

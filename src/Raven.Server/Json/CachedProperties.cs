@@ -125,6 +125,7 @@ namespace Raven.Server.Json
         }
 
         private bool hasDuplicates;
+        public int Version;
 
         int IComparer<BlittableJsonDocumentBuilder.PropertyTag>.Compare(BlittableJsonDocumentBuilder.PropertyTag x, BlittableJsonDocumentBuilder.PropertyTag y)
         {

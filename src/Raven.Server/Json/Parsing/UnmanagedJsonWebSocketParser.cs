@@ -12,7 +12,7 @@ namespace Raven.Server.Json.Parsing
     {
         private readonly WebSocket _webSocket;
 
-        public UnmanagedJsonWebSocketParser(WebSocket webSocket, RavenOperationContext ctx, JsonParserState state, string documentId) : base(ctx, state, documentId)
+        public UnmanagedJsonWebSocketParser(WebSocket webSocket, RavenOperationContext ctx, JsonParserState state, string debugTag) : base(ctx, state, debugTag)
         {
             _webSocket = webSocket;
         }

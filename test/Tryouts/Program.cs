@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
+using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Raven.Tests.Core;
+using Xunit;
 
 namespace Tryouts
 {
@@ -13,14 +18,7 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            var blittableFormatTests = new BlittableFormatTests();
-
-            blittableFormatTests.CheckRoundtrip("FastTests.Blittable.BlittableJsonWriterTests.Jsons.mix.json").Wait();
-
-            foreach (var sample in BlittableFormatTests.Samples())
-            {
-                blittableFormatTests.CheckRoundtrip((string)sample[0]).Wait();
-            }
+            new PartialBlitable().CanSkipWritingPropertyNames().Wait();
         }
     }
 }
