@@ -96,7 +96,7 @@ namespace Raven.Abstractions.Util
                         {
                             if (makePhrase)
                             {
-                                return new StringBuilder(Escape(term, false, false)).Insert(0,"\"").Append("\"").ToString();								
+                                return new StringBuilder(Escape(term, allowWildcards, false)).Insert(0,"\"").Append("\"").ToString();								
                             }
                             break;
                         }
