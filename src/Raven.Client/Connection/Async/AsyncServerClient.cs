@@ -685,7 +685,11 @@ namespace Raven.Client.Connection.Async
         {
             EnsureIsNotNullOrEmpty(key, "key");
 
-            return ExecuteWithReplication(HttpMethod.Get, operationMetadata => DirectGetAsync(operationMetadata, key, token), token);
+            return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
+            {
+                var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, false, token).ConfigureAwait(false);
+                return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
+            }, token);
         }
 
         public Task<TransformerDefinition> GetTransformerAsync(string name, CancellationToken token = default(CancellationToken))
@@ -754,60 +758,7 @@ namespace Raven.Client.Connection.Async
                 }
             });
         }
-
-        private async Task<JsonDocument> DirectGetAsync(OperationMetadata operationMetadata, string key, CancellationToken token)
-        {
-            if (key.Length > 127)
-            {
-                // avoid hitting UrlSegmentMaxLength limits in Http.sys
-                var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, new string[0], null, new Dictionary<string, RavenJToken>(), false, token).WithCancellation(token).ConfigureAwait(false);
-                var result = multiLoadResult.Results.FirstOrDefault();
-                if (result == null)
-                    return null;
-                return SerializationHelper.RavenJObjectToJsonDocument(result);
-            }
-
-            var metadata = new RavenJObject();
-
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this,
-                    (operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)),
-                    HttpMethod.Get,
-                    metadata,
-                    operationMetadata.Credentials,
-                    convention,
-                    GetRequestTimeMetric(operationMetadata.Url));
-
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(
-                createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
-                                           .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
-            {
-                Task<JsonDocument> resolveConflictTask;
-                try
-                {
-                    var requestJson = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    var docKey = request.ResponseHeaders.Get(Constants.DocumentIdFieldName) ?? key;
-                    docKey = Uri.UnescapeDataString(docKey);
-                    request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-                    var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
-                    return deserializeJsonDocument;
-                }
-                catch (ErrorResponseException e)
-                {
-                    switch (e.StatusCode)
-                    {
-                        case HttpStatusCode.NotFound:
-                            return null;
-                        case HttpStatusCode.Conflict:
-                            resolveConflictTask = ResolveConflict(e.ResponseString, e.Etag, operationMetadata, key, token);
-                            break;
-                        default:
-                            throw;
-                    }
-                }
-                return await resolveConflictTask.WithCancellation(token).ConfigureAwait(false);
-            }
-        }
-
+        
         private async Task<JsonDocument> ResolveConflict(string httpResponse, long? etag, OperationMetadata operationMetadata, string key, CancellationToken token)
         {
             var conflicts = new StringReader(httpResponse);
@@ -816,7 +767,8 @@ namespace Raven.Client.Connection.Async
                 await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, etag, token).ConfigureAwait(false);
             if (result != null)
                 throw result;
-            return await DirectGetAsync(operationMetadata, key, token).ConfigureAwait(false);
+            var multiLoadResult = await DirectGetAsync(operationMetadata, new [] { key }, null, null,null, false, token).ConfigureAwait(false);
+            return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
         }
 
         public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null,
