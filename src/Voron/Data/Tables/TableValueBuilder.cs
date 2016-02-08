@@ -32,11 +32,11 @@ namespace Voron.Data.Tables
                 Ptr = ptr
             });
             _size += size;
-            if (size + _values.Count + 1 > byte.MaxValue)
+            if (_size + _values.Count + 1 > byte.MaxValue)
             {
                 _elementSize = 2;
             }
-            if (size + _values.Count * 2 + 1 > ushort.MaxValue)
+            if (_size + _values.Count * 2 + 1 > ushort.MaxValue)
             {
                 _elementSize = 4;
             }
