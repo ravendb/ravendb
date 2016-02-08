@@ -16,17 +16,17 @@ namespace Raven.Server.Config.Categories
         private bool runInMemory;
         private string workingDirectory;
         private string dataDirectory;
-        private string[] serverUrls;
+        private string serverUrl;
 
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
-        [DefaultValue(new[] {"http://localhost:8080"})]
-        [ConfigurationEntry("Raven/ServerUrls")]
-        public string[] ServerUrls
+        [DefaultValue("http://localhost:8080")]
+        [ConfigurationEntry("Raven/ServerUrl")]
+        public string ServerUrl
         {
-            get { return serverUrls; }
+            get { return serverUrl; }
             set
             {
-                serverUrls = value;
+                serverUrl = value;
             }
         }
 
