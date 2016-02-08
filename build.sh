@@ -32,7 +32,7 @@ REPORT_MAIL=""
 REPORT_ATTACH=()
 
 function printWelcome () {
-	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.2) ${NC}\n"
+	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.3) ${NC}\n"
 	printf "${PURPLE}============================${NC}\n"
 }
 
@@ -403,6 +403,7 @@ if [ ${OP_SKIP_TESTS} == 0 ]
 then
 	for i in "${TEST_DIRS[@]}"
 	do
+		if [ ${i} == "test/Tryouts" ]; then continue; fi
 		printf "\n${BLUE}Testing ${i}:${NC}\n"
 		if [ ${OP_REPORT} == 1 ] 
 		then
