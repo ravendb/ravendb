@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.PlatformAbstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -42,6 +45,11 @@ namespace Raven.Tests.Core
 
             var server = new RavenServer(configuration);
             server.Initialize();
+
+            // TODO: Make sure to properly handle this when this is resolved:
+            // TODO: https://github.com/dotnet/corefx/issues/5205
+            // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
+
             return server;
         }
 
