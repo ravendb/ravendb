@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNet.WebSockets.Protocol;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Json.Parsing;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -71,6 +74,22 @@ namespace Raven.Server.Documents
                             // we need to split this document to an independent blittable document
                             // and this time, we'll prepare it for disk.
 
+                            DynamicJsonValue mutableMetadata;
+                            BlittableJsonReaderObject metadata;
+                            if (doc.TryGet(Constants.Metadata, out metadata))
+                            {
+                                metadata.Modifications = mutableMetadata = new DynamicJsonValue(metadata);
+                            }
+                            else
+                            {
+                                doc.Modifications = new DynamicJsonValue(doc)
+                                {
+                                    [Constants.Metadata] = mutableMetadata = new DynamicJsonValue()
+                                };
+                            }
+
+                            mutableMetadata["Raven-Last-Modified"] = DateTime.UtcNow.GetDefaultRavenFormat();
+
                             parsedCommands[i].Document = await context.ReadObject(doc, parsedCommands[i].Key,
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             break;
@@ -91,12 +110,16 @@ namespace Raven.Server.Documents
                                 var newEtag = DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
                                     parsedCommands[i].Document);
 
+                                BlittableJsonReaderObject metadata;
+                                parsedCommands[i].Document.TryGet(Constants.Metadata, out metadata);
+
                                 reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = parsedCommands[i].Key,
                                     ["Etag"] = newEtag,
                                     ["Method"] = "PUT",
-                                    ["AdditionalData"] = parsedCommands[i].AdditionalData
+                                    ["AdditionalData"] = parsedCommands[i].AdditionalData,
+                                    ["Metadata"] = metadata
                                 });
                                 break;
                             case "DELETE":
