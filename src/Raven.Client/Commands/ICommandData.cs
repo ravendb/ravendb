@@ -29,11 +29,6 @@ namespace Raven.Abstractions.Commands
         long? Etag { get; }
 
         /// <summary>
-        /// RavenJObject representing document's metadata.
-        /// </summary>
-        RavenJObject Metadata { get; }
-
-        /// <summary>
         /// Additional command data. For internal use only.
         /// </summary>
         RavenJObject AdditionalData { get; set; }

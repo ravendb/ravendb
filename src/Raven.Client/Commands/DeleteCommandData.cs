@@ -32,14 +32,6 @@ namespace Raven.Abstractions.Commands
         public virtual long? Etag { get; set; }
 
         /// <summary>
-        /// RavenJObject representing document's metadata. In this case null.
-        /// </summary>
-        public RavenJObject Metadata
-        {
-            get { return null; }
-        }
-
-        /// <summary>
         /// Additional command data. For internal use only.
         /// </summary>
         public RavenJObject AdditionalData { get; set; }

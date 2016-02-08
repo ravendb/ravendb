@@ -440,7 +440,7 @@ namespace Raven.Client.Connection
 
         public RavenJObject Patch(string key, PatchRequest[] patches)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, null));
+            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches));
         }
 
         public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
@@ -450,7 +450,7 @@ namespace Raven.Client.Connection
 
         public RavenJObject Patch(string key, ScriptedPatchRequest patch)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, null));
+            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch));
         }
 
         public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
@@ -463,10 +463,9 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, etag));
         }
 
-        public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault,
-            RavenJObject defaultMetadata)
+        public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata));
+            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault));
         }
 
         public RavenJObject Patch(string key, ScriptedPatchRequest patch, long? etag)
@@ -474,10 +473,9 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, etag));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault,
-            RavenJObject defaultMetadata)
+        public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata));
+            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchExisting, patchDefault));
         }
 
         public HttpJsonRequest CreateRequest(string relativeUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)

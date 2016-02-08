@@ -395,16 +395,6 @@ namespace Raven.Client.Connection.Async
         Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, long? etag, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Sends a patch request for a specific document which may or may not currently exist
-        /// </summary>
-        /// <param name="key">Id of the document to patch</param>
-        /// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
-        /// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
-        /// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
-        /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
         ///     Sends a patch request for a specific document
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
@@ -422,9 +412,8 @@ namespace Raven.Client.Connection.Async
         ///     The patch request to use (using JavaScript)  to a default document when the document is
         ///     missing
         /// </param>
-        /// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
         /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken));
+        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Puts the document in the database with the specified key.

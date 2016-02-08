@@ -42,11 +42,6 @@ namespace Raven.Abstractions.Commands
         public long? Etag { get; set; }
 
         /// <summary>
-        /// RavenJObject representing document's metadata.
-        /// </summary>
-        public RavenJObject Metadata { get; set; }
-
-        /// <summary>
         /// Indicates in the operation should be run in debug mode. If set to true, then server will return additional information in response.
         /// </summary>
         public bool DebugMode { get; set; }
@@ -73,7 +68,6 @@ namespace Raven.Abstractions.Commands
                         }},
                         {"DebugMode", DebugMode},
                         {"AdditionalData", AdditionalData},
-                        {"Metadata", Metadata}
                     };
             if (Etag != null)
                 ret.Add("Etag", Etag.ToString());

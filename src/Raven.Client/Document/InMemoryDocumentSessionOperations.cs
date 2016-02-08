@@ -833,7 +833,7 @@ more responsive application.
             }
 
             var json = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
-
+            json[Constants.Metadata] = documentMetadata.Metadata.CloneToken();
             var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
                            ? (long?)(documentMetadata.ETag ?? 0)
                            : null;
@@ -843,7 +843,6 @@ more responsive application.
                 Document = json,
                 Etag = etag,
                 Key = documentMetadata.Key,
-                Metadata = (RavenJObject)documentMetadata.Metadata.CloneToken(),
             };
         }
 

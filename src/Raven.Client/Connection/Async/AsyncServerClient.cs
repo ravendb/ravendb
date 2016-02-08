@@ -494,11 +494,6 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, CancellationToken token = default(CancellationToken))
-        {
-            return PatchAsync(key, patches, null, token);
-        }
-
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, bool ignoreMissing, CancellationToken token = default(CancellationToken))
         {
             var batchResults = await BatchAsync(new ICommandData[]
@@ -515,9 +510,14 @@ namespace Raven.Client.Connection.Async
             return batchResults[0].AdditionalData;
         }
 
-        public Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, CancellationToken token = default(CancellationToken))
+        public Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, CancellationToken token = new CancellationToken())
         {
-            return PatchAsync(key, patch, null, token);
+            return PatchAsync(key, patches, (long?)null, token);
+        }
+
+        public Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, CancellationToken token = new CancellationToken())
+        {
+            return PatchAsync(key, patch, (long?)null, token);
         }
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, long? etag, CancellationToken token = default(CancellationToken))
@@ -535,7 +535,8 @@ namespace Raven.Client.Connection.Async
         }
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting,
-                                                   PatchRequest[] patchesToDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken))
+                                                   PatchRequest[] patchesToDefault, 
+                                                   CancellationToken token = default(CancellationToken))
         {
             var batchResults = await BatchAsync(new ICommandData[]
                     {
@@ -544,7 +545,6 @@ namespace Raven.Client.Connection.Async
                                 Key = key,
                                 Patches = patchesToExisting,
                                 PatchesIfMissing = patchesToDefault,
-                                Metadata = defaultMetadata
                             }
                     }, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;
@@ -581,7 +581,8 @@ namespace Raven.Client.Connection.Async
         }
 
         public async Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting,
-                                                   ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken))
+                                                   ScriptedPatchRequest patchDefault, 
+                                                   CancellationToken token = default(CancellationToken))
         {
             var batchResults = await BatchAsync(new ICommandData[]
             {
@@ -590,7 +591,6 @@ namespace Raven.Client.Connection.Async
                     Key = key,
                     Patch = patchExisting,
                     PatchIfMissing = patchDefault,
-                    Metadata = defaultMetadata
                 }
             }, token).ConfigureAwait(false);
             return batchResults[0].AdditionalData;

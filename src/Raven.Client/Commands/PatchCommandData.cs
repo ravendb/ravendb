@@ -51,11 +51,6 @@ namespace Raven.Abstractions.Commands
         public long? Etag { get; set; }
 
         /// <summary>
-        /// RavenJObject representing document's metadata.
-        /// </summary>
-        public RavenJObject Metadata { get; set; }
-
-        /// <summary>
         /// Additional command data. For internal use only.
         /// </summary>
         public RavenJObject AdditionalData { get; set; }
@@ -71,7 +66,6 @@ namespace Raven.Abstractions.Commands
                         {"Key", Key},
                         {"Method", Method},
                         {"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))},
-                        {"Metadata", Metadata},
                         {"AdditionalData", AdditionalData},
                         {"SkipPatchIfEtagMismatch", SkipPatchIfEtagMismatch}
                     };
