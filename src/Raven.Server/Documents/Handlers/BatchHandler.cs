@@ -1,18 +1,25 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Microsoft.AspNet.Http;
 using Raven.Server.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
     public class BatchHandler : DatabaseRequestHandler
     {
+        private struct CommandData
+        {
+            public string Method;
+            public string Key;
+            public BlittableJsonReaderObject Document;
+            public BlittableJsonReaderObject AdditionalData;
+            public long? Etag;
+        }
+
         [RavenAction("/databases/*/bulk_docs", "POST")]
-        public async Task BulkdDocs()
+        public async Task BulkDocs()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -20,9 +27,9 @@ namespace Raven.Server.Documents
                 BlittableJsonReaderArray commands;
                 try
                 {
-                    // TODO : implement depth to skip (change also var nanme)
                     commands = await context.ParseArrayToMemory(RequestBodyStream(), "bulk/docs",
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, 3);
+                        // we will prepare the docs to disk in the actual PUT command
+                        BlittableJsonDocumentBuilder.UsageMode.None);
                 }
                 catch (InvalidDataException)
                 {
@@ -33,47 +40,72 @@ namespace Raven.Server.Documents
                     throw new InvalidDataException("Could not parse json", ioe);
                 }
 
+                var parsedCommands = new CommandData[commands.Length];
+
+                for (int i = 0; i < commands.Count; i++)
+                {
+                    var cmd = commands.GetByIndex<BlittableJsonReaderObject>(i);
+
+                    if (cmd.TryGet("Method", out parsedCommands[i].Method) == false)
+                        throw new InvalidDataException("Missing 'Method' property");
+                    if (cmd.TryGet("Key", out parsedCommands[i].Key) == false)
+                        throw new InvalidDataException("Missing 'Key' property");
+
+                    // optional
+                    cmd.TryGet("ETag", out parsedCommands[i].Etag);
+                    cmd.TryGet("AdditionalData", out parsedCommands[i].AdditionalData);
+
+                    // We have to do additional processing on the documents
+                    // in particular, prepare them for disk by compressing strings, validating floats, etc
+
+                    // We **HAVE** to do that outside of the write transaction lock, that is why we are handling
+                    // it in this manner, first parse the commands, then prepare for the put, finally open
+                    // the transaction and actually write
+                    switch (parsedCommands[i].Method)
+                    {
+                        case "PUT":
+                            BlittableJsonReaderObject doc;
+                            if (cmd.TryGet("Document", out doc) == false)
+                                throw new InvalidDataException("Missing 'Document' property");
+
+                            // we need to split this document to an independent blittable document
+                            // and this time, we'll prepare it for disk.
+
+                            parsedCommands[i].Document = await context.ReadObject(doc, parsedCommands[i].Key,
+                                BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            break;
+
+                    }
+                }
+
                 var reply = new DynamicJsonArray();
 
                 using (context.Transaction = context.Environment.WriteTransaction())
                 {
-                    for (int i = 0; i < commands.Count; i++)
+
+                    for (int i = 0; i < parsedCommands.Length; i++)
                     {
-                        var cmd = commands.GetByIndex<BlittableJsonReaderObject>(i);
-
-                        string method;
-                        if (cmd.TryGet("Method", out method) == false)
-                            throw new InvalidDataException("Missing 'Method' property");
-                        string key;
-                        if (cmd.TryGet("Key", out key) == false)
-                            throw new InvalidDataException("Missing 'Key' property");
-                        long? etag;
-                        cmd.TryGet("ETag", out etag);
-                        BlittableJsonReaderObject additionalData;
-                        cmd.TryGet("AdditionalData", out additionalData);
-
-                        switch (method)
+                        switch (parsedCommands[i].Method)
                         {
                             case "PUT":
-                                var newEtag = DocumentsStorage.Put(context, key, etag, cmd);
+                                var newEtag = DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
+                                    parsedCommands[i].Document);
 
                                 reply.Add(new DynamicJsonValue
                                 {
-                                    ["Key"] = key,
+                                    ["Key"] = parsedCommands[i].Key,
                                     ["Etag"] = newEtag,
-                                    ["Method"] = method,
-                                    ["AdditionalData"] = additionalData
+                                    ["Method"] = "PUT",
+                                    ["AdditionalData"] = parsedCommands[i].AdditionalData
                                 });
                                 break;
-
                             case "DELETE":
-                                var deleted =  DocumentsStorage.Delete(context, key, etag);
+                                var deleted = DocumentsStorage.Delete(context, parsedCommands[i].Key, parsedCommands[i].Etag);
                                 reply.Add(new DynamicJsonValue
                                 {
-                                    ["Key"] = key,
-                                    ["Etag"] = etag,
-                                    ["Method"] = method,
-                                    ["AdditionalData"] = additionalData,
+                                    ["Key"] = parsedCommands[i].Key,
+                                    ["Method"] = "DELETE",
+                                    ["AdditionalData"] = parsedCommands[i].AdditionalData,
                                     ["Deleted"] = deleted
                                 });
                                 break;
