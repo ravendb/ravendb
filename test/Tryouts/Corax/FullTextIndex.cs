@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Json;
@@ -76,6 +77,9 @@ namespace Tryouts.Corax
             public unsafe string[] Query(string name, string value)
             {
                 var property = _tx.ReadTree(name);
+                if(property == null)
+                    return Array.Empty<string>();
+
                 var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, property, value, 0);
                 if (fixedSizeTree.NumberOfEntries == 0)
                     return Array.Empty<string>();
@@ -223,27 +227,28 @@ namespace Tryouts.Corax
                     {(byte*)&bigEndianId, sizeof(long)},
                     {entry.BasePointer, entry.Size}
                 });
-                for (int i = 0; i < entry.Count; i++)
-                {
-                    var propertyByIndex = entry.GetPropertyByIndex(i);
-                    var property = propertyByIndex.Item1;
 
-                    if (property.Size > byte.MaxValue)
-                        throw new InvalidOperationException("Field name cannot exceed 255 bytes");
+                //for (int i = 0; i < entry.Count; i++)
+                //{
+                //    var propertyByIndex = entry.GetPropertyByIndex(i);
+                //    var property = propertyByIndex.Item1;
 
-                    //TODO: implement this without the field allocations
-                    //var slice = new Slice(lazyStringValue.Buffer, (u short)lazyStringValue.Size);
-                    var fieldTree = tx.CreateTree(property.ToString());
+                //    if (property.Size > byte.MaxValue)
+                //        throw new InvalidOperationException("Field name cannot exceed 255 bytes");
 
-                    //TODO: right now only supporting strings
-                    var value = (LazyStringValue)propertyByIndex.Item2;
-                    if (value.Size > byte.MaxValue)
-                        throw new InvalidOperationException("Field value cannot exceed 255 bytes");
+                //    //TODO: implement this without the field allocations
+                //    //var slice = new Slice(lazyStringValue.Buffer, (u short)lazyStringValue.Size);
+                //    var fieldTree = tx.CreateTree(property.ToString());
 
-                    var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree,
-                        new Slice(value.Buffer, (ushort)value.Size), 0);
-                    fst.Add(entryId);
-                }
+                //    //TODO: right now only supporting strings
+                //    var value = (LazyStringValue)propertyByIndex.Item2;
+                //    if (value.Size > byte.MaxValue)
+                //        throw new InvalidOperationException("Field value cannot exceed 255 bytes");
+
+                //    var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree,
+                //        new Slice(value.Buffer, (ushort)value.Size), 0);
+                //    fst.Add(entryId);
+                //}
             }
 
 
