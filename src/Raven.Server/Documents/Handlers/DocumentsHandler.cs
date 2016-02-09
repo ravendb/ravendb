@@ -211,7 +211,7 @@ namespace Raven.Server.Documents
             var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringFor("Results"));
-            await WriteDocumentsAsync(context, documents);
+            await WriteDocumentsAsync(context, writer, documents);
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringFor("Includes"));
             writer.WriteStartArray();
