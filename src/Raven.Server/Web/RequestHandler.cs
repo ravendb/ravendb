@@ -52,7 +52,7 @@ namespace Raven.Server.Web
         {
             var responseBodyStream = HttpContext.Response.Body;
 
-            if(CanAcceptGzip()==false)
+            if (CanAcceptGzip() == false)
                 return responseBodyStream;
 
             HttpContext.Response.Headers["Content-Encoding"] = "gzip";
@@ -116,15 +116,23 @@ namespace Raven.Server.Web
         protected long GetLongQueryString(string name)
         {
             var val = HttpContext.Request.Query[name];
-            if (val.Count != 0)
-            {
-                int result;
-                if (int.TryParse(val[0], out result) == false)
-                    throw new ArgumentException(
-                        string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
-                return result;
-            }
-            throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+            if (val.Count == 0)
+                throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+
+            long result;
+            if (long.TryParse(val[0], out result) == false)
+                throw new ArgumentException(
+                    string.Format("Could not parse query string '{0}' header as int64, value was: {1}", name, val[0]));
+            return result;
+        }
+
+        protected string GetStringQueryString(string name)
+        {
+            var val = HttpContext.Request.Query[name];
+            if (val.Count == 0)
+                throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+
+            return val[0];
         }
     }
 }

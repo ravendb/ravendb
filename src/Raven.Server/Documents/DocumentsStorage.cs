@@ -196,6 +196,25 @@ namespace Raven.Server.Documents
                 yield return TableValueToDocument(context, result);
             }
         }
+
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(RavenOperationContext context, string collection, int start, int take)
+        {
+            var table = new Table(_docsSchema, "@" + collection, context.Transaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue))
+            {
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
+                yield return TableValueToDocument(context, result);
+            }
+        }
+
         public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, long etag, int start, int take)
         {
             var table = new Table(_docsSchema, context.Transaction);
@@ -217,7 +236,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, string collection, long etag, int start, int take)
         {
-            var table = new Table(_docsSchema, "@"+collection, context.Transaction);
+            var table = new Table(_docsSchema, "@" + collection, context.Transaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
