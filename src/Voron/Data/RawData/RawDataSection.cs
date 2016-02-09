@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -15,6 +16,13 @@ namespace Voron.Data.RawData
         protected readonly LowLevelTransaction _tx;
         public readonly int MaxItemSize;
         protected RawDataSmallSectionPageHeader* _sectionHeader;
+
+        [StructLayout(LayoutKind.Sequential)]
+        protected struct RawDataEntrySizes
+        {
+            public short AllocatedSize;
+            public short UsedSize;
+        }
 
         public RawDataSection(LowLevelTransaction tx, long pageNumber)
         {
@@ -122,17 +130,17 @@ namespace Voron.Data.RawData
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException($"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
-            var sizes = (short*)((byte*)pageHeader + posInPage);
-            if (sizes[1] < 0)
+            var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
+            if (sizes->UsedSize < 0)
                 throw new InvalidDataException($"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
-            if (sizes[0] < sizes[1])
+            if (sizes->AllocatedSize < sizes->UsedSize)
                 throw new InvalidDataException(
                     "Asked to load a value that where the allocated size is smaller than the used size: " + id +
                     " from page " +
                     pageHeader->PageNumber);
 
-            if (sizes[0] < size)
+            if (sizes->AllocatedSize < size)
             {
                 writePos = (byte*)0;
                 return false; // can't write here
