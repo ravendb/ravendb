@@ -14,8 +14,7 @@ namespace Raven.Server.Documents
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-
-                var collections = new DynamicJsonArray();
+                var collections= new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
                     ["NumberOfDocuments"] = DocumentsStorage.GetNumberOfDocuments(context),
@@ -24,11 +23,7 @@ namespace Raven.Server.Documents
 
                 foreach (var collectionStat in DocumentsStorage.GetCollections(context))
                 {
-                    collections.Add(new DynamicJsonValue
-                    {
-                        ["Name"] = collectionStat.Name,
-                        ["Count"] = collectionStat.Count
-                    });
+                    collections[collectionStat.Name] = collectionStat.Count;
                 }
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 await context.WriteAsync(writer, result);
