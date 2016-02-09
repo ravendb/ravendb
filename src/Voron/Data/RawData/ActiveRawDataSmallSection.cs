@@ -53,7 +53,9 @@ namespace Voron.Data.RawData
                 // best case, we have enough space, and we don't need to defrag
                 pageHeader = ModifyPage(pageHeader);
                 id = (pageHeader->PageNumber)*_pageSize + pageHeader->NextAllocation;
-                ((short*) ((byte*) pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
+                var sizes = (RawDataEntrySizes*) ((byte*) pageHeader + pageHeader->NextAllocation);
+                sizes->AllocatedSize = allocatedSize;
+                sizes->UsedSize = 0;
                 pageHeader->NextAllocation += (ushort) size;
                 pageHeader->NumberOfEntries++;
                 EnsureHeaderModified();
