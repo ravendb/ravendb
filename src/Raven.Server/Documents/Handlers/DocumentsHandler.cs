@@ -175,15 +175,8 @@ namespace Raven.Server.Documents
                 {
                     documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
                 }
-                await WriteDocuments(context, documents);
+                await WriteDocumentsAsync(context, documents);
             }
-        }
-
-        private async Task WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
-        {
-            var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
-            await writer.WriteDocumentsAsync(context, documents);
-            writer.Flush();
         }
 
         private unsafe long ComputeAllDocumentsEtag(RavenOperationContext context)
@@ -218,7 +211,7 @@ namespace Raven.Server.Documents
             var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringFor("Results"));
-            await writer.WriteDocumentsAsync(context, documents);
+            await WriteDocumentsAsync(context, documents);
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringFor("Includes"));
             writer.WriteStartArray();

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                var collections= new DynamicJsonValue();
+                var collections = new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
                     ["NumberOfDocuments"] = DocumentsStorage.GetNumberOfDocuments(context),
@@ -38,12 +39,12 @@ namespace Raven.Server.Documents
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
 
                 var documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
-                await writer.WriteDocumentsAsync(context, documents);
-                writer.Flush();
+                await WriteDocumentsAsync(context, documents);
             }
         }
+
+
     }
 }

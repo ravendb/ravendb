@@ -360,23 +360,5 @@ namespace Raven.Server.Json
             WriteEndArray();
         }
 
-        public async Task WriteDocumentsAsync(RavenOperationContext context, IEnumerable<Document> documents)
-        {
-            WriteStartArray();
-
-            bool first = true;
-            foreach (var document in documents)
-            {
-                if (document == null)
-                    continue;
-                if (first == false)
-                    WriteComma();
-                first = false;
-                document.EnsureMetadata();
-                await context.WriteAsync(this, document.Data);
-            }
-
-            WriteEndArray();
-        }
     }
 }
