@@ -39,21 +39,9 @@ namespace Raven.Server.Documents
             {
                 context.Transaction = context.Environment.ReadTransaction();
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                
-                writer.WriteStartArray();
 
-                bool first = true;
-                foreach (var document in DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize()))
-                {
-                    if(first == false)
-                        writer.WriteComma();
-                    first = false;
-                    document.EnsureMetadata();
-                    await context.WriteAsync(writer, document.Data);
-                }
-
-               writer.WriteEndArray();
-
+                var documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
+                await writer.WriteDocumentsAsync(context, documents);
                 writer.Flush();
             }
         }

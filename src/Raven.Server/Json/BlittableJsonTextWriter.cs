@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Raven.Server.Documents;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 
@@ -355,6 +357,25 @@ namespace Raven.Server.Json
 
                 await WriteValueAsync(context, state, parser);
             }
+            WriteEndArray();
+        }
+
+        public async Task WriteDocumentsAsync(RavenOperationContext context, IEnumerable<Document> documents)
+        {
+            WriteStartArray();
+
+            bool first = true;
+            foreach (var document in documents)
+            {
+                if (document == null)
+                    continue;
+                if (first == false)
+                    WriteComma();
+                first = false;
+                document.EnsureMetadata();
+                await context.WriteAsync(this, document.Data);
+            }
+
             WriteEndArray();
         }
     }

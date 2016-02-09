@@ -182,21 +182,7 @@ namespace Raven.Server.Documents
         private async Task WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
         {
             var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
-            writer.WriteStartArray();
-            bool first = true;
-
-            foreach (var document in documents)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                document.EnsureMetadata();
-
-                await context.WriteAsync(writer, document.Data);
-            }
-
-            writer.WriteEndArray();
+            await writer.WriteDocumentsAsync(context, documents);
             writer.Flush();
         }
 
@@ -232,20 +218,7 @@ namespace Raven.Server.Documents
             var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringFor("Results"));
-            writer.WriteStartArray();
-            var first = true;
-            foreach (var doc in documents)
-            {
-                if (doc == null)
-                    continue;
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-                doc.EnsureMetadata();
-
-                await context.WriteAsync(writer, doc.Data);
-            }
-            writer.WriteEndArray();
+            await writer.WriteDocumentsAsync(context, documents);
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringFor("Includes"));
             writer.WriteStartArray();
