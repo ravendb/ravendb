@@ -4,7 +4,7 @@ namespace Raven.Client.Util
 {
     public interface ILastEtagHolder
     {
-        void UpdateLastWrittenEtag(Etag etag);
-        Etag GetLastWrittenEtag();
+        void UpdateLastWrittenEtag(long? etag);
+        long? GetLastWrittenEtag();
     }
 }

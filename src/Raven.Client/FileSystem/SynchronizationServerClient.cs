@@ -102,7 +102,7 @@ namespace Raven.Client.FileSystem
             {
                 request.AddHeaders(metadata);
                 request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
-                AsyncFilesServerClientExtension.AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
+                AsyncFilesServerClientExtension.AddEtagHeader(request, long.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
                 try
                 {
@@ -122,7 +122,7 @@ namespace Raven.Client.FileSystem
             {
                 request.AddHeaders(metadata);
                 request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
-                AsyncFilesServerClientExtension.AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
+                AsyncFilesServerClientExtension.AddEtagHeader(request, long.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
                 try
                 {
@@ -142,7 +142,7 @@ namespace Raven.Client.FileSystem
             {
                 request.AddHeaders(metadata);
                 request.AddHeader(SyncingMultipartConstants.SourceFileSystemInfo, sourceFileSystem.AsJson());
-                AsyncFilesServerClientExtension.AddEtagHeader(request, Etag.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
+                AsyncFilesServerClientExtension.AddEtagHeader(request, long.Parse(metadata.Value<string>(Constants.MetadataEtagField)));
 
                 try
                 {
@@ -235,7 +235,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public async Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles)
+        public async Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, long>> sentFiles)
         {
             var requestUriString = string.Format("{0}/synchronization/Confirm", baseUrl);
 
@@ -283,7 +283,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-        public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag)
+        public async Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, long? sourceFileETag)
         {
             var requestUriString =
                 string.Format("{0}/synchronization/IncrementLastETag?sourceServerId={1}&sourceFileSystemUrl={2}&sourceFileETag={3}",

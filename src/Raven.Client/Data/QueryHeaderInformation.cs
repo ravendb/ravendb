@@ -8,7 +8,7 @@ namespace Raven.Abstractions.Data
         public bool IsStale { get; set; }
         public DateTime IndexTimestamp { get; set; }
         public int TotalResults { get; set; }
-        public Etag ResultEtag { get; set; }
-        public Etag IndexEtag { get; set; }
+        public long? ResultEtag { get; set; }
+        public long? IndexEtag { get; set; }
     }
 }

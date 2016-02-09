@@ -6,8 +6,8 @@ CLR_VER="1.0.0-rc1-update1"
 CLR_RUNTIME="coreclr"
 CLR_ARCH="x64"
 
-TEST_DIRS=( "test/Voron.Tests" "test/BlittableTests" "test/Raven.Server.Tests" "test/Sparrow.Tests" )
-BUILD_DIRS=( "src/Voron" "src/Sparrow" "src/Raven.Client" "src/Raven.Server" )
+TEST_DIRS=( `find test -name project.json -printf "%h\n"` )
+BUILD_DIRS=(` find src -name project.json -printf "%h\n"` )
 CHK_PKGS=( "unzip" "curl" "libunwind8" "gettext" "libssl-dev" "libcurl4-openssl-dev" "zlib1g" "libicu-dev" "uuid-dev" )
 
 
@@ -28,10 +28,11 @@ BLUE='\033[0;34m'
 REPORT_FILE='/tmp/build.report'
 OUT_FILE='/tmp/build.out'
 REPORT_FLAG=0
-REPORT_MAIL="adi@ayende.com" # default
+REPORT_MAIL=""
+REPORT_ATTACH=()
 
 function printWelcome () {
-	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.2) ${NC}\n"
+	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.3) ${NC}\n"
 	printf "${PURPLE}============================${NC}\n"
 }
 
@@ -112,7 +113,7 @@ RECURSIVE_CALL=0
 function checkPackages () {
 	if [ ${OP_REPORT} == 1 ]
 	then
-		printf "\n${PURPLE}Generating report for ${OP_REPORT}${NC}\n"
+		printf "\n${PURPLE}Generating report for ${REPORT_MAIL}${NC}\n"
 		rm -rf ${REPORT_FILE}
 		echo "RavenDB Build Report for ${REPORT_MAIL}" >> ${REPORT_FILE}
 		echo "===============================================================" >> ${REPORT_FILE}
@@ -351,6 +352,11 @@ function buildRaven () {
 		
 	for i in "${BUILD_DIRS[@]}"
 	do
+		extra_build_args=""
+		if [ ${i} == "src/Raven.Studio" ]
+		then
+			extra_build_args="--framework dnxcore50"
+		fi
 		printf "\n${BLUE}Building ${i}:${NC}\n"
 		if [ ${OP_REPORT} == 1 ] 
 		then
@@ -360,10 +366,10 @@ function buildRaven () {
 		if [ ${OP_REPORT} == 1 ] 
 		then
 			printf "${PURPLE}Build out saved into ${OUT_FILE}.build${NC}\n"
-			dnu build >& ${OUT_FILE}.build
+			dnu build ${extra_build_args} >& ${OUT_FILE}.build
 			status=$?
 		else
-			dnu build
+			dnu build ${extra_build_args}
 			status=$?
 		fi
 		popd
@@ -397,6 +403,7 @@ if [ ${OP_SKIP_TESTS} == 0 ]
 then
 	for i in "${TEST_DIRS[@]}"
 	do
+		if [ ${i} == "test/Tryouts" ]; then continue; fi
 		printf "\n${BLUE}Testing ${i}:${NC}\n"
 		if [ ${OP_REPORT} == 1 ] 
 		then
@@ -421,12 +428,15 @@ then
 		then
 			if [ ${OP_REPORT} == 1 ]
                         then
-                                echo "FAILED !!" >> ${REPORT_FILE}
+				filenameToSave="${OUT_FILE}.`date +"%d%m%Y_%H%M%S"`"
+                                echo "FAILED !! (output saved in ${filenameToSave})" >> ${REPORT_FILE}
                                 echo "`date +"%d/%m/%Y_%H:%M:%S"` ERRORS:" >> ${REPORT_FILE}
-				cat ${OUT_FILE}.test | egrep "Total.*Errors.*Failed.*Skipped" >> ${REPORT_FILE} 
                                 grep '\[FAIL\]' ${OUT_FILE}.test >> ${REPORT_FILE}
-				echo "`date +"%d/%m/%Y_%H:%M:%S"` Saving output at ${OUT_FILE}.`date +"%d%m%Y_%H%M%S"`"
-				cp ${OUT_FILE}.test ${OUT_FILE}.`date +"%d%m%Y_%H%M%S"`
+				cat ${OUT_FILE}.test | egrep "Total.*Errors.*Failed.*Skipped" >> ${REPORT_FILE}
+				cat ${OUT_FILE}.test | egrep 'Aborted.*core.*dumped' >> ${REPORT_FILE}
+				echo "`date +"%d/%m/%Y_%H:%M:%S"` Saving output at ${filenameToSave}"
+				cp ${OUT_FILE}.test ${filenameToSave}
+				REPORT_ATTACH=( ${REPORT_ATTACH} ${filenameToSave} ) 
 				REPORT_FLAG=1
                         fi
 			printf "${NC}\n${RED}Build errors in package ${i}${NC}\n"
@@ -461,6 +471,8 @@ then
 		echo "FAILED!" >> /tmp/mailToSend.txt
 	fi
 	cat ${REPORT_FILE} >> /tmp/mailToSend.txt
+	echo " " >> /tmp/mailToSend.txt
+	echo "`date +"%d/%m/%Y_%H:%M:%S"` =========== BUILD FINISHED =============== " >> /tmp/mailToSend.txt
 	msmtp -a gmail "${REPORT_MAIL}" -t < /tmp/mailToSend.txt
 	status=$?
 	if [ ${status} == 0 ]

@@ -79,7 +79,7 @@ namespace Raven.Abstractions.Connection
 
         public string ResponseString { get; private set; }
 
-        public Etag Etag
+        public long? Etag
         {
             get
             {
@@ -88,9 +88,9 @@ namespace Raven.Abstractions.Connection
                 var responseHeader = Response.Headers.ETag.Tag;
 
                 if (responseHeader[0] == '\"')
-                    return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
+                    return long.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
 
-                return Etag.Parse(responseHeader);
+                return long.Parse(responseHeader);
             }
         }
     }

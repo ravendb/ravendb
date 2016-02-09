@@ -35,7 +35,7 @@ namespace Raven.Abstractions.Util
     {
         private readonly byte[] inner;
 
-        public ComparableByteArray(Etag etag) : this(etag.ToByteArray())
+        public ComparableByteArray(long? etag) : this(BitConverter.GetBytes(etag.Value))
         {
             
         }
@@ -81,17 +81,17 @@ namespace Raven.Abstractions.Util
             var comparableByteArray = obj as ComparableByteArray;
             if (comparableByteArray != null)
                 return CompareTo(comparableByteArray);
-            var etag = obj as Etag;
+            var etag = obj as long?;
             if(etag != null)
-                return CompareTo((Etag)obj);
+                return CompareTo((long? )obj);
             return CompareTo((Guid)obj);
         }
 
-        public int CompareTo(Etag obj)
+        public int CompareTo(long? obj)
         {
             if (obj == null)
                 return -1;
-            return CompareTo(obj.ToByteArray());
+            return CompareTo(BitConverter.GetBytes(obj.Value));
         }
 
         public int CompareTo(Guid obj)
@@ -104,9 +104,9 @@ namespace Raven.Abstractions.Util
             return new Guid(inner);
         }
 
-        public Etag ToEtag()
+        public long? ToEtag()
         {
-            return Etag.Parse(inner);
+            return BitConverter.ToInt64(inner, 0);
         }
 
         public override string ToString()

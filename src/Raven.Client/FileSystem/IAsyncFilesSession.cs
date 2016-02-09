@@ -32,18 +32,18 @@ namespace Raven.Client.FileSystem
         Task<Stream> DownloadAsync(FileHeader path, Reference<RavenJObject> metadata = null);
 
 
-        void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null);
-        void RegisterUpload(FileHeader path, Stream stream, Etag etag = null);
-        void RegisterUpload(string path, long fileSize, Action<Stream> write, RavenJObject metadata = null, Etag etag = null);
-        void RegisterUpload(FileHeader path, long fileSize, Action<Stream> write, Etag etag = null);
+        void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, long? etag = null);
+        void RegisterUpload(FileHeader path, Stream stream, long? etag = null);
+        void RegisterUpload(string path, long fileSize, Action<Stream> write, RavenJObject metadata = null, long? etag = null);
+        void RegisterUpload(FileHeader path, long fileSize, Action<Stream> write, long? etag = null);
 
-        void RegisterFileDeletion(string path, Etag etag = null);
-        void RegisterFileDeletion(FileHeader path, Etag etag = null);
+        void RegisterFileDeletion(string path, long? etag = null);
+        void RegisterFileDeletion(FileHeader path, long? etag = null);
 
         void RegisterDeletionQuery(string query);
 
-        void RegisterRename(string sourceFile, string destinationFile, Etag etag = null);
-        void RegisterRename(FileHeader sourceFile, string destinationFile, Etag etag = null);
+        void RegisterRename(string sourceFile, string destinationFile, long? etag = null);
+        void RegisterRename(FileHeader sourceFile, string destinationFile, long? etag = null);
 
         /// <summary>
         /// Saves all the changes to the Raven server.

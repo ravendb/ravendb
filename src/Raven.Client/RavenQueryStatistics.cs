@@ -59,7 +59,7 @@ namespace Raven.Client
         /// <summary>
         /// The etag of the queried index
         /// </summary>
-        public Etag IndexEtag { get; set; }
+        public long? IndexEtag { get; set; }
 
         /// <summary>
         /// The timestamp of the last time the index was queried
@@ -73,7 +73,7 @@ namespace Raven.Client
 
 
 
-        public Etag ResultEtag { get; set; }
+        public long? ResultEtag { get; set; }
 
         /// <summary>
         /// The size of the request which were sent from the server.

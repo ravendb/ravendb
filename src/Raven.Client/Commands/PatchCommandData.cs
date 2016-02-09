@@ -25,7 +25,7 @@ namespace Raven.Abstractions.Commands
         public PatchRequest[] PatchesIfMissing { get; set; }
 
         /// <summary>
-        /// <para>If set to true, _and_ the Etag is specified then the behavior</para>
+        /// <para>If set to true, _and_ the long? is specified then the behavior</para>
         /// <para>of the patch in the case of etag mismatch is different. Instead of throwing,</para>
         /// <para>the patch operation wouldn't complete, and the Skipped status would be returned </para>
         /// <para>to the user for this operation</para>
@@ -48,12 +48,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Current document etag, used for concurrency checks (null to skip check)
         /// </summary>
-        public Etag Etag { get; set; }
-
-        /// <summary>
-        /// RavenJObject representing document's metadata.
-        /// </summary>
-        public RavenJObject Metadata { get; set; }
+        public long? Etag { get; set; }
 
         /// <summary>
         /// Additional command data. For internal use only.
@@ -71,7 +66,6 @@ namespace Raven.Abstractions.Commands
                         {"Key", Key},
                         {"Method", Method},
                         {"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))},
-                        {"Metadata", Metadata},
                         {"AdditionalData", AdditionalData},
                         {"SkipPatchIfEtagMismatch", SkipPatchIfEtagMismatch}
                     };

@@ -79,7 +79,7 @@ namespace Raven.Client.FileSystem.Extensions
             }
         }
 
-        internal static void AddEtagHeader(HttpJsonRequest request, Etag etag)
+        internal static void AddEtagHeader(HttpJsonRequest request, long? etag)
         {
             if (etag != null)
             {

@@ -29,17 +29,12 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Current document etag, used for concurrency checks (null to skip check)
         /// </summary>
-        public virtual Etag Etag { get; set; }
+        public virtual long? Etag { get; set; }
 
         /// <summary>
         /// RavenJObject representing the document.
         /// </summary>
         public virtual RavenJObject Document { get; set; }
-
-        /// <summary>
-        /// RavenJObject representing document's metadata.
-        /// </summary>
-        public virtual RavenJObject Metadata { get; set; }
 
         /// <summary>
         /// Additional command data. For internal use only.
@@ -57,7 +52,6 @@ namespace Raven.Abstractions.Commands
                 {"Key", Key},
                 {"Method", Method},
                 {"Document", Document},
-                {"Metadata", Metadata},
                 {"AdditionalData", AdditionalData}
             };
             if (Etag != null)

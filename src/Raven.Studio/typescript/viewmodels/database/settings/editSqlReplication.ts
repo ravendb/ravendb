@@ -8,7 +8,7 @@ import app = require("durandal/app");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import sqlReplicationStatsDialog = require("viewmodels/database/status/sqlReplicationStatsDialog");
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
@@ -21,6 +21,7 @@ import sqlReplicationSimulationDialog = require("viewmodels/database/status/sqlR
 import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
 import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 
 class editSqlReplication extends viewModelBase {
@@ -98,7 +99,7 @@ class editSqlReplication extends viewModelBase {
             } else {
                 this.isEditingNewReplication(true);
                 this.editedReplication(this.createSqlReplication());
-                this.fetchCollections(this.activeDatabase()).always(() => canActivateResult.resolve({ can: true }));
+                this.fetchCollectionsStats(this.activeDatabase()).always(() => canActivateResult.resolve({ can: true }));
             }
         });
         return canActivateResult;
@@ -130,7 +131,7 @@ class editSqlReplication extends viewModelBase {
 
     loadSqlReplication(replicationToLoadName: string) {
         var loadDeferred = $.Deferred();
-        $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollections(this.activeDatabase()))
+        $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollectionsStats(this.activeDatabase()))
             .done(() => {
                 this.editedReplication().collections = this.collections;
                 new getDocumentsMetadataByIDPrefixCommand(editSqlReplication.sqlReplicationDocumentPrefix, 256, this.activeDatabase())
@@ -161,11 +162,11 @@ class editSqlReplication extends viewModelBase {
         return loadDocTask;
     }
 
-    private fetchCollections(db: database): JQueryPromise<any> {
-        return new getCollectionsCommand(db)
+    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
+        return new getCollectionsStatsCommand(db)
             .execute()
-            .done((collections: Array<collection>) => {
-                this.collections(collections.map((collection: collection) => { return collection.name; }));
+            .done((collectionsStats: collectionsStats) => {
+                this.collections(collectionsStats.collections.map((collection: collection) => { return collection.name; }));
             });
     }
 

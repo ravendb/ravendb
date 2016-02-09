@@ -11,7 +11,7 @@ namespace Raven.Abstractions.FileSystem
         }
 
         [JsonConstructor]
-        public SynchronizationReport(string fileName, Guid fileETag, SynchronizationType type)
+        public SynchronizationReport(string fileName, long fileETag, SynchronizationType type)
         {
             FileName = fileName;
             FileETag = fileETag;
@@ -19,7 +19,7 @@ namespace Raven.Abstractions.FileSystem
         }
 
         public string FileName { get; private set; }
-        public Etag FileETag { get; private set; }
+        public long? FileETag { get; private set; }
         public long BytesTransfered { get; set; }
         public long BytesCopied { get; set; }
         public long NeedListLength { get; set; }

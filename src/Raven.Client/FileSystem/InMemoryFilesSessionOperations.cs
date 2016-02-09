@@ -130,22 +130,22 @@ namespace Raven.Client.FileSystem
 
         private Queue<IFilesOperation> registeredOperations = new Queue<IFilesOperation>();
 
-        public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, long? etag = null)
         {
             RegisterUploadInternal(new UploadFileOperation(this, path, stream, metadata, etag));
         }
 
-        public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
+        public void RegisterUpload(FileHeader file, Stream stream, long? etag = null)
         {
             RegisterUploadInternal(new UploadFileOperation(this, file.FullPath, stream, file.Metadata, etag));
         }
 
-        public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
+        public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, long? etag = null)
         {
             RegisterUploadInternal(new UploadFileOperation(this, path, size, write, metadata, etag));
         }
 
-        public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
+        public void RegisterUpload(FileHeader file, long size, Action<Stream> write, long? etag = null)
         {
             RegisterUploadInternal(new UploadFileOperation(this, file.FullPath, size, write, file.Metadata, etag));
         }
@@ -167,7 +167,7 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);
         }
 
-        public void RegisterFileDeletion(string path, Etag etag = null)
+        public void RegisterFileDeletion(string path, long? etag = null)
         {
             FileHeader existingEntity;
             if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))
@@ -185,7 +185,7 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);
         }
 
-        public void RegisterFileDeletion(FileHeader file, Etag etag = null)
+        public void RegisterFileDeletion(FileHeader file, long? etag = null)
         {
             RegisterFileDeletion(file.FullPath, etag);
         }
@@ -199,7 +199,7 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);
         }
 
-        public void RegisterRename(string sourceFile, string destinationFile, Etag etag = null)
+        public void RegisterRename(string sourceFile, string destinationFile, long? etag = null)
         {
             FileHeader existingEntity;
             if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(sourceFile, out existingEntity))
@@ -215,7 +215,7 @@ namespace Raven.Client.FileSystem
             registeredOperations.Enqueue(operation);
         }
 
-        public void RegisterRename(FileHeader sourceFile, string destinationFile, Etag etag = null)
+        public void RegisterRename(FileHeader sourceFile, string destinationFile, long? etag = null)
         {
             RegisterRename(sourceFile.FullPath, destinationFile, etag);
         }

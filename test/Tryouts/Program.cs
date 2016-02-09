@@ -18,7 +18,10 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            new PartialBlitable().CanSkipWritingPropertyNames().Wait();
+            using (var c = new Crud())
+            {
+                c.CanSaveAndLoad().Wait();
+            }
         }
     }
 }

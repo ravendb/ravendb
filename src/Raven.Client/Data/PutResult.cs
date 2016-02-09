@@ -18,8 +18,8 @@ namespace Raven.Abstractions.Data
         public string Key { get; set; }
 
         /// <summary>
-        /// Etag of the document after PUT operation.
+        /// long? of the document after PUT operation.
         /// </summary>
-        public Etag ETag { get; set; }
+        public long? ETag { get; set; }
     }
 }

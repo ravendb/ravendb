@@ -222,7 +222,7 @@ namespace Raven.Client
         ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
         ///     forces concurrency check with given Etag
         /// </summary>
-        Task StoreAsync(object entity, Etag etag, CancellationToken token = default (CancellationToken));
+        Task StoreAsync(object entity, long? etag, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.
@@ -235,7 +235,7 @@ namespace Raven.Client
         /// <summary>
         ///     Stores entity in session with given id and forces concurrency check with given Etag.
         /// </summary>
-        Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default (CancellationToken));
+        Task StoreAsync(object entity, long? etag, string id, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Stores the specified dynamic entity, under the specified id.

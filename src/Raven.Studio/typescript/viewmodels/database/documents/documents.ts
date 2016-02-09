@@ -18,8 +18,9 @@ import changeSubscription = require("common/changeSubscription");
 import customFunctions = require("models/database/documents/customFunctions");
 import customColumns = require("models/database/documents/customColumns");
 import customColumnParams = require("models/database/documents/customColumnParams");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
@@ -32,6 +33,7 @@ class documents extends viewModelBase {
 
     displayName = "documents";
     collections = ko.observableArray<collection>();
+    documentsCount = ko.observable<number>(0);
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
     allDocumentsCollection: collection;
     collectionToSelectName: string;
@@ -70,8 +72,7 @@ class documents extends viewModelBase {
             var selectedCollection: collection = this.selectedCollection();
             if (!!selectedCollection) {
                 if (selectedCollection.name === collection.allDocsCollectionName) {
-                    var db: database = this.activeDatabase();
-                    return !!db.statistics() ? db.statistics().countOfDocuments() > 0 : false;
+                    return this.documentsCount() > 0;
                 }
                 return this.selectedCollection().documentCount() > 0;
             }
@@ -141,7 +142,7 @@ class documents extends viewModelBase {
 
         var db = this.activeDatabase();
         this.fetchAlerts();
-        this.fetchCollections(db).done(results => {
+        this.fetchCollectionsStats(db).done(results => {
             this.collectionsLoaded(results, db);
             documents.isInitialized(true);
         });
@@ -252,16 +253,17 @@ class documents extends viewModelBase {
         setTimeout(() => dynamicHeightBindingHandler.stickToTarget($(".ko-grid-viewport-container")[0], 'footer', 0), 25);
     }
 
-    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return new getCollectionsCommand(db, this.collections(), this.lastCollectionCountUpdate).execute();
+    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
+        return new getCollectionsStatsCommand(db, this.collections()).execute();
     }
 
     private refreshCollections(): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
 
-        this.fetchCollections(db).done(results => {
-            this.updateCollections(results);
+        this.fetchCollectionsStats(db).done(results => {
+            this.documentsCount(results.numberOfDocuments());
+            this.updateCollections(results.collections);
             this.refreshCollectionsData();
             //TODO: add a button to refresh the documents and than use this.refreshCollectionsData();
             deferred.resolve();
@@ -270,10 +272,11 @@ class documents extends viewModelBase {
         return deferred;
     }
 
-    collectionsLoaded(collections: Array<collection>, db: database) {
+    collectionsLoaded(collectionsStats: collectionsStats, db: database) {
+        var collections = collectionsStats.collections;
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
+        this.allDocumentsCollection.documentCount = ko.computed(() => collectionsStats.numberOfDocuments);
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);

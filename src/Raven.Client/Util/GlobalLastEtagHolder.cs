@@ -6,13 +6,13 @@ namespace Raven.Client.Util
     {
         private class EtagHolder
         {
-            public Etag Etag;
+            public long? Etag;
         }
 
         private volatile EtagHolder lastEtag;
         protected readonly object lastEtagLocker = new object();
 
-        public void UpdateLastWrittenEtag(Etag etag)
+        public void UpdateLastWrittenEtag(long? etag)
         {
             if (etag == null)
                 return;
@@ -33,7 +33,7 @@ namespace Raven.Client.Util
             }
 
             // not the most recent etag
-            if (lastEtag.Etag.CompareTo(etag) >= 0)
+            if (lastEtag.Etag.Value.CompareTo(etag.Value) >= 0)
             {
                 return;
             }
@@ -41,20 +41,20 @@ namespace Raven.Client.Util
             lock (lastEtagLocker)
             {
                 // not the most recent etag
-                if (lastEtag.Etag.CompareTo(etag) >= 0)
+                if (lastEtag.Etag.Value.CompareTo(etag.Value) >= 0)
                 {
                     return;
                 }
 
                 lastEtag = new EtagHolder
                 {
-                    Etag = etag,
+                   Etag = etag,
                 };
             }
         }
 
         
-        public Etag GetLastWrittenEtag()
+        public long? GetLastWrittenEtag()
         {
             var etagHolder = lastEtag;
             if (etagHolder == null)

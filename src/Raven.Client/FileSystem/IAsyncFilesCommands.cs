@@ -62,17 +62,17 @@ namespace Raven.Client.FileSystem
         Task<Guid> GetServerIdAsync();
         Task<FileSystemStats> GetStatisticsAsync();
 
-        Task DeleteAsync(string filename, Etag etag = null);
-        Task RenameAsync(string currentName, string newName, Etag etag = null);
-        Task CopyAsync(string sourceName, string targetNAme, Etag etag = null);
+        Task DeleteAsync(string filename, long? etag = null);
+        Task RenameAsync(string currentName, string newName, long? etag = null);
+        Task CopyAsync(string sourceName, string targetNAme, long? etag = null);
         
         Task<RavenJObject> GetMetadataForAsync(string filename);
 
-        Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null);
+        Task UpdateMetadataAsync(string filename, RavenJObject metadata, long? etag = null);
 
-        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, Etag etag = null);
-        Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, Etag etag = null);
-        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null);
+        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? etag = null);
+        Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, long? etag = null);
+        Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, long? etag = null);
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
 
@@ -88,7 +88,7 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> GetAsync(string[] filename);
         Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
-        Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
+        Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(long? fromEtag, int pageSize = int.MaxValue);
 
         Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(string query, string[] sortFields = null, int start = 0, int pageSize = int.MaxValue);
         IDisposable ForceReadFromMaster();
@@ -162,9 +162,9 @@ namespace Raven.Client.FileSystem
         Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
         Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
         Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
-        Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
+        Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, long>> sentFiles);
         Task<SignatureManifest> GetRdcManifestAsync(string path);
-        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag);
+        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, long? sourceFileETag);
     }
 
     public interface IAsyncFilesStorageCommands : IDisposable, IHoldProfilingInformation

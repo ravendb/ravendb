@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 
@@ -23,6 +24,15 @@ namespace Raven.Server.Json
         private Dictionary<string, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
+        public override string ToString()
+        {
+            var memoryStream = new MemoryStream();
+            var writer = new BlittableJsonTextWriter(_context, memoryStream);
+            WriteToOrdered(writer);
+            writer.Flush();
+            memoryStream.Position = 0;
+            return new StreamReader(memoryStream).ReadToEnd();
+        }
 
         public BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context, 
             BlittableJsonDocumentBuilder builder = null,

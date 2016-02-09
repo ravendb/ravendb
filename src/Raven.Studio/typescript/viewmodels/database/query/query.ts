@@ -8,7 +8,7 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import pagedList = require("common/pagedList");
@@ -37,6 +37,8 @@ import getIndexSuggestionsCommand = require("commands/database/index/getIndexSug
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import queryUtil = require("common/queryUtil");
+
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
@@ -294,11 +296,11 @@ class query extends viewModelBase {
     private fetchAllCollections(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        new getCollectionsCommand(db)
+        new getCollectionsStatsCommand(db)
             .execute()
-            .done((results: collection[]) => {
-                this.collections(results);
-                this.collectionNames(results.map(c => c.name));
+            .done((results: collectionsStats) => {
+                this.collections(results.collections);
+                this.collectionNames(results.collections.map(c => c.name));
                 deferred.resolve();
             });
 

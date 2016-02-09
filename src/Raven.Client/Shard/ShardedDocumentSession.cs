@@ -953,7 +953,7 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }

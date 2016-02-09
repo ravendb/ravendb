@@ -267,7 +267,7 @@ namespace Raven.Client.Document
 
         protected Action<QueryResult> afterQueryExecutedCallback;
         protected AfterStreamExecutedDelegate afterStreamExecutedCallback;
-        protected Etag cutoffEtag;
+        protected long? cutoffEtag;
 
         private int? _defaultTimeout;
 
@@ -1689,7 +1689,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
         /// <param name="cutOffEtag">The cut off etag.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag)
+        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(long? cutOffEtag)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag);
             return this;
@@ -1700,7 +1700,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="cutOffEtag">The cut off etag.</param>
         /// <param name="waitTimeout">The wait timeout.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
+        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(long? cutOffEtag, TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
             return this;
@@ -1754,7 +1754,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
-        public void WaitForNonStaleResultsAsOf(Etag cutOffEtag)
+        public void WaitForNonStaleResultsAsOf(long? cutOffEtag)
         {
             WaitForNonStaleResultsAsOf(cutOffEtag, DefaultTimeout);
         }
@@ -1762,7 +1762,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
-        public void WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
+        public void WaitForNonStaleResultsAsOf(long? cutOffEtag, TimeSpan waitTimeout)
         {
             theWaitForNonStaleResults = true;
             timeout = waitTimeout;

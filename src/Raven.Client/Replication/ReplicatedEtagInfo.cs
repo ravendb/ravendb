@@ -12,7 +12,7 @@ namespace Raven.Abstractions.Replication
     public class ReplicatedEtagInfo
     {
         public string DestinationUrl { get; set; }
-        public Etag DocumentEtag { get; set; }
+        public long? DocumentEtag { get; set; }
 
         public override string ToString()
         {

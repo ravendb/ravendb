@@ -214,7 +214,7 @@ namespace Raven.Client.Indexes
         /// <param name="documentStore">The document store.</param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
-        public static void SideBySideCreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static void SideBySideCreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             throw new NotImplementedException("Figure out how to get the relevant types from the assembly");
 
@@ -224,7 +224,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified catalog in side-by-side mode.
         /// </summary>
-        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IDatabaseCommands databaseCommands, DocumentConvention conventions, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IDatabaseCommands databaseCommands, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
             try
@@ -261,7 +261,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Creates the indexes found in the specified catalog in side-by-side mode.
         /// </summary>
-        public static async Task SideBySideCreateIndexesAsync(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static async Task SideBySideCreateIndexesAsync(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
             var failed = false;
@@ -308,7 +308,7 @@ namespace Raven.Client.Indexes
         /// <param name="documentStore">The document store.</param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
-        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static void SideBySideCreateIndexes(IList<AbstractIndexCreationTask> indexes, IList<AbstractTransformerCreationTask> transformers, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
             try
@@ -346,7 +346,7 @@ namespace Raven.Client.Indexes
         /// <param name="documentStore">The document store.</param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
-        public static Task SideBySideCreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public static Task SideBySideCreateIndexesAsync(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             throw new NotImplementedException("Figure out how to get the relevant types from the assembly");
             //return SideBySideCreateIndexesAsync(catalog, documentStore, minimumEtagBeforeReplace, replaceTimeUtc);
@@ -361,7 +361,7 @@ namespace Raven.Client.Indexes
         public static async Task SideBySideCreateIndexesAsync(
             IList<AbstractIndexCreationTask> indexes,
             IList<AbstractTransformerCreationTask> transformers,
-            IDocumentStore documentStore, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+            IDocumentStore documentStore, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexCompilationExceptions = new List<IndexCompilationException>();
             var failed = false;

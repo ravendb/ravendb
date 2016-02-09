@@ -174,7 +174,7 @@ namespace Raven.Client.FileSystem
                 conflicts.Remove(value.FileName);
             }
         }
-        public Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
+        public Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(long? fromEtag, int pageSize = int.MaxValue)
         {
             IncrementRequestCount();
 

@@ -198,7 +198,7 @@ namespace Raven.Client.Indexes
         /// <param name="store"></param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
-        public void SideBySideExecute(IDocumentStore store, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public void SideBySideExecute(IDocumentStore store, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             store.SideBySideExecuteIndex(this, minimumEtagBeforeReplace, replaceTimeUtc);
         }
@@ -218,7 +218,7 @@ namespace Raven.Client.Indexes
         /// <param name="documentConvention"></param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
-        public virtual void SideBySideExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual void SideBySideExecute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
@@ -252,7 +252,7 @@ namespace Raven.Client.Indexes
             }
         }
 
-        private void UpdateSideBySideIndex(IDatabaseCommands databaseCommands, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, string replaceIndexName, IndexDefinition indexDefinition, DocumentConvention documentConvention)
+        private void UpdateSideBySideIndex(IDatabaseCommands databaseCommands, long? minimumEtagBeforeReplace, DateTime? replaceTimeUtc, string replaceIndexName, IndexDefinition indexDefinition, DocumentConvention documentConvention)
         {
             databaseCommands.PutIndex(replaceIndexName, indexDefinition, true);
 
@@ -379,7 +379,7 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document store in side-by-side mode.
         /// </summary>
-        public Task SideBySideExecuteAsync(IDocumentStore store, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public Task SideBySideExecuteAsync(IDocumentStore store, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             return store.SideBySideExecuteIndexAsync(this, minimumEtagBeforeReplace, replaceTimeUtc);
         }
@@ -392,7 +392,7 @@ namespace Raven.Client.Indexes
             return store.ExecuteIndexAsync(this);
         }
 
-        public virtual async Task SideBySideExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken))
+        public virtual async Task SideBySideExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken))
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
@@ -425,7 +425,7 @@ namespace Raven.Client.Indexes
             }
         }
 
-        private async Task UpdateSideBySideIndexAsync(IAsyncDatabaseCommands asyncDatabaseCommands, Etag minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token, string replaceIndexName, IndexDefinition indexDefinition, DocumentConvention documentConvention)
+        private async Task UpdateSideBySideIndexAsync(IAsyncDatabaseCommands asyncDatabaseCommands, long? minimumEtagBeforeReplace, DateTime? replaceTimeUtc, CancellationToken token, string replaceIndexName, IndexDefinition indexDefinition, DocumentConvention documentConvention)
         {
             await asyncDatabaseCommands.PutIndexAsync(replaceIndexName, indexDefinition, true, token).ConfigureAwait(false);
 

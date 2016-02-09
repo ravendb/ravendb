@@ -26,7 +26,7 @@ namespace Raven.Client.Document
         Task<long> CreateAsync(SubscriptionCriteria criteria, string database = null);
 
         /// <summary>
-        /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's Etag order).
+        /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).
         /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
         /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
         /// There can be only a single client that is connected to a subscription.
@@ -35,7 +35,7 @@ namespace Raven.Client.Document
         Task<Subscription<RavenJObject>> OpenAsync(long id, SubscriptionConnectionOptions options, string database = null);
 
         /// <summary>
-        /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's Etag order).
+        /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).
         /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
         /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
         /// There can be only a single client that is connected to a subscription.

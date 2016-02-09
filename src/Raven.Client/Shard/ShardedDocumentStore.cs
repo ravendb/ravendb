@@ -285,7 +285,7 @@ namespace Raven.Client.Shard
         /// Gets the etag of the last document written by any session belonging to this 
         /// document store
         ///</summary>
-        public override Etag GetLastWrittenEtag()
+        public override long? GetLastWrittenEtag()
         {
             throw new NotSupportedException("This isn't a single last written etag when sharding");
         }
@@ -438,19 +438,19 @@ namespace Raven.Client.Shard
                 await store.ExecuteIndexesAsync(indexCreationTasks).ConfigureAwait(false);
         }
 
-        public override void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public override void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             foreach (var store in ShardStrategy.Shards.Values)
                 store.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
         }
 
-        public override async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public override async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             foreach (var store in ShardStrategy.Shards.Values)
                 await store.SideBySideExecuteIndexesAsync(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
         }
 
-        public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public override void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
             ShardStrategy.ShardAccessStrategy.Apply(list,
@@ -462,7 +462,7 @@ namespace Raven.Client.Shard
                                                             });
         }
 
-        public override Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public override Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var list = ShardStrategy.Shards.Values.Select(x => x.AsyncDatabaseCommands).ToList();
             return ShardStrategy.ShardAccessStrategy.ApplyAsync(list, new ShardRequestData(), (commands, i) =>

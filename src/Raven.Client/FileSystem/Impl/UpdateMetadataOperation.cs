@@ -13,9 +13,9 @@ namespace Raven.Client.FileSystem.Impl
         public string FileName { get; private set; }
         private FileHeader FileHeader { get; set; }
         private RavenJObject Metadata { get; set; }
-        private Etag Etag { get; set; }
+        private long? Etag { get; set; }
 
-        public UpdateMetadataOperation(InMemoryFilesSessionOperations sessionOperations, FileHeader fileHeader, RavenJObject metadata, Etag etag)
+        public UpdateMetadataOperation(InMemoryFilesSessionOperations sessionOperations, FileHeader fileHeader, RavenJObject metadata, long? etag)
         {
             if (fileHeader == null || string.IsNullOrWhiteSpace(fileHeader.FullPath))
                 throw new ArgumentNullException("fileHeader", "The file cannot be null or have an empty or whitespace name!");

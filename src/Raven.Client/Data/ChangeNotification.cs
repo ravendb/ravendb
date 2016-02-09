@@ -43,7 +43,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Document etag.
         /// </summary>
-        public Etag Etag { get; set; }
+        public long? Etag { get; set; }
 
         /// <summary>
         /// Notification message.
@@ -121,7 +121,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// TODO [ppekrol]
         /// </summary>
-        public Etag Etag { get; set; }
+        public long? Etag { get; set; }
 
         public override string ToString()
         {
@@ -162,7 +162,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Current conflict document Etag.
         /// </summary>
-        public Etag Etag { get; set; }
+        public long? Etag { get; set; }
 
         /// <summary>
         /// Operation type on which conflict occurred (Put, Delete).

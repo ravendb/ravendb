@@ -75,7 +75,7 @@ namespace Raven.Client.Connection
         /// </summary>
         /// <param name="key">key of a document to be deleted</param>
         /// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
-        void Delete(string key, Etag etag);
+        void Delete(string key, long? etag);
 
         /// <summary>
         ///     Perform a set based deletes using the specified index
@@ -164,7 +164,7 @@ namespace Raven.Client.Connection
         /// <remarks>
         ///     This is primarily useful for administration of a database
         /// </remarks>
-        JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false);
+        JsonDocument[] GetDocuments(long? fromEtag, int pageSize, bool metadataOnly = false);
 
         /// <summary>
         ///     Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -332,7 +332,7 @@ namespace Raven.Client.Connection
         long NextIdentityFor(string name);
 
         /// <summary>
-        ///     Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
+        ///     Sends a patch request for a specific document, ignoring the document's long? and if the document is missing
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patches">Array of patch requests</param>
@@ -350,7 +350,7 @@ namespace Raven.Client.Connection
         RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing);
 
         /// <summary>
-        ///     Sends a patch request for a specific document, ignoring the document's Etag and  if the document is missing
+        ///     Sends a patch request for a specific document, ignoring the document's long? and  if the document is missing
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
@@ -372,49 +372,29 @@ namespace Raven.Client.Connection
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patches">Array of patch requests</param>
-        /// <param name="etag">Require specific Etag [null to ignore]</param>
-        RavenJObject Patch(string key, PatchRequest[] patches, Etag etag);
+        /// <param name="etag">Require specific long? [null to ignore]</param>
+        RavenJObject Patch(string key, PatchRequest[] patches, long? etag);
 
-        /// <summary>
-        ///     Sends a patch request for a specific document which may or may not currently exist
-        /// </summary>
-        /// <param name="key">Id of the document to patch</param>
-        /// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
-        /// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
-        /// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
-        RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata);
-
+        
         /// <summary>
         ///     Sends a patch request for a specific document
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
-        /// <param name="etag">Require specific Etag [null to ignore]</param>
-        RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag);
-
-        /// <summary>
-        ///     Sends a patch request for a specific document which may or may not currently exist
-        /// </summary>
-        /// <param name="key">Id of the document to patch</param>
-        /// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
-        /// <param name="patchDefault">
-        ///     The patch request to use (using JavaScript)  to a default document when the document is
-        ///     missing
-        /// </param>
-        /// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
-        RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata);
+        /// <param name="etag">Require specific long? [null to ignore]</param>
+        RavenJObject Patch(string key, ScriptedPatchRequest patch, long? etag);
 
         /// <summary>
         ///     Puts the document in the database with the specified key.
         ///     <para>Returns PutResult where:</para>
         ///     <para>- Key - unique key under which document was stored,</para>
-        ///     <para>- Etag - stored document etag</para>
+        ///     <para>- long? - stored document etag</para>
         /// </summary>
         /// <param name="key">unique key under which document will be stored</param>
         /// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
         /// <param name="document">document data</param>
         /// <param name="metadata">document metadata</param>
-        PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata);
+        PutResult Put(string key, long? etag, RavenJObject document, RavenJObject metadata);
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition
@@ -435,7 +415,7 @@ namespace Raven.Client.Connection
         /// <param name="indexesToAdd">indexes to add</param>
         /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
         /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
-        string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
+        string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition
@@ -549,7 +529,7 @@ namespace Raven.Client.Connection
         /// </param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
+        IEnumerator<RavenJObject> StreamDocs(long? fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
 
         /// <summary>
         ///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless

@@ -133,7 +133,7 @@ namespace Raven.Client.Connection
             return responses;
         }
 
-        public async Task TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
+        public async Task TryResolveConflictOrCreateConcurrencyException(GetResponse[] responses, Func<string, RavenJObject, long?, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException)
         {
             // ReSharper disable once ForCanBeConvertedToForeach
             // see: http://ayende.com/blog/169377/the-bug-that-ruined-my-weekend
@@ -199,9 +199,9 @@ namespace Raven.Client.Connection
         }
 
         private static async Task TryResolveConflictOrCreateConcurrencyExceptionForSingleDocument(
-            Func<string, RavenJObject, Etag, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException,
+            Func<string, RavenJObject, long?, Task<ConflictException>> tryResolveConflictOrCreateConcurrencyException,
             string id,
-            Etag etag,
+            long? etag,
             RavenJObject docResult,
             GetResponse response)
         {

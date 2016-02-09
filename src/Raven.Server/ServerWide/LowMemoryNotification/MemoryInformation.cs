@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr CreateMemoryResourceNotification(int notificationType);
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct MemoryStatusEx
         {
             public uint dwLength;
@@ -37,8 +37,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         }
 
         [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool GlobalMemoryStatusEx([In, Out] MemoryStatusEx lpBuffer);
+        [DllImport("kernel32.dll",SetLastError = true)]
+        public static unsafe extern bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);
 
         /// <summary>
         /// This value is in MB
@@ -84,7 +84,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                 {
                     dwLength = (uint)sizeof(MemoryStatusEx)
                 };
-                var result = GlobalMemoryStatusEx(memoryStatus);
+                var result = GlobalMemoryStatusEx(&memoryStatus);
                 if (result == false)
                 {
                     Log.Warn("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());

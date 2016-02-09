@@ -53,17 +53,18 @@ namespace Raven.Abstractions.FileSystem
             }
         }
 
-        public Etag Etag
+        public long? Etag
         {
             get
             {
-                Etag parsedEtag = null;
                 if (this.Metadata.Keys.Contains(Constants.MetadataEtagField))
                 {
-                    Etag.TryParse(this.Metadata[Constants.MetadataEtagField].Value<string>(), out parsedEtag);
+                    long parsedEtag;
+                    if(long.TryParse(this.Metadata[Constants.MetadataEtagField].Value<string>(), out parsedEtag))
+                        return parsedEtag;
                 }
 
-                return parsedEtag;
+                return null;
             }
         }
 

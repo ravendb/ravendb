@@ -26,12 +26,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Current document etag, used for concurrency checks (null to skip check)
         /// </summary>
-        Etag Etag { get; }
-
-        /// <summary>
-        /// RavenJObject representing document's metadata.
-        /// </summary>
-        RavenJObject Metadata { get; }
+        long? Etag { get; }
 
         /// <summary>
         /// Additional command data. For internal use only.
