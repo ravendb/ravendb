@@ -1,0 +1,36 @@
+import commandBase = require("commands/commandBase");
+import database = require("models/resources/database");
+import collectionsStats = require("models/database/documents/collectionsStats");
+import collection = require("models/database/documents/collection");
+
+class getCollectionsStatsCommand extends commandBase {
+
+    /**
+    * @param ownerDb The database the collections will belong to.
+    */
+    //TODO: use or delete previous values
+    constructor(private ownerDb: database, private previousValues: collection[]=[]) {
+        super();
+
+        if (!this.ownerDb) {
+            throw new Error("Must specify a database.");
+        }
+    }
+
+    execute(): JQueryPromise<collectionsStats> {
+        var finalResult = $.Deferred<collectionsStats>();
+        this.query<collectionsStatsDto>("/collections/stats", null, this.ownerDb)
+            .done(results => {
+                var stats = new collectionsStats(results, this.ownerDb);
+                finalResult.resolve(stats);
+            })
+            .fail((response) => {
+                this.reportError("Can't fetch collection stats");
+                finalResult.reject(response.responseText);
+            });
+
+        return finalResult;
+    }
+}
+
+export = getCollectionsStatsCommand;

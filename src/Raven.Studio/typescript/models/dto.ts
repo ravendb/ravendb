@@ -1534,3 +1534,15 @@ interface generatedCodeDto {
     Document: string;
     Code: string;
 }
+
+
+interface collectionsStatsDto {
+    NumberOfDocuments: number;
+    Collections: collectionStat[];
+}
+
+interface collectionStat {
+    Name: string;
+    Count: number;
+}
+

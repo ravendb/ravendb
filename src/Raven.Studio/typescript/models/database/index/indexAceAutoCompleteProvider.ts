@@ -2,7 +2,6 @@ import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
 import pagedResultSet = require("common/pagedResultSet");
 
