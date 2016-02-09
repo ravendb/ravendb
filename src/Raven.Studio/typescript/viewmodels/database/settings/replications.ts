@@ -16,11 +16,12 @@ import deleteLocalReplicationsSetupCommand = require("commands/database/globalCo
 import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
 import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import replicationPatchScript = require("models/database/replication/replicationPatchScript");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 class replications extends viewModelBase {
 
@@ -150,8 +151,8 @@ class replications extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([combinedFlag, this.usingGlobal]);
 
         var db = this.activeDatabase();
-        this.fetchCollections(db).done(results => {
-            this.collections(results);
+        this.fetchCollectionsStats(db).done(results => {
+            this.collections(results.collections);
         });
     }
 
@@ -295,8 +296,8 @@ class replications extends viewModelBase {
         }
     }
 
-    private fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return new getCollectionsCommand(db, this.collections()).execute();
+    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
+        return new getCollectionsStatsCommand(db, this.collections()).execute();
     }
 
     toggleIndexReplication(skipReplicationValue: boolean) {
@@ -380,8 +381,8 @@ class replications extends viewModelBase {
                 this.fetchServerPrefixForHiLoCommand(db);
                 this.fetchAutomaticConflictResolution(db);
                 this.fetchReplications(db);
-                this.fetchCollections(db).done(results => {
-                    this.collections(results);
+                this.fetchCollectionsStats(db).done(results => {
+                    this.collections(results.collections);
                 });
             });
     }

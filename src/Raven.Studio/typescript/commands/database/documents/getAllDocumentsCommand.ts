@@ -15,11 +15,8 @@ class getAllDocumentsCommand extends commandBase {
     execute(): JQueryPromise<pagedResultSet> {
 
         // Getting all documents requires a 2 step process:
-        // 1. Fetch /indexes/Raven/DocumentsByEntityName to get the total doc count.
+        // 1. Fetch /collections/stats to get the total doc count.
         // 2. Fetch /docs to get the actual documents.
-
-        // Fetching #1 will return a document list, but it won't include the system docs.
-        // Therefore, we must fetch /docs as well, which gives us the system docs.
 
         var docsTask = this.fetchDocs();
         var totalResultsTask = this.fetchTotalResultCount();
@@ -41,15 +38,9 @@ class getAllDocumentsCommand extends commandBase {
     }
 
     private fetchTotalResultCount(): JQueryPromise<number> {
-        var args = {
-            query: "",
-            start: 0,
-            pageSize: 0
-        };
-
-        var url = "/indexes/Raven/DocumentsByEntityName";
-        var countSelector = (dto: collectionInfoDto) => dto.TotalResults;
-        return this.query(url, args, this.ownerDatabase, countSelector);
+        var url = "/collections/stats";
+        var countSelector = (dto: collectionsStatsDto) => dto.NumberOfDocuments;
+        return this.query(url, null, this.ownerDatabase, countSelector);
     }
 }
 

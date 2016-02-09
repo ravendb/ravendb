@@ -1,11 +1,12 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collection = require("models/database/documents/collection");
 import appUrl = require("common/appUrl");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require('common/messagePublisher'); 
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 class exportDatabase extends viewModelBase {
     includeDocuments = ko.observable(true);
@@ -33,10 +34,10 @@ class exportDatabase extends viewModelBase {
         super.activate(args);
         this.updateHelpLink('YD9M1R');
 
-        new getCollectionsCommand(this.activeDatabase())
+        new getCollectionsStatsCommand(this.activeDatabase())
             .execute()
-            .done((collections: collection[]) => {
-                this.includedCollections(collections.map(c => {
+            .done((collectionsStats: collectionsStats) => {
+                this.includedCollections(collectionsStats.collections.map(c => {
                     return {
                         collection: c.name,
                         isIncluded: ko.observable(false)

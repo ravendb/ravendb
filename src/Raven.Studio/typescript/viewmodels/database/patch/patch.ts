@@ -4,7 +4,7 @@ import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import patchParam = require("models/database/patch/patchParam");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collection = require("models/database/documents/collection");
 import customColumns = require("models/database/documents/customColumns");
 import document = require("models/database/documents/document");
@@ -26,6 +26,7 @@ import getDocumentsByEntityNameCommand = require("commands/database/documents/ge
 import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 class patch extends viewModelBase {
 
@@ -245,10 +246,11 @@ class patch extends viewModelBase {
     }
 
     fetchAllCollections(): JQueryPromise<any> {
-        return new getCollectionsCommand(this.activeDatabase())
+        return new getCollectionsStatsCommand(this.activeDatabase())
             .execute()
             .always(() => NProgress.done())
-            .done((colls: collection[]) => {
+            .done((collectionsStats: collectionsStats) => {
+                var colls = collectionsStats.collections;
                 var currentlySelectedCollection: collection = null;
 
                 if (this.patchDocument().selectedItem()) {
