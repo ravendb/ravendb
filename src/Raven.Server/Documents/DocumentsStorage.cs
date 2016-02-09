@@ -462,7 +462,8 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocuments(RavenOperationContext context)
         {
-            var fst = context.Transaction.FixedTreeFor(_docsSchema.FixedSizeIndexes["AllDocsEtags"].NameAsSlice);
+            var fstIndex = _docsSchema.FixedSizeIndexes["AllDocsEtags"];
+            var fst = context.Transaction.FixedTreeFor(fstIndex.NameAsSlice, sizeof(long));
             return fst.NumberOfEntries;
         }
 

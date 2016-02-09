@@ -3,14 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.PlatformAbstractions;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Server;
@@ -27,7 +23,7 @@ namespace Raven.Tests.Core
 
         protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
 
-        public static Lazy<RavenServer> Server  = new Lazy<RavenServer>(CreateServer);
+        public Lazy<RavenServer> Server  = new Lazy<RavenServer>(CreateServer);
 
         private static RavenServer CreateServer()
         {
@@ -119,6 +115,9 @@ namespace Raven.Tests.Core
             {
                 documentStore.Dispose();
             }
+
+            if(Server.IsValueCreated)
+                Server.Value.Dispose();
         }
     }
 }

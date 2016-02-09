@@ -8,7 +8,13 @@ class collectionsStats  {
     
     constructor(statsDto: collectionsStatsDto, ownerDatabase: database) {
         this.numberOfDocuments(statsDto.NumberOfDocuments);
-        this.collections = statsDto.Collections.map(x => new collection(x.Name, ownerDatabase, x.Count));
+        this.collections = [];
+
+        for (var key in statsDto.Collections) {
+            if (!statsDto.Collections.hasOwnProperty(key))
+                continue;
+            this.collections.push(new collection(key, ownerDatabase, statsDto.Collections[key]));
+        }
     }
    
 }
