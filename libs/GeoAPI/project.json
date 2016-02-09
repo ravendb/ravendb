@@ -1,0 +1,11 @@
+{
+  "version": "1.7.5",
+  "frameworks": {
+    "dnxcore50": {
+      "bin": {
+        "assembly": "dnxcore50\\GeoAPI.dll",
+        "pdb": "dnxcore50\\GeoAPI.pdb"
+      }
+    }
+  }
+}
