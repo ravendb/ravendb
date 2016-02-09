@@ -630,7 +630,7 @@ interface bulkDocumentDto {
     PatchResult?: any;
     Deleted?: any;
     DebugMode?: boolean;
-    Patch: any;
+    Patch?: any;
 }
 
 interface databaseDocumentSaveDto {
