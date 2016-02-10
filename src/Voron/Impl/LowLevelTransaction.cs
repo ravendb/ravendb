@@ -185,22 +185,8 @@ namespace Voron.Impl
 
         internal HashSet<PageFromScratchBuffer> GetTransactionPages()
         {
-            ValidateTransactionPages();
+            VerifyNoDuplicateScratchPages();
             return _transactionPages;
-        }
-
-        [Conditional("DEBUG")]
-        private void ValidateTransactionPages()
-        {
-            var pageNums = new HashSet<long>();
-            foreach (var txPage in _transactionPages)
-            {
-                var scratchPage = Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber,
-                    txPage.PositionInScratchBuffer);
-                if (pageNums.Add(scratchPage.PageNumber) == false)
-                    throw new VoronUnrecoverableErrorException("Duplicate page in transaction: " + scratchPage.PageNumber + " " +
-                                                               scratchPage);
-            }
         }
 
         internal List<PageFromScratchBuffer> GetUnusedScratchPages()
@@ -304,9 +290,9 @@ namespace Voron.Impl
 
             Debug.Assert(pageNumber < State.NextPageNumber);
 
-
+#if VALIDATE
             VerifyNoDuplicateScratchPages();
-
+#endif
             var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
             _transactionPages.Add(pageFromScratchBuffer);
 
@@ -328,8 +314,10 @@ namespace Voron.Impl
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
 
+#if VALIDATE
             VerifyNoDuplicateScratchPages();
-            ValidateTransactionPages();
+#endif
+
             return newPage;
         }
 
@@ -367,7 +355,7 @@ namespace Voron.Impl
         }
 
 
-        [Conditional("VALIDATE")]
+        [Conditional("DEBUG")]
         public void VerifyNoDuplicateScratchPages()
         {
             var pageNums = new HashSet<long>();
