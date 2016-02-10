@@ -84,8 +84,6 @@ namespace Voron.Impl
             get { return _txHeader->Crc; }
         }
 
-
-
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
         {
             _dataPager = env.Options.DataPager;
