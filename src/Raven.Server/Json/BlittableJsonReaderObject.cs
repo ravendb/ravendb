@@ -184,6 +184,9 @@ namespace Raven.Server.Json
 
         private unsafe LazyStringValue GetPropertyName(int propertyId)
         {
+            if (_cachedProperties != null)
+                return _cachedProperties.GetProperty(propertyId);
+
             if (_parent != null)
                 return _parent.GetPropertyName(propertyId);
 

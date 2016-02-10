@@ -402,5 +402,26 @@ namespace Raven.Server.Json
                 await writer.WriteArrayAsync(this, state, parser);
             }
         }
+
+        public async Task<BlittableJsonReaderObject> ReadObjectWithExternalProperties(DynamicJsonValue obj, string debugTag)
+        {
+            var state = new JsonParserState();
+            using (var parser = new ObjectJsonParser(state, obj, this))
+            {
+                var writer = new BlittableJsonDocumentBuilder(this, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, state);
+                try
+                {
+                    var writeToken = await writer.ReadPartialObject();
+                    writer.FinalizeDocumentWithoutProperties(writeToken, CachedProperties.Version);
+                    _disposables.Add(writer);
+                    return writer.CreateReader(CachedProperties);
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
+            }
+        }
     }
 }

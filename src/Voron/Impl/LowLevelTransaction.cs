@@ -183,6 +183,7 @@ namespace Voron.Impl
 
         internal HashSet<PageFromScratchBuffer> GetTransactionPages()
         {
+            VerifyNoDuplicateScratchPages();
             return _transactionPages;
         }
 
@@ -287,9 +288,9 @@ namespace Voron.Impl
 
             Debug.Assert(pageNumber < State.NextPageNumber);
 
-
+#if VALIDATE
             VerifyNoDuplicateScratchPages();
-
+#endif
             var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
             _transactionPages.Add(pageFromScratchBuffer);
 
@@ -300,7 +301,7 @@ namespace Voron.Impl
             }
 
             _scratchPagesTable[pageNumber] = pageFromScratchBuffer;
-
+           
             _dirtyPages.Add(pageNumber);
 
             if (numberOfPages > 1)
@@ -311,7 +312,9 @@ namespace Voron.Impl
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
 
+#if VALIDATE
             VerifyNoDuplicateScratchPages();
+#endif
 
             return newPage;
         }
@@ -340,7 +343,7 @@ namespace Voron.Impl
                 _transactionPages.Add(pageFromScratchBuffer);
                 _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
                 _dirtyOverflowPages.Remove(pageNumber + i);
-                _dirtyPages.Add(pageNumber + 1);
+                _dirtyPages.Add(pageNumber + i);
 
                 var newPage = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber,
                     value.PositionInScratchBuffer + i);
@@ -350,7 +353,7 @@ namespace Voron.Impl
         }
 
 
-        [Conditional("VALIDATE")]
+        [Conditional("DEBUG")]
         public void VerifyNoDuplicateScratchPages()
         {
             var pageNums = new HashSet<long>();

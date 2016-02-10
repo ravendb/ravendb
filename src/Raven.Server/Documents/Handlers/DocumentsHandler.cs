@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
@@ -36,14 +37,10 @@ namespace Raven.Server.Documents
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                long newEtag;
+                PutResult putResult;
                 using (context.Transaction = context.Environment.WriteTransaction())
                 {
-                    if (id[id.Length - 1] == '/')
-                    {
-                        id = id + DocumentsStorage.IdentityFor(context, id);
-                    }
-                    newEtag = DocumentsStorage.Put(context, id, etag, doc);
+                    putResult = DocumentsStorage.Put(context, id, etag, doc);
                     context.Transaction.Commit();
                     // we want to release the transaction before we write to the network
                 }
@@ -52,8 +49,8 @@ namespace Raven.Server.Documents
 
                 var reply = new DynamicJsonValue
                 {
-                    ["Key"] = id,
-                    ["Etag"] = newEtag
+                    ["Key"] = putResult.Key,
+                    ["Etag"] = putResult.ETag
                 };
 
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
@@ -175,15 +172,8 @@ namespace Raven.Server.Documents
                 {
                     documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
                 }
-                await WriteDocuments(context, documents);
+                await WriteDocumentsAsync(context, documents);
             }
-        }
-
-        private async Task WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
-        {
-            var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
-            await writer.WriteDocumentsAsync(context, documents);
-            writer.Flush();
         }
 
         private unsafe long ComputeAllDocumentsEtag(RavenOperationContext context)
@@ -218,7 +208,7 @@ namespace Raven.Server.Documents
             var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringFor("Results"));
-            await writer.WriteDocumentsAsync(context, documents);
+            await WriteDocumentsAsync(context, writer, documents);
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringFor("Includes"));
             writer.WriteStartArray();

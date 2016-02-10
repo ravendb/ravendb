@@ -49,7 +49,7 @@ class editDocument extends viewModelBase {
     relatedDocumentHrefs = ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
-    lodaedDocumentName = ko.observable('');
+    loadedDocumentName = ko.observable('');
     isSaveEnabled: KnockoutComputed<Boolean>;
     documentSize: KnockoutComputed<string>;
     isInDocMode = ko.observable(true);
@@ -57,7 +57,7 @@ class editDocument extends viewModelBase {
     docTitle: KnockoutComputed<string>;
     isNewLineFriendlyMode = ko.observable(false);
     autoCollapseMode = ko.observable(false);
-    isFirstDocumenNavtDisabled: KnockoutComputed<boolean>;
+    isFirstDocumentNavDisabled: KnockoutComputed<boolean>;
     isLastDocumentNavDisabled: KnockoutComputed<boolean>;
     newLineToggle = '\\n';
     isSystemDocumentByDocTitle = ko.observable(false);
@@ -121,8 +121,8 @@ class editDocument extends viewModelBase {
 
 
         this.docTitle = ko.computed(() => {
-            if (this.isInDocMode() == true) {
-                if (this.isCreatingNewDocument() === true) {
+            if (this.isInDocMode()) {
+                if (this.isCreatingNewDocument()) {
                     this.isSystemDocumentByDocTitle(false);
                     return 'New Document';
                 } else {
@@ -147,12 +147,12 @@ class editDocument extends viewModelBase {
             }
         });
 
-        this.isFirstDocumenNavtDisabled = ko.computed(() => {
+        this.isFirstDocumentNavDisabled = ko.computed(() => {
             var list = this.docsList();
             if (list) {
                 var currentDocumentIndex = list.currentItemIndex();
 
-                if (currentDocumentIndex == 0) {
+                if (currentDocumentIndex === 0) {
                     return true;
                 }
             }
@@ -166,7 +166,7 @@ class editDocument extends viewModelBase {
                 var currentDocumentIndex = list.currentItemIndex();
                 var totalDocuments = list.totalResultCount();
 
-                if (currentDocumentIndex == totalDocuments - 1) {
+                if (currentDocumentIndex === totalDocuments - 1) {
                     return true;
                 }
             }
@@ -175,7 +175,6 @@ class editDocument extends viewModelBase {
         });
     }
 
-    // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
         super.canActivate(args);
         var canActivateResult = $.Deferred();
@@ -193,8 +192,7 @@ class editDocument extends viewModelBase {
             return canActivateResult;
         } else if (args && args.item && args.list) {
             return $.Deferred().resolve({ can: true }); //todo: maybe treat case when there is collection and item number but no id
-        }
-        else if (args && args.index) {
+        } else if (args && args.index) {
             this.isInDocMode(false);
             var indexName: string = args.index;
             var queryText: string = args.query;
@@ -202,8 +200,7 @@ class editDocument extends viewModelBase {
             
             if (args.sorts) {
                 sorts = args.sorts.split(',').map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
-                
-        } else {
+            } else {
                 sorts = [];
             }
                 
@@ -218,7 +215,7 @@ class editDocument extends viewModelBase {
             list.getNthItem(item)
                 .done((doc: document) => {
                     this.document(doc);
-                    this.lodaedDocumentName("");
+                    this.loadedDocumentName("");
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
@@ -239,11 +236,11 @@ class editDocument extends viewModelBase {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
 
-        this.lodaedDocumentName(this.userSpecifiedId());
+        this.loadedDocumentName(this.userSpecifiedId());
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId],false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.computed(()=> {
-            return (this.dirtyFlag().isDirty() || this.lodaedDocumentName() == "");// && !!self.userSpecifiedId(); || 
+            return (this.dirtyFlag().isDirty() || this.loadedDocumentName() == "");// && !!self.userSpecifiedId(); || 
         }, this);
 
         // Find the database and collection we're supposed to load.
@@ -280,7 +277,7 @@ class editDocument extends viewModelBase {
 
     updateNewlineLayoutInDocument(unescapeNewline) {
         var dirtyFlagValue = this.dirtyFlag().isDirty();
-        if (unescapeNewline == true) {
+        if (unescapeNewline) {
             this.documentText(this.unescapeNewlinesAndTabsInTextFields(this.documentText()));
             this.docEditor.getSession().setMode('ace/mode/json_newline_friendly');
         } else {
@@ -289,13 +286,11 @@ class editDocument extends viewModelBase {
             this.formatDocument();
         }
 
-        if (dirtyFlagValue == false) {
+        if (!dirtyFlagValue) {
             this.dirtyFlag().reset();
         }
     }
     
-
-    // Called when the view is attached to the DOM.
     attached() {
         super.attached();
         this.setupKeyboardShortcuts();
@@ -336,7 +331,6 @@ class editDocument extends viewModelBase {
         this.createKeyboardShortcut("alt+page-down", () => this.nextDocumentOrFirst(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+s", () => this.saveDocument(), editDocument.editDocSelector); // Q. Why do we have to setup ALT+S, when we could just use HTML's accesskey attribute? A. Because the accesskey attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
-        //this.createKeyboardShortcut("/", () => this.docsList(), editDocument.editDocSelector);
     }
 
     focusOnMetadata() {
@@ -390,15 +384,10 @@ class editDocument extends viewModelBase {
                 }
 
                 var newTokenValue = curToken.value
-                    //.replace(/(\\n|\\r\\n)/g, '\\\\r\\\\n')
-                    //.replace(/(\n|\r\n)/g, '\\r\\n')
-                    //.replace(/(\\t)/g, '\\\\t')
-                    //.replace(/(\t)/g, '\\t');                    
                     .replace(/(\r\n)/g, '\\r\\n')
                     .replace(/(\n)/g, '\\n')
                     .replace(/(\t)/g, '\\t');
                 text += newTokenValue;
-                //text += curToken.value.replace(/(\n|\r\n)/g, '\\r\\n');
             } else {
                 text += curToken.value;
             }
@@ -419,10 +408,7 @@ class editDocument extends viewModelBase {
                         this.isNewLineFriendlyMode.toggle();
                     }
                 });
-            
-        }
-        else
-        {
+        } else {
             this.isNewLineFriendlyMode.toggle();
         }
     }
@@ -454,9 +440,7 @@ class editDocument extends viewModelBase {
         var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
         var curToken = iterator.getCurrentToken();
         // first, calculate newline indexes
-        var rowsIndexes = str.split("").map(function (x, index) {return { char: x, index: index } }).filter(function (x) {return x.char == "\n" }).map(function (x) {return x.index });
-
-        
+        var rowsIndexes = str.split("").map((x, index) => { return { char: x, index: index } }).filter(x => x.char === "\n").map(x => x.index);
 
         // start iteration from the end of the document
         while (curToken) {
@@ -512,7 +496,7 @@ class editDocument extends viewModelBase {
     saveDocument() {
         this.isInDocMode(true);
         var currentDocumentId = this.userSpecifiedId();
-        if ((currentDocumentId == "") || (this.lodaedDocumentName() != currentDocumentId)) {
+        if ((currentDocumentId == "") || (this.loadedDocumentName() != currentDocumentId)) {
             //the name of the document was changed and we have to save it as a new one
             this.isCreatingNewDocument(true);
         }
@@ -525,7 +509,7 @@ class editDocument extends viewModelBase {
         } else {
             try {
                 var updatedDto;
-                if (this.isNewLineFriendlyMode() === true) {
+                if (this.isNewLineFriendlyMode()) {
                     updatedDto = JSON.parse(this.escapeNewlinesAndTabsInTextFields(this.documentText()));
                 } else {
                     updatedDto = JSON.parse(this.documentText());
@@ -668,7 +652,7 @@ class editDocument extends viewModelBase {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
         loadDocTask.done((document: document)=> {
             this.document(document);
-            this.lodaedDocumentName(this.userSpecifiedId());
+            this.loadedDocumentName(this.userSpecifiedId());
             this.dirtyFlag().reset(); //Resync Changes
 
             this.loadRelatedDocumentsList(document);
@@ -697,7 +681,7 @@ class editDocument extends viewModelBase {
         }
         } else {
             this.queryResultList().getNthItem(this.currentQueriedItemIndex).done((doc) => this.document(doc));
-            this.lodaedDocumentName("");
+            this.loadedDocumentName("");
     }
     }
 
@@ -781,14 +765,14 @@ class editDocument extends viewModelBase {
             if (list) {
                 list.getNthItem(index)
                     .done((doc: document) => {
-                        if (this.isInDocMode() === true) {
+                        if (this.isInDocMode()) {
                             this.loadDocument(doc.getId());
                             list.currentItemIndex(index);
                             this.updateUrl(doc.getId());
                         }
                         else {
                             this.document(doc);
-                            this.lodaedDocumentName("");
+                            this.loadedDocumentName("");
                             this.dirtyFlag().reset(); //Resync Changes
                         }
 
@@ -845,10 +829,9 @@ class editDocument extends viewModelBase {
             var metaDto = this.metadata().toDto();
 
             documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
-
             var metaString = this.stringify(metaDto);
             this.metadataText(metaString);
-            if (meta.id != undefined) {
+            if (meta.id) {
                 this.userSpecifiedId(meta.id);
             }
         }
@@ -878,7 +861,6 @@ class editDocument extends viewModelBase {
     }
 
     appendRecentDocument(docId: string) {
-
         var existingRecentDocumentsStore = editDocument.recentDocumentsInDatabases.first(x=> x.databaseName == this.databaseForEditedDoc.name);
         if (existingRecentDocumentsStore) {
             var existingDocumentInStore = existingRecentDocumentsStore.recentDocuments.first(x=> x === docId);
@@ -888,7 +870,6 @@ class editDocument extends viewModelBase {
                 }
                 existingRecentDocumentsStore.recentDocuments.unshift(docId);
             }
-
         } else {
             editDocument.recentDocumentsInDatabases.push({ databaseName: this.databaseForEditedDoc.name, recentDocuments: ko.observableArray([docId]) });
         }

@@ -172,15 +172,6 @@ namespace Voron.Impl.Journal
 			}
 
             var txPages = tx.GetTransactionPages();
-#if DEBUG
-	        var pageNums = new HashSet<long>();
-	        foreach (var txPage in txPages)
-	        {
-                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-                if(pageNums.Add(scratchPage.PageNumber) == false)
-                    throw new VoronUnrecoverableErrorException("Duplicate page in transaction: " + scratchPage.PageNumber + " " + scratchPage);
-            }
-#endif
             foreach ( var txPage in txPages )
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);

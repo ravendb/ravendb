@@ -41,11 +41,9 @@ namespace Raven.Server.Documents
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
 
                 var documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
-                await writer.WriteDocumentsAsync(context, documents);
-                writer.Flush();
+                await WriteDocumentsAsync(context, documents);
             }
         }
 
