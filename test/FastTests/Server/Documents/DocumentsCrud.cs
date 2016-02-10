@@ -541,34 +541,17 @@ namespace FastTests.Server.Documents
 
                 using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
-                    ["ThisDocId"] = $"2"
+                    ["ThisDocId"] = "2"
                 }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var putResult = _documentsStorage.Put(ctx, key, null, doc);
                     Assert.Equal(5, putResult.ETag);
+                    Assert.Equal("users/5", putResult.Key);
                 }
                 ctx.Transaction.Commit();
             }
 
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
-            {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
-
-                for (int i = 1; i < 5; i++)
-                {
-                    var id = (i != 2) ? i : 5;
-                    var document = _documentsStorage.Get(ctx, $"users/{id}");
-                    Assert.NotNull(document);
-                    Assert.Equal(id, document.Etag);
-                    Assert.Equal($"users/{id}", document.Key);
-                    string docid;
-                    document.Data.TryGet("ThisDocId", out docid);
-                    Assert.Equal($"{i}", docid);
-                }
-
-                ctx.Transaction.Commit();
-            }
         }
 
         public void Dispose()
