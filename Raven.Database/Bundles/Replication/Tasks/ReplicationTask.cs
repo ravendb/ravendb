@@ -285,7 +285,8 @@ namespace Raven.Bundles.Replication.Tasks
                     {
                         //If we didn't get any work to do and the destination can't be stale for more than 5 minutes
                         //We will skip querying the destination for its last Etag until we get some real work.
-                        if (stat.LastReplicatedEtag == lastWorkDocumentEtag && stat.LastReplicatedAttachmentEtag == lastWorkAttachmentEtag
+                        if (lastWorkDocumentEtag!=null && lastWorkAttachmentEtag!= null &&
+                            stat.LastReplicatedEtag == lastWorkDocumentEtag && stat.LastReplicatedAttachmentEtag == lastWorkAttachmentEtag
                             && (SystemTime.UtcNow - (stat.LastSuccessTimestamp ?? DateTime.MinValue)).TotalMinutes <= 5)
                             continue;
                     }
@@ -1235,7 +1236,6 @@ namespace Raven.Bundles.Replication.Tasks
                     DataAsJson = new RavenJObject()
                 })
                 .ToList();
-
             var results = docsToReplicate.Concat(tombstones);
 
             if (tombstones.Count >= maxNumberOfTombstones + 1)
