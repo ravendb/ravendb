@@ -228,6 +228,10 @@ namespace Voron.Data.Tables
             if (ptr == null)
                 return;
 
+            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
+            NumberOfEntries--;
+            stats->NumberOfEntries = NumberOfEntries;
+
             DeleteValueFromIndex(id, new TableValueReader(ptr, size));
 
             var largeValue = (id % _pageSize) == 0;
