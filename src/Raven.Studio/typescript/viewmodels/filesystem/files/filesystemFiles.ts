@@ -231,12 +231,12 @@ class filesystemFiles extends viewModelBase {
         return list;
     }
 
-    fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
+    fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), this.escapeQueryString(directory), skip, take).execute();
         return task;
     }
 
-    fetchRevisions(skip: number, take: number): JQueryPromise<pagedResultSet> {
+    fetchRevisions(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         var task = new getFilesystemRevisionsCommand(appUrl.getFileSystem(), skip, take).execute();
         return task;
     }
@@ -442,7 +442,7 @@ class filesystemFiles extends viewModelBase {
 
             new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
                 .execute()
-                .done((results: pagedResultSet) => {
+                .done((results: pagedResultSet<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showMessage("There are no files matching your query.", "Nothing to do");
                 } else {

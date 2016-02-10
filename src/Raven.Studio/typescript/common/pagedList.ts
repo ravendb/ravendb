@@ -7,11 +7,11 @@ class pagedList {
     totalResultCount = ko.observable(0);
     private items = [];
     isFetching = false;
-    queuedFetch: { skip: number; take: number; task: JQueryDeferred<pagedResultSet> } = null;
+    queuedFetch: { skip: number; take: number; task: JQueryDeferred<pagedResultSet<any>> } = null;
     collectionName = "";
     currentItemIndex = ko.observable(0);
 
-    constructor(private fetcher: (skip: number, take: number) => JQueryPromise<pagedResultSet>) {
+    constructor(private fetcher: (skip: number, take: number) => JQueryPromise<pagedResultSet<any>>) {
         if (!fetcher) {
             throw new Error("Fetcher must be specified.");
         }
@@ -32,7 +32,7 @@ class pagedList {
         return this.items ? this.items.length : 0;
     }
 
-    fetch(skip: number, take: number): JQueryPromise<pagedResultSet> {
+    fetch(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         if (this.isFetching) {
             this.queuedFetch = { skip: skip, take: take, task: $.Deferred() };
             return this.queuedFetch.task;
@@ -41,7 +41,7 @@ class pagedList {
         var cachedItemsSlice = this.getCachedSliceOrNull(skip, take);
         if (cachedItemsSlice) {
             // We've already fetched these items. Just return them immediately.
-            var deferred = $.Deferred<pagedResultSet>();
+            var deferred = $.Deferred<pagedResultSet<any>>();
             var results = new pagedResultSet(cachedItemsSlice, this.totalResultCount());
             deferred.resolve(results);
             return deferred;
@@ -50,7 +50,7 @@ class pagedList {
             // We haven't fetched some of the items. Fetch them now from remote.
             this.isFetching = true;
             var remoteFetch = this.fetcher(skip, take)
-                .done((resultSet: pagedResultSet) => {
+                .done((resultSet: pagedResultSet<any>) => {
                     this.totalResultCount(resultSet.totalResultCount);
                     resultSet.items.forEach((r, i) => this.items[i + skip] = r);
                 })
@@ -79,7 +79,7 @@ class pagedList {
             deferred.resolve(cachedItemArray[0]);
         } else {
             this.fetch(nth, 1)
-                .done((result: pagedResultSet) => {
+                .done((result: pagedResultSet<any>) => {
                     deferred.resolve(result.items[0]);
                 })
                 .fail(error => deferred.reject(error));

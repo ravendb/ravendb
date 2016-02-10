@@ -55,7 +55,7 @@ class indexAceAutoCompleteProvider {
                 if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
                     new getDocumentsByEntityNameCommand(new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase), 0, 1)
                         .execute()
-                        .done((result: pagedResultSet) => {
+                        .done((result: pagedResultSet<any>) => {
                             if (!!result && result.totalResultCount > 0) {
                                 var documentPattern: document = new document(result.items[0]);
                                 deferred.resolve(documentPattern.getDocumentPropertyNames());
