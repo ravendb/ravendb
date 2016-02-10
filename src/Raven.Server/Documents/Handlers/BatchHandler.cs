@@ -107,7 +107,7 @@ namespace Raven.Server.Documents
                         switch (parsedCommands[i].Method)
                         {
                             case "PUT":
-                                var newEtag = DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
+                                var putResult = DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
                                     parsedCommands[i].Document);
 
                                 BlittableJsonReaderObject metadata;
@@ -115,8 +115,8 @@ namespace Raven.Server.Documents
 
                                 reply.Add(new DynamicJsonValue
                                 {
-                                    ["Key"] = parsedCommands[i].Key,
-                                    ["Etag"] = newEtag,
+                                    ["Key"] = putResult.Key,
+                                    ["Etag"] = putResult.ETag,
                                     ["Method"] = "PUT",
                                     ["AdditionalData"] = parsedCommands[i].AdditionalData,
                                     ["Metadata"] = metadata

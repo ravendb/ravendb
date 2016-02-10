@@ -183,8 +183,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Equal(1, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/1", null, doc);
+                    Assert.Equal(1, putResult.ETag);
                 }
 
                 ctx.Transaction.Commit();
@@ -205,8 +205,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/2", null, doc);
-                    Assert.Equal(2, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/2", null, doc);
+                    Assert.Equal(2, putResult.ETag);
                 }
 
                 ctx.Transaction.Commit();
@@ -229,8 +229,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Equal(1, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/1", null, doc);
+                    Assert.Equal(1, putResult.ETag);
                     _documentsStorage.Delete(ctx, "users/1", null);
                 }
 
@@ -251,8 +251,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/2", null, doc);
-                    Assert.Equal(2, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/2", null, doc);
+                    Assert.Equal(2, putResult.ETag);
                 }
 
                 ctx.Transaction.Commit();
@@ -498,6 +498,73 @@ namespace FastTests.Server.Documents
                 {
                     _documentsStorage.Put(ctx, "users/1", null, doc);
                     Assert.Throws<ConcurrencyException>(() => _documentsStorage.Put(ctx, "users/1", 0, doc));
+                }
+
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
+        public async Task PutDocumentWithoutId()
+        {
+            var key = "users/";
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                for (int i = 1; i < 5; i++)
+                {
+                    using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["ThisDocId"] = $"{i}"
+                    }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    {
+                        var putResult = _documentsStorage.Put(ctx, key, null, doc);
+                        Assert.Equal(i, putResult.ETag);
+                    }
+                }
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                _documentsStorage.Delete(ctx, "users/2", null);
+
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["ThisDocId"] = $"2"
+                }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    var putResult = _documentsStorage.Put(ctx, key, null, doc);
+                    Assert.Equal(5, putResult.ETag);
+                }
+                ctx.Transaction.Commit();
+            }
+
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                for (int i = 1; i < 5; i++)
+                {
+                    var id = (i != 2) ? i : 5;
+                    var document = _documentsStorage.Get(ctx, $"users/{id}");
+                    Assert.NotNull(document);
+                    Assert.Equal(id, document.Etag);
+                    Assert.Equal($"users/{id}", document.Key);
+                    string docid;
+                    document.Data.TryGet("ThisDocId", out docid);
+                    Assert.Equal($"{i}", docid);
                 }
 
                 ctx.Transaction.Commit();
