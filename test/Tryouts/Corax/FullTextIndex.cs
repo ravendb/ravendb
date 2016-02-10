@@ -79,7 +79,7 @@ namespace Tryouts.Corax
             public unsafe string[] Query(string name, string value)
             {
                 var property = _tx.ReadTree(name);
-                if(property == null)
+                if (property == null)
                     return Array.Empty<string>();
 
                 var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, property, value, 0);
@@ -153,7 +153,9 @@ namespace Tryouts.Corax
                     while (_tokenSource.Next())
                     {
                         var term = _tokenSource.GetCurrent();
-                        _parent._analyzer.Process(fieldName, term);
+                        if (_parent._analyzer.Process(fieldName, term) == false)
+                            continue;
+
                     }
                 }
 
