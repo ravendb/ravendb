@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
@@ -401,7 +402,7 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public long Put(RavenOperationContext context, string key, long? expectedEtag,
+        public PutResult Put(RavenOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -409,6 +410,12 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
+
+            if (key[key.Length - 1] == '/')
+            {
+                var str = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, context);
+                key = $"{key}{str}";
+            }
 
             var collectionName = GetCollectionName(key, document);
             byte* lowerKey;
@@ -451,7 +458,46 @@ namespace Raven.Server.Documents
                         $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
                 table.Update(oldValue.Id, tbv);
             }
-            return newEtag;
+
+            return new PutResult
+            {
+                ETag = newEtag,
+                Key = key
+            };
+        }
+
+        private long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, RavenOperationContext context)
+        {
+            var identities = context.Transaction.ReadTree("Identities");
+            var nextIdentityValue = identities.Increment(key, 1);
+
+            var table = new Table(_docsSchema, context.Transaction);
+
+            if (table.ReadByKey(GetSliceFromKey(context, $"{key}{nextIdentityValue}")) == null)
+            {
+                return nextIdentityValue;
+            }
+
+            var lastKnownBusy = nextIdentityValue;
+            var maybeFree = nextIdentityValue * 2;
+            var lastKnownFree = long.MaxValue;
+            while (true)
+            {
+                if (table.ReadByKey(GetSliceFromKey(context, $"{key}{maybeFree}")) == null)
+                {
+                    if (lastKnownBusy + 1 == maybeFree)
+                    {
+                        return identities.Increment(key, maybeFree);
+                    }
+                    lastKnownFree = maybeFree;
+                    maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
+                }
+                else
+                {
+                    lastKnownBusy = maybeFree;
+                    maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
+                }
+            }
         }
 
         private static string GetCollectionName(string key, BlittableJsonReaderObject document)
