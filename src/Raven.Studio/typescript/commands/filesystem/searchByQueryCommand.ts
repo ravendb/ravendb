@@ -9,7 +9,7 @@ class searchByQueryCommand  extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<any>> {
 
         var filesTask = this.fetchFiles();
 

@@ -455,7 +455,7 @@ class query extends viewModelBase {
                         this.isLoading(false);
                         this.focusOnQuery();
                     })
-                    .done((queryResults: pagedResultSet) => {
+                    .done((queryResults: pagedResultSet<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
                         this.indexSuggestions([]);
                         if (queryResults.totalResultCount == 0) {
@@ -630,7 +630,7 @@ class query extends viewModelBase {
         var queryResult = this.runQuery();
         queryResult
             .fetch(0, 1)
-            .done((results: pagedResultSet) => {
+            .done((results: pagedResultSet<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showMessage("There are no documents matching your query.", "Nothing to do");
                 } else {
@@ -685,7 +685,7 @@ class query extends viewModelBase {
                 var collectionName = indexName.substring(8);
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
-                    .done((result: pagedResultSet) => {
+                    .done((result: pagedResultSet<any>) => {
                         if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
                             if (!!dynamicIndexPattern) {

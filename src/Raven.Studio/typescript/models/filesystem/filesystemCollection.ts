@@ -26,7 +26,7 @@ class filesystemCollection{
         return this.itemsList;
     }
 
-    fetchItems(skip: number, take: number): JQueryPromise<pagedResultSet> {
+    fetchItems(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         throw new Error('This method is abstract');
     }
 

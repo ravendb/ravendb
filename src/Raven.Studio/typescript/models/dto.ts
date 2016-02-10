@@ -1538,6 +1538,6 @@ interface generatedCodeDto {
 
 interface collectionsStatsDto {
     NumberOfDocuments: number;
-    Collections: any;
+    Collections: dictionary<number>;
 }
 

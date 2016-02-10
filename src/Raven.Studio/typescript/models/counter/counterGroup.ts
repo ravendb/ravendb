@@ -59,7 +59,7 @@ class counterGroup implements ICollectionBase {
         return list;
     }
 
-    private fetchCounters(skip: number, take: number): JQueryPromise<pagedResultSet> {
+    private fetchCounters(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         var group = this.isAllGroupsGroup ? null : this.name;
         return new getCountersCommand(this.ownerCounterStorage, skip, take, group).execute();
     }
