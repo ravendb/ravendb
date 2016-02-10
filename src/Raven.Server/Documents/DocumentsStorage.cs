@@ -411,13 +411,15 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
 
+            var collectionName = GetCollectionName(key, document);
+            _docsSchema.Create(context.Transaction, collectionName);
+            var table = new Table(_docsSchema, collectionName, context.Transaction);
+
             if (key[key.Length - 1] == '/')
             {
-                var str = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, context);
-                key = $"{key}{str}";
+                key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context);
             }
 
-            var collectionName = GetCollectionName(key, document);
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -435,9 +437,7 @@ namespace Raven.Server.Documents
                 {document.BasePointer, document.Size}
             };
 
-            _docsSchema.Create(context.Transaction, collectionName);
 
-            var table = new Table(_docsSchema, collectionName, context.Transaction);
             var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort) lowerSize));
             if (oldValue == null)
             {
@@ -466,16 +466,15 @@ namespace Raven.Server.Documents
             };
         }
 
-        private long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, RavenOperationContext context)
+        private string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, RavenOperationContext context)
         {
             var identities = context.Transaction.ReadTree("Identities");
             var nextIdentityValue = identities.Increment(key, 1);
 
-            var table = new Table(_docsSchema, context.Transaction);
-
-            if (table.ReadByKey(GetSliceFromKey(context, $"{key}{nextIdentityValue}")) == null)
+            var finalKey = key + nextIdentityValue;
+            if (table.ReadByKey(GetSliceFromKey(context, finalKey)) == null)
             {
-                return nextIdentityValue;
+                return finalKey;
             }
 
             var lastKnownBusy = nextIdentityValue;
@@ -483,11 +482,13 @@ namespace Raven.Server.Documents
             var lastKnownFree = long.MaxValue;
             while (true)
             {
-                if (table.ReadByKey(GetSliceFromKey(context, $"{key}{maybeFree}")) == null)
+                finalKey = key + maybeFree;
+                if (table.ReadByKey(GetSliceFromKey(context, finalKey)) == null)
                 {
                     if (lastKnownBusy + 1 == maybeFree)
                     {
-                        return identities.Increment(key, maybeFree);
+                        nextIdentityValue =  identities.Increment(key, maybeFree);
+                        return key + nextIdentityValue;
                     }
                     lastKnownFree = maybeFree;
                     maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
