@@ -33,7 +33,7 @@ namespace Raven.Server.Documents
                 // a single use token for them.
 
                 // TODO: generate API tokens
-                // TODO: look at _context.HttpContext.Authentication.ChallengeAsync()
+                // TODO: look at Context.HttpContext.Authentication.ChallengeAsync()
                 //var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
                 //var token = authorizer.GenerateSingleUseAuthToken(DatabaseName, User);

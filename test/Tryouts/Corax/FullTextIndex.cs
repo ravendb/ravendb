@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Tryouts.Corax.Analyzers;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -27,6 +28,7 @@ namespace Tryouts.Corax
             });
 
         private readonly UnmanagedBuffersPool _pool;
+        private DefaultAnalyzer _analyzer;
 
         public FullTextIndex(StorageEnvironmentOptions options)
         {
@@ -34,7 +36,7 @@ namespace Tryouts.Corax
             {
                 _pool = new UnmanagedBuffersPool("Index for " + options.BasePath);
                 _env = new StorageEnvironment(options);
-
+                _analyzer = new DefaultAnalyzer();
                 using (var tx = _env.WriteTransaction())
                 {
                     tx.CreateTree("Fields");
@@ -121,6 +123,7 @@ namespace Tryouts.Corax
             private readonly List<BlittableJsonReaderObject> _newEntries = new List<BlittableJsonReaderObject>();
             private readonly List<string> _deletes = new List<string>();
             private long _size;
+            private ITokenSource _tokenSource;
 
 
             public Indexer(FullTextIndex parent, int batchSize = 1024 * 1024 * 16)
@@ -138,7 +141,22 @@ namespace Tryouts.Corax
             public async Task NewEntry(DynamicJsonValue entry, string identifier)
             {
                 entry[Constants.DocumentIdFieldName] = identifier;
-                var blitEntry = await _context.ReadObject(entry, identifier);
+                var blitEntry = await _context.ReadObjectWithExternalProperties(entry, identifier);
+
+
+                for (int i = 0; i < blitEntry.Count; i++)
+                {
+                    var propertyByIndex = blitEntry.GetPropertyByIndex(i);
+                    var fieldName = propertyByIndex.Item1;
+                    _tokenSource = _parent._analyzer.CreateTokenSource(fieldName, _tokenSource);
+                    _tokenSource.SetReader((LazyStringValue)propertyByIndex.Item2);
+                    while (_tokenSource.Next())
+                    {
+                        var term = _tokenSource.GetCurrent();
+                        _parent._analyzer.Process(fieldName, term);
+                    }
+                }
+
                 _newEntries.Add(blitEntry);
                 _size += blitEntry.Size;
                 if (_size < _batchSize)
