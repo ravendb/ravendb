@@ -9,7 +9,7 @@ class getKeysCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<any>> {
         var selector = (keys: timeSeriesKeyDto[]) => keys.map((key: timeSeriesKeyDto) => new timeSeriesKey(key, this.ts));
         var doneTask = $.Deferred();
         var args = {

@@ -545,7 +545,7 @@ class patch extends viewModelBase {
                 var collectionName = indexName.substring(8);
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
-                    .done((result: pagedResultSet) => {
+                    .done((result: pagedResultSet<any>) => {
                         if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
                             var dynamicIndexPattern: document = new document(result.items[0]);
                             if (!!dynamicIndexPattern) {

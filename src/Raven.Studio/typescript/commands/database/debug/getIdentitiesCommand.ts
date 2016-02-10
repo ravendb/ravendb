@@ -15,7 +15,7 @@ class getIdentitiesCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<any>> {
         
         var args = {
             start: this.skip,

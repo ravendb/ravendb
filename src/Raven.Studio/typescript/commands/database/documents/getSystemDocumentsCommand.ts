@@ -9,7 +9,7 @@ class getSystemDocumentsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<any>> {
 
         // To get system docs, we just call /docs asking for docs that start with "Raven/".
         // Unfortunately, this returns a plain array; it doesn't tell how many *total* system docs there are.
