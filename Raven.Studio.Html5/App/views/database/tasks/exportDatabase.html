@@ -135,18 +135,18 @@
                                 </thead>
                                 <tbody data-bind="foreach: filters">
                                     <tr>
-                                        <td><input class="form-control" type="text" data-bind="value: Path" /></td>
-                                        <td><input class="form-control" type="text" data-bind="value: Values[0]" /></td>
+                                        <td><input class="form-control" type="text" data-bind="value: path" /></td>
+                                        <td><input class="form-control" type="text" data-bind="value: value" /></td>
                                         <td>
                                             <div class="btn-group">
                                                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                    <span data-bind="visible: ShouldMatchObservable">Should match</span>
-                                                    <span data-bind="visible: !ShouldMatchObservable()">Should <strong>not</strong> match</span>
+                                                    <span data-bind="visible: shouldMatch">Should match</span>
+                                                    <span data-bind="visible: !shouldMatch()">Should <strong>not</strong> match</span>
                                                     <span class="caret"></span>
                                                 </button>
                                                 <ul class="dropdown-menu" role="menu">
-                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: ShouldMatchObservable.bind(ShouldMatchObservable, true)">Should match</a></li>
-                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: ShouldMatchObservable.bind(ShouldMatchObservable, false)">Should <strong>not</strong> match</a></li>
+                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, true)">Should match</a></li>
+                                                    <li><a href="#" style="text-decoration: none;" data-bind="click: shouldMatch.bind(shouldMatch, false)">Should <strong>not</strong> match</a></li>
                                                 </ul>
                                             </div>
                                         </td>
@@ -174,10 +174,12 @@
                         </pre>
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Command</label>
+                    <pre class="col-sm-9" data-bind="text: exportCommand"></pre>
+                </div>
             </form>
-            <div>
-                
-            </div>
         </div>
     </div>
 </div>
