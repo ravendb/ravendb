@@ -438,19 +438,17 @@ namespace Voron.Data.Fixed
 
                     return allocatePage.Pointer + allocatePage.StartPosition + srcCopyStart + sizeof(long);
                 }
-                else
-                {
-                    byte* newData = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize);
-                    var header = (FixedSizeTreeHeader.Embedded*)newData;
-                    header->ValueSize = _valSize;
-                    header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
-                    header->NumberOfEntries = newEntriesCount;
 
-                    Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
-                        newSize);
+                byte* newData = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize);
+                var header = (FixedSizeTreeHeader.Embedded*)newData;
+                header->ValueSize = _valSize;
+                header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
+                header->NumberOfEntries = newEntriesCount;
 
-                    return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
-                }
+                Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
+                    newSize);
+
+                return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
             }
         }
 
