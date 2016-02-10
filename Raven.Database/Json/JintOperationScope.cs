@@ -127,6 +127,10 @@ namespace Raven.Database.Json
 
                 return rja;
             }
+            if (v.IsDate())
+            {
+                return new RavenJValue(v.AsDate().ToDateTime());
+            }
             if (v.IsObject())
             {
                 return ToRavenJObject(v, propertyKey, recursiveCall);
