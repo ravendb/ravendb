@@ -182,7 +182,18 @@ namespace Voron.Debugging
 				sw.WriteLine("</body></html>");
 				sw.Flush();
 			}
-			Process.Start(output);
+		    var process = new Process
+		    {
+		        StartInfo =
+		        {
+		            FileName = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                    Arguments = output,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+		        }
+		    };
+		    process.Start();
 		}
 
 		private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
