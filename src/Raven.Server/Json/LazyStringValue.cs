@@ -8,9 +8,9 @@ namespace Raven.Server.Json
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>
     {
-        private readonly RavenOperationContext _context;
+        public readonly RavenOperationContext Context;
         public readonly byte* Buffer;
-        public readonly int Size;
+        public int Size;
         public string String;
         public int[] EscapePositions;
         public UnmanagedBuffersPool.AllocatedMemoryData AllocatedMemoryData;
@@ -21,7 +21,7 @@ namespace Raven.Server.Json
         {
             String = str;
             Size = size;
-            _context = context;
+            Context = context;
             Buffer = buffer;
         }
 
@@ -29,10 +29,10 @@ namespace Raven.Server.Json
         public int CompareTo(string other)
         {
             var sizeInBytes = Encoding.UTF8.GetMaxByteCount(other.Length);
-            var tmp = _context.GetNativeTempBuffer(sizeInBytes, out sizeInBytes);
+            var tmp = Context.GetNativeTempBuffer(sizeInBytes, out sizeInBytes);
             fixed (char* pOther = other)
             {
-                var tmpSize = _context.Encoding.GetBytes(pOther, other.Length, tmp, sizeInBytes);
+                var tmpSize = Context.Encoding.GetBytes(pOther, other.Length, tmp, sizeInBytes);
                 return Compare(tmp, tmpSize);
             }
         }
@@ -84,11 +84,11 @@ namespace Raven.Server.Json
             if (self.String != null)
                 return self.String;
 
-            var charCount = self._context.Encoding.GetCharCount(self.Buffer, self.Size);
+            var charCount = self.Context.Encoding.GetCharCount(self.Buffer, self.Size);
             var str = new string(' ', charCount);
             fixed (char* pStr = str)
             {
-                self._context.Encoding.GetChars(self.Buffer, self.Size, pStr, charCount);
+                self.Context.Encoding.GetChars(self.Buffer, self.Size, pStr, charCount);
                 self.String = str;
                 return str;
             }
