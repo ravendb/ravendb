@@ -26,7 +26,9 @@ namespace Tryouts
         public static void Main(string[] args)
         {
             //new DuplicatePageUsage().ShouldNotHappen();
-            Run();
+            //Run();
+
+            new MultiGetOperations().WithPaging().Wait();
         }
 
         private static void Run()

@@ -11,7 +11,7 @@ namespace Raven.Server.Web
         public HttpContext HttpContext;
         public RavenServer RavenServer;
         public RouteMatch RouteMatch;
-
+        public bool AllowResponseCompression;
         public DocumentsStorage DocumentsStorage;
     }
 }

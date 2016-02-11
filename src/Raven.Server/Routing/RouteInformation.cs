@@ -77,5 +77,10 @@ namespace Raven.Server.Routing
 
             return _request;
         }
+
+        public HandleRequest GetRequestHandler()
+        {
+            return _request;
+        }
     }
 }

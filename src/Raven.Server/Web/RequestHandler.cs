@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.Primitives;
@@ -14,17 +15,33 @@ namespace Raven.Server.Web
     {
         protected static readonly ILog Log = LogManager.GetLogger(typeof(RequestHandler).FullName);
 
-        protected HttpContext HttpContext;
-        public RavenServer Server;
-        public ServerStore ServerStore;
-        public RouteMatch RouteMatch;
+        private RequestHandlerContext _context;
+
+        protected HttpContext HttpContext
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _context.HttpContext; }
+        }
+
+        public RavenServer Server
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _context.RavenServer; }
+        }
+        public ServerStore ServerStore
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _context.RavenServer.ServerStore; }
+        }
+        public RouteMatch RouteMatch
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _context.RouteMatch; }
+        }
 
         public virtual void Init(RequestHandlerContext context)
         {
-            HttpContext = context.HttpContext;
-            Server = context.RavenServer;
-            ServerStore = Server.ServerStore;
-            RouteMatch = context.RouteMatch;
+            _context = context;
         }
 
         protected Stream RequestBodyStream()
@@ -65,6 +82,9 @@ namespace Raven.Server.Web
 
         private bool CanAcceptGzip()
         {
+            if (_context.AllowResponseCompression == false)
+                return false;
+
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var val in HttpContext.Request.Headers["Accept-Encoding"])
             {

@@ -159,40 +159,41 @@ namespace Raven.Server.Json
             if (_fieldNames.TryGetValue(field, out value))
                 return value;
             
+            value = GetLazyString(field);
+            _fieldNames[field] = value;
+            return value;
+        }
+
+        public unsafe LazyStringValue GetLazyString(string field)
+        {
             var state = new JsonParserState();
             state.FindEscapePositionsIn(field);
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
-            var memory = GetMemory(maxByteCount+state.GetEscapePositionsSize());
+            var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize());
             try
             {
                 fixed (char* pField = field)
                 {
-                    var address = (byte*)memory.Address;
+                    var address = (byte*) memory.Address;
                     var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
                     state.WriteEscapePositionsTo(address + actualSize);
-                    _fieldNames[field] = value = new LazyStringValue(field, address, actualSize, this)
+                    return new LazyStringValue(field, address, actualSize, this)
                     {
                         AllocatedMemoryData = memory
                     };
                 }
-
             }
             catch (Exception)
             {
                 ReturnMemory(memory);
                 throw;
             }
-            return value;
         }
-
-
 
 
         public unsafe LazyStringValue GetLazyString(char[] chars, int start, int count)
         {
             LazyStringValue value;
-            if (_fieldNames == null)
-                _fieldNames = new Dictionary<string, LazyStringValue>();
 
             var state = new JsonParserState();
             state.FindEscapePositionsIn(chars, start,count);

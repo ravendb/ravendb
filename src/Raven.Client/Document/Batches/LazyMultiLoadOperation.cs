@@ -39,7 +39,7 @@ namespace Raven.Client.Document.Batches
                 query += "&transformer=" + transformer;
             return new GetRequest
             {
-                Url = "/queries/",
+                Url = "/document",
                 Query = query 
             };
         }

@@ -22,6 +22,13 @@ namespace Raven.Server.Routing
             _ravenServer = ravenServer;
         }
 
+        public RouteInformation GetRoute(string method, string path, out RouteMatch match)
+        {
+            var tryMatch = _trie.TryMatch(method, path);
+            match = tryMatch.Match;
+            return tryMatch.Value;
+        }
+
         public async Task HandlePath(HttpContext context, string method, string path)
         {
             var tryMatch = _trie.TryMatch(method, path);
