@@ -108,8 +108,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        [RavenAction("/databases/*/queries", "POST")]
-        public async Task QueriesPost()
+        [RavenAction("/databases/*/doc", "GET", "/databases/{databaseName:string}/doc?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
+        public async Task GetDocument()
+        {
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.Transaction = context.Environment.ReadTransaction();
+                await GetDocumentsById(context, GetStringValuesQueryString("id"));
+            }
+        }
+
+        [RavenAction("/databases/*/doc", "POST", "/databases/{databaseName:string}/queries body{documentsIds:string[]}")]
+        public async Task PostGetDocument()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -128,19 +139,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        [RavenAction("/databases/*/docs", "GET")]
-        public async Task Get()
+
+        [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs")]
+        public async Task GetDocuments()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                if (HttpContext.Request.Query.ContainsKey("id"))
-                {
-                    await GetDocumentsById(context, HttpContext.Request.Query["id"]);
-                    return;
-                }
-
 
                 // everything here operates on all docs
                 var actualEtag = ComputeAllDocumentsEtag(context);
@@ -188,24 +194,38 @@ namespace Raven.Server.Documents
 
         private async Task GetDocumentsById(RavenOperationContext context, StringValues ids)
         {
+            /* TODO: Call AddRequestTraceInfo
+            AddRequestTraceInfo(sb =>
+            {
+                foreach (var id in ids)
+                {
+                    sb.Append("\t").Append(id).AppendLine();
+                }
+            });*/
+
             var documents = new Document[ids.Count];
             for (int i = 0; i < ids.Count; i++)
             {
                 documents[i] = DocumentsStorage.Get(context, ids[i]);
             }
 
-            //TODO: Handle includes
-
             long actualEtag = ComputeEtagsFor(documents);
-
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
             {
                 HttpContext.Response.StatusCode = 304;
                 return;
             }
 
+            var includes = HttpContext.Request.Query["include"];
+            var transformer = HttpContext.Request.Query["transformer"];
+            if (includes.Count > 0)
+            {
+                //TODO: Transformer and includes
+            }
+
+            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
-            var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
+            var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringFor("Results"));
             await WriteDocumentsAsync(context, writer, documents);
