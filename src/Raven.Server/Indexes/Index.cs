@@ -16,6 +16,8 @@ namespace Raven.Server.Indexes
 {
     public abstract class Index : IDisposable
     {
+        private static readonly Slice TypeSlice = "Type";
+
         private static readonly Slice LastMappedEtagSlice = "LastMappedEtag";
 
         private static readonly Slice LastReducedEtagSlice = "LastReducedEtag";
@@ -38,17 +40,53 @@ namespace Raven.Server.Indexes
 
         private ContextPool _contextPool;
 
-        protected Index(int indexId, DocumentsStorage documentsStorage)
+        protected Index(int indexId, IndexType type, DocumentsStorage documentsStorage)
         {
             if (indexId <= 0)
                 throw new ArgumentException("IndexId must be greater than zero.", nameof(indexId));
 
             IndexId = indexId;
+            Type = type;
             _documentsStorage = documentsStorage;
             IndexPersistance = new LuceneIndexPersistance();
         }
 
+        public static Index Create(int indexId, string path, DocumentsStorage documentsStorage)
+        {
+            var options = StorageEnvironmentOptions.ForPath(path);
+            try
+            {
+                options.SchemaVersion = 1;
+
+                var environment = new StorageEnvironment(options);
+                using (var tx = environment.ReadTransaction())
+                {
+                    var statsTree = tx.ReadTree("Stats");
+                    var result = statsTree.Read(TypeSlice);
+                    if (result == null)
+                        throw new InvalidOperationException();
+
+                    var type = (IndexType)result.Reader.ReadLittleEndianInt32();
+
+                    switch (type)
+                    {
+                        case IndexType.Auto:
+                            return AutoIndex.Create(indexId, documentsStorage, environment);
+                        default:
+                            throw new NotImplementedException();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                options.Dispose();
+                throw;
+            }
+        }
+
         public int IndexId { get; }
+
+        public IndexType Type { get; set; }
 
         public string PublicName { get; private set; }
 
@@ -77,8 +115,23 @@ namespace Raven.Server.Indexes
                     options.Dispose();
                     throw;
                 }
+            }
+        }
+
+        protected void Initialize(StorageEnvironment environment)
+        {
+            try
+            {
+                _environment = environment;
+                _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
+                _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
 
                 _initialized = true;
+            }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
             }
         }
 
@@ -87,14 +140,9 @@ namespace Raven.Server.Indexes
             options.SchemaVersion = 1;
             try
             {
-                _environment = new StorageEnvironment(options);
-                _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
-                _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
-
-                using (var tx = _environment.WriteTransaction())
-                {
-                    tx.Commit();
-                }
+                var environment = new StorageEnvironment(options);
+                
+                Initialize(environment);
             }
             catch (Exception)
             {
@@ -152,8 +200,8 @@ namespace Raven.Server.Indexes
 
         private static long ReadLastEtag(Transaction tx, Slice key)
         {
-            var tree = tx.CreateTree("Etags");
-            var readResult = tree.Read(key);
+            var statsTree = tx.CreateTree("Stats");
+            var readResult = statsTree.Read(key);
             long lastEtag = 0;
             if (readResult != null)
                 lastEtag = readResult.Reader.ReadLittleEndianInt64();
@@ -173,8 +221,8 @@ namespace Raven.Server.Indexes
 
         private static unsafe void WriteLastEtag(Transaction tx, Slice key, long etag)
         {
-            var tree = tx.CreateTree("Etags");
-            tree.Add(key, new Slice((byte*)&etag, sizeof(long)));
+            var statsTree = tx.CreateTree("Stats");
+            statsTree.Add(key, new Slice((byte*)&etag, sizeof(long)));
         }
 
         private void ExecuteIndexing()

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 
 using Raven.Server.Documents;
 
+using Voron;
+
 using Document = Raven.Server.Documents.Document;
 
 namespace Raven.Server.Indexes
@@ -11,9 +13,22 @@ namespace Raven.Server.Indexes
     {
         private readonly IDictionary<string, string[]> _documentPathsByCollection = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
-        public AutoIndex(int indexId, DocumentsStorage documentsStorage)
-            : base(indexId, documentsStorage)
+        private AutoIndex(int indexId, DocumentsStorage documentsStorage)
+            : base(indexId, IndexType.Auto, documentsStorage)
         {
+        }
+
+        public static AutoIndex CreateNew()
+        {
+            throw new NotImplementedException();
+        }
+
+        public static AutoIndex Create(int indexId, DocumentsStorage documentsStorage, StorageEnvironment environment)
+        {
+            var instance = new AutoIndex(indexId, documentsStorage);
+            instance.Initialize(environment);
+
+            return instance;
         }
 
         protected override Lucene.Net.Documents.Document ConvertDocument(string collection, Document document)

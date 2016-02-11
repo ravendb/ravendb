@@ -6,7 +6,12 @@ namespace Raven.Server.Indexes
     public class MapIndex : Index
     {
         public MapIndex(int indexId, DocumentsStorage documentsStorage)
-            : base(indexId, documentsStorage)
+            : this(indexId, IndexType.Map,  documentsStorage)
+        {
+        }
+
+        protected MapIndex(int indexId, IndexType type, DocumentsStorage documentsStorage)
+            : base(indexId, type, documentsStorage)
         {
         }
 
