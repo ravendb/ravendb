@@ -402,6 +402,13 @@ namespace Raven.Server.Documents
             return true;
         }
 
+        public void DeleteCollection(RavenOperationContext context, string name, List<long> deletedList, long untilEtag)
+        {
+            name = "@" + name; //todo: avoid this allocation
+            var table = new Table(_docsSchema, name, context.Transaction);
+            table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, untilEtag);
+        }
+
         public PutResult Put(RavenOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document)
         {

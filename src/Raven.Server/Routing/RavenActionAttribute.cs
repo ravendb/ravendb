@@ -10,10 +10,13 @@ namespace Raven.Server.Routing
 
         public string Method { get; }
 
-        public RavenActionAttribute(string path, string method)
+        public string Description { get; }
+
+        public RavenActionAttribute(string path, string method, string description = null)
         {
             Path = path;
             Method = method;
+            Description = description;
         }
     }
 }

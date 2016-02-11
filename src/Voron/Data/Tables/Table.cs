@@ -18,7 +18,7 @@ namespace Voron.Data.Tables
 
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
-        private readonly string _name;
+        public readonly string Name;
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
@@ -73,7 +73,7 @@ namespace Voron.Data.Tables
                 {
                     var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
                     if (readResult == null)
-                        throw new InvalidDataException($"Could not find active sections for {_name}");
+                        throw new InvalidDataException($"Could not find active sections for {Name}");
 
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
 
@@ -94,8 +94,10 @@ namespace Voron.Data.Tables
         {
             _schema = schema;
             _tx = tx;
-            _name = name;
+            Name = name;
             _tableTree = _tx.ReadTree(name);
+            if (_tableTree == null)
+                throw new InvalidDataException($"Cannot find collection name {name}");
             _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
@@ -273,7 +275,7 @@ namespace Voron.Data.Tables
 
                 byte* writePos;
                 if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out writePos) == false)
-                    throw new InvalidDataException($"Cannot write to newly allocated size in {_name} during delete");
+                    throw new InvalidDataException($"Cannot write to newly allocated size in {Name} during delete");
 
                 Memory.Copy(writePos, pos, itemSize);
             }
@@ -322,7 +324,7 @@ namespace Voron.Data.Tables
                 id = AllocateFromSmallActiveSection(size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {_name}");
+                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
 
                 // MemoryCopy into final position.
                 builder.CopyTo(pos);
@@ -373,7 +375,7 @@ namespace Voron.Data.Tables
             {
                 return new FixedSizeTree(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects, indexDef.NameAsSlice, sizeof(long));
             }
-            var tableTree = _tx.ReadTree(_name);
+            var tableTree = _tx.ReadTree(Name);
             var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof (long));
             return index;
         }
@@ -428,7 +430,7 @@ namespace Voron.Data.Tables
 
             var treeHeader = _tableTree.DirectRead(name);
             if (treeHeader == null)
-                throw new InvalidOperationException($"Cannot find tree {name} in table {_name}");
+                throw new InvalidOperationException($"Cannot find tree {name} in table {Name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader);
             _treesBySlice[name] = tree;
@@ -574,6 +576,29 @@ namespace Voron.Data.Tables
                 return;
             }
             Insert(builder);
+        }
+
+        public void DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)
+        {
+            var fst = GetFixedSizeTree(index);
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(long.MinValue) == false)
+                    return;
+                
+                do
+                {
+                    if (it.CurrentKey >= maxValue)
+                        break;
+
+                    deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                } while (it.MoveNext() && deletedList.Count < 10*1024);
+            }
+
+            foreach (var id in deletedList)
+            {
+                Delete(id);
+            }
         }
     }
 }
