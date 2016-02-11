@@ -1,0 +1,11 @@
+{
+  "version": "3.0.4",
+  "frameworks": {
+    "dnxcore50": {
+			"bin": {
+				"assembly": "dnxcore50\\Lucene.Net.dll",
+				"pdb": "dnxcore50\\Lucene.Net.pdb"
+			}
+    }
+  }
+}

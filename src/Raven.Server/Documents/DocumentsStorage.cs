@@ -67,6 +67,8 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; private set; }
 
+        public RavenConfiguration Configuration => _configuration;
+
         public void Dispose()
         {
             Environment?.Dispose();
