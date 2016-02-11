@@ -47,6 +47,40 @@ namespace Raven.Server.Indexes
             }
         }
 
+        public Index GetIndex(int indexId)
+        {
+            Index index;
+            if (_indexes.TryGetValue(indexId, out index) == false)
+                return null;
+
+            return index;
+        }
+
+        public Index GetIndex(string indexName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int CreateIndex(AutoIndexDefinition definition)
+        {
+            var indexId = 1; // TODO
+            AddIndex(indexId, AutoIndex.CreateNew(indexId, definition, _documentsStorage));
+            return indexId;
+        }
+
+        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
+            //FlushMapIndexes();
+            //FlushReduceIndexes();
+
+            _indexes.ForEach(x => x.Value.Dispose());
+        }
+
         private void OpenIndexes()
         {
             if (_documentsStorage.Configuration.Core.RunInMemory)
@@ -66,29 +100,6 @@ namespace Raven.Server.Indexes
         private void AddIndex(int indexId, Index index)
         {
             _indexes[indexId] = index;
-        }
-
-        public Index GetIndex(string indexName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public AutoIndex CreateIndex(AutoIndexDefinition definition)
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Dispose()
-        {
-            //FlushMapIndexes();
-            //FlushReduceIndexes();
-
-            _indexes.ForEach(x => x.Value.Dispose());
         }
     }
 }

@@ -1,7 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 using Raven.Server.Documents;
+using Raven.Server.Indexes.Auto;
 
 using Voron;
 
@@ -11,16 +13,31 @@ namespace Raven.Server.Indexes
 {
     public class AutoIndex : MapIndex
     {
-        private readonly IDictionary<string, string[]> _documentPathsByCollection = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        private readonly AutoIndexDefinition _definition;
+
+        private readonly string[] _fields;
 
         private AutoIndex(int indexId, DocumentsStorage documentsStorage)
             : base(indexId, IndexType.Auto, documentsStorage)
         {
         }
 
-        public static AutoIndex CreateNew()
+        private AutoIndex(int indexId, DocumentsStorage documentsStorage, AutoIndexDefinition definition)
+            : base(indexId, IndexType.Auto, documentsStorage)
         {
-            throw new NotImplementedException();
+            _definition = definition;
+            _fields = definition.MapFields.ToArray();
+            Collections = new[] { definition.Collection };
+        }
+
+        protected override string[] Collections { get; }
+
+        public static AutoIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentsStorage documentsStorage)
+        {
+            var instance = new AutoIndex(indexId, documentsStorage, definition);
+            instance.Initialize();
+
+            return instance;
         }
 
         public static AutoIndex Open(int indexId, DocumentsStorage documentsStorage, StorageEnvironment environment)
@@ -28,15 +45,18 @@ namespace Raven.Server.Indexes
             var instance = new AutoIndex(indexId, documentsStorage);
             instance.Initialize(environment);
 
+            // TODO
+
             return instance;
         }
 
         protected override Lucene.Net.Documents.Document ConvertDocument(string collection, Document document)
         {
-            var documentPaths = _documentPathsByCollection[collection];
+            Debug.Assert(string.Equals(_definition.Collection, collection, StringComparison.OrdinalIgnoreCase), "Collection does not match.");
+
             var indexDocument = new Lucene.Net.Documents.Document();
 
-            foreach (var field in IndexPersistance.DocumentConverter.GetFields(documentPaths, document))
+            foreach (var field in IndexPersistance.DocumentConverter.GetFields(_fields, document))
                 indexDocument.Add(field);
 
             return indexDocument;

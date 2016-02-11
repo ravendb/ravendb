@@ -1,4 +1,6 @@
-﻿using Raven.Server.Documents;
+﻿using System;
+
+using Raven.Server.Documents;
 using Raven.Server.Json;
 
 namespace Raven.Server.Indexes
@@ -15,7 +17,15 @@ namespace Raven.Server.Indexes
         {
         }
 
-        protected override bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext)
+        protected override string[] Collections
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        protected override bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag)
         {
             long lastDocumentEtag;
             using (var tx = databaseContext.Environment.ReadTransaction())
@@ -29,6 +39,7 @@ namespace Raven.Server.Indexes
                 lastMappedEtag = ReadLastMappedEtag(tx);
             }
 
+            lastEtag = lastMappedEtag;
             return lastDocumentEtag > lastMappedEtag;
         }
 

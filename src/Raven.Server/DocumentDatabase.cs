@@ -28,6 +28,7 @@ namespace Raven.Server
         public void Initialize()
         {
             DocumentStorage.Initialize();
+            IndexStore.Initialize();
         }
 
         public void Dispose()

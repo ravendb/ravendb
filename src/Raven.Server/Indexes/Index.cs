@@ -28,8 +28,6 @@ namespace Raven.Server.Indexes
 
         private readonly DocumentsStorage _documentsStorage;
 
-        private readonly HashSet<string> _forCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         private Task _indexingTask;
 
         private bool _initialized;
@@ -45,9 +43,9 @@ namespace Raven.Server.Indexes
             if (indexId <= 0)
                 throw new ArgumentException("IndexId must be greater than zero.", nameof(indexId));
 
+            _documentsStorage = documentsStorage;
             IndexId = indexId;
             Type = type;
-            _documentsStorage = documentsStorage;
             IndexPersistance = new LuceneIndexPersistance();
         }
 
@@ -90,9 +88,9 @@ namespace Raven.Server.Indexes
 
         public string PublicName { get; private set; }
 
-        public bool ShouldRun { get; private set; }
+        public bool ShouldRun { get; private set; } = true;
 
-        public void Initialize()
+        protected void Initialize()
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -126,6 +124,13 @@ namespace Raven.Server.Indexes
                 _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                 _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
 
+                using (var tx = _environment.WriteTransaction())
+                {
+                    tx.CreateTree("Stats");
+
+                    tx.Commit();
+                }
+
                 _initialized = true;
             }
             catch (Exception)
@@ -141,7 +146,7 @@ namespace Raven.Server.Indexes
             try
             {
                 var environment = new StorageEnvironment(options);
-                
+
                 Initialize(environment);
             }
             catch (Exception)
@@ -184,7 +189,9 @@ namespace Raven.Server.Indexes
             _contextPool = null;
         }
 
-        protected abstract bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext);
+        protected abstract string[] Collections { get; }
+
+        protected abstract bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag);
 
         protected abstract Lucene.Net.Documents.Document ConvertDocument(string collection, Document document);
 
@@ -266,13 +273,14 @@ namespace Raven.Server.Indexes
             RavenOperationContext databaseContext;
             RavenOperationContext indexContext;
             using (_documentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-            using (_documentsStorage.ContextPool.AllocateOperationContext(out indexContext))
+            using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                if (IsStale(databaseContext, indexContext) == false)
+                long lastEtag;
+                if (IsStale(databaseContext, indexContext, out lastEtag) == false)
                     return false;
 
                 var foundWork = false;
-                foreach (var collection in _forCollections)
+                foreach (var collection in Collections)
                 {
                     var start = 0;
                     const int PageSize = 1024 * 10;
@@ -280,13 +288,10 @@ namespace Raven.Server.Indexes
                     while (true)
                     {
                         var count = 0;
-                        long lastEtag = 0;
                         var indexDocuments = new List<Lucene.Net.Documents.Document>();
                         using (var tx = databaseContext.Environment.ReadTransaction())
                         {
                             databaseContext.Transaction = tx;
-
-                            lastEtag = ReadLastMappedEtag(tx);
 
                             foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, PageSize))
                             {

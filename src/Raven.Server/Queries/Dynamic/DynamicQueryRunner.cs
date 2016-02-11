@@ -29,7 +29,7 @@ namespace Raven.Server.Queries.Dynamic
             {
                 var autoIndexDef = map.CreateAutoIndexDefinition();
 
-                index = _indexStore.CreateIndex(autoIndexDef);
+                //index = _indexStore.CreateIndex(autoIndexDef);
                 newAutoIndex = true;
             }
 
