@@ -614,7 +614,7 @@ namespace Raven.Client.Connection.Async
             if (key != null)
                 key = Uri.EscapeDataString(key);
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs?id=" + key, method, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/document?id=" + key, method, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
             {
                 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
@@ -780,7 +780,7 @@ namespace Raven.Client.Connection.Async
         private async Task<MultiLoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
                                                            Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default(CancellationToken))
         {
-            var path = operationMetadata.Url + "/docs?";
+            var path = operationMetadata.Url + "/document?";
             if (metadataOnly)
                 path += "&metadata-only=true";
             if (includes != null && includes.Length > 0)
@@ -2027,7 +2027,7 @@ namespace Raven.Client.Connection.Async
 
         public string UrlFor(string documentKey)
         {
-            return Url + "/docs/" + documentKey;
+            return Url + "/document?id=" + documentKey;
         }
 
         public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
@@ -2041,7 +2041,7 @@ namespace Raven.Client.Connection.Async
         {
             var metadata = new RavenJObject();
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, HttpMethod.Head, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/document?id=" + key, HttpMethod.Head, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
                 try
                 {
