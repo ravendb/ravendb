@@ -108,16 +108,16 @@ namespace Raven.Bundles.Replication.Tasks
             };
             docDb.Notifications.OnAttachmentChange += (_, attachmentChangeNotification, ___) =>
             {
-                lastWorkIsIndexOrTransformer = false;
+                lastWorkIsIndexOrTransformer = false;                
                 //There is no need to be thread safe this is only used to prevent unnecessary work
-                lastWorkAttachmentEtag = attachmentChangeNotification.Etag;
+                lastWorkAttachmentEtag = attachmentChangeNotification.Etag??Etag.InvalidEtag;
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
             docDb.Notifications.OnBulkInsertChange += (_, BulkInsertChangeNotification) =>
             {
                 lastWorkIsIndexOrTransformer = false;
                 //There is no need to be thread safe this is only used to prevent unnecessary work
-                lastWorkDocumentEtag = BulkInsertChangeNotification.Etag;
+                lastWorkDocumentEtag = BulkInsertChangeNotification.Etag ?? Etag.InvalidEtag;
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
             docDb.Notifications.OnDocumentChange += (_, dcn, ___) =>
@@ -129,7 +129,7 @@ namespace Raven.Bundles.Replication.Tasks
                     return;
                 lastWorkIsIndexOrTransformer = false;
                 //There is no need to be thread safe this is only used to prevent unnecessary work
-                lastWorkDocumentEtag = dcn.Etag;
+                lastWorkDocumentEtag = dcn.Etag ?? Etag.InvalidEtag;
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
 
@@ -285,8 +285,7 @@ namespace Raven.Bundles.Replication.Tasks
                     {
                         //If we didn't get any work to do and the destination can't be stale for more than 5 minutes
                         //We will skip querying the destination for its last Etag until we get some real work.
-                        if (lastWorkDocumentEtag!=null && lastWorkAttachmentEtag!= null &&
-                            stat.LastReplicatedEtag == lastWorkDocumentEtag && stat.LastReplicatedAttachmentEtag == lastWorkAttachmentEtag
+                        if (stat.LastReplicatedEtag == lastWorkDocumentEtag && stat.LastReplicatedAttachmentEtag == lastWorkAttachmentEtag
                             && (SystemTime.UtcNow - (stat.LastSuccessTimestamp ?? DateTime.MinValue)).TotalMinutes <= 5)
                             continue;
                     }
