@@ -9,10 +9,10 @@ using Voron.Impl.FileHeaders;
 
 namespace Voron.Debugging
 {
-	public class DebugStuff
-	{
-	
-		private const string css = @".css-treeview ul,
+    public class DebugStuff
+    {
+
+        private const string css = @".css-treeview ul,
 .css-treeview li
 {
     padding: 0;
@@ -128,180 +128,180 @@ namespace Voron.Debugging
     }
 }";
 
-		[Conditional("DEBUG")]
-		public unsafe static void RenderAndShow_FixedSizeTree(LowLevelTransaction tx, FixedSizeTree fst)
-		{
-		    var name = fst.Name;
-		    var tree = fst.Parent;
-			RenderHtmlTreeView(writer =>
-			{
-				var ptr = tree.DirectRead(name);
-				if (ptr == null)
-				{
-					writer.WriteLine("<p>empty fixed size tree</p>");
-				}
-				else if (((FixedSizeTreeHeader.Embedded*)ptr)->RootObjectType == RootObjectType.EmbeddedFixedSizeTree)
-				{
-					var header = ((FixedSizeTreeHeader.Embedded*)ptr);
-					writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
-					writer.WriteLine("<ul>");
-					var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-					for (int i = 0; i < header->NumberOfEntries; i++)
-					{
-						var key = *(long*)(dataStart + ((sizeof(long) + header->ValueSize) * i));
-						writer.WriteLine("<li>{0:#,#;;0}</li>", key);
-					}
-					writer.WriteLine("</ul>");
-				}
-				else
-				{
-					var header = (FixedSizeTreeHeader.Large*)ptr;
-					writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
-					writer.WriteLine("<div class='css-treeview'><ul>");
+        [Conditional("DEBUG")]
+        public unsafe static void RenderAndShow_FixedSizeTree(LowLevelTransaction tx, FixedSizeTree fst)
+        {
+            var name = fst.Name;
+            var tree = fst.Parent;
+            RenderHtmlTreeView(writer =>
+            {
+                var ptr = tree.DirectRead(name);
+                if (ptr == null)
+                {
+                    writer.WriteLine("<p>empty fixed size tree</p>");
+                }
+                else if (((FixedSizeTreeHeader.Embedded*)ptr)->RootObjectType == RootObjectType.EmbeddedFixedSizeTree)
+                {
+                    var header = ((FixedSizeTreeHeader.Embedded*)ptr);
+                    writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
+                    writer.WriteLine("<ul>");
+                    var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
+                    for (int i = 0; i < header->NumberOfEntries; i++)
+                    {
+                        var key = *(long*)(dataStart + ((sizeof(long) + header->ValueSize) * i));
+                        writer.WriteLine("<li>{0:#,#;;0}</li>", key);
+                    }
+                    writer.WriteLine("</ul>");
+                }
+                else
+                {
+                    var header = (FixedSizeTreeHeader.Large*)ptr;
+                    writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
+                    writer.WriteLine("<div class='css-treeview'><ul>");
 
-					var page = tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber);
+                    var page = tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber);
 
-					RenderFixedSizeTreePage(tx, page, writer, header, "Root", true);
+                    RenderFixedSizeTreePage(tx, page, writer, header, "Root", true);
 
-					writer.WriteLine("</ul></div>");
-				}
-			});
-		}
+                    writer.WriteLine("</ul></div>");
+                }
+            });
+        }
 
-		private static void RenderHtmlTreeView(Action<TextWriter> action)
-		{
-			if (Debugger.IsAttached == false)
-				return;
+        private static void RenderHtmlTreeView(Action<TextWriter> action)
+        {
+            if (Debugger.IsAttached == false)
+                return;
 
-			var output = Path.GetTempFileName() + ".html";
-            using(var file = File.OpenWrite(output))
+            var output = Path.GetTempFileName() + ".html";
+            using (var file = File.OpenWrite(output))
             using (var sw = new StreamWriter(file))
-			{
-				sw.WriteLine("<html><head><style>{0}</style></head><body>", css);
-				action(sw);
-				sw.WriteLine("</body></html>");
-				sw.Flush();
-			}
-		    var process = new Process
-		    {
-		        StartInfo =
-		        {
-		            FileName = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            {
+                sw.WriteLine("<html><head><style>{0}</style></head><body>", css);
+                action(sw);
+                sw.WriteLine("</body></html>");
+                sw.Flush();
+            }
+            var process = new Process
+            {
+                StartInfo =
+                {
+                    FileName = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
                     Arguments = output,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
-		        }
-		    };
-		    process.Start();
-		}
+                }
+            };
+            process.Start();
+        }
 
-		private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
-		{
-			sw.WriteLine(
+        private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
+        {
+            sw.WriteLine(
                 "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries from {5}</label><ul>",
                 page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text, page.Source);
 
             for (int i = 0; i < page.NumberOfEntries; i++)
-			{
-				if (page.IsLeaf)
-				{
-					var key =
-						*(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + header->ValueSize)) * i));
-					sw.Write("{0:#,#;;0}, ", key);
-				}
-				else
-				{
-					var key =
-					 *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * Math.Max(i, 1)));
-					var pageNum = *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
+            {
+                if (page.IsLeaf)
+                {
+                    var key =
+                        *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + header->ValueSize)) * i));
+                    sw.Write("{0:#,#;;0}, ", key);
+                }
+                else
+                {
+                    var key =
+                     *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * Math.Max(i, 1)));
+                    var pageNum = *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
 
-					var s = key.ToString("#,#");
-					if (i == 0)
-						s = "[smallest]";
+                    var s = key.ToString("#,#");
+                    if (i == 0)
+                        s = "[smallest]";
 
-					RenderFixedSizeTreePage(tx, tx.GetReadOnlyFixedSizeTreePage(pageNum), sw, header, s, false);
-				}
-			}
+                    RenderFixedSizeTreePage(tx, tx.GetReadOnlyFixedSizeTreePage(pageNum), sw, header, s, false);
+                }
+            }
 
-			sw.WriteLine("</ul></li></ul>");
-		}
+            sw.WriteLine("</ul></li></ul>");
+        }
 
-		[Conditional("DEBUG")]
-		public static void RenderAndShow(Tree tree)
-		{
-			var headerData = string.Format("<p>{0}</p>", tree.State);
-			RenderAndShowTree(tree.Llt, tree.State.RootPageNumber, headerData);
-		}
+        [Conditional("DEBUG")]
+        public static void RenderAndShow(Tree tree)
+        {
+            var headerData = string.Format("<p>{0}</p>", tree.State);
+            RenderAndShowTree(tree.Llt, tree.State.RootPageNumber, headerData);
+        }
 
-		[Conditional("DEBUG")]
-		public static void RenderAndShowTree(LowLevelTransaction tx, long startPageNumber, string headerData = null)
-		{
-			RenderHtmlTreeView(writer =>
-			{
-				if (headerData != null)
-					writer.WriteLine(headerData);
-				writer.WriteLine("<div class='css-treeview'><ul>");
+        [Conditional("DEBUG")]
+        public static void RenderAndShowTree(LowLevelTransaction tx, long startPageNumber, string headerData = null)
+        {
+            RenderHtmlTreeView(writer =>
+            {
+                if (headerData != null)
+                    writer.WriteLine(headerData);
+                writer.WriteLine("<div class='css-treeview'><ul>");
 
-				var page = tx.GetReadOnlyTreePage(startPageNumber);
-				RenderPage(tx, page, writer, "Root", true);
+                var page = tx.GetReadOnlyTreePage(startPageNumber);
+                RenderPage(tx, page, writer, "Root", true);
 
-				writer.WriteLine("</ul></div>");
-			});
+                writer.WriteLine("</ul></div>");
+            });
 
-		}
+        }
 
-		public static void DumpTreeToStream(Tree tree, Stream stream)
-		{
-			var headerData = string.Format("<p>{0}</p>", tree.State);
+        public static void DumpTreeToStream(Tree tree, Stream stream)
+        {
+            var headerData = string.Format("<p>{0}</p>", tree.State);
 
-			WriteHtml(new StreamWriter(stream), writer =>
-			{
-				writer.WriteLine(headerData);
-				writer.WriteLine("<div class='css-treeview'><ul>");
+            WriteHtml(new StreamWriter(stream), writer =>
+            {
+                writer.WriteLine(headerData);
+                writer.WriteLine("<div class='css-treeview'><ul>");
 
-				var page = tree.Llt.GetReadOnlyTreePage(tree.State.RootPageNumber);
-				RenderPage(tree.Llt, page, writer, "Root", true);
+                var page = tree.Llt.GetReadOnlyTreePage(tree.State.RootPageNumber);
+                RenderPage(tree.Llt, page, writer, "Root", true);
 
-				writer.WriteLine("</ul></div>");
-			});
-		}
+                writer.WriteLine("</ul></div>");
+            });
+        }
 
-		private static void WriteHtml(TextWriter sw, Action<TextWriter> action)
-		{
-			sw.WriteLine("<html><head><style>{0}</style></head><body>", css);
-			action(sw);
-			sw.WriteLine("</body></html>");
-			sw.Flush();
-		}
+        private static void WriteHtml(TextWriter sw, Action<TextWriter> action)
+        {
+            sw.WriteLine("<html><head><style>{0}</style></head><body>", css);
+            action(sw);
+            sw.WriteLine("</body></html>");
+            sw.Flush();
+        }
 
-		private unsafe static void RenderPage(LowLevelTransaction tx, TreePage page, TextWriter sw, string text, bool open)
-		{
-			sw.WriteLine(
-			   "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
-			   page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text);
+        private unsafe static void RenderPage(LowLevelTransaction tx, TreePage page, TextWriter sw, string text, bool open)
+        {
+            sw.WriteLine(
+               "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
+               page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text);
 
-			for (int i = 0; i < page.NumberOfEntries; i++)
-			{
-				var nodeHeader = page.GetNode(i);
-				if (page.IsLeaf)
-				{
-					var key = new Slice(nodeHeader).ToString();
-					sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, TreeNodeHeader.GetDataSize(tx, nodeHeader));
-				}
-				else
-				{
-					var key = new Slice(nodeHeader).ToString();
+            for (int i = 0; i < page.NumberOfEntries; i++)
+            {
+                var nodeHeader = page.GetNode(i);
+                if (page.IsLeaf)
+                {
+                    var key = new Slice(nodeHeader).ToString();
+                    sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, TreeNodeHeader.GetDataSize(tx, nodeHeader));
+                }
+                else
+                {
+                    var key = new Slice(nodeHeader).ToString();
 
-					var pageNum = nodeHeader->PageNumber;
+                    var pageNum = nodeHeader->PageNumber;
 
-					if (i == 0)
-						key = "[smallest]";
+                    if (i == 0)
+                        key = "[smallest]";
 
-					RenderPage(tx, tx.GetReadOnlyTreePage(pageNum), sw, key, false);
-				}
-			}
-			sw.WriteLine("</ul></li></ul>");
-		}
-	}
+                    RenderPage(tx, tx.GetReadOnlyTreePage(pageNum), sw, key, false);
+                }
+            }
+            sw.WriteLine("</ul></li></ul>");
+        }
+    }
 }
