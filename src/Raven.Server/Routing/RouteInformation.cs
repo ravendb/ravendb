@@ -57,7 +57,7 @@ namespace Raven.Server.Routing
         public async Task CreateDatabase(RequestHandlerContext context)
         {
             var databaseId = context.RouteMatch.GetCapture();
-            var databasesLandlord = context.ServerStore.DatabasesLandlord;
+            var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             Task<DocumentsStorage> task;
             if (databasesLandlord.TryGetOrCreateResourceStore(databaseId, out task) == false)
             {

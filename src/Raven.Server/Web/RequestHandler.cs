@@ -15,13 +15,15 @@ namespace Raven.Server.Web
         protected static readonly ILog Log = LogManager.GetLogger(typeof(RequestHandler).FullName);
 
         protected HttpContext HttpContext;
+        public RavenServer Server;
         public ServerStore ServerStore;
         public RouteMatch RouteMatch;
 
         public virtual void Init(RequestHandlerContext context)
         {
             HttpContext = context.HttpContext;
-            ServerStore = context.ServerStore;
+            Server = context.RavenServer;
+            ServerStore = Server.ServerStore;
             RouteMatch = context.RouteMatch;
         }
 

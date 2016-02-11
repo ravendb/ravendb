@@ -9,7 +9,7 @@ namespace Raven.Server.Web
     public class RequestHandlerContext
     {
         public HttpContext HttpContext;
-        public ServerStore ServerStore;
+        public RavenServer RavenServer;
         public RouteMatch RouteMatch;
 
         public DocumentsStorage DocumentsStorage;
