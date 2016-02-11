@@ -39,7 +39,7 @@ namespace Raven.Server.Documents
         }
 
         [RavenAction("/databases/*/document", "GET", "/databases/{databaseName:string}/document?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
-        public async Task GetDocument()
+        public async Task Get()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
         }
 
         [RavenAction("/databases/*/document", "POST", "/databases/{databaseName:string}/document body{documentsIds:string[]}")]
-        public async Task PostGetDocument()
+        public async Task PostGet()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents
                 DocumentsStorage.Delete(context, id, etag);
                 context.Transaction.Commit();
 
-                HttpContext.Response.StatusCode = 204;
+                HttpContext.Response.StatusCode = 204; // NoContent
 
                 return Task.CompletedTask;
             }
@@ -210,6 +210,16 @@ namespace Raven.Server.Documents
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 await context.WriteAsync(writer, reply);
                 writer.Flush();
+            }
+        }
+
+        [RavenAction("/databases/*/document", "PATCH", "/databases/{databaseName:string}/document?id={documentId:string}")]
+        public async Task Patch()
+        {
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                // TODO: We should implement here ScriptedPatchRequest as the EVAL function in v3.5. We retire the v3.0 PATCH method.
             }
         }
     }
