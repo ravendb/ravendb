@@ -40,8 +40,8 @@ namespace Raven.Server.Documents
 
                     // documents
                     ["LastDocEtag"] = DocumentsStorage.ReadLastEtag(context.Transaction),
-                    ["CountOfDocuments"] = DocumentsStorage.GetNumberOfDocuments(context),
-                    ["DatabaseId"] = DocumentsStorage.Environment.DbId.ToString(),
+                    ["CountOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
+                    ["DatabaseId"] = Database.DocumentsStorage.Environment.DbId.ToString(),
                     ["Is64Bits"] = IntPtr.Size == sizeof (long)
                 });
             }

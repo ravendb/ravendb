@@ -72,7 +72,7 @@ namespace Raven.Server.Documents
                     HttpContext.Response.Headers.Clear();
                     await requestHandler(new RequestHandlerContext
                     {
-                        DocumentsStorage = DocumentsStorage,
+                        Database = Database,
                         RavenServer = Server,
                         RouteMatch = localMatch,
                         HttpContext = HttpContext,

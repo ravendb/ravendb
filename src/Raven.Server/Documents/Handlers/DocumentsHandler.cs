@@ -35,12 +35,12 @@ namespace Raven.Server.Documents
                 IEnumerable<Document> documents;
                 if (HttpContext.Request.Query.ContainsKey("etag"))
                 {
-                    documents = DocumentsStorage.GetDocumentsAfter(context,
+                    documents = Database.DocumentsStorage.GetDocumentsAfter(context,
                         GetLongQueryString("etag"), GetStart(), GetPageSize());
                 }
                 else if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
-                    documents = DocumentsStorage.GetDocumentsStartingWith(context,
+                    documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                         HttpContext.Request.Query["startsWith"],
                         HttpContext.Request.Query["matches"],
                         HttpContext.Request.Query["excludes"],
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
                 }
                 else // recent docs
                 {
-                    documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
+                    documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
                 }
                 await WriteDocumentsAsync(context, documents);
             }
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents
             var buffer = stackalloc long[2];
 
             buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction);
-            buffer[1] = DocumentsStorage.GetNumberOfDocuments(context);
+            buffer[1] = Database.DocumentsStorage.GetNumberOfDocuments(context);
 
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }

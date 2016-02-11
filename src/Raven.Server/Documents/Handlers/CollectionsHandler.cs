@@ -20,11 +20,11 @@ namespace Raven.Server.Documents
                 var collections= new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
-                    ["NumberOfDocuments"] = DocumentsStorage.GetNumberOfDocuments(context),
+                    ["NumberOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
                     ["Collections"] = collections
                 };
 
-                foreach (var collectionStat in DocumentsStorage.GetCollections(context))
+                foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
                 {
                     collections[collectionStat.Name] = collectionStat.Count;
                 }
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
-                var documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
+                var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
                 await WriteDocumentsAsync(context, documents);
             }
         }
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
                         if (maxEtag == -1)
                             maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction);
 
-                        DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
+                        Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
                         context.Transaction.Commit();
                     }
 

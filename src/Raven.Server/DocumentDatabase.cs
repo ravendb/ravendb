@@ -11,8 +11,8 @@ namespace Raven.Server
             Name = name;
             Configuration = configuration;
 
-            DocumentStorage = new DocumentsStorage(name, configuration);
-            IndexStore = new IndexStore(DocumentStorage);
+            DocumentsStorage = new DocumentsStorage(name, configuration);
+            IndexStore = new IndexStore(DocumentsStorage);
         }
 
         public string Name { get; }
@@ -21,19 +21,19 @@ namespace Raven.Server
 
         public RavenConfiguration Configuration { get; }
 
-        public DocumentsStorage DocumentStorage { get; }
+        public DocumentsStorage DocumentsStorage { get; }
 
         public IndexStore IndexStore { get; }
 
         public void Initialize()
         {
-            DocumentStorage.Initialize();
+            DocumentsStorage.Initialize();
             IndexStore.Initialize();
         }
 
         public void Dispose()
         {
-            DocumentStorage.Dispose();
+            DocumentsStorage.Dispose();
         }
     }
 }

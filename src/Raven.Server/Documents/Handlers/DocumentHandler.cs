@@ -29,7 +29,7 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var document = DocumentsStorage.Get(context, ids[0]);
+                var document = Database.DocumentsStorage.Get(context, ids[0]);
                 if (document == null)
                     HttpContext.Response.StatusCode = 404;
                 else
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
             var documents = new Document[ids.Count];
             for (int i = 0; i < ids.Count; i++)
             {
-                documents[i] = DocumentsStorage.Get(context, ids[i]);
+                documents[i] = Database.DocumentsStorage.Get(context, ids[i]);
             }
 
             long actualEtag = ComputeEtagsFor(documents);
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents
                 var etag = GetLongFromHeaders("If-Match");
 
                 context.Transaction = context.Environment.WriteTransaction();
-                DocumentsStorage.Delete(context, id, etag);
+                Database.DocumentsStorage.Delete(context, id, etag);
                 context.Transaction.Commit();
 
                 HttpContext.Response.StatusCode = 204; // NoContent
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents
                 PutResult putResult;
                 using (context.Transaction = context.Environment.WriteTransaction())
                 {
-                    putResult = DocumentsStorage.Put(context, id, etag, doc);
+                    putResult = Database.DocumentsStorage.Put(context, id, etag, doc);
                     context.Transaction.Commit();
                     // we want to release the transaction before we write to the network
                 }

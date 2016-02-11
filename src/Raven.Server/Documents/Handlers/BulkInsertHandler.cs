@@ -136,7 +136,7 @@ namespace Raven.Server.Documents
                             {
                                 foreach (var doc in batch)
                                 {
-                                    DocumentsStorage.Put(context, doc.Key, null, doc.Data);
+                                    Database.DocumentsStorage.Put(context, doc.Key, null, doc.Data);
                                 }
 
                                 context.Transaction.Commit();

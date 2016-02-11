@@ -10,15 +10,15 @@ namespace Raven.Server.Documents
     public abstract class DatabaseRequestHandler : RequestHandler
     {
         protected ContextPool ContextPool;
-        protected DocumentsStorage DocumentsStorage;
+        protected DocumentDatabase Database;
         protected IndexStore IndexStore;
 
         public override void Init(RequestHandlerContext context)
         {
             base.Init(context);
 
-            DocumentsStorage = context.Database.DocumentStorage;
-            ContextPool = DocumentsStorage?.ContextPool;
+            Database = context.Database;
+            ContextPool = Database?.DocumentsStorage?.ContextPool;
             IndexStore = context.Database.IndexStore;
         }
 

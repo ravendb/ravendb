@@ -11,7 +11,7 @@ namespace Raven.Server.Indexes.Handlers
         public Task Get()
         {
             var indexName = GetStringQueryString("name");
-            var query = GetIndexQuery(DocumentsStorage.Configuration.Core.MaxPageSize);
+            var query = GetIndexQuery(Database.DocumentsStorage.Configuration.Core.MaxPageSize);
 
             var runner = new QueryRunner(IndexStore);
 

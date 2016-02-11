@@ -107,7 +107,7 @@ namespace Raven.Server.Documents
                         switch (parsedCommands[i].Method)
                         {
                             case "PUT":
-                                var putResult = DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
+                                var putResult = Database.DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
                                     parsedCommands[i].Document);
 
                                 BlittableJsonReaderObject metadata;
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents
                                 });
                                 break;
                             case "DELETE":
-                                var deleted = DocumentsStorage.Delete(context, parsedCommands[i].Key, parsedCommands[i].Etag);
+                                var deleted = Database.DocumentsStorage.Delete(context, parsedCommands[i].Key, parsedCommands[i].Etag);
                                 reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = parsedCommands[i].Key,
