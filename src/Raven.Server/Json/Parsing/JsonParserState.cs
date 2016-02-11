@@ -66,6 +66,31 @@ namespace Raven.Server.Json.Parsing
             }
         }
 
+
+        public void FindEscapePositionsIn(char[] buffer, int start, int count)
+        {
+            EscapePositions.Clear();
+            //TODO: inefficient, need to copy  COMString::IndexOfCharArray
+            var lastEscape = 0;
+            while (true)
+            {
+                var curEscape = -1;
+
+                foreach (var escapeChar in EscapeChars)
+                {
+                    curEscape = Array.IndexOf(buffer, escapeChar, start + lastEscape, count);
+                    if (curEscape != -1)
+                        break;
+                }
+
+                if (curEscape == -1)
+                    break;
+                EscapePositions.Add(curEscape - lastEscape);
+                lastEscape = curEscape + 1;
+            }
+        }
+
+
         public void WriteEscapePositionsTo(byte* buffer)
         {
             WriteVariableSizeInt(ref buffer, EscapePositions.Count);

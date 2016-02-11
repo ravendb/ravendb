@@ -14,7 +14,8 @@ namespace Tryouts.Corax.Analyzers
 
         bool Next();
 
-        void SetReader(LazyStringValue reader);
-        LazyStringValue GetCurrent();
+        void SetReader(TextReader reader);
+        
+        char[] Buffer { get; }
     }
 }

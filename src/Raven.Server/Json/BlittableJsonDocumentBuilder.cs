@@ -129,7 +129,7 @@ namespace Raven.Server.Json
             var properties = new List<PropertyTag>();
             var firstWrite = _position;
 
-            var fakeFieldName = _context.GetLazyStringFor("_");
+            var fakeFieldName = _context.GetLazyStringForFieldWithCaching("_");
             var propIndex = _context.CachedProperties.GetPropertyId(fakeFieldName);
 
             // Write actual array to the UnmanagedWriteBuffer

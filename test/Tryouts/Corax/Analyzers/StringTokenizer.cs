@@ -1,28 +1,27 @@
 using System.IO;
-using Raven.Server.Json;
+using System.Runtime.CompilerServices;
+using Tryouts.Corax.Analyzers;
 
-namespace Tryouts.Corax.Analyzers
+namespace Corax.Indexing
 {
     public class StringTokenizer : ITokenSource
     {
         private bool _quoted;
-        private LazyStringValue _term;
-        
-        public void SetReader(LazyStringValue reader)
+        private TextReader _reader;
+
+        public StringTokenizer(int maxBufferSize = 256)
         {
-            _term = reader;
-            Start = 0;
-            Position = 0;
+            Buffer = new char[maxBufferSize];
+        }
+
+        public void SetReader(TextReader reader)
+        {
+            _reader = reader;
             Size = 0;
             _quoted = false;
         }
 
-        public unsafe LazyStringValue GetCurrent()
-        {
-            return new LazyStringValue(null, _term.Buffer+Start, Size, _term.Context);
-        }
-
-        public int Start { get; set; }
+        public char[] Buffer { get; }
 
         public int Size { get; set; }
 
@@ -31,26 +30,35 @@ namespace Tryouts.Corax.Analyzers
         public int Column { get; private set; }
         public int Position { get; set; }
 
-        public unsafe bool Next()
+        private bool BufferFull
         {
-            Start += Size;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Buffer.Length == Size; }
+        }
+
+        public bool Next()
+        {
             Size = 0;
-            byte ch = 0;
-            while (Position < _term.Size)
+            Position++;
+            char ch = '\0';
+            while (true)
             {
-                byte prev = ch;
-                ch = _term.Buffer[Position++];
+                char prev = ch;
+                int r = _reader.Read();
                 Column++;
-                if (Position == _term.Size) // EOF
+                if (r == -1) // EOF
                 {
                     if (_quoted && Size > 0)
                     {
                         // we have an unterminated string, so we will ignore the quote, instead of errorring
-                        Start++; // skip quote
-                        return true;
+                        SetReader(new StringReader(new string(Buffer, 0, Size)));
+                        ch = '\0';
+                        continue;
                     }
                     return Size > 0;
                 }
+
+                ch = (char)r;
                 if (ch == '\r' || ch == '\n')
                 {
                     Column = 0;
@@ -60,17 +68,25 @@ namespace Tryouts.Corax.Analyzers
                     }
                     if (_quoted)
                     {
-                        Size++;
+                        AppendToBuffer(ch);
+                        if (BufferFull)
+                        {
+                            return true;
+                        }
                     }
                     else if (Size > 0)
                         return true;
                     continue;
                 }
-                if (char.IsWhiteSpace((char)ch))
+                if (char.IsWhiteSpace(ch))
                 {
                     if (_quoted) // for a quoted string, we will continue until the end of the string
                     {
-                        Size++;
+                        AppendToBuffer(ch);
+                        if (BufferFull)
+                        {
+                            return true;
+                        }
                     }
                     else if (Size > 0) // if we have content before, we will return this token
                         return true;
@@ -89,21 +105,29 @@ namespace Tryouts.Corax.Analyzers
                     return true;
                 }
 
-                if (char.IsPunctuation((char)ch))
+                if (char.IsPunctuation(ch))
                 {
                     // if followed by whitespace, ignore
-                    if(Position+1 < _term.Size && char.IsWhiteSpace((char)_term.Buffer[Position + 1]))
+                    int next = _reader.Peek();
+                    if (next == -1 || char.IsWhiteSpace((char)next))
                         continue;
                 }
 
-                Size++;
+                AppendToBuffer(ch);
+                if (BufferFull)
+                    return true;
             }
-            return Size > 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AppendToBuffer(char ch)
+        {
+            Buffer[Size++] = ch;
         }
 
         public override string ToString()
         {
-            return _term.ToString();
+            return new string(Buffer, 0, Size);
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Sparrow;
 using Tryouts.Corax.Analyzers;
 using Voron;
 using Voron.Data.BTrees;
@@ -124,13 +125,18 @@ namespace Tryouts.Corax
             private readonly List<string> _deletes = new List<string>();
             private long _size;
             private ITokenSource _tokenSource;
+            private MmapStream _mmapStream;
+            private StreamReader _mmapReader;
 
 
-            public Indexer(FullTextIndex parent, int batchSize = 1024 * 1024 * 16)
+            public unsafe Indexer(FullTextIndex parent, int batchSize = 1024 * 1024 * 16)
             {
                 _parent = parent;
                 _batchSize = batchSize;
                 _context = new RavenOperationContext(_parent._pool);
+
+                _mmapStream = new MmapStream(null, 0);
+                _mmapReader = new StreamReader(_mmapStream);
             }
 
             public void Delete(string identifier)
@@ -141,30 +147,146 @@ namespace Tryouts.Corax
             public async Task NewEntry(DynamicJsonValue entry, string identifier)
             {
                 entry[Constants.DocumentIdFieldName] = identifier;
-                var blitEntry = await _context.ReadObjectWithExternalProperties(entry, identifier);
-
-
-                for (int i = 0; i < blitEntry.Count; i++)
+                var values = new List<LazyStringValue>();
+                var analyzedEntry = new DynamicJsonValue();
+                foreach (var property in entry.Properties)
                 {
-                    var propertyByIndex = blitEntry.GetPropertyByIndex(i);
-                    var fieldName = propertyByIndex.Item1;
-                    _tokenSource = _parent._analyzer.CreateTokenSource(fieldName, _tokenSource);
-                    _tokenSource.SetReader((LazyStringValue)propertyByIndex.Item2);
+                    var field = property.Item1;
+                    var value = GetReaderForValue(property.Item2);
+
+                    _tokenSource = _parent._analyzer.CreateTokenSource(field, _tokenSource);
+                    _tokenSource.SetReader(value);
+                    values.Clear();
                     while (_tokenSource.Next())
                     {
-                        var term = _tokenSource.GetCurrent();
-                        if (_parent._analyzer.Process(fieldName, term) == false)
+                        if (_parent._analyzer.Process(field, _tokenSource) == false)
                             continue;
 
+                        values.Add(_context.GetLazyString(_tokenSource.Buffer, 0, _tokenSource.Size));
+                    }
+                    if (values.Count > 1)
+                    {
+                        var dynamicJsonArray = new DynamicJsonArray();
+                        foreach (var val in values)
+                        {
+                            dynamicJsonArray.Add(val);
+                        }
+                        analyzedEntry[field] = dynamicJsonArray;
+                    }
+                    else
+                    {
+                        analyzedEntry[field] = values[0];
                     }
                 }
-
+                var blitEntry = await _context.ReadObject(analyzedEntry, identifier);
                 _newEntries.Add(blitEntry);
                 _size += blitEntry.Size;
                 if (_size < _batchSize)
                     return;
                 Flush();
             }
+
+            private unsafe TextReader GetReaderForValue(object item2)
+            {
+                var s = item2 as string;
+                if (s != null)
+                    return new StringReader(s);
+                var lsv = item2 as LazyStringValue;
+                if (lsv != null)
+                {
+                    _mmapStream.Set(lsv.Buffer, lsv.Size);
+                    _mmapReader.DiscardBufferedData();
+                    return _mmapReader;
+                }
+
+                throw new NotSupportedException("Cannot process " + item2);
+            }
+
+            private unsafe class MmapStream : Stream
+            {
+                private  byte* ptr;
+                private  long len;
+                private long pos;
+
+                public MmapStream(byte* ptr, long len)
+                {
+                    this.ptr = ptr;
+                    this.len = len;
+                }
+
+                public override void Flush()
+                {
+                }
+
+                public override long Seek(long offset, SeekOrigin origin)
+                {
+                    switch (origin)
+                    {
+                        case SeekOrigin.Begin:
+                            Position = offset;
+                            break;
+                        case SeekOrigin.Current:
+                            Position += offset;
+                            break;
+                        case SeekOrigin.End:
+                            Position = len + offset;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException("origin", origin, null);
+                    }
+                    return Position;
+                }
+
+                public override void SetLength(long value)
+                {
+                    throw new NotSupportedException();
+                }
+
+                public override int ReadByte()
+                {
+                    if (Position == len)
+                        return -1;
+                    return ptr[pos++];
+                }
+
+                public override int Read(byte[] buffer, int offset, int count)
+                {
+                    if (pos == len)
+                        return 0;
+                    if (count > len - pos)
+                    {
+                        count = (int) (len - pos);
+                    }
+                    fixed (byte* dst = buffer)
+                    {
+                        Memory.CopyInline(dst + offset, ptr + pos, count);
+                    }
+                    pos += count;
+                    return count;
+                }
+
+                public override void Write(byte[] buffer, int offset, int count)
+                {
+                    throw new NotSupportedException();
+                }
+
+                public override bool CanRead => true;
+
+                public override bool CanSeek => true;
+
+                public override bool CanWrite => false;
+
+                public override long Length => len;
+                public override long Position { get { return pos; } set { pos = value; } }
+
+                public void Set(byte* buffer, int size)
+                {
+                    this.ptr = buffer;
+                    this.len = size;
+                    pos = 0;
+                }
+            }
+
 
             private unsafe void Flush()
             {

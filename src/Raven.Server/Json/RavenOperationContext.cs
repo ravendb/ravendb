@@ -150,7 +150,7 @@ namespace Raven.Server.Json
             _disposed = true;
         }
 
-        public unsafe LazyStringValue GetLazyStringFor(string field)
+        public unsafe LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
             LazyStringValue value;
             if (_fieldNames == null)
@@ -176,6 +176,37 @@ namespace Raven.Server.Json
                     };
                 }
 
+            }
+            catch (Exception)
+            {
+                ReturnMemory(memory);
+                throw;
+            }
+            return value;
+        }
+
+
+
+
+        public unsafe LazyStringValue GetLazyString(char[] chars, int start, int count)
+        {
+            LazyStringValue value;
+            if (_fieldNames == null)
+                _fieldNames = new Dictionary<string, LazyStringValue>();
+
+            var state = new JsonParserState();
+            state.FindEscapePositionsIn(chars, start,count);
+            var maxByteCount = Encoding.GetMaxByteCount(count);
+            var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize());
+            try
+            {
+                fixed (char* pChars = chars)
+                {
+                    var address = (byte*)memory.Address;
+                    var actualSize = Encoding.GetBytes(pChars + start, count, address, memory.SizeInBytes);
+                    state.WriteEscapePositionsTo(address + actualSize);
+                    value = new LazyStringValue(null, address, actualSize, this);
+                }
             }
             catch (Exception)
             {

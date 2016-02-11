@@ -49,7 +49,7 @@ namespace Tryouts
             storageEnvironmentOptions.ManualFlushing = true;
             using (var corax = new FullTextIndex(storageEnvironmentOptions))
             {
-                for (int a = 0; a < 50; a++)
+                for (int a = 0; a < 5; a++)
                 {
                     using (var indexer = corax.CreateIndexer())
                     {
@@ -59,9 +59,9 @@ namespace Tryouts
                             indexer.NewEntry(new DynamicJsonValue
                             {
                                 ["Location"] = line,
-                                ["Active"] = "true",
-                                ["Age"] = (index % 120).ToString(),
-                                ["Name"] = line.Substring(0, Math.Min(15, line.Length))
+                                //["Active"] = "true",
+                                //["Age"] = (index % 120).ToString(),
+                                //["Name"] = line.Substring(0, Math.Min(15, line.Length))
                             }, "users/" + (++index)).Wait();
                         }
                     }

@@ -336,12 +336,12 @@ namespace Raven.Server.Json
         {
             if (_cachedProperties != null)
             {
-                var propName = _context.GetLazyStringFor(name);
+                var propName = _context.GetLazyStringForFieldWithCaching(name);
                 return _cachedProperties.GetPropertyId(propName);
             }
 
             int min = 0, max = _propCount;
-            var comparer = _context.GetLazyStringFor(name);
+            var comparer = _context.GetLazyStringForFieldWithCaching(name);
 
             int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)
