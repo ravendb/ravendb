@@ -28,7 +28,7 @@ namespace Raven.Server.Queries.Dynamic
     
     public class DynamicQueryToIndexMatcher
     {
-        //public DynamicQueryToIndexMatcher(DocumentDatabase database)
+        //public DynamicQueryToIndexMatcher(Database database)
         //{
         //    this.database = database;
         //}

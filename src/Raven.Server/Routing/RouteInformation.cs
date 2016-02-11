@@ -58,12 +58,12 @@ namespace Raven.Server.Routing
         {
             var databaseId = context.RouteMatch.GetCapture();
             var databasesLandlord = context.ServerStore.DatabasesLandlord;
-            Task<DocumentsStorage> task;
+            Task<DocumentDatabase> task;
             if (databasesLandlord.TryGetOrCreateResourceStore(databaseId, out task) == false)
             {
                 throw new DatabaseDoesNotExistsException($"Database '{databaseId}' was not found");
             }
-            context.DocumentsStorage = await task;
+            context.Database = await task;
         }
 
         public async Task<HandleRequest> CreateHandler(RequestHandlerContext context)

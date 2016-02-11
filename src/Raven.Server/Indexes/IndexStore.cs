@@ -7,7 +7,7 @@ using Raven.Server.Documents;
 
 namespace Raven.Server.Indexes
 {
-    public class IndexStorage
+    public class IndexStore
     {
         private readonly DocumentsStorage _documentsStorage;
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Indexes
 
         private string _path;
 
-        public IndexStorage(DocumentsStorage documentsStorage)
+        public IndexStore(DocumentsStorage documentsStorage)
         {
             _documentsStorage = documentsStorage;
         }
