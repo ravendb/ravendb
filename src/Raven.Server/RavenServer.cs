@@ -5,6 +5,7 @@ using Microsoft.AspNet.Hosting.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server
@@ -48,13 +49,15 @@ namespace Raven.Server
             }
             sp.Restart();
 
+            Router = new RequestRouter(RouteScanner.Scan(), this);
+
             IHostingEngine hostingEngine;
             try
             {
                 hostingEngine = new WebHostBuilder(Configuration.WebHostConfig, true)
                     .UseServer("Microsoft.AspNet.Server.Kestrel")
                     .UseStartup<RavenServerStartup>()
-                    .UseServices(services => services.AddInstance(ServerStore))
+                    .UseServices(services => services.AddInstance(Router))
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
             }
@@ -79,6 +82,8 @@ namespace Raven.Server
                 throw;
             }
         }
+
+        public RequestRouter Router { get; private set; }
 
         public void Dispose()
         {
