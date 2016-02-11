@@ -58,7 +58,7 @@ namespace Raven.Server.Indexes
                 if (int.TryParse(indexDirectory.Name, out indexId) == false)
                     continue;
 
-                var index = Index.Create(indexId, indexDirectory.FullName, _documentsStorage);
+                var index = Index.Open(indexId, indexDirectory.FullName, _documentsStorage);
                 AddIndex(indexId, index);
             }
         }

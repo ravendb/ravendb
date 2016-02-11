@@ -51,7 +51,7 @@ namespace Raven.Server.Indexes
             IndexPersistance = new LuceneIndexPersistance();
         }
 
-        public static Index Create(int indexId, string path, DocumentsStorage documentsStorage)
+        public static Index Open(int indexId, string path, DocumentsStorage documentsStorage)
         {
             var options = StorageEnvironmentOptions.ForPath(path);
             try
@@ -71,7 +71,7 @@ namespace Raven.Server.Indexes
                     switch (type)
                     {
                         case IndexType.Auto:
-                            return AutoIndex.Create(indexId, documentsStorage, environment);
+                            return AutoIndex.Open(indexId, documentsStorage, environment);
                         default:
                             throw new NotImplementedException();
                     }

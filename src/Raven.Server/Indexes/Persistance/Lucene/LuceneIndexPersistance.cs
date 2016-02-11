@@ -96,7 +96,7 @@ namespace Raven.Server.Indexes.Persistance.Lucene
             }
         }
 
-        protected void AddDocumentToIndex(LuceneIndexWriter indexWriter, Document luceneDoc, Analyzer analyzer)
+        private void AddDocumentToIndex(LuceneIndexWriter indexWriter, Document luceneDoc, Analyzer analyzer)
         {
             indexWriter.AddDocument(luceneDoc, analyzer);
 

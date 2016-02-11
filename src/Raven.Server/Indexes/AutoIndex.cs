@@ -23,7 +23,7 @@ namespace Raven.Server.Indexes
             throw new NotImplementedException();
         }
 
-        public static AutoIndex Create(int indexId, DocumentsStorage documentsStorage, StorageEnvironment environment)
+        public static AutoIndex Open(int indexId, DocumentsStorage documentsStorage, StorageEnvironment environment)
         {
             var instance = new AutoIndex(indexId, documentsStorage);
             instance.Initialize(environment);
