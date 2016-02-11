@@ -344,7 +344,7 @@ namespace Raven.Server.Json.Parsing
                                 break;// line continuation, skip
                             case (byte)'u':// unicode value
                                 await ParseUnicodeValue();
-                                _currentStrStart += 4;
+                                
                                 break;
                             default:
                                 throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
@@ -368,6 +368,7 @@ namespace Raven.Server.Json.Parsing
                 await EnsureBuffer();
 
                 b = _buffer[_pos++];
+                _currentStrStart++;
                 if (b >= (byte)'0' && b <= (byte)'9')
                 {
                     val = (val << 4) | (b - (byte)'0');
