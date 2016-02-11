@@ -104,10 +104,10 @@ namespace Raven.Server.Documents
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
             var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
             writer.WriteStartObject();
-            writer.WritePropertyName(context.GetLazyStringFor("Results"));
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
             await WriteDocumentsAsync(context, writer, documents);
             writer.WriteComma();
-            writer.WritePropertyName(context.GetLazyStringFor("Includes"));
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
             writer.WriteStartArray();
             //TODO: Includes
             //TODO: Need to handle etags here as well
