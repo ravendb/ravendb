@@ -18,12 +18,12 @@ class queryFacetsCommand extends commandBase {
 
     public argsUrl: string;
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<any>> {
         var url = "/facets/" + this.indexName + this.argsUrl;
 
         // Querying facets returns a facetResultSetDto. We need to massage that
         // data into something that can be displayed in the grid: the pagedResultSet.
-        var finishedTask = $.Deferred<pagedResultSet>(); 
+        var finishedTask = $.Deferred<pagedResultSet<any>>(); 
         this.query(url, null, this.db)
             .fail((response: JQueryXHR) => {
                 this.reportError("Unable to run query.", response.responseText, response.statusText);
@@ -36,7 +36,7 @@ class queryFacetsCommand extends commandBase {
         return finishedTask;
     }
 
-    private parseResults(resultSet: facetResultSetDto): pagedResultSet {
+    private parseResults(resultSet: facetResultSetDto): pagedResultSet<any> {
         var items = [];
         var totalItemCount = 0;
 

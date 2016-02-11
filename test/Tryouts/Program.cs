@@ -31,6 +31,7 @@ namespace Tryouts
 
         private static void Run()
         {
+
             ForceInit();
 
             var sp = Stopwatch.StartNew();

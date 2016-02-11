@@ -191,7 +191,7 @@ class reporting extends viewModelBase {
             var command = new queryFacetsCommand(selectedIndex, filterQuery, skip, take, groupedFacets, db, this.isCacheDisable());
             ko.postbox.publish("SetRawJSONUrl", appUrl.forReportingRawData(this.activeDatabase(), this.selectedIndexName()) + command.argsUrl);
             return command.execute()
-                .done((resultSet: pagedResultSet) => this.queryDuration(resultSet.additionalResultInfo));
+                .done((resultSet: pagedResultSet<any>) => this.queryDuration(resultSet.additionalResultInfo));
         };
         this.reportResults(new pagedList(resultsFetcher));
     }

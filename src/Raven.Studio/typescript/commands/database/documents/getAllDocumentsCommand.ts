@@ -12,7 +12,7 @@ class getAllDocumentsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<any>> {
 
         // Getting all documents requires a 2 step process:
         // 1. Fetch /collections/stats to get the total doc count.
