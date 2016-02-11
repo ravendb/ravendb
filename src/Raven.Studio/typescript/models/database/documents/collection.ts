@@ -1,6 +1,6 @@
 import pagedList = require("common/pagedList");
-import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
 import getSystemDocumentsCommand = require("commands/database/documents/getSystemDocumentsCommand");
+import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getAllDocumentsCommand = require("commands/database/documents/getAllDocumentsCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
@@ -8,7 +8,7 @@ import cssGenerator = require("common/cssGenerator");
 
 class collection implements ICollectionBase {
     colorClass = ""; 
-    documentCount: any = ko.observable(0);
+    documentCount = ko.observable(0);
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
     isAllDocuments = false;
     isSystemDocuments = false;
@@ -52,14 +52,14 @@ class collection implements ICollectionBase {
         }
     }
 
-    fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet> {
+    fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         if (this.isSystemDocuments) {
             // System documents don't follow the normal paging rules. See getSystemDocumentsCommand.execute() for more info.
             return new getSystemDocumentsCommand(this.ownerDatabase, skip, take, this.documentCount()).execute();
         } if (this.isAllDocuments) {
             return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
         } else {
-            return new getDocumentsByEntityNameCommand(this, skip, take).execute();
+            return new getDocumentsFromCollectionCommand(this, skip, take).execute();
         }
     }
 

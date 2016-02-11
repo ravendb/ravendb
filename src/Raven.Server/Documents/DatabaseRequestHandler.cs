@@ -24,6 +24,12 @@ namespace Raven.Server.Documents
         protected async Task WriteDocumentsAsync(RavenOperationContext context, IEnumerable<Document> documents)
         {
             var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
+            await WriteDocumentsAsync(context, writer, documents);
+            writer.Flush();
+        }
+
+        public static async Task WriteDocumentsAsync(RavenOperationContext context, BlittableJsonTextWriter writer, IEnumerable<Document> documents)
+        {
             writer.WriteStartArray();
 
             bool first = true;
@@ -39,8 +45,6 @@ namespace Raven.Server.Documents
             }
 
             writer.WriteEndArray();
-            writer.Flush();
         }
-
     }
 }

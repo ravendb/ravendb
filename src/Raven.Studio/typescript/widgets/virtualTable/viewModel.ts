@@ -271,7 +271,7 @@ class ctor {
             // The scrolling has paused for a minute. See if we have all the data needed.
             var firstVisibleIndex = this.firstVisibleRow.rowIndex();
             var fetchTask = this.items.fetch(firstVisibleIndex, this.recycleRows().length);
-            fetchTask.done((resultSet: pagedResultSet) => {
+            fetchTask.done((resultSet: pagedResultSet<any>) => {
                 var firstVisibleRowIndexHasChanged = firstVisibleIndex !== this.firstVisibleRow.rowIndex();
                 if (!firstVisibleRowIndexHasChanged) {
                     this.virtualRowCount(resultSet.totalResultCount);

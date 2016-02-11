@@ -72,19 +72,16 @@ namespace Raven.Server.Web
             return false;
         }
 
-
         protected long? GetLongFromHeaders(string name)
         {
-            long? etag = null;
             var etags = HttpContext.Request.Headers[name];
-            if (etags.Count != 0)
-            {
-                long result;
-                if (long.TryParse(etags[0], out result) == false)
-                    throw new ArgumentException(
-                        "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
-                etag = result;
-            }
+            if (etags.Count == 0)
+                return null;
+
+            long etag;
+            if (long.TryParse(etags[0], out etag) == false)
+                throw new ArgumentException(
+                    "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
             return etag;
         }
 
@@ -98,18 +95,21 @@ namespace Raven.Server.Web
             return GetIntQueryString("pageSize", defaultValue);
         }
 
-        protected int GetIntQueryString(string name, int defaultValue)
+        protected int GetIntQueryString(string name, int? defaultValue = null)
         {
             var val = HttpContext.Request.Query[name];
-            if (val.Count != 0)
+            if (val.Count == 0)
             {
-                int result;
-                if (int.TryParse(val[0], out result) == false)
-                    throw new ArgumentException(
-                        string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
-                return result;
+                if (defaultValue.HasValue)
+                    return defaultValue.Value;
+                throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
             }
-            return defaultValue;
+
+            int result;
+            if (int.TryParse(val[0], out result) == false)
+                throw new ArgumentException(
+                    string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+            return result;
         }
 
 
@@ -133,6 +133,15 @@ namespace Raven.Server.Web
                 throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
 
             return val[0];
+        }
+
+        protected StringValues GetStringValuesQueryString(string name)
+        {
+            var val = HttpContext.Request.Query[name];
+            if (val.Count == 0)
+                throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+
+            return val;
         }
     }
 }

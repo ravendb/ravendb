@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
@@ -401,7 +402,14 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public long Put(RavenOperationContext context, string key, long? expectedEtag,
+        public void DeleteCollection(RavenOperationContext context, string name, List<long> deletedList, long untilEtag)
+        {
+            name = "@" + name; //todo: avoid this allocation
+            var table = new Table(_docsSchema, name, context.Transaction);
+            table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, untilEtag);
+        }
+
+        public PutResult Put(RavenOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -411,6 +419,14 @@ namespace Raven.Server.Documents
                     nameof(context));
 
             var collectionName = GetCollectionName(key, document);
+            _docsSchema.Create(context.Transaction, collectionName);
+            var table = new Table(_docsSchema, collectionName, context.Transaction);
+
+            if (key[key.Length - 1] == '/')
+            {
+                key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context);
+            }
+
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -428,9 +444,7 @@ namespace Raven.Server.Documents
                 {document.BasePointer, document.Size}
             };
 
-            _docsSchema.Create(context.Transaction, collectionName);
 
-            var table = new Table(_docsSchema, collectionName, context.Transaction);
             var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort) lowerSize));
             if (oldValue == null)
             {
@@ -451,7 +465,47 @@ namespace Raven.Server.Documents
                         $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
                 table.Update(oldValue.Id, tbv);
             }
-            return newEtag;
+
+            return new PutResult
+            {
+                ETag = newEtag,
+                Key = key
+            };
+        }
+
+        private string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, RavenOperationContext context)
+        {
+            var identities = context.Transaction.ReadTree("Identities");
+            var nextIdentityValue = identities.Increment(key, 1);
+
+            var finalKey = key + nextIdentityValue;
+            if (table.ReadByKey(GetSliceFromKey(context, finalKey)) == null)
+            {
+                return finalKey;
+            }
+
+            var lastKnownBusy = nextIdentityValue;
+            var maybeFree = nextIdentityValue * 2;
+            var lastKnownFree = long.MaxValue;
+            while (true)
+            {
+                finalKey = key + maybeFree;
+                if (table.ReadByKey(GetSliceFromKey(context, finalKey)) == null)
+                {
+                    if (lastKnownBusy + 1 == maybeFree)
+                    {
+                        nextIdentityValue =  identities.Increment(key, maybeFree);
+                        return key + nextIdentityValue;
+                    }
+                    lastKnownFree = maybeFree;
+                    maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
+                }
+                else
+                {
+                    lastKnownBusy = maybeFree;
+                    maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
+                }
+            }
         }
 
         private static string GetCollectionName(string key, BlittableJsonReaderObject document)

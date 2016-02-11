@@ -182,8 +182,6 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public const string DefaultRequestEncoding = "UTF-8";
         
-        public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
-        
         public const string MetadataEtagField = "ETag";
 
         public const string TempUploadsDirectoryName = "RavenTempUploads";
