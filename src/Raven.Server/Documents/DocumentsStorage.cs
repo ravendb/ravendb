@@ -21,8 +21,6 @@ namespace Raven.Server.Documents
 {
     public unsafe class DocumentsStorage : IDisposable
     {
-        public RavenConfiguration Configuration => _configuration;
-
         private readonly RavenConfiguration _configuration;
         private readonly TableSchema _docsSchema = new TableSchema();
         private readonly ILog _log;
@@ -68,6 +66,8 @@ namespace Raven.Server.Documents
         }
 
         public StorageEnvironment Environment { get; private set; }
+
+        public RavenConfiguration Configuration => _configuration;
 
         public void Dispose()
         {

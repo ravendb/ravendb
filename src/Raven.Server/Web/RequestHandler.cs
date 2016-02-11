@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Globalization;
+using System.Linq;
 using System.IO;
 using System.IO.Compression;
-using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.Primitives;
+
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -80,8 +85,8 @@ namespace Raven.Server.Web
 
             long etag;
             if (long.TryParse(etags[0], out etag) == false)
-                throw new ArgumentException(
-                    "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
+                    throw new ArgumentException(
+                        "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
             return etag;
         }
 
@@ -105,12 +110,12 @@ namespace Raven.Server.Web
                 throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
             }
 
-            int result;
-            if (int.TryParse(val[0], out result) == false)
-                throw new ArgumentException(
-                    string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
-            return result;
-        }
+                int result;
+                if (int.TryParse(val[0], out result) == false)
+                    throw new ArgumentException(
+                        string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+                return result;
+            }
 
 
         protected long GetLongQueryString(string name)
@@ -126,7 +131,7 @@ namespace Raven.Server.Web
             return result;
         }
 
-        protected string GetStringQueryString(string name)
+        protected string GetStringQueryString(string name, bool required = false)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0)
@@ -142,6 +147,81 @@ namespace Raven.Server.Web
                 throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
 
             return val;
+        }
+
+        protected virtual IndexQuery GetIndexQuery(int maxPageSize)
+        {
+            var query = new IndexQuery
+            {
+                Query = GetStringQueryString("query") ?? /* TODO arek queryFromPostRequest ?? */"",
+                Start = GetStart(),
+                //Cutoff = GetCutOff(),
+                //WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),
+                //CutoffEtag = GetCutOffEtag(),
+                PageSize = GetPageSize(maxPageSize),
+                FieldsToFetch = GetStringValuesQueryString("fetch").ToArray(),
+                DefaultField = GetStringQueryString("defaultField"),
+
+                DefaultOperator =
+                    string.Equals(GetStringQueryString("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
+                        QueryOperator.And :
+                        QueryOperator.Or,
+
+                SortedFields = EnumerableExtension.EmptyIfNull(GetStringValuesQueryString("sort"))
+                    .Select(x => new SortedField(x))
+                    .ToArray(),
+                //HighlightedFields = GetHighlightedFields().ToArray(),
+                HighlighterPreTags = GetStringValuesQueryString("preTags").ToArray(),
+                HighlighterPostTags = GetStringValuesQueryString("postTags").ToArray(),
+                HighlighterKeyName = GetStringQueryString("highlighterKeyName"),
+                ResultsTransformer = GetStringQueryString("resultsTransformer"),
+                //TransformerParameters = ExtractTransformerParameters(),
+                //ExplainScores = GetExplainScores(),
+                //SortHints = GetSortHints(),
+                //IsDistinct = IsDistinct()
+            };
+
+            //var allowMultipleIndexEntriesForSameDocumentToResultTransformer = GetQueryStringValue("allowMultipleIndexEntriesForSameDocumentToResultTransformer");
+            //bool allowMultiple;
+            //if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
+            //    query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
+
+            //if (query.WaitForNonStaleResultsAsOfNow)
+            //    query.Cutoff = SystemTime.UtcNow;
+
+            //var showTimingsAsString = GetQueryStringValue("showTimings");
+            //bool showTimings;
+            //if (string.IsNullOrEmpty(showTimingsAsString) == false && bool.TryParse(showTimingsAsString, out showTimings) && showTimings)
+            //    query.ShowTimings = true;
+
+            //var skipDuplicateCheckingAsstring = GetQueryStringValue("skipDuplicateChecking");
+            //bool skipDuplicateChecking;
+            //if (string.IsNullOrEmpty(skipDuplicateCheckingAsstring) == false &&
+            //    bool.TryParse(skipDuplicateCheckingAsstring, out skipDuplicateChecking) && skipDuplicateChecking)
+            //    query.ShowTimings = true;
+
+            //var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
+            //var queryShape = GetQueryStringValue("queryShape");
+            //SpatialUnits units;
+            //var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
+            //double distanceErrorPct;
+            //if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
+            //    distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
+            //SpatialRelation spatialRelation;
+
+            //if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation) && !string.IsNullOrWhiteSpace(queryShape))
+            //{
+            //    return new SpatialIndexQuery(query)
+            //    {
+            //        SpatialFieldName = spatialFieldName,
+            //        QueryShape = queryShape,
+            //        RadiusUnitOverride = unitsSpecified ? units : (SpatialUnits?)null,
+            //        SpatialRelation = spatialRelation,
+            //        DistanceErrorPercentage = distanceErrorPct,
+            //    };
+            //}
+
+            return query;
         }
     }
 }
