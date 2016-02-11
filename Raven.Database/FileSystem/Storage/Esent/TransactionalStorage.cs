@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
@@ -131,7 +132,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                 disposerLock.ExitWriteLock();
             }
         }
-
+        private static object locker = new object();
         public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs, Action<string> putResourceMarker = null)
         {
             if(codecs == null)
@@ -142,18 +143,35 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
             try
             {
+                
                 new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
+                bool lockTaken = false;
+                //locking only the compaction didn't resolve the problem it seems this is the minimal amount of code that needs to be locked 
+                //to prevent errors from esent
+                try
+                {
+                    Monitor.TryEnter(locker, 30 * 1000, ref lockTaken);
+                    if (lockTaken == false)
+                    {
+                        throw new TimeoutException("Could not take Esent Compact Lock. Because of a probable bug in Esent, we only allow a single database to be compacted at a given time.\r\n" +
+                                                   "However, we waited for 30 seconds for the compact lock to be released, and gave up. The database wasn't compacted, please try again later, when the other compaction process is over.");
+                    }
+                    Api.JetInit(ref instance);
 
-                Api.JetInit(ref instance);
+                    EnsureDatabaseIsCreatedAndAttachToDatabase();
+                }
+                finally
+                {
 
-                EnsureDatabaseIsCreatedAndAttachToDatabase();
-
+                    if (lockTaken)
+                        Monitor.Exit(locker);
+                }
                 SetIdFromDb();
 
-                tableColumnsCache.InitColumDictionaries(instance, database);
+                    tableColumnsCache.InitColumDictionaries(instance, database);
 
-                if (putResourceMarker != null)
-                    putResourceMarker(path);
+                    if (putResourceMarker != null)
+                        putResourceMarker(path);
             }
             catch (Exception e)
             {
@@ -310,7 +328,10 @@ namespace Raven.Database.FileSystem.Storage.Esent
                         return false;
                 }
                 if (e.Error != JET_err.FileNotFound)
+                {
+                    Debugger.Break();
                     throw;
+                }
             }
 
             using (var session = new Session(instance))
