@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Server.Documents;
+using Raven.Server.Indexes.Auto;
 
 namespace Raven.Server.Indexes
 {
@@ -62,5 +63,20 @@ namespace Raven.Server.Indexes
         {
             _indexes[indexId] = index;
         }
+
+        public Index GetIndex(string indexName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public AutoIndex CreateIndex(AutoIndexDefinition definition)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
+        {
+            throw new NotImplementedException();
+        } 
     }
 }

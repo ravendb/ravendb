@@ -1,40 +1,47 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Server.Indexes;
 
 namespace Raven.Server.Queries.Dynamic
 {
     public class DynamicQueryRunner
     {
-        private readonly string _collection;
-        private readonly IndexQuery _query;
+        private readonly IndexStore _indexStore;
 
-        public DynamicQueryRunner(string dynamicIndexName, IndexQuery query)
+        public DynamicQueryRunner(IndexStore indexStore)
         {
-            _collection = dynamicIndexName.Substring("dynamic/".Length);
-            _query = query;
+            _indexStore = indexStore;
         }
 
-        public QueryResult Execute()
+        public QueryResult Execute(string dynamicIndexName, IndexQuery query)
         {
-            var map = DynamicQueryMapping.Create(_collection, _query);
+            var collection = dynamicIndexName.Substring("dynamic/".Length);
 
-            object index;
+            var map = DynamicQueryMapping.Create(collection, query);
+
+            bool newAutoIndex = false;
+
+            Index index;
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
-                var definition = map.CreateAutoIndexDefinition();
+                var autoIndexDef = map.CreateAutoIndexDefinition();
 
-                // TODO  arek: create index
+                index = _indexStore.CreateIndex(autoIndexDef);
+                newAutoIndex = true;
             }
 
-            string realQuery = map.Items.Aggregate(_query.Query, (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
+            //TODO arek
+            //string realQuery = map.Items.Aggregate(query.Query, (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
 
-            UpdateFieldNamesForSortedFields(_query, map);
+            //UpdateFieldNamesForSortedFields(query, map);
 
             // We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
             //UpdateFieldsInArray(map, query.FieldsToFetch);
 
-            return ExecuteActualQuery(_query, map, realQuery);
+            return ExecuteActualQuery(index, query, newAutoIndex);
         }
 
         private static void UpdateFieldNamesForSortedFields(IndexQuery query, DynamicQueryMapping map)
@@ -42,33 +49,31 @@ namespace Raven.Server.Queries.Dynamic
             if (query.SortedFields == null) return;
             foreach (var sortedField in query.SortedFields)
             {
-                var item = map.Items.FirstOrDefault(x => x.From == sortedField.Field);
+                var item = map.MapFields.FirstOrDefault(x => x.From == sortedField.Field);
                 if (item != null)
                     sortedField.Field = item.To;
             }
         }
 
-        private QueryResult ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, string realQuery)
+        private static QueryResult ExecuteActualQuery(Index index, IndexQuery query, bool newAutoIndex)
         {
-            return null;
             // Perform the query until we have some results at least
-            //QueryResultWithIncludes result;
-            //var sp = Stopwatch.StartNew();
-            //while (true)
-            //{
-            //    var indexQuery = CreateIndexQuery(query, map, realQuery);
-            //    result = documentDatabase.Queries.Query(map.IndexName, indexQuery, token);
+            var sp = Stopwatch.StartNew();
 
-            //    if (!touchTemporaryIndexResult.Item2 ||
-            //        !result.IsStale ||
-            //        (result.Results.Count >= query.PageSize && query.PageSize > 0) ||
-            //        sp.Elapsed.TotalSeconds > 15)
-            //    {
-            //        return result;
-            //    }
+            while (true)
+            {
+                var result = index.Query(query);
 
-            //    Thread.Sleep(100);
-            //}
+                if (newAutoIndex == false ||
+                    result.IsStale == false ||
+                    (result.Results.Count >= query.PageSize && query.PageSize > 0) ||
+                    sp.Elapsed.TotalSeconds > 15)
+                {
+                    return result;
+                }
+
+                Thread.Sleep(100);
+            }
         }
 
         private static IndexQuery CreateIndexQuery(IndexQuery query, DynamicQueryMapping map, string realQuery)
@@ -111,7 +116,7 @@ namespace Raven.Server.Queries.Dynamic
                     hasRange = true;
                 }
 
-                var item = map.Items.FirstOrDefault(x => string.Equals(x.QueryFrom, fieldName, StringComparison.OrdinalIgnoreCase));
+                var item = map.MapFields.FirstOrDefault(x => string.Equals(x.QueryFrom, fieldName, StringComparison.OrdinalIgnoreCase));
                 if (item == null)
                     continue;
 
@@ -121,49 +126,33 @@ namespace Raven.Server.Queries.Dynamic
             return indexQuery;
         }
 
-        private bool TryMatchExistingIndexToQuery(DynamicQueryMapping map, out object index)
+        private bool TryMatchExistingIndexToQuery(DynamicQueryMapping map, out Index index)
         {
+            var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(_indexStore);
+            
+            var matchResult = dynamicQueryToIndex.Match(map);
+
+            switch (matchResult.MatchType)
+            {
+                case DynamicQueryMatchType.Complete:
+                    index = _indexStore.GetIndex(matchResult.IndexName);
+                    return true;
+                case DynamicQueryMatchType.Partial:
+                    // At this point, we found an index that has some fields we need and
+                    // isn't incompatible with anything else we're asking for
+                    // We need to clone that other index 
+                    // We need to add all our requested indexes information to our cloned index
+                    // We can then use our new index instead
+                    
+                    throw new NotSupportedException("TODO arek");
+                    //var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(matchResult.IndexName);
+                    //map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
+
+                    break;
+            }
+
             index = null;
-
             return false;
-            var dynamicQueryOptimizedMatcher = new DynamicQueryToIndexMatcher();
-
-            //dynamicQueryOptimizedMatcher.SelectAppropriateIndex()
-            //TODO arek
-            //var appropriateIndex = new DynamicQueryToIndexMatcher(documentDatabase).SelectAppropriateIndex(entityName, query);
-            //if (appropriateIndex.MatchType == DynamicQueryMatchType.Complete)
-            //{
-            //    map.IndexName = appropriateIndex.IndexName;
-            //    return Tuple.Create(appropriateIndex.IndexName, false);
-            //}
-
-            //if (appropriateIndex.MatchType == DynamicQueryMatchType.Partial)
-            //{
-            //    // At this point, we found an index that has some fields we need and
-            //    // isn't incompatible with anything else we're asking for
-            //    // We need to clone that other index 
-            //    // We need to add all our requested indexes information to our cloned index
-            //    // We can then use our new index instead
-            //    var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex.IndexName);
-            //    map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
-            //}
-            //return CreateAutoIndex(map.IndexName, map.CreateAutoIndexDefinition);
         }
-
-
-        //private Tuple<string, bool> CreateAutoIndex(string permanentIndexName, Func<IndexDefinition> createDefinition)
-        //{
-        //    if (documentDatabase.Indexes.GetIndexDefinition(permanentIndexName) != null)
-        //        return Tuple.Create(permanentIndexName, false);
-
-        //    lock (_createIndexLock)
-        //    {
-        //        var indexDefinition = createDefinition();
-        //        documentDatabase.Indexes.PutIndex(permanentIndexName, indexDefinition);
-        //    }
-
-        //    return Tuple.Create(permanentIndexName, true);
-
-        //}
     }
 }

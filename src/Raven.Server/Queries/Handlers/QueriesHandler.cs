@@ -13,7 +13,7 @@ namespace Raven.Server.Indexes.Handlers
             var indexName = GetStringQueryString("name");
             var query = GetIndexQuery(DocumentsStorage.Configuration.Core.MaxPageSize);
 
-            var runner = new QueryRunner();
+            var runner = new QueryRunner(IndexStore);
 
             var result = runner.ExecuteQuery(indexName, query);
 

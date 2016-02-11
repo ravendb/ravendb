@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Data;
 using Raven.Server.Documents;
 using Raven.Server.Indexes.Persistance.Lucene;
 using Raven.Server.Json;
@@ -323,6 +323,11 @@ namespace Raven.Server.Indexes
 
         private void ExecuteReduce()
         {
+        }
+
+        public QueryResult Query(IndexQuery query)
+        {
+            throw new NotImplementedException();
         }
     }
 }

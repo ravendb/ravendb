@@ -15,13 +15,13 @@ namespace Raven.Server.Queries.Dynamic
 
         public DynamicSortInfo[] SortDescriptors { get; private set; } = new DynamicSortInfo[0];
 
-        public DynamicQueryMappingItem[] Items { get; private set; } = new DynamicQueryMappingItem[0];
+        public DynamicQueryMappingItem[] MapFields { get; private set; } = new DynamicQueryMappingItem[0];
 
         public string[] HighlightedFields { get; private set; }
 
         public AutoIndexDefinition CreateAutoIndexDefinition()
         {
-            return new AutoIndexDefinition(ForCollection, Items.Select(field =>
+            return new AutoIndexDefinition(ForCollection, MapFields.Select(field =>
                 new AutoIndexField(name: field.From,
                     sortOption: SortDescriptors.FirstOrDefault(x => field.To.Equals(x.Field))?.FieldType,
                     highlighted: HighlightedFields.Any(x => field.To.Equals(x)))).ToArray());
@@ -83,7 +83,7 @@ namespace Raven.Server.Queries.Dynamic
 
         private void SetupFieldsToIndex(IEnumerable<Tuple<string, string>> fields)
         {
-            Items = fields.Select(x => new DynamicQueryMappingItem
+            MapFields = fields.Select(x => new DynamicQueryMappingItem
             {
                 From = x.Item1,
                 To = ReplaceInvalidCharactersForFields(x.Item2),
