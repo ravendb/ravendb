@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Indexes.Auto;
 
 namespace Raven.Server.Indexes
 {
-    public class IndexStore
+    public class IndexStore : IDisposable
     {
         private readonly DocumentsStorage _documentsStorage;
 
@@ -48,6 +49,9 @@ namespace Raven.Server.Indexes
 
         private void OpenIndexes()
         {
+            if (_documentsStorage.Configuration.Core.RunInMemory)
+                return;
+
             foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
             {
                 int indexId;
@@ -77,6 +81,14 @@ namespace Raven.Server.Indexes
         public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
         {
             throw new NotImplementedException();
-        } 
+        }
+
+        public void Dispose()
+        {
+            //FlushMapIndexes();
+            //FlushReduceIndexes();
+
+            _indexes.ForEach(x => x.Value.Dispose());
+        }
     }
 }
