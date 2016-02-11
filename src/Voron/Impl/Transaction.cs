@@ -23,14 +23,13 @@ namespace Voron.Impl
 
         internal Action<Transaction> AfterCommit = delegate { };
 
+        private readonly Dictionary<string, PrefixTree> _prefixTrees = new Dictionary<string, PrefixTree>();
         private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
-
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
             _lowLevelTransaction = lowLevelTransaction;
         }
-
 
         public Tree ReadTree(string treeName)
         {
@@ -54,7 +53,6 @@ namespace Voron.Impl
             return null;
         }
 
-      
         public IEnumerable<Tree> Trees
         {
             get { return _trees.Values; }
@@ -90,8 +88,21 @@ namespace Voron.Impl
                 var treeState = tree.State;
                 if (treeState.IsModified)
                 {
-                    var treePtr =
-                        (TreeRootHeader*) _lowLevelTransaction.RootObjects.DirectAdd((Slice) tree.Name, sizeof (TreeRootHeader));
+                    var treePtr = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectAdd((Slice)tree.Name, sizeof(TreeRootHeader));
+                    treeState.CopyTo(treePtr);
+                }
+            }
+
+            foreach ( var prefixTree in PrefixTrees )
+            {
+                // FEDERICO: This should never happen, why it happens on tree still eludes me. 
+                if (prefixTree == null)
+                    continue;
+
+                var treeState = prefixTree.State;
+                if (treeState.IsModified)
+                {
+                    var treePtr = (PrefixTreeRootHeader*)_lowLevelTransaction.RootObjects.DirectAdd((Slice)prefixTree.Name, sizeof(PrefixTreeRootHeader));
                     treeState.CopyTo(treePtr);
                 }
             }
@@ -212,6 +223,61 @@ namespace Voron.Impl
             _lowLevelTransaction?.Dispose();
         }
 
+
+
+        public PrefixTree ReadPrefixTree(string treeName)
+        {
+            PrefixTree tree;
+            if (_prefixTrees.TryGetValue(treeName, out tree))
+                return tree;
+
+            if (PrefixTree.TryOpen(_lowLevelTransaction, _lowLevelTransaction.RootObjects, treeName, out tree))
+            {
+                _prefixTrees.Add(treeName, tree);
+                return tree;
+            }
+
+            return null;
+        }
+
+        public PrefixTree CreatePrefixTree(string name)
+        {
+            PrefixTree tree = ReadPrefixTree(name);
+            if (tree != null)
+                return tree;
+
+            if (_lowLevelTransaction.Flags == (TransactionFlags.ReadWrite) == false)
+                throw new InvalidOperationException("No such tree: '" + name + "' and cannot create trees in read transactions");
+
+            Slice key = name;
+            
+            tree = PrefixTree.Create(LowLevelTransaction, LowLevelTransaction.RootObjects, name);
+            tree.Name = name;
+
+            var space = _lowLevelTransaction.RootObjects.DirectAdd(key, sizeof(PrefixTreeRootHeader));
+            tree.State.CopyTo((PrefixTreeRootHeader*)space);
+            tree.State.IsModified = true;
+
+            AddPrefixTree(name, tree);
+
+            return tree;
+        }
+
+        internal void AddPrefixTree(string name, PrefixTree tree)
+        {
+            PrefixTree value;
+            if (_prefixTrees.TryGetValue(name, out value))
+                throw new InvalidOperationException("Prefix Tree already exists: " + name);
+
+            _prefixTrees[name] = tree;
+        }
+
+        public IEnumerable<PrefixTree> PrefixTrees
+        {
+            get { return _prefixTrees.Values; }
+        }
+
+
         public FixedSizeTree FixedTreeFor(Slice treeName)
         {
             var valueSize = FixedSizeTree.GetValueSize(LowLevelTransaction, LowLevelTransaction.RootObjects,
@@ -223,11 +289,6 @@ namespace Voron.Impl
         public FixedSizeTree FixedTreeFor(Slice treeName, ushort valSize)
         {
             return new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName, valSize);
-        }
-
-        public PrefixTree PrefixTreeFor(Slice treeName)
-        {
-            return PrefixTree.Open(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName);
         }
 
 

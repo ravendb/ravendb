@@ -171,7 +171,7 @@ namespace Voron.Data.Tables
             return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size);
         }
 
-        public void Update(long id, TableValueBuilder builder)
+        public long Update(long id, TableValueBuilder builder)
         {
             int size = builder.Size;
 
@@ -190,7 +190,8 @@ namespace Voron.Data.Tables
                     // MemoryCopy into final position.
                     builder.CopyTo(pos);
                     InsertIndexValuesFor(id, new TableValueReader(pos, size));
-                    return;
+
+                    return id;
                 }
             }
             else if (prevIsSmall == false)
@@ -212,13 +213,13 @@ namespace Voron.Data.Tables
 
                     InsertIndexValuesFor(id, new TableValueReader(pos, size));
 
-                    return;
+                    return id;
                 }
             }
 
             // can't fit in place, will just delete & insert instead
             Delete(id);
-            Insert(builder);
+            return Insert(builder);
         }
 
         public void Delete(long id)
@@ -308,7 +309,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public void Insert(TableValueBuilder builder)
+        public long Insert(TableValueBuilder builder)
         {
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
@@ -344,6 +345,8 @@ namespace Voron.Data.Tables
             }
 
             InsertIndexValuesFor(id, new TableValueReader(pos, size));
+
+            return id;
         }
 
         private void InsertIndexValuesFor(long id, TableValueReader value)
@@ -565,17 +568,19 @@ namespace Voron.Data.Tables
             return new TableValueReader(ptr, size);
         }
 
-        public void Set(TableValueBuilder builder)
+        public long Set(TableValueBuilder builder)
         {
             int size;
             var read = builder.Read(_schema.Key.StartIndex, out size);
+
             long id;
             if (TryFindIdFromPrimaryKey(new Slice(read, (ushort)size), out id))
             {
-                Update(id, builder);
-                return;
+                id = Update(id, builder);
+                return id;
             }
-            Insert(builder);
+
+            return Insert(builder);
         }
 
         public void DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)

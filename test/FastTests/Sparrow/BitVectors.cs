@@ -1,11 +1,15 @@
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
-using Sparrow.Binary;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Xunit;
+using Xunit.Extensions;
 
 namespace FastTests.Sparrow
 {
-    public class BitVectorsTest
+    public class BitVectorsTests
     {
         public static IEnumerable<object[]> VectorSize
         {
@@ -32,8 +36,7 @@ namespace FastTests.Sparrow
         public void Constants()
         {
             Assert.Equal(64, BitVector.BitsPerWord);
-            // Workaround for https://github.com/dotnet/coreclr/issues/2683
-            Assert.Equal((uint) (Math.Log(BitVector.BitsPerWord) / Math.Log(2)), BitVector.Log2BitsPerWord);
+            Assert.Equal((uint)Math.Log(BitVector.BitsPerWord, 2), BitVector.Log2BitsPerWord);
         }
 
         [Fact]
@@ -111,16 +114,46 @@ namespace FastTests.Sparrow
         [Fact]
         public void Construction_PrefixFree()
         {
-            var vector = BitVector.Of("1", false);
-            var prefixFreeVector = BitVector.Of("1", true);
+            var vector = BitVector.Of(false, "1");
+            var prefixFreeVector = BitVector.Of(true, "1");
 
-            Assert.Equal(vector.Count + 16, prefixFreeVector.Count);
+            Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
             Assert.True(vector.IsProperPrefix(prefixFreeVector));
 
-            vector = BitVector.Of("10", false);
-            prefixFreeVector = BitVector.Of("10", true);
+            vector = BitVector.Of(false, "10");
+            prefixFreeVector = BitVector.Of(true, "10");
+
+            Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
+            Assert.True(vector.IsProperPrefix(prefixFreeVector));
+
+            vector = BitVector.Of(false, "13");
+            prefixFreeVector = BitVector.Of(true, "13");
+
+            Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
+            Assert.True(vector.IsProperPrefix(prefixFreeVector));
+
+            vector = BitVector.Of(false, 94949L, 1231L);
+            prefixFreeVector = BitVector.Of(true, 94949L, 1231L);
+
+            Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
+            Assert.True(vector.IsProperPrefix(prefixFreeVector));
+
+            vector = BitVector.Of(false, 94949u, 1231u);
+            prefixFreeVector = BitVector.Of(true, 94949u, 1231u);
             
-            Assert.Equal(vector.Count + 16, prefixFreeVector.Count);
+            Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
+            Assert.True(vector.IsProperPrefix(prefixFreeVector));
+
+            vector = BitVector.Of(false, 94949u, 1231u, 1231u);
+            prefixFreeVector = BitVector.Of(true, 94949u, 1231u, 1231u);
+
+            Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
+            Assert.True(vector.IsProperPrefix(prefixFreeVector));
+
+            vector = BitVector.Of(false, (byte)123, (byte)55, (byte)55, (byte)55);
+            prefixFreeVector = BitVector.Of(true, (byte)123, (byte)55, (byte)55, (byte)55);
+
+            Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
             Assert.True(vector.IsProperPrefix(prefixFreeVector));
         }
 

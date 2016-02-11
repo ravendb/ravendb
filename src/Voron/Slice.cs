@@ -49,7 +49,14 @@ namespace Voron
 
         internal BitVector ToBitVector()
         {
-            throw new NotImplementedException();
+            if (Array != null)
+            {
+                return BitVector.Of(true, Array);
+            }
+            else
+            {
+                return BitVector.Of(true, this.Pointer, this.KeyLength);                
+            }            
         }
 
         public bool Equals(Slice other)
