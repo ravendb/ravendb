@@ -4,7 +4,7 @@ using Lucene.Net.Index;
 
 using Raven.Abstractions.Logging;
 
-namespace Raven.Server.Indexes.Storage.Lucene
+namespace Raven.Server.Indexes.Persistance.Lucene
 {
     public class ErrorLoggingConcurrentMergeScheduler : ConcurrentMergeScheduler
     {

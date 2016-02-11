@@ -5,7 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Server.Documents;
-using Raven.Server.Indexes.Storage.Lucene;
+using Raven.Server.Indexes.Persistance.Lucene;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 

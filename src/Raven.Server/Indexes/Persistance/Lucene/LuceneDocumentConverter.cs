@@ -9,7 +9,7 @@ using Sparrow;
 
 using Document = Raven.Server.Documents.Document;
 
-namespace Raven.Server.Indexes.Storage.Lucene
+namespace Raven.Server.Indexes.Persistance.Lucene
 {
     public class LuceneDocumentConverter
     {

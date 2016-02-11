@@ -11,7 +11,7 @@ using Raven.Server.Json;
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
 
-namespace Raven.Server.Indexes.Storage.Lucene
+namespace Raven.Server.Indexes.Persistance.Lucene
 {
     public class LuceneIndexPersistance : IDisposable
     {
