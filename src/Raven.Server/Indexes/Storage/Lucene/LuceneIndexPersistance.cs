@@ -13,7 +13,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Indexes.Storage.Lucene
 {
-    public class LuceneIndexStorage : IDisposable
+    public class LuceneIndexPersistance : IDisposable
     {
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
@@ -27,7 +27,7 @@ namespace Raven.Server.Indexes.Storage.Lucene
 
         private volatile bool _disposed;
 
-        public LuceneIndexStorage()
+        public LuceneIndexPersistance()
         {
             DocumentConverter = new LuceneDocumentConverter();
         }
@@ -45,7 +45,7 @@ namespace Raven.Server.Indexes.Storage.Lucene
         public void Write(RavenOperationContext context, List<Document> documents)
         {
             if (_disposed)
-                throw new ObjectDisposedException("LuceneIndexStorage was disposed.");
+                throw new ObjectDisposedException("LuceneIndexPersistance was disposed.");
 
             lock (writeLock)
             {

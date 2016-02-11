@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 
 using Raven.Server.Documents;
-using Raven.Server.Json;
 
 using Document = Raven.Server.Documents.Document;
 
@@ -12,8 +11,8 @@ namespace Raven.Server.Indexes
     {
         private readonly IDictionary<string, string[]> _documentPathsByCollection = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
-        public AutoIndex(RavenOperationContext context, DocumentsStorage documentsStorage)
-            : base(context, documentsStorage)
+        public AutoIndex(int indexId, DocumentsStorage documentsStorage)
+            : base(indexId, documentsStorage)
         {
         }
 
@@ -22,10 +21,8 @@ namespace Raven.Server.Indexes
             var documentPaths = _documentPathsByCollection[collection];
             var indexDocument = new Lucene.Net.Documents.Document();
 
-            foreach (var field in IndexStorage.DocumentConverter.GetFields(documentPaths, document))
-            {
+            foreach (var field in IndexPersistance.DocumentConverter.GetFields(documentPaths, document))
                 indexDocument.Add(field);
-            }
 
             return indexDocument;
         }
