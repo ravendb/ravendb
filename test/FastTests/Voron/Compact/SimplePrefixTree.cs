@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Voron;
-using Voron.Data.Compact;
+using Voron.Data.Tables;
 using Xunit;
 
 namespace FastTests.Voron.Compact
@@ -13,15 +13,22 @@ namespace FastTests.Voron.Compact
     {
         private string Name = "MyTree";
 
-        [Fact]
-        public void Construction()
+        private void InitializeStorage()
         {
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.CreatePrefixTree(Name);
+                DocsSchema.Create(tx, "docs");
+                tx.CreatePrefixTree(Name);
 
                 tx.Commit();
             }
+        }
+
+
+        [Fact]
+        public void Construction()
+        {
+            InitializeStorage();
 
             using (var tx = Env.ReadTransaction())
             {
@@ -38,13 +45,18 @@ namespace FastTests.Voron.Compact
         [Fact]
         public void Operations_SingleElement_Invariants()
         {
-            var key = "oren";
+            InitializeStorage();
 
+            Slice key = new Slice(Encoding.UTF8.GetBytes("oren"));
+
+            long recordId;
             using (var tx = Env.WriteTransaction())
             {
+                var docs = new Table(DocsSchema, "docs", tx);
                 var tree = tx.CreatePrefixTree(Name);
 
-                Assert.True(tree.Add(key, (Slice)"eini"));
+                recordId = SetHelper(docs, key, "eini");
+                Assert.True(tree.Add(key, recordId));
 
                 tx.Commit();
             }
@@ -53,12 +65,16 @@ namespace FastTests.Voron.Compact
             {
                 var tree = tx.ReadPrefixTree(Name);
 
+                var docs = new Table(DocsSchema, "docs", tx);
+                docs.ReadByKey(key);
+
                 Assert.Equal(key, tree.FirstKey());
                 Assert.Equal(key, tree.LastKey());
                 Assert.True(tree.Contains(key));
 
-                string value;
+                long value;
                 Assert.True(tree.TryGet(key, out value));
+                Assert.Equal(recordId, value);
 
                 StructuralVerify(tree);
             }
@@ -67,13 +83,18 @@ namespace FastTests.Voron.Compact
         [Fact]
         public void Operations_SingleElement_Operations()
         {
-            var key = "oren";
+            InitializeStorage();
 
+            Slice key = new Slice(Encoding.UTF8.GetBytes("oren"));
+
+            long recordId;
             using (var tx = Env.WriteTransaction())
             {
+                var docs = new Table(DocsSchema, "docs", tx);
                 var tree = tx.CreatePrefixTree(Name);
 
-                Assert.True(tree.Add(key, (Slice)"eini"));
+                recordId = SetHelper(docs, key, "eini");
+                Assert.True(tree.Add(key, recordId));
 
                 StructuralVerify(tree);
 

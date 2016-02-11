@@ -547,17 +547,18 @@ namespace Sparrow.Binary
 
         public unsafe static BitVector Of(bool prefixFree, byte* values, int length)
         {
-            int prefixAdjustment = (prefixFree ? 2 : 0);
+            int prefixAdjustment = (prefixFree ? 2 : 0);          
 
-            int extraBytes = (length + prefixAdjustment) % sizeof(ulong);
-            int lastLong = length / sizeof(ulong);
+            int size = (length + prefixAdjustment) / 8;
 
-            int size = (length + prefixAdjustment) / 8 ;
+            int extraBytes = length % sizeof(ulong);
             if (extraBytes != 0)
                 size++;
 
             int position;
             ulong[] newValue = new ulong[size];
+
+            int lastLong = length / sizeof(ulong);
             for (int i = 0; i < lastLong; i++)
             {
                 position = i * sizeof(ulong);
@@ -570,7 +571,7 @@ namespace Sparrow.Binary
                               (ulong)values[position + 6] << 8 |
                               (ulong)values[position + 7];
             }
-
+          
             if (extraBytes != 0)
             {
                 position = lastLong * sizeof(ulong);
@@ -586,7 +587,7 @@ namespace Sparrow.Binary
                 }
                 while (bytesLeft > 0);
 
-                newValue[lastLong] = lastValue << (8 - extraBytes) * BitVector.BitsPerByte;
+                newValue[lastLong] = lastValue << ((8 - length) * BitVector.BitsPerByte);
             }
 
             return new BitVector((length + prefixAdjustment) * BitVector.BitsPerByte, newValue);

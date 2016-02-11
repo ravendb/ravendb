@@ -2,32 +2,78 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Voron;
 using Voron.Data.Compact;
-using Voron.Tests;
+using Voron.Data.Tables;
+using Voron.Util.Conversion;
 using Xunit;
 
 namespace FastTests.Voron.Compact
 {
     public unsafe class PrefixTreeStorageTests : StorageTest
     {
-        public sealed class SampleData : IEquatable<SampleData>
-        {
-            public string Data;
-
-            bool IEquatable<SampleData>.Equals(SampleData other)
-            {
-                return other.Data == this.Data;
-            }
-        }
+        protected TableSchema DocsSchema;
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);
+
+            DocsSchema = new TableSchema()
+                .DefineKey(new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = 0,
+                });
         }
 
+        public unsafe long SetHelper(Table table, params object[] args)
+        {
+            var builder = new TableValueBuilder();
+            var buffers = new List<byte[]>();
+            foreach (var o in args)
+            {
+                var s = o as string;
+                if (s != null)
+                {
+                    buffers.Add(Encoding.UTF8.GetBytes(s));
+                    continue;
+                }
+
+                var slice = o as Slice;
+                if (slice != null )
+                {
+                    if (slice.Array == null)
+                        throw new NotSupportedException();
+
+                    buffers.Add(slice.Array);
+                    continue;
+                }
+
+                var l = (long)o;
+                buffers.Add(EndianBitConverter.Big.GetBytes(l));
+            }
+
+            var handles1 = new List<GCHandle>();
+            foreach (var buffer in buffers)
+            {
+                var gcHandle1 = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                handles1.Add(gcHandle1);
+                builder.Add((byte*)gcHandle1.AddrOfPinnedObject(), buffer.Length);
+            }
+
+            var handles = handles1;
+
+            long id = table.Set(builder);
+
+            foreach (var gcHandle in handles)
+            {
+                gcHandle.Free();
+            }
+
+            return id;
+        }
 
         public static void DumpKeys(PrefixTree tree)
         {
