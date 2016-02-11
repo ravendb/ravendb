@@ -1,1 +1,0 @@
-Copy-Item Tools\Git\pre-commit .git\hooks\pre-commit
