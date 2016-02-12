@@ -6,7 +6,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Tests.Core;
 
@@ -19,24 +18,25 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckDispose()
         {
-            using (var storage = CreateDocumentsStorage())
-            {
-                var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
+            var notifications = new DatabaseNotifications();
+            var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
 
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String, false) }), storage, indexingConfiguration);
+            using (var storage = CreateDocumentsStorage(notifications))
+            {
+                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery()));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String, false) }), storage, indexingConfiguration);
+                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
                 index.Execute(CancellationToken.None);
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String, false) }), storage, indexingConfiguration);
+                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
                     index.Execute(cts.Token);
 
                     cts.Cancel();
@@ -46,9 +46,9 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        private static DocumentsStorage CreateDocumentsStorage()
+        private static DocumentsStorage CreateDocumentsStorage(DatabaseNotifications notifications)
         {
-            var storage = new DocumentsStorage("TestStorage", new RavenConfiguration { Core = { RunInMemory = true } });
+            var storage = new DocumentsStorage("TestStorage", new RavenConfiguration { Core = { RunInMemory = true } }, notifications);
             storage.Initialize();
 
             return storage;

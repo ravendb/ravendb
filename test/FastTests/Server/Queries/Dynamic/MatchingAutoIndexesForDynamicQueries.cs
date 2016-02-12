@@ -14,15 +14,17 @@ namespace FastTests.Server.Queries.Dynamic
         private readonly IndexStore _indexStore;
         private readonly DynamicQueryToIndexMatcher _sut;
         private readonly DocumentsStorage _documentsStorage;
+        private readonly DatabaseNotifications _databaseNotifications;
 
         public MatchingAutoIndexesForDynamicQueries()
         {
             var config = new RavenConfiguration { Core = { RunInMemory = true } };
 
-            _documentsStorage = new DocumentsStorage("TestStorage", config);
+            _databaseNotifications = new DatabaseNotifications();
+            _documentsStorage = new DocumentsStorage("TestStorage", config, _databaseNotifications);
             _documentsStorage.Initialize();
 
-            _indexStore = new IndexStore(_documentsStorage, config.Indexing);
+            _indexStore = new IndexStore(_documentsStorage, config.Indexing, _databaseNotifications);
             _indexStore.Initialize();
 
             _sut = new DynamicQueryToIndexMatcher(_indexStore);
@@ -31,14 +33,14 @@ namespace FastTests.Server.Queries.Dynamic
         [Fact]
         public void DoesNotMatchIfIndexStoreHasNoIndexes()
         {
-            var result = _sut.Match(DynamicQueryMapping.Create("Users", new IndexQuery() { Query = "Name:Arek"}));
+            var result = _sut.Match(DynamicQueryMapping.Create("Users", new IndexQuery() { Query = "Name:Arek" }));
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
         public void Foo()
         {
-            add_index(new AutoIndexDefinition("Users", new AutoIndexField[]
+            add_index(new AutoIndexDefinition("Users", new[]
             {
                 new AutoIndexField("FirstName"),
                 new AutoIndexField("LastName"),

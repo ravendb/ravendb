@@ -16,8 +16,9 @@ namespace Raven.Server.Documents
             Configuration = configuration;
             CancellationToken = CancellationTokenSource.Token;
 
-            DocumentsStorage = new DocumentsStorage(name, configuration);
-            IndexStore = new IndexStore(DocumentsStorage, configuration.Indexing);
+            Notifications = new DatabaseNotifications();
+            DocumentsStorage = new DocumentsStorage(name, configuration, Notifications);
+            IndexStore = new IndexStore(DocumentsStorage, configuration.Indexing, Notifications);
         }
 
         public string Name { get; }
@@ -29,6 +30,8 @@ namespace Raven.Server.Documents
         public CancellationToken CancellationToken { get; }
 
         public DocumentsStorage DocumentsStorage { get; }
+
+        public DatabaseNotifications Notifications { get; }
 
         public IndexStore IndexStore { get; }
 

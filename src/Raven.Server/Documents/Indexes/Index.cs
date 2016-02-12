@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -43,6 +44,8 @@ namespace Raven.Server.Documents.Indexes
 
         private DocumentsStorage _documentsStorage;
 
+        private DatabaseNotifications _databaseNotifications;
+
         private Task _indexingTask;
 
         private bool _initialized;
@@ -55,6 +58,8 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _disposed;
 
+        private readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
+
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
@@ -66,7 +71,7 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistence = new LuceneIndexPersistance();
         }
 
-        public static Index Open(int indexId, string path, DocumentsStorage documentsStorage)
+        public static Index Open(int indexId, string path, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
             var options = StorageEnvironmentOptions.ForPath(path);
             try
@@ -86,7 +91,7 @@ namespace Raven.Server.Documents.Indexes
                     switch (type)
                     {
                         case IndexType.Auto:
-                            return AutoIndex.Open(indexId, environment, documentsStorage);
+                            return AutoIndex.Open(indexId, environment, documentsStorage, databaseNotifications);
                         default:
                             throw new NotImplementedException();
                     }
@@ -109,7 +114,8 @@ namespace Raven.Server.Documents.Indexes
 
         public bool ShouldRun { get; private set; } = true;
 
-        protected void Initialize(DocumentsStorage documentsStorage, IndexingConfiguration configuration)
+
+        protected void Initialize(DocumentsStorage documentsStorage, IndexingConfiguration configuration, DatabaseNotifications databaseNotifications)
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -127,7 +133,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    Initialize(new StorageEnvironment(options), documentsStorage);
+                    Initialize(new StorageEnvironment(options), documentsStorage, databaseNotifications);
                 }
                 catch (Exception)
                 {
@@ -137,7 +143,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected unsafe void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage)
+        protected unsafe void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage, DatabaseNotifications databaseNotifications)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Index));
@@ -155,6 +161,7 @@ namespace Raven.Server.Documents.Indexes
 
                     _environment = environment;
                     _documentsStorage = documentsStorage;
+                    _databaseNotifications = databaseNotifications;
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                     _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
 
@@ -318,6 +325,8 @@ namespace Raven.Server.Documents.Indexes
                         foundWork = true;
                         // TODO
                     }
+
+                    _mre.Wait(cts.Token);
 
                     if (foundWork == false && ShouldRun)
                     {

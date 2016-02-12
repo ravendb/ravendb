@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexingConfiguration _configuration;
 
+        private readonly DatabaseNotifications _databaseNotifications;
+
         private readonly object _locker = new object();
 
         private readonly Dictionary<int, Index> _indexes = new Dictionary<int, Index>();
@@ -23,10 +25,12 @@ namespace Raven.Server.Documents.Indexes
 
         private string _path;
 
-        public IndexStore(DocumentsStorage documentsStorage, IndexingConfiguration configuration)
+
+        public IndexStore(DocumentsStorage documentsStorage, IndexingConfiguration configuration, DatabaseNotifications databaseNotifications)
         {
             _documentsStorage = documentsStorage;
             _configuration = configuration;
+            _databaseNotifications = databaseNotifications;
         }
 
         public void Initialize()
@@ -69,7 +73,7 @@ namespace Raven.Server.Documents.Indexes
         public int CreateIndex(AutoIndexDefinition definition)
         {
             var indexId = 1; // TODO
-            AddIndex(indexId, AutoIndex.CreateNew(indexId, definition, _documentsStorage, _configuration));
+            AddIndex(indexId, AutoIndex.CreateNew(indexId, definition, _documentsStorage, _configuration, _databaseNotifications));
             return indexId;
         }
 
@@ -97,7 +101,7 @@ namespace Raven.Server.Documents.Indexes
                 if (int.TryParse(indexDirectory.Name, out indexId) == false)
                     continue;
 
-                var index = Index.Open(indexId, indexDirectory.FullName, _documentsStorage);
+                var index = Index.Open(indexId, indexDirectory.FullName, _documentsStorage, _configuration, _databaseNotifications);
                 AddIndex(indexId, index);
             }
         }

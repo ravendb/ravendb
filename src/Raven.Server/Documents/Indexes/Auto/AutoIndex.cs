@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Indexes.Auto;
 
 using Voron;
 
-namespace Raven.Server.Documents.Indexes
+namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndex : MapIndex<AutoIndexDefinition>
     {
@@ -18,18 +18,18 @@ namespace Raven.Server.Documents.Indexes
             _fields = definition.MapFields.ToArray();
         }
 
-        public static AutoIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentsStorage documentsStorage, IndexingConfiguration configuration)
+        public static AutoIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
             var instance = new AutoIndex(indexId, definition);
-            instance.Initialize(documentsStorage, configuration);
+            instance.Initialize(documentsStorage, indexingConfiguration, databaseNotifications);
 
             return instance;
         }
 
-        public static AutoIndex Open(int indexId, StorageEnvironment environment, DocumentsStorage documentsStorage)
+        public static AutoIndex Open(int indexId, StorageEnvironment environment, DocumentsStorage documentsStorage, DatabaseNotifications databaseNotifications)
         {
             var instance = new AutoIndex(indexId, null);
-            instance.Initialize(environment, documentsStorage);
+            instance.Initialize(environment, documentsStorage, databaseNotifications);
 
             // TODO
 
