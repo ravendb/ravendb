@@ -33,18 +33,54 @@ namespace FastTests.Server.Queries.Dynamic
         [Fact]
         public void DoesNotMatchIfIndexStoreHasNoIndexes()
         {
-            var result = _sut.Match(DynamicQueryMapping.Create("Users", new IndexQuery() { Query = "Name:Arek" }));
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek" });
+
+            var result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        public void Foo()
+        [Fact]
+        public void IfThereIsOneMatchingIndexItShouldBeChosen()
         {
-            add_index(new AutoIndexDefinition("Users", new[]
+            var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("FirstName"),
-                new AutoIndexField("LastName"),
-            }));
+                new AutoIndexField("Name"),
+            });
+
+            add_index(definition);
+
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek" });
+
+            var result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
+            Assert.Equal(definition.Name, result.IndexName);
+        }
+
+        [Fact]
+        public void IndexMatchesAllFieldsShouldBeChosen()
+        {
+            var usersByName = new AutoIndexDefinition("Users", new[]
+            {
+                new AutoIndexField("Name"),
+            });
+
+            var usersByNameAndAge = new AutoIndexDefinition("Users", new[]
+            {
+                new AutoIndexField("Name"),
+                new AutoIndexField("Age")
+            });
+
+            add_index(usersByName);
+            add_index(usersByNameAndAge);
+
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek Age:29" });
+
+            var result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
+            Assert.Equal(usersByNameAndAge.Name, result.IndexName);
         }
 
         private void add_index(AutoIndexDefinition definition)

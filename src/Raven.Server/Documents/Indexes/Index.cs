@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexDefinitionBase Definition { get; }
 
-        public string PublicName => Definition.Name;
+        public string Name => Definition.Name;
 
         public bool ShouldRun { get; private set; } = true;
 

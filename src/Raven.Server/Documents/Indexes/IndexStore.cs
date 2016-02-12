@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Extensions;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 
@@ -19,12 +17,11 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
-        private readonly Dictionary<int, Index> _indexes = new Dictionary<int, Index>();
-
         private bool _initialized;
 
         private string _path;
 
+        public CollectionOfIndexes _indexes = new CollectionOfIndexes();
 
         public IndexStore(DocumentsStorage documentsStorage, IndexingConfiguration configuration, DatabaseNotifications databaseNotifications)
         {
@@ -56,30 +53,31 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Index GetIndex(int indexId)
+        public Index GetIndex(int id)
         {
             Index index;
-            if (_indexes.TryGetValue(indexId, out index) == false)
+            if (_indexes.TryGetById(id, out index) == false)
                 return null;
 
             return index;
         }
 
-        public Index GetIndex(string indexName)
+        public Index GetIndex(string name)
         {
-            throw new NotImplementedException();
+            Index index;
+            if (_indexes.TryGetByName(name, out index) == false)
+                return null;
+
+            return index;
         }
 
         public int CreateIndex(AutoIndexDefinition definition)
         {
-            var indexId = 1; // TODO
-            AddIndex(indexId, AutoIndex.CreateNew(indexId, definition, _documentsStorage, _configuration, _databaseNotifications));
-            return indexId;
-        }
+            var indexId = _indexes.GetNextIndexId();
 
-        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
-        {
-            throw new NotImplementedException();
+            _indexes.Add(AutoIndex.CreateNew(indexId, definition, _documentsStorage, _configuration, _databaseNotifications));
+
+            return indexId;
         }
 
         public void Dispose()
@@ -87,7 +85,10 @@ namespace Raven.Server.Documents.Indexes
             //FlushMapIndexes();
             //FlushReduceIndexes();
 
-            _indexes.ForEach(x => x.Value.Dispose());
+            foreach (var index in _indexes)
+            {
+                index.Dispose();
+            }
         }
 
         private void OpenIndexes()
@@ -102,13 +103,13 @@ namespace Raven.Server.Documents.Indexes
                     continue;
 
                 var index = Index.Open(indexId, indexDirectory.FullName, _documentsStorage, _configuration, _databaseNotifications);
-                AddIndex(indexId, index);
+                _indexes.Add(index);
             }
         }
 
-        private void AddIndex(int indexId, Index index)
+        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
         {
-            _indexes[indexId] = index;
+            return _indexes.GetAutoIndexDefinitionsForCollection(collection); // TODO arek
         }
     }
 }

@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var currentBestState = DynamicQueryMatchType.Complete;
 
-            if (query.MapFields.All(x => definition.ContainsField(x.From))) // TODO arek: x.From
+            if (query.MapFields.All(x => definition.ContainsField(x.From)) == false) // TODO arek: x.From
             {
                 explain(indexName, () =>
                 {
