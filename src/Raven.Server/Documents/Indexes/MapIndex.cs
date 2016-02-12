@@ -4,24 +4,20 @@ using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class MapIndex : Index
+    public class MapIndex : MapIndex<IndexDefinitionBase>
     {
-        public MapIndex(int indexId, DocumentsStorage documentsStorage)
-            : this(indexId, IndexType.Map,  documentsStorage)
+        protected MapIndex(int indexId, IndexType type)
+            : base(indexId, type, null)
         {
         }
+    }
 
-        protected MapIndex(int indexId, IndexType type, DocumentsStorage documentsStorage)
-            : base(indexId, type, documentsStorage)
+    public abstract class MapIndex<TIndexDefinition> : Index<TIndexDefinition> 
+        where TIndexDefinition : IndexDefinitionBase
+    {
+        protected MapIndex(int indexId, IndexType type, TIndexDefinition definition)
+            : base(indexId, type, definition)
         {
-        }
-
-        protected override string[] Collections
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
         }
 
         protected override bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag)
@@ -44,7 +40,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected override Lucene.Net.Documents.Document ConvertDocument(string collection, Document document)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
     }
 }

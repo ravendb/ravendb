@@ -8,39 +8,28 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class AutoIndex : MapIndex
+    public class AutoIndex : MapIndex<AutoIndexDefinition>
     {
-        private readonly AutoIndexDefinition _definition;
-
         private readonly string[] _fields;
 
-        private AutoIndex(int indexId, DocumentsStorage documentsStorage)
-            : base(indexId, IndexType.Auto, documentsStorage)
+        private AutoIndex(int indexId, AutoIndexDefinition definition)
+            : base(indexId, IndexType.Auto, definition)
         {
-        }
-
-        private AutoIndex(int indexId, DocumentsStorage documentsStorage, AutoIndexDefinition definition)
-            : base(indexId, IndexType.Auto, documentsStorage)
-        {
-            _definition = definition;
             _fields = definition.MapFields.ToArray();
-            Collections = new[] { definition.Collection };
         }
-
-        protected override string[] Collections { get; }
 
         public static AutoIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentsStorage documentsStorage)
         {
-            var instance = new AutoIndex(indexId, documentsStorage, definition);
-            instance.Initialize();
+            var instance = new AutoIndex(indexId, definition);
+            instance.Initialize(documentsStorage);
 
             return instance;
         }
 
-        public static AutoIndex Open(int indexId, DocumentsStorage documentsStorage, StorageEnvironment environment)
+        public static AutoIndex Open(int indexId, StorageEnvironment environment, DocumentsStorage documentsStorage)
         {
-            var instance = new AutoIndex(indexId, documentsStorage);
-            instance.Initialize(environment);
+            var instance = new AutoIndex(indexId, null);
+            instance.Initialize(environment, documentsStorage);
 
             // TODO
 
@@ -49,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected override Lucene.Net.Documents.Document ConvertDocument(string collection, Document document)
         {
-            Debug.Assert(string.Equals(_definition.Collection, collection, StringComparison.OrdinalIgnoreCase), "Collection does not match.");
+            Debug.Assert(Definition.Collections.Any(x => string.Equals(x, collection, StringComparison.OrdinalIgnoreCase)), "Collection does not match.");
 
             var indexDocument = new Lucene.Net.Documents.Document();
 

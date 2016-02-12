@@ -4,41 +4,37 @@ using System.Text.RegularExpressions;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoIndexDefinition
+    public class AutoIndexDefinition : IndexDefinitionBase
     {
         private readonly AutoIndexField[] _fields;
-        static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
+
+        private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
 
         public AutoIndexDefinition(string collection, AutoIndexField[] fields)
+            : base(FindIndexName(collection, fields), new[] { collection })
         {
             _fields = fields;
-            Collection = collection;
-            Name = FindIndexName();
         }
-
-        public string Collection { get; }
 
         public IEnumerable<string> MapFields => _fields.Select(x => x.Name);
 
-        public string Name { get; }
-
-        private string FindIndexName()
+        private static string FindIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {
-            var combinedFields = string.Join("And", _fields.Select(x => ReplaceInvalidCharacterForFields.Replace(x.Name, "_")).OrderBy(x => x));
+            var combinedFields = string.Join("And", fields.Select(x => ReplaceInvalidCharacterForFields.Replace(x.Name, "_")).OrderBy(x => x));
 
-            var sortOptions = _fields.Where(x => x.SortOption != null).Select(x => x.Name).ToArray();
+            var sortOptions = fields.Where(x => x.SortOption != null).Select(x => x.Name).ToArray();
             if (sortOptions.Length > 0)
             {
                 combinedFields = $"{combinedFields}SortBy{string.Join(string.Empty, sortOptions.OrderBy(x => x))}";
             }
 
-            var highlighted = _fields.Where(x => x.Highlighted).Select(x => x.Name).ToArray();
+            var highlighted = fields.Where(x => x.Highlighted).Select(x => x.Name).ToArray();
             if (highlighted.Length > 0)
             {
                 combinedFields = $"{combinedFields}Highlight{string.Join("", highlighted.OrderBy(x => x))}";
             }
 
-            return _fields.Length == 0 ? $"Auto/{Collection}" : $"Auto/{Collection}/By{combinedFields}";
+            return fields.Count == 0 ? $"Auto/{collection}" : $"Auto/{collection}/By{combinedFields}";
         }
     }
 }

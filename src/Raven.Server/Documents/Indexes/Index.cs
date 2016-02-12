@@ -14,7 +14,18 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public abstract class Index : IDisposable
+    public abstract class Index<TIndexDefinition> : Index
+        where TIndexDefinition : IndexDefinitionBase
+    {
+        public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
+
+        protected Index(int indexId, IndexType type, TIndexDefinition definition) 
+            : base(indexId, type, definition)
+        {
+        }
+    }
+
+    public abstract class Index
     {
         private static readonly Slice TypeSlice = "Type";
 
@@ -26,7 +37,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
-        private readonly DocumentsStorage _documentsStorage;
+        private DocumentsStorage _documentsStorage;
 
         private Task _indexingTask;
 
@@ -38,14 +49,14 @@ namespace Raven.Server.Documents.Indexes
 
         private ContextPool _contextPool;
 
-        protected Index(int indexId, IndexType type, DocumentsStorage documentsStorage)
+        protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
                 throw new ArgumentException("IndexId must be greater than zero.", nameof(indexId));
 
-            _documentsStorage = documentsStorage;
             IndexId = indexId;
             Type = type;
+            Definition = definition;
             IndexPersistence = new LuceneIndexPersistance();
         }
 
@@ -69,7 +80,7 @@ namespace Raven.Server.Documents.Indexes
                     switch (type)
                     {
                         case IndexType.Auto:
-                            return AutoIndex.Open(indexId, documentsStorage, environment);
+                            return AutoIndex.Open(indexId, environment, documentsStorage);
                         default:
                             throw new NotImplementedException();
                     }
@@ -84,13 +95,15 @@ namespace Raven.Server.Documents.Indexes
 
         public int IndexId { get; }
 
-        public IndexType Type { get; set; }
+        public IndexType Type { get; }
 
-        public string PublicName { get; private set; }
+        public IndexDefinitionBase Definition { get; }
+
+        public string PublicName => Definition.Name;
 
         public bool ShouldRun { get; private set; } = true;
 
-        protected void Initialize()
+        protected void Initialize(DocumentsStorage documentsStorage)
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -106,7 +119,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    Initialize(options);
+                    Initialize(options, documentsStorage);
                 }
                 catch (Exception)
                 {
@@ -116,11 +129,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected void Initialize(StorageEnvironment environment)
+        protected void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage)
         {
             try
             {
                 _environment = environment;
+                _documentsStorage = documentsStorage;
                 _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                 _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
 
@@ -140,14 +154,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void Initialize(StorageEnvironmentOptions options)
+        private void Initialize(StorageEnvironmentOptions options, DocumentsStorage documentsStorage)
         {
             options.SchemaVersion = 1;
             try
             {
                 var environment = new StorageEnvironment(options);
 
-                Initialize(environment);
+                Initialize(environment, documentsStorage);
             }
             catch (Exception)
             {
@@ -189,7 +203,13 @@ namespace Raven.Server.Documents.Indexes
             _contextPool = null;
         }
 
-        protected abstract string[] Collections { get; }
+        protected string[] Collections
+        {
+            get
+            {
+                return Definition.Collections;
+            }
+        }
 
         protected abstract bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag);
 
