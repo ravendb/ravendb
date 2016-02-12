@@ -4,18 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
+
 using Microsoft.AspNet.Http;
-using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
+
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.Web;
-using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class MultiGetHandler : DatabaseRequestHandler
     {

@@ -1,14 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.AspNet.WebSockets.Protocol;
+
 using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Raven.Server.Json.Parsing;
+using Raven.Server.Routing;
+
 using Constants = Raven.Abstractions.Data.Constants;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {

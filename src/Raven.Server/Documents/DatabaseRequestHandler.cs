@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Server.Indexes;
+
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.Web;

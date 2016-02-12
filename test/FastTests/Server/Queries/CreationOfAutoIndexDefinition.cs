@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Server.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Dynamic;
+
 using Xunit;
 
 namespace FastTests.Server.Queries
