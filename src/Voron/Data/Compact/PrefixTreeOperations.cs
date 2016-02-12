@@ -202,7 +202,7 @@ namespace Voron.Data.Compact
 
         public static string ToDebugString(this PrefixTree tree, Node* @this)
         {
-            throw new NotImplementedException();
+            return "TODO: Implement ToDebugString()";
         }
     }
 }

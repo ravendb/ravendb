@@ -131,6 +131,14 @@ namespace Voron.Data.Compact
             IsModified = true;
         }
 
+        public bool AreNodesInSameChunk( long na, long nb )
+        {
+            long naChunkIdx = na / _innerCopy.NodesPerChunk;
+            long nbChunkIdx = nb / _innerCopy.NodesPerChunk;
+
+            return naChunkIdx == nbChunkIdx;
+        }
+
         public PageLocationPtr MapVirtualToPhysical(long nodeName, TranslationTableMapMode mode = TranslationTableMapMode.Read)
         {
             Debug.Assert(nodeName >= PrefixTree.Constants.RootNodeName);
