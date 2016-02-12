@@ -84,3 +84,4 @@ src/Raven.Studio/wwwroot/App/**/*.js.map
 src/Raven.Studio/typings/**/*.d.ts
 
 /src/Raven.Studio/wwwroot/Content
+/src/Raven.Studio/wwwroot/lib

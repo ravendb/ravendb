@@ -16,7 +16,7 @@ declare module "jszip-utils" {
 
 declare var forge: any;
 
-declare module "forge/forge_custom.min" {
+declare module "forge" {
     export = forge;
 }
 
