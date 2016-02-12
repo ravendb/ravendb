@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Voron.Data.Compact
 {
+    // TODO: Change the size of the structs to account for the removal of the right and left pointer. 
     public unsafe partial class PrefixTree
     {
         public enum NodeType : byte
@@ -41,7 +42,7 @@ namespace Voron.Data.Compact
         /// <summary>
         /// Every internal node contains a pointer to its two children, the extremes ia and ja of its skip interval,
         /// its own extent ea and two additional jump pointers J- and J+. Page 163 of [1].
-        /// </summary>
+        /// </summary>        
         [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 48)]
         public struct Internal
         {
@@ -57,22 +58,6 @@ namespace Voron.Data.Compact
             /// </summary>
             [FieldOffset(4)]
             public long ReferencePtr;
-
-            /// <summary>
-            /// The right subtrie.
-            /// </summary>
-            // TODO: Given that we are using an implicit representation is this necessary?
-            //       Wouldnt be the same naming the current node and save 4 bytes per node?
-            [FieldOffset(12)]
-            public long RightPtr;
-
-            /// <summary>
-            /// The left subtrie.
-            /// </summary>
-            // TODO: Given that we are using an implicit representation is this necessary?
-            //       Wouldnt be the same naming the current node and save 4 bytes per node?
-            [FieldOffset(20)]
-            public long LeftPtr;
 
             /// <summary>
             /// The downward right jump pointer.
@@ -99,10 +84,10 @@ namespace Voron.Data.Compact
                 this.ExtentLength = extentLength;
 
                 this.ReferencePtr = Constants.InvalidNodeName;
-                this.RightPtr = Constants.InvalidNodeName;
+                //this.RightPtr = Constants.InvalidNodeName;
                 this.JumpLeftPtr = Constants.InvalidNodeName;
                 this.JumpRightPtr = Constants.InvalidNodeName;
-                this.LeftPtr = Constants.InvalidNodeName;
+                //this.LeftPtr = Constants.InvalidNodeName;
             }
 
             public bool IsLeaf => Type == NodeType.Leaf;
@@ -116,10 +101,10 @@ namespace Voron.Data.Compact
                 this.ExtentLength = extentLength;
 
                 this.ReferencePtr = Constants.InvalidNodeName;
-                this.RightPtr = Constants.InvalidNodeName;
+                //this.RightPtr = Constants.InvalidNodeName;
                 this.JumpLeftPtr = Constants.InvalidNodeName;
                 this.JumpRightPtr = Constants.InvalidNodeName;
-                this.LeftPtr = Constants.InvalidNodeName;
+                //this.LeftPtr = Constants.InvalidNodeName;
             }
         }
 

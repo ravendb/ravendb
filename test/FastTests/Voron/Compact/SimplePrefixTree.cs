@@ -121,6 +121,11 @@ namespace FastTests.Voron.Compact
             }
         }
 
+        private long AddToPrefixTree(PrefixTree tree, Table table, string key, string value)
+        {
+            return AddToPrefixTree(tree, table, new Slice(Encoding.UTF8.GetBytes(key)), value);
+        }
+
         private long AddToPrefixTree(PrefixTree tree, Table table, Slice key, string value)
         {
             long recordId = SetHelper(table, key, value);
@@ -129,25 +134,25 @@ namespace FastTests.Voron.Compact
         }
 
         [Fact]
-        public void Operations_SingleBranchInsertion()
+        public void Structure_MultipleBranchInsertion()
         {
             InitializeStorage();
 
-            Slice smallestKey = new Slice(Encoding.UTF8.GetBytes("Ar"));
-            Slice lesserKey = new Slice(Encoding.UTF8.GetBytes("Oren")); 
-            Slice greaterKey = new Slice(Encoding.UTF8.GetBytes("oren")); 
-            Slice greatestKey = new Slice(Encoding.UTF8.GetBytes("zz"));
-
-            long lesserKeyRecordId = -1;
-            long greaterKeyRecordId = -1;
             using (var tx = Env.WriteTransaction())
             {
                 var docs = new Table(DocsSchema, "docs", tx);
                 var tree = tx.CreatePrefixTree(Name);
 
-                lesserKeyRecordId = AddToPrefixTree(tree, docs, lesserKey, "Oren");
-                greaterKeyRecordId = AddToPrefixTree(tree, docs, greaterKey, "Eini");
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8Jp3", "8Jp3"));
+                DumpTree(tree);
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "GX37", "GX37"));
+                DumpTree(tree);
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "f04o", "f04o"));
+                DumpTree(tree);
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "KmGx", "KmGx"));
+                DumpTree(tree);
 
+                DumpKeys(tree);
                 StructuralVerify(tree);
 
                 tx.Commit();
@@ -158,39 +163,8 @@ namespace FastTests.Voron.Compact
                 var tree = tx.ReadPrefixTree(Name);
                 StructuralVerify(tree);
 
-                Assert.Equal(lesserKey, tree.FirstKey());
-                Assert.Equal(greaterKey, tree.LastKey());
-
-                Assert.True(tree.Contains(greaterKey));
-                Assert.True(tree.Contains(lesserKey));
-
-                long value;
-                Assert.True(tree.TryGet(lesserKey, out value));
-                Assert.Equal(lesserKeyRecordId, value);
-
-                Assert.True(tree.TryGet(greaterKey, out value));
-                Assert.Equal(greaterKeyRecordId, value);
-
-                Assert.False(tree.TryGet(greaterKey + "1", out value));
-                Assert.Equal(-1, value);
-
-                Assert.False(tree.TryGet("1", out value));
-                Assert.Equal(-1, value);
-
-                // x+ = min{y ? S | y = x} (the successor of x in S) - Page 160 of [1]
-                // Therefore the successor of the key "oren" is greater or equal to "oren"
-                Assert.Equal(lesserKey, tree.Successor(lesserKey));
-                Assert.Equal(greaterKey, tree.Successor(greaterKey));
-                Assert.Equal(greaterKey, tree.Successor(lesserKey + "1"));
-                Assert.Equal(Slice.AfterAllKeys, tree.Successor(greatestKey));
-
-                // x- = max{y ? S | y < x} (the predecessor of x in S) - Page 160 of [1] 
-                // Therefore the predecessor of the key "oren" is strictly less than "oren".
-                Assert.Equal(lesserKey, tree.Predecessor(greaterKey));
-                Assert.Equal(Slice.BeforeAllKeys, tree.Predecessor(lesserKey));
-                Assert.Equal(Slice.BeforeAllKeys, tree.Predecessor(smallestKey));
+                Assert.Equal(4, tree.Count);
             }
         }
-
     }
 }

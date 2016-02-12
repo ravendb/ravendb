@@ -159,9 +159,7 @@ namespace Voron.Data.Compact
                     newInternal->ReferencePtr = rightChildName;
                     newLeaf->ReferencePtr = newInternalName;
 
-                    newInternal->RightPtr = rightChildName;
                     newInternal->JumpRightPtr = rightChildName;
-                    newInternal->LeftPtr = leftChildName;
                     newInternal->JumpLeftPtr = isCutLow && exitNode->IsInternal ? ((Internal*)exitNode)->JumpLeftPtr : leftChildName;                    
                 }
                 else
@@ -179,33 +177,11 @@ namespace Voron.Data.Compact
                     newInternal->ReferencePtr = leftChildName;
                     newLeaf->ReferencePtr = newInternalName;
 
-                    newInternal->RightPtr = rightChildName;
                     newInternal->JumpRightPtr = leftChildName;
-                    newInternal->LeftPtr = leftChildName;
                     newInternal->JumpLeftPtr = isCutLow && exitNode->IsInternal ? ((Internal*)exitNode)->JumpRightPtr : rightChildName;
                 }
 
                 ValidateInternalNode(newInternalName, newInternal);
-
-                // TODO: Given that we are using an implicit representation is this necessary?
-                //       Wouldnt be the same naming the current node and save 4 bytes per node?
-
-                // If the exit node is not the root
-                if (!isExitNodeRoot)
-                {
-                    var cutPointParentNode = (Internal*) this.ModifyNodeByName(cutPoint.Parent);
-                    Debug.Assert(cutPointParentNode->IsInternal);
-
-                    // Update the parent exit node.
-                    if (isRightChild)
-                    {
-                        cutPointParentNode->RightPtr = exitNodeName;
-                    }
-                    else
-                    {
-                        cutPointParentNode->LeftPtr = exitNodeName;
-                    }
-                }
 
                 // Update the jump table after the insertion.
                 if (exitDirection)
@@ -288,7 +264,7 @@ namespace Voron.Data.Compact
 
         [Conditional("DEBUG")]
         private void ValidateInternalNode(long internalNodeName, Internal* nodePtr)
-        {            
+        {     
             var internalPtr = this.ReadNodeByName(internalNodeName);
             Debug.Assert(nodePtr == internalPtr); // Ensure that trying to read returns the same node. 
             Debug.Assert(nodePtr->IsInternal);
@@ -296,8 +272,8 @@ namespace Voron.Data.Compact
             var extentLength = this.GetExtentLength(nodePtr); // Retrieve the extent of the internal node. 
 
             // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
-            var leftLeaf = ReadNodeByName(nodePtr->LeftPtr);
-            var rightLeaf = ReadNodeByName(nodePtr->RightPtr);
+            var leftLeaf = ReadNodeByName(this._translationTable.GetLeftChildName(internalNodeName));
+            var rightLeaf = ReadNodeByName(this._translationTable.GetRightChildName(internalNodeName));
 
             Debug.Assert(this.Name(leftLeaf)[extentLength] == false);
             Debug.Assert(this.Name(rightLeaf)[extentLength] == true);
@@ -453,7 +429,7 @@ namespace Voron.Data.Compact
 
             int jumpLength = this.GetJumpLength(node);
 
-            long jumpNodeName = node->LeftPtr;
+            long jumpNodeName = _translationTable.GetLeftChildName(nodeName);
             Node* jumpNode = this.ReadNodeByName(nodeName);
             while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
             {
@@ -464,7 +440,7 @@ namespace Voron.Data.Compact
             Debug.Assert(PrefixTreeOperations.Intersects(jumpNode, jumpLength));            
             node->JumpLeftPtr = jumpNodeName;
 
-            jumpNodeName = node->RightPtr;
+            jumpNodeName = _translationTable.GetRightChildName(nodeName);
             jumpNode = this.ReadNodeByName(nodeName);
             while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
             {
@@ -497,9 +473,9 @@ namespace Voron.Data.Compact
             // Check if the node is either the parex(key) and/or exit(key). 
             long candidateNodeName;
             if (parexOrExitNode->ExtentLength < length && searchKey[parexOrExitNode->ExtentLength])
-                candidateNodeName = parexOrExitNode->RightPtr;
+                candidateNodeName = _translationTable.GetRightChildName(parexOrExitNodeName);
             else
-                candidateNodeName = parexOrExitNode->LeftPtr;
+                candidateNodeName = _translationTable.GetLeftChildName(parexOrExitNodeName);
 
             Node* candidateNode = ReadNodeByName(candidateNodeName);
             int lcpLength = searchKey.LongestCommonPrefixLength(this.Extent(candidateNode));
@@ -540,9 +516,9 @@ namespace Voron.Data.Compact
 
                 long parexNodeName = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode->NameLength, isExact: false);
 
-                Internal* parexNode = (Internal*)ReadNodeByName(parexNodeName);
-                var parexLeftName = parexNode->LeftPtr;
-                var parexRightName = parexNode->RightPtr;
+                //Internal* parexNode = (Internal*)ReadNodeByName(parexNodeName);
+                var parexLeftName = _translationTable.GetLeftChildName(parexNodeName);
+                var parexRightName = _translationTable.GetRightChildName(parexNodeName);
 
                 if (parexLeftName == parexOrExitNodeName || parexRightName == parexOrExitNodeName)
                     return new CutPoint(lcpLength, parexNodeName, parexOrExitNodeName, searchKey);
@@ -561,9 +537,9 @@ namespace Voron.Data.Compact
             parexOrExitNodeName = FatBinarySearch(searchKey, state, stack, -1, length, isExact: true);
 
             if (parexOrExitNode->ExtentLength < length && searchKey[parexOrExitNode->ExtentLength])
-                candidateNodeName = parexOrExitNode->RightPtr;
+                candidateNodeName = _translationTable.GetRightChildName( parexOrExitNodeName );
             else
-                candidateNodeName = parexOrExitNode->LeftPtr;
+                candidateNodeName = _translationTable.GetLeftChildName( parexOrExitNodeName );
 
             candidateNode = ReadNodeByName(candidateNodeName);
 
@@ -824,9 +800,9 @@ namespace Voron.Data.Compact
             // Check if the node is either the parex(key) and/or exit(key). 
             long candidateNodeName;
             if (parexOrExitNode->ExtentLength < searchKey.Count && searchKey[parexOrExitNode->ExtentLength])
-                candidateNodeName = parexOrExitNode->RightPtr;             
+                candidateNodeName = _translationTable.GetRightChildName( parexOrExitNodeName );             
             else
-                candidateNodeName = parexOrExitNode->LeftPtr;
+                candidateNodeName = _translationTable.GetLeftChildName( parexOrExitNodeName );
 
             Node* candidateNode = ReadNodeByName(candidateNodeName);
 
@@ -848,9 +824,9 @@ namespace Voron.Data.Compact
             if (this.Extent((Node*)parexOrExitNode).IsProperPrefix(searchKey))
             {
                 if (parexOrExitNode->ExtentLength < searchKey.Count && searchKey[parexOrExitNode->ExtentLength])
-                    candidateNodeName = parexOrExitNode->RightPtr;
+                    candidateNodeName = _translationTable.GetRightChildName( parexOrExitNodeName );
                 else
-                    candidateNodeName = parexOrExitNode->LeftPtr;
+                    candidateNodeName = _translationTable.GetLeftChildName( parexOrExitNodeName );
             }
             else
             {
