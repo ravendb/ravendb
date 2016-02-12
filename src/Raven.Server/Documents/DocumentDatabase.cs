@@ -1,9 +1,8 @@
 ﻿using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 
-namespace Raven.Server
+namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
