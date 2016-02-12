@@ -170,6 +170,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value, actual => actual.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
             configurationComparer.Assert(expected => expected.Voron.AllowIncrementalBackups.Value, actual => actual.Storage.Voron.AllowIncrementalBackups);
             configurationComparer.Assert(expected => expected.Voron.AllowOn32Bits.Value, actual => actual.Storage.Voron.AllowOn32Bits);
+            configurationComparer.Assert(expected => expected.Voron.SkipConsistencyChecks.Value, actual => actual.Storage.SkipConsistencyCheck);
             configurationComparer.Assert(expected => expected.Voron.InitialFileSize.Value, actual => actual.Storage.Voron.InitialFileSize);
             configurationComparer.Assert(expected => expected.Voron.ScratchBufferSizeNotificationThreshold.Value, actual => actual.Storage.Voron.ScratchBufferSizeNotificationThreshold);
             configurationComparer.Assert(expected => expected.Voron.MaxBufferPoolSize.Value, actual => actual.Storage.Voron.MaxBufferPoolSize);
@@ -276,7 +277,6 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
             configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
             configurationComparer.Ignore(x => x.TransactionMode);
-            configurationComparer.Ignore(x => x.Storage.SkipConsistencyCheck);
 
             Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
             Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);
