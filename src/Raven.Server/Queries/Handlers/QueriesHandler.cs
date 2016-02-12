@@ -1,9 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
-using Raven.Server.Queries;
 using Raven.Server.Routing;
 
-namespace Raven.Server.Indexes.Handlers
+namespace Raven.Server.Queries.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {

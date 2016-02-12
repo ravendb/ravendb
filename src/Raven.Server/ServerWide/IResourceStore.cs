@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Server.Config;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.ServerWide
 {
     public interface IResourceStore : IDisposable
     {

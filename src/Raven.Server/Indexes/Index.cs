@@ -22,7 +22,7 @@ namespace Raven.Server.Indexes
 
         private static readonly Slice LastReducedEtagSlice = "LastReducedEtag";
 
-        protected readonly LuceneIndexPersistance IndexPersistance;
+        protected readonly LuceneIndexPersistance IndexPersistence;
 
         private readonly object _locker = new object();
 
@@ -46,7 +46,7 @@ namespace Raven.Server.Indexes
             _documentsStorage = documentsStorage;
             IndexId = indexId;
             Type = type;
-            IndexPersistance = new LuceneIndexPersistance();
+            IndexPersistence = new LuceneIndexPersistance();
         }
 
         public static Index Open(int indexId, string path, DocumentsStorage documentsStorage)
@@ -310,7 +310,7 @@ namespace Raven.Server.Indexes
                         {
                             indexContext.Transaction = tx;
 
-                            IndexPersistance.Write(indexContext, indexDocuments);
+                            IndexPersistence.Write(indexContext, indexDocuments);
                             WriteLastMappedEtag(tx, lastEtag);
 
                             tx.Commit();

@@ -56,7 +56,7 @@ namespace Raven.Server.Indexes
 
             var indexDocument = new Lucene.Net.Documents.Document();
 
-            foreach (var field in IndexPersistance.DocumentConverter.GetFields(_fields, document))
+            foreach (var field in IndexPersistence.DocumentConverter.GetFields(_fields, document))
                 indexDocument.Add(field);
 
             return indexDocument;
