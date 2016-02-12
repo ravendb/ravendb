@@ -18,7 +18,7 @@ namespace Raven.Server.Json
     public class RavenOperationContext : IDisposable
     {
         private Stack<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
-        
+
         public readonly UnmanagedBuffersPool Pool;
         private UnmanagedBuffersPool.AllocatedMemoryData _tempBuffer;
         private Dictionary<string, LazyStringValue> _fieldNames;
@@ -27,13 +27,14 @@ namespace Raven.Server.Json
         private bool _disposed;
 
         private byte[] _bytesBuffer;
-        private readonly List<IDisposable> _disposables = new List<IDisposable>(); 
+        private readonly List<IDisposable> _disposables = new List<IDisposable>();
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
         public Transaction Transaction;
         public CachedProperties CachedProperties;
         public StorageEnvironment Environment;
         private int _lastStreamSize = 4096;
+
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
@@ -45,7 +46,7 @@ namespace Raven.Server.Json
         public byte[] GetManagedBuffer()
         {
             if (_bytesBuffer == null)
-                _bytesBuffer = new byte[4096];
+                _bytesBuffer = new byte[1024 * 64];
             return _bytesBuffer;
         }
 
@@ -150,7 +151,7 @@ namespace Raven.Server.Json
             _disposed = true;
         }
 
-        public unsafe LazyStringValue GetLazyStringForFieldWithCaching(string field)
+        public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
             LazyStringValue value;
             if (_fieldNames == null)
@@ -158,7 +159,7 @@ namespace Raven.Server.Json
 
             if (_fieldNames.TryGetValue(field, out value))
                 return value;
-            
+
             value = GetLazyString(field);
             _fieldNames[field] = value;
             return value;
@@ -174,7 +175,7 @@ namespace Raven.Server.Json
             {
                 fixed (char* pField = field)
                 {
-                    var address = (byte*) memory.Address;
+                    var address = (byte*)memory.Address;
                     var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
                     state.WriteEscapePositionsTo(address + actualSize);
                     return new LazyStringValue(field, address, actualSize, this)
@@ -196,7 +197,7 @@ namespace Raven.Server.Json
             LazyStringValue value;
 
             var state = new JsonParserState();
-            state.FindEscapePositionsIn(chars, start,count);
+            state.FindEscapePositionsIn(chars, start, count);
             var maxByteCount = Encoding.GetMaxByteCount(count);
             var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize());
             try
@@ -263,29 +264,29 @@ namespace Raven.Server.Json
             return returnedByteArray;
         }
 
-        public async Task<BlittableJsonReaderObject> ReadForDisk(Stream stream, string documentId)
+        public BlittableJsonReaderObject ReadForDisk(Stream stream, string documentId)
         {
-            return await ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        public async Task<BlittableJsonReaderObject> ReadForMemory(Stream stream, string documentId)
+        public BlittableJsonReaderObject ReadForMemory(Stream stream, string documentId)
         {
-            return await ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
+            return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
 
-        public unsafe Task<BlittableJsonReaderObject> ReadObject(DynamicJsonValue builder, string documentId,
+        public BlittableJsonReaderObject ReadObject(DynamicJsonValue builder, string documentId,
             BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             return ReadObjectInternal(builder, documentId, mode);
         }
 
-        public unsafe Task<BlittableJsonReaderObject> ReadObject(BlittableJsonReaderObject obj, string documentId,
+        public BlittableJsonReaderObject ReadObject(BlittableJsonReaderObject obj, string documentId,
          BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             return ReadObjectInternal(obj, documentId, mode);
         }
 
-        private async Task<BlittableJsonReaderObject> ReadObjectInternal(object builder, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
+        private BlittableJsonReaderObject ReadObjectInternal(object builder, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, builder, this))
@@ -294,7 +295,9 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    await writer.ReadObject();
+                    // nothing special needs to be done here, since we know that 
+                    // ObjectJsonParser doesn't need continuations
+                    writer.ReadObject();
                     _disposables.Add(writer);
                     return writer.CreateReader();
                 }
@@ -306,22 +309,33 @@ namespace Raven.Server.Json
             }
         }
 
-        public async Task<BlittableJsonReaderObject> Read(Stream stream, string documentId)
+        public BlittableJsonReaderObject Read(Stream stream, string documentId)
         {
             var state = BlittableJsonDocumentBuilder.UsageMode.ToDisk;
-            return await ParseToMemory(stream, documentId, state);
+            return ParseToMemory(stream, documentId, state);
         }
 
-        private async Task<BlittableJsonReaderObject> ParseToMemory(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
+        private unsafe BlittableJsonReaderObject ParseToMemory(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, documentId))
+            var buffer = GetManagedBuffer();
+            using (var parser = new UnmanagedJsonParser(this, state, documentId))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();
-                    await writer.ReadObject();
+
+                    while (true)
+                    {
+                        var read = stream.Read(buffer, 0, buffer.Length);
+                        if (read == 0)
+                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                        parser.SetBuffer(buffer, read);
+                        if (writer.ReadObject())
+                            break;
+                    }
+
                     _disposables.Add(writer);
                     return writer.CreateReader();
                 }
@@ -334,17 +348,28 @@ namespace Raven.Server.Json
         }
 
 
-        public async Task<BlittableJsonReaderArray> ParseArrayToMemory(Stream stream, string debugTag, 
+        public async Task<BlittableJsonReaderArray> ParseArrayToMemory(Stream stream, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, debugTag))
+            var buffer = GetManagedBuffer();
+            using (var parser = new UnmanagedJsonParser(this, state, debugTag))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();
-                    await writer.ReadArray();
+
+                    while (true)
+                    {
+                        var read = stream.Read(buffer, 0, buffer.Length);
+                        if (read == 0)
+                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                        parser.SetBuffer(buffer, read);
+                        if (writer.ReadArray())
+                            break;
+                    }
+
                     _disposables.Add(writer);
                     return writer.CreateArrayReader();
                 }
@@ -361,7 +386,8 @@ namespace Raven.Server.Json
         {
             var state = new JsonParserState();
             var returnedArray = new BlittableJsonReaderObject[count];
-            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, "many/docs"))
+            var buffer = GetManagedBuffer();
+            using (var parser = new UnmanagedJsonParser(this, state, "many/docs"))
             {
                 for (int i = 0; i < count; i++)
                 {
@@ -370,7 +396,16 @@ namespace Raven.Server.Json
                     try
                     {
                         CachedProperties.NewDocument();
-                        await writer.ReadObject();
+                        while (true)
+                        {
+                            var read = stream.Read(buffer, 0, buffer.Length);
+                            if (read == 0)
+                                throw new EndOfStreamException("Stream ended without reaching end of json content");
+                            parser.SetBuffer(buffer, read);
+                            if (writer.ReadObject())
+                                break;
+                        }
+
                         _disposables.Add(writer);
                         reader = writer.CreateReader();
                     }
@@ -413,7 +448,7 @@ namespace Raven.Server.Json
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, json, this))
             {
-                await parser.ReadAsync();
+                parser.Read();
 
                 await writer.WriteObjectAsync(this, state, parser);
             }
@@ -429,13 +464,13 @@ namespace Raven.Server.Json
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, json, this))
             {
-                await parser.ReadAsync();
+                parser.Read();
 
-                await writer.WriteArrayAsync(this, state, parser);
+                await writer.WriteArray(this, state, parser);
             }
         }
 
-        public async Task<BlittableJsonReaderObject> ReadObjectWithExternalProperties(DynamicJsonValue obj, string debugTag)
+        public BlittableJsonReaderObject ReadObjectWithExternalProperties(DynamicJsonValue obj, string debugTag)
         {
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, obj, this))
@@ -443,8 +478,8 @@ namespace Raven.Server.Json
                 var writer = new BlittableJsonDocumentBuilder(this, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, state);
                 try
                 {
-                    var writeToken = await writer.ReadPartialObject();
-                    writer.FinalizeDocumentWithoutProperties(writeToken, CachedProperties.Version);
+                    writer.ReadPartialObject(); // here we know we don't need to handle continutations
+                    writer.FinalizeDocumentWithoutProperties(CachedProperties.Version);
                     _disposables.Add(writer);
                     return writer.CreateReader(CachedProperties);
                 }
