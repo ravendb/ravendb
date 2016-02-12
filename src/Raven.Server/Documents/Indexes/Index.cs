@@ -215,6 +215,18 @@ namespace Raven.Server.Documents.Indexes
 
         protected abstract Lucene.Net.Documents.Document ConvertDocument(string collection, Document document);
 
+        public long GetLastMappedEtag()
+        {
+            RavenOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.Environment.ReadTransaction())
+                {
+                    return ReadLastMappedEtag(tx);
+                }
+            }
+        }
+
         protected long ReadLastMappedEtag(Transaction tx)
         {
             return ReadLastEtag(tx, LastMappedEtagSlice);

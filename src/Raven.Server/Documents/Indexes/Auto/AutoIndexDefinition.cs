@@ -16,7 +16,15 @@ namespace Raven.Server.Documents.Indexes.Auto
             _fields = fields;
         }
 
-        public IEnumerable<string> MapFields => _fields.Select(x => x.Name);
+        public IEnumerable<string> MapFields => _fields.Select(x => x.Name); // TODO arek - maybe remove that
+
+        public bool ContainsField(string field)
+        {
+            if (field.EndsWith("_Range"))
+                field = field.Substring(0, field.Length - 6);
+            
+            return _fields.Select(x => x.Name).Contains(field);
+        }
 
         private static string FindIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {

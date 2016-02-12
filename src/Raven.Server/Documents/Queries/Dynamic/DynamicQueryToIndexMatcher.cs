@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 
@@ -14,9 +14,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public DynamicQueryMatchResult(string match, DynamicQueryMatchType matchType)
         {
-            this.IndexName = match;
-            this.MatchType = matchType;
+            IndexName = match;
+            MatchType = matchType;
         }
+
+        public long LastMappedEtag { get; set; }
+
+        public long NumberOfMappedFields { get; set;}
     }
 
     public enum DynamicQueryMatchType
@@ -74,179 +78,85 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (autoIndexes.Count == 0)
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
 
-            var results = autoIndexes.Select(definition => ConsiderUsageOfAutoIndex(definition, explain))
+            var results = autoIndexes.Select(definition => ConsiderUsageOfAutoIndex(query, definition, explain))
             .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
                     .GroupBy(x => x.MatchType)
                     .ToDictionary(x => x.Key, x => x.ToArray());
 
-            throw new NotImplementedException();
+            DynamicQueryMatchResult[] matchResults;
+            if (results.TryGetValue(DynamicQueryMatchType.Complete, out matchResults) && matchResults.Length > 0)
+            {
+                var prioritizedResults = matchResults
+                    .OrderByDescending(x => x.LastMappedEtag)
+                    .ThenByDescending(x => x.NumberOfMappedFields)
+                    .ToArray();
 
+                for (var i = 1; i < prioritizedResults.Length; i++)
+                {
+                    explain(prioritizedResults[i].IndexName,
+                            () => "Wasn't the widest / most unstable index matching this query");
+                }
 
-            //DynamicQueryMatchResult[] matchResults;
-            //if (results.TryGetValue(DynamicQueryMatchType.Complete, out matchResults) && matchResults.Length > 0)
-            //{
-            //    DynamicQueryMatchResult[] prioritizedResults = null;
-            //    database.TransactionalStorage.Batch(accessor =>
-            //    {
-            //        prioritizedResults = matchResults.OrderByDescending(result =>
-            //        {
-            //            var instance = this.database.IndexStorage.GetIndexInstance(result.IndexName);
-            //            var stats = accessor.Indexing.GetIndexStats(instance.indexId);
-            //            if (stats == null)
-            //                return Etag.Empty;
+                return prioritizedResults[0];
+            }
 
-            //            return stats.LastIndexedEtag;
-            //        })
-            //            .ThenByDescending(result =>
-            //            {
-            //                var abstractViewGenerator =
-            //                    database.IndexDefinitionStorage.GetViewGenerator(result.IndexName);
-            //                if (abstractViewGenerator == null)
-            //                    return -1;
-            //                return abstractViewGenerator.CountOfFields;
-            //            })
-            //            .ToArray();
-            //    });
-            //    for (int i = 1; i < prioritizedResults.Length; i++)
-            //    {
-            //        explain(prioritizedResults[i].IndexName,
-            //                () => "Wasn't the widest / most unstable index matching this query");
-            //    }
+            if (results.TryGetValue(DynamicQueryMatchType.Partial, out matchResults) && matchResults.Length > 0)
+            {
+                return matchResults.OrderByDescending(x => x.NumberOfMappedFields).First();
+            }
 
-            //    return prioritizedResults[0];
-            //}
-
-            //if (results.TryGetValue(DynamicQueryMatchType.Partial, out matchResults) && matchResults.Length > 0)
-            //{
-            //    return matchResults.OrderByDescending(x =>
-            //    {
-            //        var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(x.IndexName);
-
-            //        if (viewGenerator == null)
-            //            return -1;
-            //        return viewGenerator.CountOfFields;
-            //    }).First();
-            //}
-
-            //return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
-
+            return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(AutoIndexDefinition definition, ExplainDelegate explain)
+        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, AutoIndexDefinition definition, ExplainDelegate explain)
         {
+            var collection = query.ForCollection;
             var indexName = definition.Name;
 
-            throw new NotImplementedException();
-            //var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
-            //var currentBestState = DynamicQueryMatchType.Complete;
-            //if (abstractViewGenerator == null) // there is no matching view generator
-            //{
-            //    explain(indexName, () => "There is no matching view generator. Maybe the index in the process of being deleted?");
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //}
+            if (definition.Collections.Contains(collection, StringComparer.OrdinalIgnoreCase) == false)
+            {
+                if (definition.Collections.Length == 0)
+                    explain(indexName, () => "Query is specific for collection, but the index searches across all of them, may result in a different type being returned.");
+                else
+                    explain(indexName, () => $"Index does not apply to collection '{collection}'");
 
-            //if (definition.Value == null)
-            //{
-            //    explain(indexName, () => "Index id " + definition.Key + " is null, probably bad upgrade?");
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //}
+                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+            }
+            else
+            {
+                if (definition.Collections.Length > 1) // we only allow indexes with a single entity name
+                {
+                    explain(indexName, () => "Index contains more than a single entity name, may result in a different type being returned.");
+                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                }
+            }
 
-            //if (definition.Value.IsTestIndex)
-            //{
-            //    explain(indexName, () => "Cannot select a test index for dynamic query");
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //}
+            var index = _indexStore.GetIndex(definition.Name);
 
-            //var indexingPriority = IndexingPriority.None;
-            //var isInvalidIndex = false;
-            //database.TransactionalStorage.Batch(accessor =>
-            //{
-            //    var stats = accessor.Indexing.GetIndexStats(definition.Key);
-            //    if (stats == null)
-            //    {
-            //        isInvalidIndex = true;
-            //        return;
-            //    }
-            //    isInvalidIndex = stats.IsInvalidIndex;
-            //    indexingPriority = stats.Priority;
-            //});
+            IndexingPriority priority = IndexingPriority.None; // TODO arek: use index.Priority
 
+            if (priority == IndexingPriority.Error ||
+                     priority == IndexingPriority.Disabled) //||
+                                                            // TODO: arekisInvalidIndex)
+            {
+                explain(indexName, () => string.Format("Cannot do dynamic queries on disabled index or index with errors (index name = {0})", indexName));
+                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+            }
 
-            //if (entityName == null)
-            //{
-            //    if (abstractViewGenerator.ForEntityNames.Count != 0)
-            //    {
-            //        explain(indexName, () => "Query is not specific for entity name, but the index filter by entity names.");
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
-            //}
-            //else
-            //{
-            //    if (indexingPriority == IndexingPriority.Error ||
-            //        indexingPriority == IndexingPriority.Disabled ||
-            //        isInvalidIndex)
-            //    {
-            //        explain(indexName, () => string.Format("Cannot do dynamic queries on disabled index or index with errors (index name = {0})", indexName));
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
+            var currentBestState = DynamicQueryMatchType.Complete;
 
-            //    if (abstractViewGenerator.ForEntityNames.Count > 1) // we only allow indexes with a single entity name
-            //    {
-            //        explain(indexName, () => "Index contains more than a single entity name, may result in a different type being returned.");
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
-            //    if (abstractViewGenerator.ForEntityNames.Count == 0)
-            //    {
-            //        explain(indexName, () => "Query is specific for entity name, but the index searches across all of them, may result in a different type being returned.");
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
-            //    if (abstractViewGenerator.ForEntityNames.Contains(entityName) == false) // for the specified entity name
-            //    {
-            //        explain(indexName, () => string.Format("Index does not apply to entity name: {0}", entityName));
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
-            //}
+            if (query.MapFields.All(x => definition.ContainsField(x.From))) // TODO arek: x.From
+            {
+                explain(indexName, () =>
+                {
+                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.From) == false); //TODO are: x.From
+                    return $"The following fields are missing: {string.Join(", ", missingFields)}";
+                });
 
-            //if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index
-            //{
-            //    explain(indexName, () => "Can't choose a map/reduce index for dynamic queries.");
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //}
+                currentBestState = DynamicQueryMatchType.Partial;
+            }
 
-            //if (abstractViewGenerator.HasWhereClause) // without a where clause
-            //{
-            //    explain(indexName, () => "Can't choose an index with a where clause, it might filter things that the query is looking for.");
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //}
-
-            //// we can't select an index that has SelectMany in it, because it result in invalid results when
-            //// you query it for things like Count, see https://github.com/ravendb/ravendb/issues/250
-            //// for indexes with internal projections, we use the exact match based on the generated index name
-            //// rather than selecting the optimal one
-            //// in order to handle that, we count the number of select many that would happen because of the query
-            //// and match it to the number of select many in the index
-            //if (abstractViewGenerator.CountOfSelectMany != distinctSelectManyFields.Count)
-            //{
-            //    explain(indexName,
-            //            () => "Can't choose an index with a different number of from clauses / SelectMany, will affect queries like Count().");
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //}
-
-            //if (normalizedFieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap) == false)
-            //{
-            //    explain(indexName, () =>
-            //    {
-            //        var missingFields =
-            //            normalizedFieldsQueriedUpon.Where(s => abstractViewGenerator.ContainsFieldOnMap(s) == false);
-            //        return "The following fields are missing: " + string.Join(", ", missingFields);
-            //    });
-            //    currentBestState = DynamicQueryMatchType.Partial;
-            //}
-
-            //var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
-            //if (indexDefinition == null)
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-
+            //TODO arek: ignore sorting and highlighting for now
             //if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
             //{
             //    var nonHighlightableFields = indexQuery
@@ -329,57 +239,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
             //        }
             //    }
             //}
+            
+            if (currentBestState != DynamicQueryMatchType.Complete) // TODO arek
+                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
 
-            //if (indexDefinition.Analyzers != null && indexDefinition.Analyzers.Count > 0)
-            //{
-            //    // none of the fields have custom analyzers
-            //    if (normalizedFieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey))
-            //    {
-            //        explain(indexName, () =>
-            //        {
-            //            var fields = normalizedFieldsQueriedUpon.Where(indexDefinition.Analyzers.ContainsKey);
-            //            return "The following field have a custom analyzer: " + string.Join(", ", fields);
-            //        });
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
-            //}
+            if (currentBestState == DynamicQueryMatchType.Complete && (priority == IndexingPriority.Idle || priority == IndexingPriority.Abandoned))
+            {
+                currentBestState = DynamicQueryMatchType.Partial;
+                explain(indexName, () => String.Format("The index (name = {0}) is disabled or abandoned. The preference is for active indexes - making a partial match", indexName));
+            }
 
-            //if (indexDefinition.Indexes != null && indexDefinition.Indexes.Count > 0)
-            //{
-            //    //If any of the fields we want to query on are set to something other than the default, don't use the index
-            //    var anyFieldWithNonDefaultIndexing = normalizedFieldsQueriedUpon.Where(x =>
-            //    {
-            //        FieldIndexing analyzedInfo;
-            //        if (indexDefinition.Indexes.TryGetValue(x, out analyzedInfo))
-            //        {
-            //            if (analyzedInfo != FieldIndexing.Default)
-            //                return true;
-            //        }
-            //        return false;
-            //    });
-
-            //    var fieldWithNonDefaultIndexing = anyFieldWithNonDefaultIndexing.ToArray(); //prevent several enumerations
-            //    if (fieldWithNonDefaultIndexing.Any())
-            //    {
-            //        explain(indexName, () =>
-            //        {
-            //            var fields = fieldWithNonDefaultIndexing.Where(indexDefinition.Analyzers.ContainsKey);
-            //            return "The following field have aren't using default indexing: " + string.Join(", ", fields);
-            //        });
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
-            //}
-            //if (currentBestState != DynamicQueryMatchType.Complete && indexDefinition.Type != "Auto")
-            //    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //if (currentBestState == DynamicQueryMatchType.Complete &&
-            //    (indexingPriority == IndexingPriority.Idle ||
-            //     indexingPriority == IndexingPriority.Abandoned))
-            //{
-            //    currentBestState = DynamicQueryMatchType.Partial;
-            //    explain(indexName, () => String.Format("The index (name = {0}) is disabled or abandoned. The preference is for active indexes - making a partial match", indexName));
-            //}
-
-            //return new DynamicQueryOptimizerResult(indexName, currentBestState);
+            return new DynamicQueryMatchResult(indexName, currentBestState)
+            {
+                LastMappedEtag = index.GetLastMappedEtag(),
+                NumberOfMappedFields = definition.MapFields.Count() // TODO arek
+            };
         }
     }
 }
