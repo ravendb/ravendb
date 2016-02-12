@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 using Lucene.Net.Documents;
 
 using Raven.Abstractions.Data;
+using Raven.Server.Json;
 
 using Sparrow;
 
@@ -38,17 +40,19 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                     yield break;
                 }
 
-                if (value is string)
+                if (value is LazyStringValue)
                 {
                     yield return CreateFieldWithCaching(name, value.ToString(), storage, Field.Index.NOT_ANALYZED_NO_NORMS, termVector);
                     yield break;
                 }
+
+                throw new NotImplementedException();
             }
         }
 
         private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
-            var cacheKey = new FieldCacheKey(name, index, store, termVector, null);
+            var cacheKey = new FieldCacheKey(name, index, store, termVector, new int[0]); // TODO [ppekrol]
 
             Field field;
             if (fieldsCache.TryGetValue(cacheKey, out field) == false)

@@ -26,12 +26,12 @@ namespace Raven.Server.Documents.Indexes.Auto
             return instance;
         }
 
-        public static AutoIndex Open(int indexId, StorageEnvironment environment, DocumentsStorage documentsStorage, DatabaseNotifications databaseNotifications)
+        public static AutoIndex Open(int indexId, StorageEnvironment environment, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
             var instance = new AutoIndex(indexId, null);
-            instance.Initialize(environment, documentsStorage, databaseNotifications);
+            instance.Initialize(environment, documentsStorage, indexingConfiguration, databaseNotifications);
 
-            // TODO
+            throw new NotImplementedException();
 
             return instance;
         }

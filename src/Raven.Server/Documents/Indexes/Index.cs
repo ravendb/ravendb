@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public abstract class Index
+    public abstract class Index : IDisposable
     {
         private static readonly Slice TypeSlice = "Type";
 
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Indexes
                     switch (type)
                     {
                         case IndexType.Auto:
-                            return AutoIndex.Open(indexId, environment, documentsStorage, databaseNotifications);
+                            return AutoIndex.Open(indexId, environment, documentsStorage, indexingConfiguration, databaseNotifications);
                         default:
                             throw new NotImplementedException();
                     }
@@ -115,7 +116,7 @@ namespace Raven.Server.Documents.Indexes
         public bool ShouldRun { get; private set; } = true;
 
 
-        protected void Initialize(DocumentsStorage documentsStorage, IndexingConfiguration configuration, DatabaseNotifications databaseNotifications)
+        protected void Initialize(DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -125,15 +126,15 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException();
 
-                var options = configuration.RunInMemory
+                var options = indexingConfiguration.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(configuration.IndexStoragePath, IndexId.ToString()));
+                    : StorageEnvironmentOptions.ForPath(Path.Combine(indexingConfiguration.IndexStoragePath, IndexId.ToString()));
 
                 options.SchemaVersion = 1;
 
                 try
                 {
-                    Initialize(new StorageEnvironment(options), documentsStorage, databaseNotifications);
+                    Initialize(new StorageEnvironment(options), documentsStorage, indexingConfiguration, databaseNotifications);
                 }
                 catch (Exception)
                 {
@@ -143,7 +144,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected unsafe void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage, DatabaseNotifications databaseNotifications)
+        protected unsafe void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Index));
@@ -174,6 +175,8 @@ namespace Raven.Server.Documents.Indexes
 
                         tx.Commit();
                     }
+
+                    IndexPersistence.Initialize(indexingConfiguration);
 
                     _initialized = true;
                 }
@@ -298,45 +301,66 @@ namespace Raven.Server.Documents.Indexes
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token))
             {
-                while (ShouldRun)
+                try
                 {
-                    bool foundWork;
-                    try
-                    {
-                        cts.Token.ThrowIfCancellationRequested();
-                        foundWork = ExecuteMap(cts.Token);
-                    }
-                    catch (OutOfMemoryException oome)
-                    {
-                        foundWork = true;
-                        // TODO
-                    }
-                    catch (AggregateException ae)
-                    {
-                        foundWork = true;
-                        // TODO
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        foundWork = true;
-                        // TODO
-                    }
+                    _databaseNotifications.OnDocumentChange += HandleDocumentChange;
 
-                    _mre.Wait(cts.Token);
-
-                    if (foundWork == false && ShouldRun)
+                    while (ShouldRun)
                     {
-                        // cleanup tasks here
+                        try
+                        {
+                            _mre.Reset();
+
+                            cts.Token.ThrowIfCancellationRequested();
+
+                            ExecuteMap(cts.Token);
+
+                            _mre.Wait(cts.Token);
+                        }
+                        catch (OutOfMemoryException oome)
+                        {
+                            // TODO
+                        }
+                        catch (AggregateException ae)
+                        {
+                            // TODO
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return;
+                        }
+                        catch (Exception e)
+                        {
+                            // TODO
+                        }
                     }
+                }
+                finally
+                {
+                    _databaseNotifications.OnDocumentChange -= HandleDocumentChange;
                 }
             }
         }
 
-        private bool ExecuteMap(CancellationToken cancellationToken)
+        private void HandleDocumentChange(DocumentChangeNotification notification)
+        {
+            if (_mre.IsSet)
+                return;
+
+            if (notification.Type != DocumentChangeTypes.Put)
+                return;
+
+            var collectionName = notification.CollectionName; // TODO [ppekrol]
+            if (collectionName.StartsWith("@"))
+                collectionName = collectionName.Substring(1);
+
+            if (Collections.Any(x => string.Equals(x, collectionName, StringComparison.OrdinalIgnoreCase)) == false)
+                return;
+
+            _mre.Set();
+        }
+
+        private void ExecuteMap(CancellationToken cancellationToken)
         {
             RavenOperationContext databaseContext;
             RavenOperationContext indexContext;
@@ -345,9 +369,10 @@ namespace Raven.Server.Documents.Indexes
             {
                 long lastEtag;
                 if (IsStale(databaseContext, indexContext, out lastEtag) == false)
-                    return false;
+                    return;
 
-                var foundWork = false;
+                lastEtag++;
+
                 foreach (var collection in Collections)
                 {
                     var start = 0;
@@ -368,13 +393,14 @@ namespace Raven.Server.Documents.Indexes
                                 indexDocuments.Add(ConvertDocument(collection, document));
                                 count++;
 
-                                Debug.Assert(document.Etag > lastEtag);
+                                Debug.Assert(document.Etag >= lastEtag);
 
                                 lastEtag = document.Etag;
                             }
                         }
 
-                        foundWork = foundWork || indexDocuments.Count > 0;
+                        if (indexDocuments.Count == 0)
+                            break;
 
                         using (var tx = indexContext.Environment.WriteTransaction())
                         {
@@ -386,13 +412,12 @@ namespace Raven.Server.Documents.Indexes
                             tx.Commit();
                         }
 
-                        if (count < PageSize) break;
+                        if (count < PageSize)
+                            break;
 
                         start += PageSize;
                     }
                 }
-
-                return foundWork;
             }
         }
 

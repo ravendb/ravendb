@@ -5,7 +5,9 @@ using System.Threading;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
+using Lucene.Net.Store;
 
+using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 
 using Directory = Lucene.Net.Store.Directory;
@@ -17,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
     {
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
-        private readonly object writeLock = new object();
+        private readonly object _writeLock = new object();
 
         private LuceneIndexWriter _indexWriter;
 
@@ -25,7 +27,9 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         private Directory _directory;
 
-        private volatile bool _disposed;
+        private bool _disposed;
+
+        private bool _initialized;
 
         public LuceneIndexPersistance()
         {
@@ -34,20 +38,56 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         public LuceneDocumentConverter DocumentConverter { get; private set; }
 
+        public void Initialize(IndexingConfiguration indexingConfiguration)
+        {
+            if (_initialized)
+                throw new InvalidOperationException();
+
+            lock (_writeLock)
+            {
+                if (_initialized)
+                    throw new InvalidOperationException();
+
+                if (indexingConfiguration.RunInMemory)
+                {
+                    _directory = new RAMDirectory();
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+
+                _initialized = true;
+            }
+        }
+
         public void Dispose()
         {
-            lock (writeLock)
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
+
+            lock (_writeLock)
             {
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(Index));
+
                 _disposed = true;
+
+                _indexWriter?.Analyzer?.Dispose();
+                _indexWriter?.Dispose();
+                _directory?.Dispose();
             }
         }
 
         public void Write(RavenOperationContext context, List<global::Lucene.Net.Documents.Document> documents, CancellationToken cancellationToken)
         {
             if (_disposed)
-                throw new ObjectDisposedException("LuceneIndexPersistance was disposed.");
+                throw new ObjectDisposedException(nameof(LuceneDocumentConverter));
 
-            lock (writeLock)
+            if (_initialized == false)
+                throw new InvalidOperationException();
+
+            lock (_writeLock)
             {
                 Analyzer analyzer = null;
 
@@ -117,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         {
             try
             {
-                lock (writeLock)
+                lock (_writeLock)
                 {
                     if (_disposed)
                         return;
