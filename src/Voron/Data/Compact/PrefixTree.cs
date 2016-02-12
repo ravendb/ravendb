@@ -238,7 +238,7 @@ namespace Voron.Data.Compact
                     this.NodesTable.Add(exitNodeName, hash);
 
                     //  We update the jumps for the exit node.                
-                    UpdateJumps(exitNode);
+                    UpdateJumps(exitNodeName);
                 }
                 else
                 {
@@ -324,7 +324,7 @@ namespace Voron.Data.Compact
                     {
                         toFix = (Internal*)this.ModifyNodeByName(toFixNodeName); // Now we need to modify
                         toFix->JumpLeftPtr = insertedNodeName;
-                    }                        
+                    }
                 }
             }
             else
@@ -357,11 +357,11 @@ namespace Voron.Data.Compact
                     int jumpLength = this.GetJumpLength(toFix);
 
                     var exitNode = this.ReadNodeByName(exitNodeName);
-                    while ( exitNode->IsInternal && toFix->JumpRightPtr != exitNodeName)
+                    while (exitNode->IsInternal && toFix->JumpRightPtr != exitNodeName)
                     {
                         exitNodeName = ((Internal*)exitNode)->JumpRightPtr;
                         exitNode = this.ReadNodeByName(exitNodeName);
-                    }                        
+                    }
 
                     // As soon as we cannot find a matching descendant, we can stop updating
                     if (toFix->JumpRightPtr != exitNodeName)
@@ -376,13 +376,104 @@ namespace Voron.Data.Compact
 
         private void UpdateLeftJumpsAfterInsertion(long insertedNodeName, long exitNodeName, bool isRightChild, long insertedLeafName, long insertedLeafNameLength, Stack<long> stack)
         {
-            throw new NotImplementedException();
+            // See: Algorithm 2 of [1]
+
+            if (isRightChild)
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are right descendant of ß.
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Pop();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    if (toFix->JumpRightPtr != exitNodeName)
+                        break;
+
+                    int jumpLength = this.GetJumpLength(toFix);
+                    if (jumpLength < insertedLeafNameLength)
+                    {
+                        toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                        toFix->JumpRightPtr = insertedNodeName;
+                    }                        
+                }
+            }
+            else
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are left descendant of ß.
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Peek();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    int jumpLength = this.GetJumpLength(toFix);
+
+                    if (toFix->JumpLeftPtr != exitNodeName || jumpLength >= insertedLeafNameLength)
+                        break;
+
+                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFix->JumpLeftPtr = insertedNodeName;
+
+                    stack.Pop();
+                }
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Pop();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    var exitNode = this.ReadNodeByName(exitNodeName);
+                    while (exitNode->IsInternal && toFix->JumpLeftPtr != exitNodeName)
+                    {
+                        exitNodeName = ((Internal*)exitNode)->JumpLeftPtr;
+                        exitNode = this.ReadNodeByName(exitNodeName);
+                    }
+
+                    // As soon as we cannot find a matching descendant, we can stop updating
+                    if (toFix->JumpLeftPtr != exitNodeName)
+                        return;
+
+                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFix->JumpLeftPtr = insertedLeafName;
+                }
+            }
         }
 
 
-        private void UpdateJumps(Node* exitNode)
+        private void UpdateJumps(long nodeName)
         {
-            throw new NotImplementedException();
+            var node = (Internal*)this.ModifyNodeByName(nodeName);
+            Debug.Assert(node->IsInternal);
+
+            int jumpLength = this.GetJumpLength(node);
+
+            long jumpNodeName = node->LeftPtr;
+            Node* jumpNode = this.ReadNodeByName(nodeName);
+            while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
+            {
+                jumpNodeName = ((Internal*)jumpNode)->JumpLeftPtr;
+                jumpNode = this.ReadNodeByName(jumpNodeName);
+            }
+
+            Debug.Assert(PrefixTreeOperations.Intersects(jumpNode, jumpLength));            
+            node->JumpLeftPtr = jumpNodeName;
+
+            jumpNodeName = node->RightPtr;
+            jumpNode = this.ReadNodeByName(nodeName);
+            while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
+            {
+                jumpNodeName = ((Internal*)jumpNode)->JumpRightPtr;
+                jumpNode = this.ReadNodeByName(jumpNodeName);
+            }
+
+            Debug.Assert(PrefixTreeOperations.Intersects(jumpNode, jumpLength));
+            node->JumpRightPtr = jumpNodeName;
         }
 
 
@@ -1079,7 +1170,7 @@ namespace Voron.Data.Compact
                 Debug.Assert(previous->IsLeaf || previous->IsTombstone);
 
                 var next = (Leaf*)this.ModifyNodeByName(destAsLeaf->NextPtr);
-                Debug.Assert(next->IsLeaf || previous->IsTombstone);
+                Debug.Assert(next->IsLeaf || next->IsTombstone);
 
                 previous->NextPtr = destName;
                 next->PreviousPtr = destName;
