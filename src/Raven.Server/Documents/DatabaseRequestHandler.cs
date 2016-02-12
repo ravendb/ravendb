@@ -22,14 +22,13 @@ namespace Raven.Server.Documents
             IndexStore = context.Database.IndexStore;
         }
 
-        protected async Task WriteDocumentsAsync(RavenOperationContext context, IEnumerable<Document> documents)
+        protected void  WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
         {
-            var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-            await WriteDocumentsAsync(context, writer, documents);
-            writer.Flush();
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                WriteDocuments(context, writer, documents);
         }
 
-        public static async Task WriteDocumentsAsync(RavenOperationContext context, BlittableJsonTextWriter writer, IEnumerable<Document> documents)
+        public static void WriteDocuments(RavenOperationContext context, BlittableJsonTextWriter writer, IEnumerable<Document> documents)
         {
             writer.WriteStartArray();
 
@@ -42,7 +41,7 @@ namespace Raven.Server.Documents
                     writer.WriteComma();
                 first = false;
                 document.EnsureMetadata();
-                await context.WriteAsync(writer, document.Data);
+                context.Write(writer, document.Data);
             }
 
             writer.WriteEndArray();

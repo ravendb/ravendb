@@ -18,21 +18,22 @@ namespace FastTests.Blittable
     public class PartialBlitable
     {
         [Fact]
-        public async Task CanSkipWritingPropertyNames()
+        public void CanSkipWritingPropertyNames()
         {
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var ctx = new RavenOperationContext(pool))
             {
-                var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes("{\"Name\":\"Oren\"}"));
+                var buffer = Encoding.UTF8.GetBytes("{\"Name\":\"Oren\"}");
                 var state = new JsonParserState();
-                using (var parser = new UnmanagedJsonStreamParser(memoryStream, ctx, state, "test"))
+                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
                 {
+                    parser.SetBuffer(buffer, buffer.Length);
                     var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk,
                         "test", parser, state);
                     ctx.CachedProperties.NewDocument();
-                    var writeToken = await writer.ReadPartialObject();
+                    writer.ReadPartialObject();
 
-                    writer.FinalizeDocumentWithoutProperties(writeToken, 1);
+                    writer.FinalizeDocumentWithoutProperties(1);
                     ctx.CachedProperties.Version = 1;
                     var reader = writer.CreateReader(ctx.CachedProperties);
 

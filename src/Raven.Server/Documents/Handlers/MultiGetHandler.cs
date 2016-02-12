@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var requests = await context.ParseArrayToMemory(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);
+                var requests = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);
 
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 writer.WriteStartArray();
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
                         writer.WritePropertyName(statusProperty);
                         writer.WriteInteger(400);
                         writer.WritePropertyName(resultProperty);
-                        await context.WriteAsync(writer, new DynamicJsonValue
+                        context.Write(writer, new DynamicJsonValue
                         {
                             ["Error"] = $"There is no handler for path: {method} {url}{query}"
                         });

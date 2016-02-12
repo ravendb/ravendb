@@ -16,7 +16,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
     {
         [Theory]
         [MemberData("Samples")]
-        public async Task CheckRoundtrip(string name)
+        public void CheckRoundtrip(string name)
         {
             using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             {
@@ -25,7 +25,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 using (var pool = new UnmanagedBuffersPool("test") )
                 using (var context = new RavenOperationContext(pool))
                 {
-                    var writer = await context.Read(stream, "docs/1");
+                    var writer = context.Read(stream, "docs/1");
 
                     var memoryStream = new MemoryStream();
                     writer.WriteTo(memoryStream, originalPropertyOrder: true);
@@ -39,7 +39,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         [Fact]
-        public async Task ShouldNotCrashForManyDifferentProperties()
+        public void ShouldNotCrashForManyDifferentProperties()
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })
             {
@@ -54,7 +54,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         var compacted = JObject.Load(new JsonTextReader(new StreamReader(stream))).ToString(Formatting.None);
                         stream.Position = 0;
                        
-                        using (var writer = await context.Read(stream, "docs/1 "))
+                        using (var writer = context.Read(stream, "docs/1 "))
                         {
 
                             var memoryStream = new MemoryStream();

@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
                 {
                     documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
                 }
-                await WriteDocumentsAsync(context, documents);
+                WriteDocuments(context, documents);
             }
         }
 

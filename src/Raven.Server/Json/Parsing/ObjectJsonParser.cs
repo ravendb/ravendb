@@ -106,7 +106,13 @@ namespace Raven.Server.Json.Parsing
 
         }
 
-        public void Read()
+        public bool Read()
+        {
+            ReadInternal();
+            return true;
+        }
+
+        private void ReadInternal()
         {
             if (_elements.Count == 0)
                 throw new EndOfStreamException();

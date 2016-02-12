@@ -28,9 +28,8 @@ namespace Raven.Server.Documents
                 {
                     collections[collectionStat.Name] = collectionStat.Count;
                 }
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                await context.WriteAsync(writer, result);
-                writer.Flush();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    context.Write(writer, result);
             }
         }
 
@@ -43,7 +42,7 @@ namespace Raven.Server.Documents
                 context.Transaction = context.Environment.ReadTransaction();
 
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
-                await WriteDocumentsAsync(context, documents);
+                WriteDocuments(context, documents);
             }
         }
 

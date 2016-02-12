@@ -55,7 +55,7 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var array = await context.ParseArrayToMemory(RequestBodyStream(), "queries",
+                var array = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "queries",
                     BlittableJsonDocumentBuilder.UsageMode.None);
 
                 var ids = new string[array.Count];
@@ -105,7 +105,7 @@ namespace Raven.Server.Documents
             var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
-            await WriteDocumentsAsync(context, writer, documents);
+            WriteDocuments(context, writer, documents);
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
             writer.WriteStartArray();
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrWhiteSpace(id))
                     throw new ArgumentException("The 'id' query string parameter must have a non empty value");
 
-                var doc = await context.ReadForDisk(RequestBodyStream(), id);
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id);
 
                 var etag = GetLongFromHeaders("If-Match");
 
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents
                 };
 
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                await context.WriteAsync(writer, reply);
+                context.Write(writer, reply);
                 writer.Flush();
             }
         }

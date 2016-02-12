@@ -144,7 +144,7 @@ namespace Tryouts.Corax
                 _deletes.Add(identifier);
             }
 
-            public async Task NewEntry(DynamicJsonValue entry, string identifier)
+            public void NewEntry(DynamicJsonValue entry, string identifier)
             {
                 entry[Constants.DocumentIdFieldName] = identifier;
                 var values = new List<LazyStringValue>();
@@ -178,7 +178,7 @@ namespace Tryouts.Corax
                         analyzedEntry[field] = values[0];
                     }
                 }
-                var blitEntry = await _context.ReadObject(analyzedEntry, identifier);
+                var blitEntry =  _context.ReadObject(analyzedEntry, identifier);
                 _newEntries.Add(blitEntry);
                 _size += blitEntry.Size;
                 if (_size < _batchSize)

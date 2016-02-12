@@ -9,7 +9,7 @@ namespace Raven.Server.Documents
     public class StatsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/stats", "GET")]
-        public async Task Stats()
+        public void Stats()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 //TODO: Implement properly and split to dedicated endpoints
                 //TODO: So we don't get so much stuff to ignore in the stats
-                await context.WriteAsync(writer, new DynamicJsonValue
+                context.Write(writer, new DynamicJsonValue
                 {
                     // storage
                     ["StorageEngine"] = "Voron 4.0",

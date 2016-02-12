@@ -64,7 +64,7 @@ namespace Tryouts
                                 //["Active"] = "true",
                                 //["Age"] = (index % 120).ToString(),
                                 //["Name"] = line.Substring(0, Math.Min(15, line.Length))
-                            }, "users/" + (++index)).Wait();
+                            }, "users/" + (++index));
                         }
                     }
                 }
@@ -110,7 +110,7 @@ namespace Tryouts
                             indexer.NewEntry(new DynamicJsonValue
                             {
                                 ["Location"] = line
-                            }, "users/" + (++index)).Wait();
+                            }, "users/" + (++index));
 
                         }
                     }

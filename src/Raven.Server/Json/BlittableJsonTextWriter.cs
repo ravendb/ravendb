@@ -9,7 +9,7 @@ using Sparrow;
 
 namespace Raven.Server.Json
 {
-    public class BlittableJsonTextWriter
+    public class BlittableJsonTextWriter : IDisposable
     {
         private readonly Stream _stream;
 
@@ -436,5 +436,9 @@ namespace Raven.Server.Json
             return true;
         }
 
+        public void Dispose()
+        {
+            Flush();
+        }
     }
 }

@@ -25,7 +25,7 @@ namespace Raven.Server.Web.System
             {
                 var stream = new MemoryStream();
                 var writer = new BlittableJsonTextWriter(context, stream);
-                await context.WriteAsync(writer, new DynamicJsonValue
+                context.Write(writer, new DynamicJsonValue
                 {
                     ["BuildVersion"] = ServerVersion.Build,
                     ["ProductVersion"] = ServerVersion.Version,
