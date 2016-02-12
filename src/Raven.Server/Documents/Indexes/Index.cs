@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Indexes
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
-        protected Index(int indexId, IndexType type, TIndexDefinition definition) 
+        protected Index(int indexId, IndexType type, TIndexDefinition definition)
             : base(indexId, type, definition)
         {
         }
@@ -37,6 +38,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
         private DocumentsStorage _documentsStorage;
 
         private Task _indexingTask;
@@ -48,6 +51,8 @@ namespace Raven.Server.Documents.Indexes
         private StorageEnvironment _environment;
 
         private ContextPool _contextPool;
+
+        private bool _disposed;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -113,13 +118,15 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException();
 
-                var options = _documentsStorage.Configuration.Core.RunInMemory
+                var options = documentsStorage.Configuration.Core.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
                     : StorageEnvironmentOptions.ForPath(Path.Combine(_documentsStorage.Configuration.Core.IndexStoragePath, IndexId.ToString()));
 
+                options.SchemaVersion = 1;
+
                 try
                 {
-                    Initialize(options, documentsStorage);
+                    Initialize(new StorageEnvironment(options), documentsStorage);
                 }
                 catch (Exception)
                 {
@@ -129,50 +136,52 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage)
+        protected unsafe void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage)
         {
-            try
-            {
-                _environment = environment;
-                _documentsStorage = documentsStorage;
-                _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
-                _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
 
-                using (var tx = _environment.WriteTransaction())
+            if (_initialized)
+                throw new InvalidOperationException();
+
+            lock (_locker)
+            {
+                if (_initialized) throw new InvalidOperationException();
+
+                try
                 {
-                    tx.CreateTree("Stats");
+                    Debug.Assert(Definition != null);
 
-                    tx.Commit();
+                    _environment = environment;
+                    _documentsStorage = documentsStorage;
+                    _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
+                    _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
+
+                    using (var tx = _environment.WriteTransaction())
+                    {
+                        var typeInt = (int)Type;
+
+                        var statsTree = tx.CreateTree("Stats");
+                        statsTree.Add(TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
+
+                        tx.Commit();
+                    }
+
+                    _initialized = true;
                 }
-
-                _initialized = true;
-            }
-            catch (Exception)
-            {
-                Dispose();
-                throw;
+                catch (Exception)
+                {
+                    Dispose();
+                    throw;
+                }
             }
         }
 
-        private void Initialize(StorageEnvironmentOptions options, DocumentsStorage documentsStorage)
+        public void Execute(CancellationToken cancellationToken)
         {
-            options.SchemaVersion = 1;
-            try
-            {
-                var environment = new StorageEnvironment(options);
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
 
-                Initialize(environment, documentsStorage);
-            }
-            catch (Exception)
-            {
-                options.Dispose();
-                Dispose();
-                throw;
-            }
-        }
-
-        public void Execute()
-        {
             if (_initialized == false)
                 throw new InvalidOperationException();
 
@@ -184,23 +193,36 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingTask != null)
                     throw new InvalidOperationException();
 
-                _indexingTask = Task.Factory.StartNew(ExecuteIndexing, TaskCreationOptions.LongRunning);
+                _indexingTask = Task.Factory.StartNew(() => ExecuteIndexing(cancellationToken), TaskCreationOptions.LongRunning);
             }
         }
 
         public void Dispose()
         {
-            _indexingTask?.Wait();
-            _indexingTask = null;
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
 
-            _environment?.Dispose();
-            _environment = null;
+            lock (_locker)
+            {
+                if (_disposed)
+                    throw new ObjectDisposedException(nameof(Index));
 
-            _unmanagedBuffersPool?.Dispose();
-            _unmanagedBuffersPool = null;
+                _disposed = true;
 
-            _contextPool?.Dispose();
-            _contextPool = null;
+                _cancellationTokenSource.Cancel();
+
+                _indexingTask?.Wait();
+                _indexingTask = null;
+
+                _environment?.Dispose();
+                _environment = null;
+
+                _unmanagedBuffersPool?.Dispose();
+                _unmanagedBuffersPool = null;
+
+                _contextPool?.Dispose();
+                _contextPool = null;
+            }
         }
 
         protected string[] Collections
@@ -264,43 +286,47 @@ namespace Raven.Server.Documents.Indexes
             statsTree.Add(key, new Slice((byte*)&etag, sizeof(long)));
         }
 
-        private void ExecuteIndexing()
+        private void ExecuteIndexing(CancellationToken cancellationToken)
         {
-            while (ShouldRun)
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token))
             {
-                bool foundWork;
-                try
+                while (ShouldRun)
                 {
-                    foundWork = ExecuteMap();
-                }
-                catch (OutOfMemoryException oome)
-                {
-                    foundWork = true;
-                    // TODO
-                }
-                catch (AggregateException ae)
-                {
-                    foundWork = true;
-                    // TODO
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    foundWork = true;
-                    // TODO
-                }
+                    bool foundWork;
+                    try
+                    {
+                        cts.Token.ThrowIfCancellationRequested();
+                        foundWork = ExecuteMap(cts.Token);
+                    }
+                    catch (OutOfMemoryException oome)
+                    {
+                        foundWork = true;
+                        // TODO
+                    }
+                    catch (AggregateException ae)
+                    {
+                        foundWork = true;
+                        // TODO
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        foundWork = true;
+                        // TODO
+                    }
 
-                if (foundWork == false && ShouldRun)
-                {
-                    // cleanup tasks here
+                    if (foundWork == false && ShouldRun)
+                    {
+                        // cleanup tasks here
+                    }
                 }
             }
         }
 
-        private bool ExecuteMap()
+        private bool ExecuteMap(CancellationToken cancellationToken)
         {
             RavenOperationContext databaseContext;
             RavenOperationContext indexContext;
@@ -327,6 +353,8 @@ namespace Raven.Server.Documents.Indexes
 
                             foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, PageSize))
                             {
+                                cancellationToken.ThrowIfCancellationRequested();
+
                                 indexDocuments.Add(ConvertDocument(collection, document));
                                 count++;
 
@@ -342,7 +370,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             indexContext.Transaction = tx;
 
-                            IndexPersistence.Write(indexContext, indexDocuments);
+                            IndexPersistence.Write(indexContext, indexDocuments, cancellationToken);
                             WriteLastMappedEtag(tx, lastEtag);
 
                             tx.Commit();
@@ -364,6 +392,9 @@ namespace Raven.Server.Documents.Indexes
 
         public QueryResult Query(IndexQuery query)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
+
             throw new NotImplementedException();
         }
     }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -13,6 +14,15 @@ namespace Raven.Server.Documents.Indexes.Auto
         public AutoIndexDefinition(string collection, AutoIndexField[] fields)
             : base(FindIndexName(collection, fields), new[] { collection })
         {
+            if (string.IsNullOrEmpty(collection))
+                throw new ArgumentNullException(nameof(collection));
+
+            if (fields == null)
+                throw new ArgumentNullException(nameof(fields));
+
+            if (fields.Length == 0)
+                throw new ArgumentException("You must specify at least one field.", nameof(fields));
+
             _fields = fields;
         }
 

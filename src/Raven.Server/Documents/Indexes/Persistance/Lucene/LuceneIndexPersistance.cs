@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }
         }
 
-        public void Write(RavenOperationContext context, List<global::Lucene.Net.Documents.Document> documents)
+        public void Write(RavenOperationContext context, List<global::Lucene.Net.Documents.Document> documents, CancellationToken cancellationToken)
         {
             if (_disposed)
                 throw new ObjectDisposedException("LuceneIndexPersistance was disposed.");
@@ -67,7 +68,11 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                             }
 
                             foreach (var document in documents)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+
                                 AddDocumentToIndex(_indexWriter, document, analyzer);
+                            }
                         }
                         catch (Exception)
                         {

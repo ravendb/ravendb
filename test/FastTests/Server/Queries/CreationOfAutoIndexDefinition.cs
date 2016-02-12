@@ -1,5 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
 
 using Xunit;
@@ -11,12 +14,26 @@ namespace FastTests.Server.Queries
         private DynamicQueryMapping _sut;
 
         [Fact]
+        public void SpecifyingInvalidParametersWillResultInException()
+        {
+            var fields = new[] { new AutoIndexField("test", SortOptions.String, false) };
+
+            Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition(null, null));
+            Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition("test", null));
+            Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition(null, fields));
+
+            Assert.Throws<ArgumentException>(() => new AutoIndexDefinition("test", new AutoIndexField[0]));
+
+            new AutoIndexDefinition("test", fields);
+        }
+
+        [Fact]
         public void CanExtractTermsFromRangedQuery()
         {
             create_dynamic_mapping_for_users_collection("Term:[0 TO 10]");
-            
+
             var definition = _sut.CreateAutoIndexDefinition();
-            
+
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
             Assert.Equal("Term", definition.MapFields.ToArray()[0]);
