@@ -13,7 +13,6 @@ namespace Raven.Server.Config.Categories
         private bool runInMemory;
         private string workingDirectory;
         private string dataDirectory;
-        private string indexStoragePath;
         private string serverUrl;
 
         [Description("The maximum allowed page size for queries")]
@@ -61,25 +60,6 @@ namespace Raven.Server.Config.Categories
         {
             get { return dataDirectory; }
             set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
-        }
-
-        [Description("The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Raven/IndexStoragePath")]
-        public string IndexStoragePath
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(indexStoragePath))
-                    indexStoragePath = Path.Combine(DataDirectory, "Indexes");
-                return indexStoragePath;
-            }
-            set
-            {
-                if (string.IsNullOrEmpty(value))
-                    return;
-                indexStoragePath = value.ToFullPath();
-            }
         }
 
         private static string CalculateWorkingDirectory(string workingDirectory)

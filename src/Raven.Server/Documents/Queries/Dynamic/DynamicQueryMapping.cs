@@ -20,6 +20,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public string[] HighlightedFields { get; private set; }
 
+        private DynamicQueryMapping()
+        {
+        }
+
         public AutoIndexDefinition CreateAutoIndexDefinition()
         {
             return new AutoIndexDefinition(ForCollection, MapFields.Select(field =>

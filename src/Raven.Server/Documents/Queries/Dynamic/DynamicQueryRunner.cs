@@ -30,7 +30,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var autoIndexDef = map.CreateAutoIndexDefinition();
 
-                //index = _indexStore.CreateIndex(autoIndexDef);
+                var id = _indexStore.CreateIndex(autoIndexDef);
+                index = _indexStore.GetIndex(id);
+
                 newAutoIndex = true;
             }
 

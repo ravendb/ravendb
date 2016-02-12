@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 
 using Voron;
@@ -18,10 +18,10 @@ namespace Raven.Server.Documents.Indexes
             _fields = definition.MapFields.ToArray();
         }
 
-        public static AutoIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentsStorage documentsStorage)
+        public static AutoIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentsStorage documentsStorage, IndexingConfiguration configuration)
         {
             var instance = new AutoIndex(indexId, definition);
-            instance.Initialize(documentsStorage);
+            instance.Initialize(documentsStorage, configuration);
 
             return instance;
         }

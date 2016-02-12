@@ -4,7 +4,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexField
     {
-        public AutoIndexField(string name, SortOptions? sortOption, bool highlighted)
+        public AutoIndexField(string name, SortOptions? sortOption = null, bool highlighted = false)
         {
             Name = name;
             SortOption = sortOption;

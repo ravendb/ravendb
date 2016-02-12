@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Extensions;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 
 namespace Raven.Server.Documents.Indexes
@@ -11,6 +13,7 @@ namespace Raven.Server.Documents.Indexes
     public class IndexStore : IDisposable
     {
         private readonly DocumentsStorage _documentsStorage;
+        private readonly IndexingConfiguration _configuration;
 
         private readonly object _locker = new object();
 
@@ -20,9 +23,10 @@ namespace Raven.Server.Documents.Indexes
 
         private string _path;
 
-        public IndexStore(DocumentsStorage documentsStorage)
+        public IndexStore(DocumentsStorage documentsStorage, IndexingConfiguration configuration)
         {
             _documentsStorage = documentsStorage;
+            _configuration = configuration;
         }
 
         public void Initialize()
@@ -35,10 +39,12 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException();
 
-                _path = _documentsStorage.Configuration.Core.IndexStoragePath;
-
-                if (System.IO.Directory.Exists(_path) == false && _documentsStorage.Configuration.Core.RunInMemory == false)
-                    System.IO.Directory.CreateDirectory(_path);
+                if (_configuration.RunInMemory == false)
+                {
+                    _path = _configuration.IndexStoragePath;
+                    if (System.IO.Directory.Exists(_path) == false && _configuration.RunInMemory == false)
+                        System.IO.Directory.CreateDirectory(_path);
+                }
 
                 Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
 
@@ -63,7 +69,7 @@ namespace Raven.Server.Documents.Indexes
         public int CreateIndex(AutoIndexDefinition definition)
         {
             var indexId = 1; // TODO
-            AddIndex(indexId, AutoIndex.CreateNew(indexId, definition, _documentsStorage));
+            AddIndex(indexId, AutoIndex.CreateNew(indexId, definition, _documentsStorage, _configuration));
             return indexId;
         }
 
@@ -82,7 +88,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void OpenIndexes()
         {
-            if (_documentsStorage.Configuration.Core.RunInMemory)
+            if (_configuration.RunInMemory)
                 return;
 
             foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())

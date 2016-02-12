@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -108,7 +109,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool ShouldRun { get; private set; } = true;
 
-        protected void Initialize(DocumentsStorage documentsStorage)
+        protected void Initialize(DocumentsStorage documentsStorage, IndexingConfiguration configuration)
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -118,9 +119,9 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException();
 
-                var options = documentsStorage.Configuration.Core.RunInMemory
+                var options = configuration.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(_documentsStorage.Configuration.Core.IndexStoragePath, IndexId.ToString()));
+                    : StorageEnvironmentOptions.ForPath(Path.Combine(configuration.IndexStoragePath, IndexId.ToString()));
 
                 options.SchemaVersion = 1;
 
