@@ -362,15 +362,13 @@ namespace Voron.Impl
 
             for (int i = 0; i < value.NumberOfPages; i++)
             {
-                var pageFromScratchBuffer = new PageFromScratchBuffer(value.ScratchFileNumber,
-                    value.PositionInScratchBuffer + i, 1, 1);
+                var pageFromScratchBuffer = new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 1, 1);
                 _transactionPages.Add(pageFromScratchBuffer);
                 _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
                 _dirtyOverflowPages.Remove(pageNumber + i);
                 _dirtyPages.Add(pageNumber + i);
 
-                var newPage = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber,
-                    value.PositionInScratchBuffer + i);
+                var newPage = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer + i);
                 newPage.PageNumber = pageNumber + i;
                 newPage.Flags = PageFlags.Single;
             }

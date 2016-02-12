@@ -222,7 +222,7 @@ namespace FastTests.Voron.Compact
                 var leaves = new HashSet<long>();
                 var references = new HashSet<long>();
 
-                int numberOfNodes = VisitNodes(tree, tree.Root, null, 0, nodes, leaves, references);
+                int numberOfNodes = VisitNodes(tree, PrefixTree.Constants.RootNodeName, PrefixTree.Constants.InvalidNodeName, 0, nodes, leaves, references);
                 Assert.Equal(2 * tree.Count - 1, numberOfNodes); // The amount of nodes is directly correlated with the tree size.
                 Assert.Equal(tree.Count, leaves.Count); // The size of the tree is equal to the amount of leaves in the tree.
 
@@ -233,7 +233,7 @@ namespace FastTests.Voron.Compact
                     Assert.True(leaf->IsLeaf);
 
                     // We check the reference of the leaf has been accounted for as an internal node. 
-                    if (references.Contains(leaf->ReferencePtr))
+                    if (references.Contains(leaf->DataPtr))
                         counter++;
                 }
 
@@ -245,30 +245,36 @@ namespace FastTests.Voron.Compact
             tree.NodesTable.VerifyStructure();
         }
 
-        private static int VisitNodes(PrefixTree tree, PrefixTree.Node* node,
-                                     PrefixTree.Node* parent, int nameLength,
+        private static int VisitNodes(PrefixTree tree, long nodeName,
+                                     long parentName, int nameLength,
                                      HashSet<long> nodes,
                                      HashSet<long> leaves,
                                      HashSet<long> references)
         {
-            if (node == null)
+            if (nodeName == PrefixTree.Constants.InvalidNodeName)
                 return 0;
 
+            var node = tree.ReadNodeByName(nodeName);
             Assert.True(nameLength <= tree.GetExtentLength(node));
 
-            if (parent->IsInternal)
+            PrefixTree.Node* parent = null;
+            if (parentName != PrefixTree.Constants.InvalidNodeName)
             {
-                Assert.True(tree.Extent(parent).Equals(tree.Extent(node).SubVector(0, ((PrefixTree.Internal*)parent)->ExtentLength)));
+                parent = tree.ReadNodeByName(parentName);
+                if ( parent->IsInternal)
+                {
+                    Assert.True(tree.Extent(parent).Equals(tree.Extent(node).SubVector(0, ((PrefixTree.Internal*)parent)->ExtentLength)));
+                }                
             }
 
             if (node->IsInternal)
             {
                 var leafNode = (PrefixTree.Leaf*)tree.ReadNodeByName(node->ReferencePtr);
 
-                Assert.NotNull(leafNode->IsLeaf); // We ensure that internal node references are leaves. 
+                Assert.True(leafNode->IsLeaf); // We ensure that internal node references are leaves. 
 
                 Assert.True(references.Add(leafNode->DataPtr));
-                Assert.True(nodes.Remove((long)node));
+                Assert.True(nodes.Remove(nodeName));
 
                 var handle = tree.Handle(node);
 
@@ -278,31 +284,40 @@ namespace FastTests.Voron.Compact
 
                 var internalNode = (PrefixTree.Internal*)node;
                 int jumpLength = tree.GetJumpLength(internalNode);
+                Assert.NotEqual(PrefixTree.Constants.InvalidNodeName, internalNode->ReferencePtr);
 
-                var jumpLeft = tree.ReadNodeByName(internalNode->LeftPtr);
+                var jumpLeftName = internalNode->LeftPtr;
+                var jumpLeft = tree.ReadNodeByName(jumpLeftName);
                 while (jumpLeft->IsInternal && jumpLength > ((PrefixTree.Internal*)jumpLeft)->ExtentLength)
-                    jumpLeft = tree.ReadNodeByName(((PrefixTree.Internal*)jumpLeft)->LeftPtr);
+                {
+                    jumpLeftName = ((PrefixTree.Internal*)jumpLeft)->LeftPtr;
+                    jumpLeft = tree.ReadNodeByName(jumpLeftName);
+                }                    
 
-                Assert.Equal(internalNode->JumpLeftPtr, (long)jumpLeft);
+                Assert.Equal(internalNode->JumpLeftPtr, jumpLeftName);
 
-                var jumpRight = tree.ReadNodeByName(internalNode->RightPtr);
+                var jumpRightName = internalNode->RightPtr;
+                var jumpRight = tree.ReadNodeByName(jumpRightName);
                 while (jumpRight->IsInternal && jumpLength > ((PrefixTree.Internal*)jumpRight)->ExtentLength)
-                    jumpRight = tree.ReadNodeByName(((PrefixTree.Internal*)jumpRight)->RightPtr);
+                {
+                    jumpRightName = ((PrefixTree.Internal*)jumpRight)->RightPtr;
+                    jumpRight = tree.ReadNodeByName(jumpRightName);
+                }                    
 
-                Assert.Equal(internalNode->JumpRightPtr, (long)jumpRight);
+                Assert.Equal(internalNode->JumpRightPtr, jumpRightName);
 
-                var left = tree.ReadNodeByName(internalNode->LeftPtr);
-                var right = tree.ReadNodeByName(internalNode->RightPtr);
+                var left = internalNode->LeftPtr;
+                var right = internalNode->RightPtr;
 
-                return 1 + VisitNodes(tree, left, node, internalNode->ExtentLength + 1, nodes, leaves, references)
-                         + VisitNodes(tree, right, node, internalNode->ExtentLength + 1, nodes, leaves, references);
+                return 1 + VisitNodes(tree, left, nodeName, internalNode->ExtentLength + 1, nodes, leaves, references)
+                         + VisitNodes(tree, right, nodeName, internalNode->ExtentLength + 1, nodes, leaves, references);
             }
             else
             {
                 Assert.True(node->IsLeaf);
                 var leafNode = (PrefixTree.Leaf*)node;
 
-                Assert.True(leaves.Add((long)leafNode)); // We haven't found this leaf somewhere else.
+                Assert.True(leaves.Add(nodeName)); // We haven't found this leaf somewhere else.
                 Assert.Equal(tree.Name(node).Count, tree.GetExtentLength(node)); // This is a leaf, the extent is the key
 
                 var reference = tree.ReadNodeByName(parent->ReferencePtr);

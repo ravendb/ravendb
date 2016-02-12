@@ -145,8 +145,8 @@ namespace FastTests.Voron.Compact
                 var docs = new Table(DocsSchema, "docs", tx);
                 var tree = tx.CreatePrefixTree(Name);
 
-                AddToPrefixTree(tree, docs, lesserKey, "Oren");
-                AddToPrefixTree(tree, docs, greaterKey, "Eini");
+                lesserKeyRecordId = AddToPrefixTree(tree, docs, lesserKey, "Oren");
+                greaterKeyRecordId = AddToPrefixTree(tree, docs, greaterKey, "Eini");
 
                 StructuralVerify(tree);
 
