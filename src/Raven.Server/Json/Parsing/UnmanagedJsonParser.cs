@@ -50,6 +50,13 @@ namespace Raven.Server.Json.Parsing
             {
                 case JsonParserTokenContinuation.None:
                     break;// parse normally
+                case JsonParserTokenContinuation.PartialNumber:
+                    if (ParseNumber() == false)
+                        return false;
+                    if (_state.CurrentTokenType == JsonParserToken.Float)
+                        _stringBuffer.EnsureSingleChunk(_state);
+                    _state.Continuation = JsonParserTokenContinuation.None;
+                    return true;
                 case JsonParserTokenContinuation.PartialPreamble:
                     if (EnsureRestOfToken() == false)
                         return false;
