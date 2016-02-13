@@ -363,122 +363,12 @@ namespace Raven.Server.Json
             WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
         }
 
-        private unsafe void WriteString(RavenOperationContext context, JsonParserState state)
-        {
-            WriteString(new LazyStringValue(null, state.StringBuffer,state.StringSize, context));
-        }
+        
 
         public void Dispose()
         {
             Flush();
         }
-        public void WriteObject(RavenOperationContext context, JsonParserState state, ObjectJsonParser parser)
-        {
-            if (state.CurrentTokenType != JsonParserToken.StartObject)
-                throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
-
-            WriteStartObject();
-            bool first = true;
-            while (true)
-            {
-                if(parser.Read() == false)
-                    throw new InvalidOperationException("Object json parser can't return partial results");
-                if (state.CurrentTokenType == JsonParserToken.EndObject)
-                    break;
-
-                if (state.CurrentTokenType != JsonParserToken.String)
-                    throw new InvalidOperationException("Property expected, but got " + state.CurrentTokenType);
-
-                if (first == false)
-                    WriteComma();
-                first = false;
-
-                WriteString(context, state);
-                EnsureBuffer(1);
-                _buffer[_pos++] = Colon;
-
-                if (parser.Read() == false)
-                    throw new InvalidOperationException("Object json parser can't return partial results");
-
-                WriteValue(context, state, parser);
-            }
-            WriteEndObject();
-        }
-
-        private void WriteValue(RavenOperationContext context, JsonParserState state, ObjectJsonParser parser)
-        {
-            switch (state.CurrentTokenType)
-            {
-                case JsonParserToken.Null:
-                    WriteNull();
-                    break;
-                case JsonParserToken.False:
-                    WriteBool(false);
-                    break;
-                case JsonParserToken.True:
-                    WriteBool(true);
-                    break;
-                case JsonParserToken.String:
-                    WriteString(context, state);
-                    break;
-                case JsonParserToken.Float:
-                    WriteString(context, state);
-                    break;
-                case JsonParserToken.Integer:
-                    WriteInteger(state.Long);
-                    break;
-                case JsonParserToken.StartObject:
-                    WriteObject(context, state, parser);
-                    break;
-                case JsonParserToken.StartArray:
-                    WriteArray(context, state, parser);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
-            }
-        }
-
-        public void WriteArray(RavenOperationContext context, JsonParserState state, ObjectJsonParser parser)
-        {
-            if (state.CurrentTokenType != JsonParserToken.StartArray)
-                throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
-
-            WriteStartArray();
-            bool first = true;
-            while (true)
-            {
-                if (parser.Read() == false)
-                    throw new InvalidOperationException("Object json parser can't return partial results");
-
-                if (state.CurrentTokenType == JsonParserToken.EndArray)
-                    break;
-
-                if (first == false)
-                    WriteComma();
-                first = false;
-
-                WriteValue(context, state, parser);
-            }
-            WriteEndArray();
-        }
-
-        public void WriteDocumentsAsync(RavenOperationContext context, IEnumerable<Document> documents)
-        {
-            WriteStartArray();
-
-            bool first = true;
-            foreach (var document in documents)
-            {
-                if (document == null)
-                    continue;
-                if (first == false)
-                    WriteComma();
-                first = false;
-                document.EnsureMetadata();
-                context.Write(this, document.Data);
-            }
-
-            WriteEndArray();
-        }
+        
     }
 }

@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 3, TimeSpan.FromSeconds(3)));
+                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 3, TimeSpan.FromSeconds(15)));
                     }
                 }
             }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Server.Documents;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 using Sparrow.Binary;
@@ -516,7 +517,7 @@ namespace Raven.Server.Json
             {
                 parser.Read();
 
-                writer.WriteObject(this, state, parser);
+                WriteObject(writer, state, parser);
             }
         }
 
@@ -532,7 +533,7 @@ namespace Raven.Server.Json
             {
                 parser.Read();
 
-                writer.WriteArray(this, state, parser);
+                WriteArray(writer, state, parser);
             }
         }
 
@@ -545,7 +546,7 @@ namespace Raven.Server.Json
                 try
                 {
                     writer.ReadObject();
-                    if(writer.Read() == false)
+                    if (writer.Read() == false)
                         throw new InvalidOperationException("Partial json content in object json parser shouldn't happen");
                     writer.FinalizeDocumentWithoutProperties(CachedProperties.Version);
                     _disposables.Add(writer);
@@ -557,6 +558,111 @@ namespace Raven.Server.Json
                     throw;
                 }
             }
+        }
+
+        public unsafe void WriteObject(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        {
+            if (state.CurrentTokenType != JsonParserToken.StartObject)
+                throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
+
+            writer.WriteStartObject();
+            bool first = true;
+            while (true)
+            {
+                if (parser.Read() == false)
+                    throw new InvalidOperationException("Object json parser can't return partial results");
+                if (state.CurrentTokenType == JsonParserToken.EndObject)
+                    break;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    throw new InvalidOperationException("Property expected, but got " + state.CurrentTokenType);
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+               writer.WritePropertyName(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+
+                if (parser.Read() == false)
+                    throw new InvalidOperationException("Object json parser can't return partial results");
+
+                WriteValue(writer, state, parser);
+            }
+            writer.WriteEndObject();
+        }
+
+        private unsafe void WriteValue(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        {
+            switch (state.CurrentTokenType)
+            {
+                case JsonParserToken.Null:
+                    writer.WriteNull();
+                    break;
+                case JsonParserToken.False:
+                    writer.WriteBool(false);
+                    break;
+                case JsonParserToken.True:
+                    writer.WriteBool(true);
+                    break;
+                case JsonParserToken.String:
+                case JsonParserToken.Float:
+                    writer.WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                    break;
+                case JsonParserToken.Integer:
+                    writer.WriteInteger(state.Long);
+                    break;
+                case JsonParserToken.StartObject:
+                    WriteObject(writer, state, parser);
+                    break;
+                case JsonParserToken.StartArray:
+                    WriteArray(writer, state, parser);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
+            }
+        }
+
+        public void WriteArray(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        {
+            if (state.CurrentTokenType != JsonParserToken.StartArray)
+                throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
+
+            writer.WriteStartArray();
+            bool first = true;
+            while (true)
+            {
+                if (parser.Read() == false)
+                    throw new InvalidOperationException("Object json parser can't return partial results");
+
+                if (state.CurrentTokenType == JsonParserToken.EndArray)
+                    break;
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                WriteValue(writer, state, parser);
+            }
+            writer.WriteEndArray();
+        }
+
+        private void WriteDocuments(BlittableJsonTextWriter writer, IEnumerable<Document> documents)
+        {
+            writer.WriteStartArray();
+
+            bool first = true;
+            foreach (var document in documents)
+            {
+                if (document == null)
+                    continue;
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+                document.EnsureMetadata();
+                Write(writer, document.Data);
+            }
+
+            writer.WriteEndArray();
         }
     }
 }
