@@ -26,7 +26,8 @@ namespace Raven.Server.Json
         private Dictionary<string, byte[]> _fieldNamesAsByteArrays;
         private bool _disposed;
 
-        private byte[] _bytesBuffer;
+        private byte[] _managedBuffer;
+        private byte[] _parsingBuffer;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
@@ -45,13 +46,15 @@ namespace Raven.Server.Json
 
         private byte[] GetParsingBuffer()
         {
-            return new byte[1];
+            if (_parsingBuffer == null)
+                _parsingBuffer = new byte[4096];
+            return _parsingBuffer;
         }
         public byte[] GetManagedBuffer()
         {
-            if (_bytesBuffer == null)
-                _bytesBuffer = new byte[4096];
-            return _bytesBuffer;
+            if (_managedBuffer == null)
+                _managedBuffer = new byte[4096];
+            return _managedBuffer;
         }
 
         /// <summary>
