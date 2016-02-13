@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Json.Parsing;
 using Sparrow;
@@ -26,21 +25,6 @@ namespace Raven.Server.Json
 
         private int _pos;
         private readonly byte[] _buffer;
-        private Stack<WriteObjectState> _objectState = new Stack<WriteObjectState>();
-        private Stack<WriteArrayState> _arrayState = new Stack<WriteArrayState>(); 
-        private struct WriteObjectState
-        {
-            public bool FirstProperty;
-            public bool ReadingProperty;
-            public bool WroteStartObject;
-        }
-
-        private struct WriteArrayState
-        {
-            public bool FirstItem;
-            public bool WriteStartArray;
-            public bool ReadingItem;
-        }
 
         public BlittableJsonTextWriter(RavenOperationContext context, Stream stream)
         {
@@ -82,24 +66,24 @@ namespace Raven.Server.Json
         {
             switch (b)
             {
-                case (byte)'\b':
-                    return (byte)'b';
-                case (byte)'\t':
-                    return (byte)'t';
-                case (byte)'\n':
-                    return (byte)'n';
-                case (byte)'\f':
-                    return (byte)'f';
-                case (byte)'\r':
-                    return (byte)'r';
-                case (byte)'\\':
-                    return (byte)'\\';
+                case (byte) '\b':
+                     return (byte) 'b';
+                case (byte) '\t':
+                    return (byte) 't';
+                case (byte) '\n':
+                    return (byte) 'n';
+                case (byte) '\f':
+                    return (byte) 'f';
+                case (byte) '\r':
+                    return (byte) 'r';
+                case (byte) '\\':
+                    return (byte) '\\';
                 case (byte)'/':
                     return (byte)'/';
-                case (byte)'"':
-                    return (byte)'"';
+                case (byte) '"':
+                    return (byte) '"';
                 default:
-                    throw new InvalidOperationException("Invalid escape char '" + (char)b + "' numeric value is: " + b);
+                    throw new InvalidOperationException("Invalid escape char '"+(char)b +"' numeric value is: " + b);
             }
         }
 
@@ -144,7 +128,7 @@ namespace Raven.Server.Json
                 _pos += size;
                 return;
             }
-
+            
             // need to do this in pieces
             var posInStr = 0;
             fixed (byte* p = _buffer)
@@ -249,14 +233,14 @@ namespace Raven.Server.Json
 
         public void WriteInteger(long val)
         {
-            if (val == 0)
+            if (val == 0) 
             {
                 EnsureBuffer(1);
                 _buffer[_pos++] = (byte)'0';
                 return;
             }
             int len = 1;
-
+           
             for (var i = val / 10; i != 0; i /= 10)
             {
                 len++;
@@ -264,7 +248,7 @@ namespace Raven.Server.Json
             if (val < 0)
             {
                 EnsureBuffer(len + 1);
-                _buffer[_pos++] = (byte)'-';
+                _buffer[_pos++] = (byte) '-';
             }
             else
             {
@@ -281,164 +265,125 @@ namespace Raven.Server.Json
         public unsafe void WriteDouble(LazyDoubleValue val)
         {
             var lazyStringValue = val.Inner;
-            WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
+            WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
         }
 
         private unsafe void WriteString(RavenOperationContext context, JsonParserState state)
         {
-            WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, context));
-        }
-
-        public bool WriteObject(RavenOperationContext context, JsonParserState state, IJsonParser parser)
-        {
-            WriteObjectState writeState;
-            if (_objectState.Count != 0)
-            {
-                writeState = _objectState.Pop();
-            }
-            else
-            {
-                writeState = new WriteObjectState
-                {
-                    FirstProperty = true,
-                    ReadingProperty = true,
-                    WroteStartObject = false
-                };
-            }
-            if (writeState.FirstProperty && state.CurrentTokenType != JsonParserToken.StartObject)
-                throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
-
-            if (writeState.WroteStartObject == false)
-            {
-                WriteStartObject();
-                writeState.WroteStartObject = true;
-            }
-            while (true)
-            {
-                if (writeState.ReadingProperty)
-                {
-                    if (parser.Read() == false)
-                    {
-                        _objectState.Push(writeState);
-                        return false;
-                    }
-                    if (state.CurrentTokenType == JsonParserToken.EndObject)
-                        break;
-
-                    if (state.CurrentTokenType != JsonParserToken.String)
-                        throw new InvalidOperationException("Property expected, but got " + state.CurrentTokenType);
-
-                    if (writeState.FirstProperty == false)
-                        WriteComma();
-
-                    WriteString(context, state);
-                    EnsureBuffer(1);
-                    _buffer[_pos++] = Colon;
-
-                    writeState.FirstProperty = false;
-                    writeState.ReadingProperty = false;
-
-                    if (parser.Read() == false)
-                    {
-                        _objectState.Push(writeState);
-                        return false;
-                    }
-                }
-               
-
-                if (WriteValue(context, state, parser) == false)
-                {
-                    _objectState.Push(writeState);
-                    return false;
-                }
-            }
-            WriteEndObject();
-            return true;
-        }
-
-        private bool WriteValue(RavenOperationContext context, JsonParserState state, IJsonParser parser)
-        {
-            switch (state.CurrentTokenType)
-            {
-                case JsonParserToken.Null:
-                    WriteNull();
-                    return true;
-                case JsonParserToken.False:
-                    WriteBool(false);
-                    return true;
-                case JsonParserToken.True:
-                    WriteBool(true);
-                    return true;
-                case JsonParserToken.String:
-                    WriteString(context, state);
-                    return true;
-                case JsonParserToken.Float:
-                    WriteString(context, state);
-                    return true;
-                case JsonParserToken.Integer:
-                    WriteInteger(state.Long);
-                    return true;
-                case JsonParserToken.StartObject:
-                    return WriteObject(context, state, parser);
-                case JsonParserToken.StartArray:
-                    return WriteArray(context, state, parser);
-                default:
-                    throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
-            }
-        }
-
-        public bool WriteArray(RavenOperationContext context, JsonParserState state, IJsonParser parser)
-        {
-                WriteArrayState writeArrayState;
-            if (_arrayState.Count != 0)
-            {
-                writeArrayState = _arrayState.Pop();
-            }
-            else
-            {
-                writeArrayState = new WriteArrayState
-                {
-                    FirstItem = true,
-                    WriteStartArray = false,
-                    ReadingItem = false
-                };
-            }
-            if (writeArrayState.FirstItem && state.CurrentTokenType != JsonParserToken.StartArray)
-                throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
-
-            if (writeArrayState.WriteStartArray == false)
-            {
-                WriteStartArray();
-                writeArrayState.WriteStartArray = true;
-            }
-            while (true)
-            {
-                if (writeArrayState.ReadingItem == false)
-                {
-
-                    if (parser.Read() == false)
-                        return false;
-                    if (state.CurrentTokenType == JsonParserToken.EndArray)
-                        break;
-
-                    if (writeArrayState.FirstItem == false)
-                        WriteComma();
-                    writeArrayState.FirstItem = false;
-                    writeArrayState.ReadingItem = true;
-                }
-
-                if (WriteValue(context, state, parser) == false)
-                    return false;
-
-                writeArrayState.ReadingItem = false;
-            }
-            WriteEndArray();
-            return true;
+            WriteString(new LazyStringValue(null, state.StringBuffer,state.StringSize, context));
         }
 
         public void Dispose()
         {
             Flush();
+        }
+        public void WriteObject(RavenOperationContext context, JsonParserState state, ObjectJsonParser parser)
+        {
+            if (state.CurrentTokenType != JsonParserToken.StartObject)
+                throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
+
+            WriteStartObject();
+            bool first = true;
+            while (true)
+            {
+                if(parser.Read() == false)
+                    throw new InvalidOperationException("Object json parser can't return partial results");
+                if (state.CurrentTokenType == JsonParserToken.EndObject)
+                    break;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    throw new InvalidOperationException("Property expected, but got " + state.CurrentTokenType);
+
+                if (first == false)
+                    WriteComma();
+                first = false;
+
+                WriteString(context, state);
+                EnsureBuffer(1);
+                _buffer[_pos++] = Colon;
+
+                if (parser.Read() == false)
+                    throw new InvalidOperationException("Object json parser can't return partial results");
+
+                WriteValue(context, state, parser);
+            }
+            WriteEndObject();
+        }
+
+        private void WriteValue(RavenOperationContext context, JsonParserState state, ObjectJsonParser parser)
+        {
+            switch (state.CurrentTokenType)
+            {
+                case JsonParserToken.Null:
+                    WriteNull();
+                    break;
+                case JsonParserToken.False:
+                    WriteBool(false);
+                    break;
+                case JsonParserToken.True:
+                    WriteBool(true);
+                    break;
+                case JsonParserToken.String:
+                    WriteString(context, state);
+                    break;
+                case JsonParserToken.Float:
+                    WriteString(context, state);
+                    break;
+                case JsonParserToken.Integer:
+                    WriteInteger(state.Long);
+                    break;
+                case JsonParserToken.StartObject:
+                    WriteObject(context, state, parser);
+                    break;
+                case JsonParserToken.StartArray:
+                    WriteArray(context, state, parser);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
+            }
+        }
+
+        public void WriteArray(RavenOperationContext context, JsonParserState state, ObjectJsonParser parser)
+        {
+            if (state.CurrentTokenType != JsonParserToken.StartArray)
+                throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
+
+            WriteStartArray();
+            bool first = true;
+            while (true)
+            {
+                if (parser.Read() == false)
+                    throw new InvalidOperationException("Object json parser can't return partial results");
+
+                if (state.CurrentTokenType == JsonParserToken.EndArray)
+                    break;
+
+                if (first == false)
+                    WriteComma();
+                first = false;
+
+                WriteValue(context, state, parser);
+            }
+            WriteEndArray();
+        }
+
+        public void WriteDocumentsAsync(RavenOperationContext context, IEnumerable<Document> documents)
+        {
+            WriteStartArray();
+
+            bool first = true;
+            foreach (var document in documents)
+            {
+                if (document == null)
+                    continue;
+                if (first == false)
+                    WriteComma();
+                first = false;
+                document.EnsureMetadata();
+                context.Write(this, document.Data);
+            }
+
+            WriteEndArray();
         }
     }
 }
