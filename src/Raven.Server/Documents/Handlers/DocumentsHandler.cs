@@ -6,11 +6,13 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
 using Raven.Server.Json;
 using Raven.Server.Routing;
+
 using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class DocumentsHandler : DatabaseRequestHandler
     {

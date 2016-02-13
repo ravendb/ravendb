@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -28,7 +26,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Identifier of document for which notification was created.
         /// </summary>
-        public string Id { get; set; }
+        public string Key { get; set; }
 
         /// <summary>
         /// Document collection name.
@@ -45,14 +43,9 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public long? Etag { get; set; }
 
-        /// <summary>
-        /// Notification message.
-        /// </summary>
-        public string Message { get; set; }
-
         public override string ToString()
         {
-            return string.Format("{0} on {1}", Type, Id);
+            return string.Format("{0} on {1}", Type, Key);
         }
     }
 
@@ -196,7 +189,7 @@ namespace Raven.Abstractions.Data
         Put = 1,
         Delete = 2,
     }
-    
+
     public class TrafficWatchNotification : EventArgs
     {
         public DateTime TimeStamp { get; set; }

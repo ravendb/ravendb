@@ -613,7 +613,7 @@ namespace Raven.Client.Document
         public void OnNext(DocumentChangeNotification notification)
         {
             if (notification.Type != DocumentChangeTypes.Put ||
-                notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+                notification.Key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                 return;
 
             newDocuments.Set();

@@ -6,14 +6,17 @@
 
 using System;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Primitives;
+
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+
 using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {

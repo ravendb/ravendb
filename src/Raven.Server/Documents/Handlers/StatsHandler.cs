@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
+
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {

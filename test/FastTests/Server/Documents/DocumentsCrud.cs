@@ -25,7 +25,7 @@ namespace FastTests.Server.Documents
             configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
 
-            _documentsStorage = new DocumentsStorage("foo", configuration);
+            _documentsStorage = new DocumentsStorage("foo", configuration, new DatabaseNotifications());
             _documentsStorage.Initialize();
             _unmanagedBuffersPool = new UnmanagedBuffersPool("test");
         }
@@ -271,7 +271,7 @@ namespace FastTests.Server.Documents
                  //["run.in.memory"] = "false",
                  //["system.path"] = Path.GetTempPath() + "\\crud"
              }));
-            _documentsStorage = new DocumentsStorage("test", new RavenConfiguration());
+            _documentsStorage = new DocumentsStorage("test", new RavenConfiguration(), new DatabaseNotifications());
             _documentsStorage.Initialize(options);
         }
 
