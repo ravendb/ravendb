@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public async Task SimpleIndexing()
+        public void SimpleIndexing()
         {
             var notifications = new DatabaseNotifications();
             var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
@@ -68,26 +68,26 @@ namespace FastTests.Server.Documents.Indexing
                         {
                             context.Transaction = tx;
 
-                            using (var doc = await CreateDocumentAsync(context, "key/1", new DynamicJsonValue
+                            using (var doc =  CreateDocumentAsync(context, "key/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
                                 [Constants.Metadata] = new DynamicJsonValue
                                 {
                                     [Constants.RavenEntityName] = "Users"
                                 }
-                            }).ConfigureAwait(false))
+                            }))
                             {
                                 storage.Put(context, "key/1", null, doc);
                             }
 
-                            using (var doc = await CreateDocumentAsync(context, "key/2", new DynamicJsonValue
+                            using (var doc =  CreateDocumentAsync(context, "key/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
                                 [Constants.Metadata] = new DynamicJsonValue
                                 {
                                     [Constants.RavenEntityName] = "Users"
                                 }
-                            }).ConfigureAwait(false))
+                            }))
                             {
                                 storage.Put(context, "key/2", null, doc);
                             }
@@ -103,14 +103,14 @@ namespace FastTests.Server.Documents.Indexing
                         {
                             context.Transaction = tx;
 
-                            using (var doc = await CreateDocumentAsync(context, "key/3", new DynamicJsonValue
+                            using (var doc = CreateDocumentAsync(context, "key/3", new DynamicJsonValue
                             {
                                 ["Name"] = "William",
                                 [Constants.Metadata] = new DynamicJsonValue
                                 {
                                     [Constants.RavenEntityName] = "Users"
                                 }
-                            }).ConfigureAwait(false))
+                            }))
                             {
                                 storage.Put(context, "key/3", null, doc);
                             }
@@ -124,7 +124,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        private static Task<BlittableJsonReaderObject> CreateDocumentAsync(RavenOperationContext context, string key, DynamicJsonValue value)
+        private static BlittableJsonReaderObject CreateDocumentAsync(RavenOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
