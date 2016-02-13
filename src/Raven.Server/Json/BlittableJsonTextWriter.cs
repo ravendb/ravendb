@@ -11,7 +11,6 @@ namespace Raven.Server.Json
     public class BlittableJsonTextWriter : IDisposable
     {
         private readonly Stream _stream;
-
         private const byte StartObject = (byte)'{';
         private const byte EndObject = (byte)'}';
         private const byte StartArray = (byte)'[';
@@ -31,6 +30,102 @@ namespace Raven.Server.Json
             _stream = stream;
             _buffer = context.GetManagedBuffer();
         }
+
+        public void WriteToOrdered(BlittableJsonReaderObject obj)
+        {
+            WriteStartObject();
+            var props = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < props.Length; i++)
+            {
+                if (i != 0)
+                {
+                    WriteComma();
+                }
+
+                var prop = obj.GetPropertyByIndex(props[i]);
+                WritePropertyName(prop.Item1);
+
+                WriteValue(prop.Item3 & BlittableJsonReaderObject.TypesMask, prop.Item2, originalPropertyOrder: true);
+            }
+
+            WriteEndObject();
+        }
+
+        public void WriteTo(BlittableJsonReaderObject obj)
+        {
+            WriteStartObject();
+            for (int i = 0; i < obj.Count; i++)
+            {
+                if (i != 0)
+                {
+                    WriteComma();
+                }
+                var prop = obj.GetPropertyByIndex(i);
+                WritePropertyName(prop.Item1);
+
+                WriteValue(prop.Item3 & BlittableJsonReaderObject.TypesMask, prop.Item2, originalPropertyOrder: false);
+            }
+
+            WriteEndObject();
+        }
+
+
+        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, bool originalPropertyOrder)
+        {
+            WriteStartArray();
+            var length = blittableArray.Length;
+            for (var i = 0; i < length; i++)
+            {
+                var propertyValueAndType = blittableArray.GetValueTokenTupleByIndex(i);
+
+                if (i != 0)
+                {
+                    WriteComma();
+                }
+                // write field value
+                WriteValue(propertyValueAndType.Item2, propertyValueAndType.Item1, originalPropertyOrder);
+
+            }
+            WriteEndArray();
+        }
+
+        private void WriteValue(BlittableJsonToken token, object val, bool originalPropertyOrder = false)
+        {
+            switch (token)
+            {
+                case BlittableJsonToken.StartArray:
+                    WriteArrayToStream((BlittableJsonReaderArray)val, originalPropertyOrder);
+                    break;
+                case BlittableJsonToken.StartObject:
+                    var blittableJsonReaderObject = ((BlittableJsonReaderObject)val);
+                    if (originalPropertyOrder)
+                        WriteToOrdered(blittableJsonReaderObject);
+                    else
+                        WriteTo(blittableJsonReaderObject);
+                    break;
+                case BlittableJsonToken.String:
+                    WriteString((LazyStringValue)val);
+                    break;
+                case BlittableJsonToken.CompressedString:
+                    WriteString((LazyCompressedStringValue)val);
+                    break;
+                case BlittableJsonToken.Integer:
+                    WriteInteger((long)val);
+                    break;
+                case BlittableJsonToken.Float:
+                    WriteDouble((LazyDoubleValue)val);
+                    break;
+                case BlittableJsonToken.Boolean:
+                    WriteBool((bool)val);
+                    break;
+                case BlittableJsonToken.Null:
+                    WriteNull();
+                    break;
+                default:
+                    throw new DataMisalignedException($"Unidentified Type {token}");
+            }
+        }
+
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

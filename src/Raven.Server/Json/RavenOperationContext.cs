@@ -487,6 +487,23 @@ namespace Raven.Server.Json
             Transaction?.Dispose();
         }
 
+
+        public void Write(Stream stream, BlittableJsonReaderObject json)
+        {
+            using (var writer = new BlittableJsonTextWriter(this, stream))
+            {
+                writer.WriteToOrdered(json);
+            }
+        }
+
+
+        public void WriteOrdered(Stream stream, BlittableJsonReaderObject json)
+        {
+            using (var writer = new BlittableJsonTextWriter(this, stream))
+            {
+                writer.WriteToOrdered(json);
+            }
+        }
         public void Write(BlittableJsonTextWriter writer, BlittableJsonReaderObject json)
         {
             WriteInternal(writer, json);

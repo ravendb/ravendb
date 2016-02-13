@@ -6,12 +6,12 @@ namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase
     {
-        private int _count;
-        private byte* _metadataPtr;
+        private readonly int _count;
+        private readonly byte* _metadataPtr;
         //private byte* _types;
-        private byte* _dataStart;
-        private long _currentOffsetSize;
-        private Dictionary<int, Tuple<object,BlittableJsonToken>> cache;
+        private readonly byte* _dataStart;
+        private readonly long _currentOffsetSize;
+        private Dictionary<int, Tuple<object,BlittableJsonToken>> _cache;
 
         public DynamicJsonArray Modifications;
 
@@ -67,7 +67,7 @@ namespace Raven.Server.Json
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             Tuple<object, BlittableJsonToken> result;
-            if (cache != null && cache.TryGetValue(index, out result))
+            if (_cache != null && _cache.TryGetValue(index, out result))
                 return result;
 
             if (index >= _count || index < 0)
@@ -78,15 +78,15 @@ namespace Raven.Server.Json
             var offset = ReadNumber(itemMetadataStartPtr, _currentOffsetSize);
             var token = *(itemMetadataStartPtr + _currentOffsetSize);
             result = Tuple.Create(_parent.GetObject((BlittableJsonToken)token,
-                (int) (_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & typesMask);
+                (int) (_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & TypesMask);
 
             if (result.Item1 is BlittableJsonReaderBase)
             {
-                if (cache == null)
+                if (_cache == null)
                 {
-                    cache = new Dictionary<int, Tuple<object,BlittableJsonToken>>();
+                    _cache = new Dictionary<int, Tuple<object,BlittableJsonToken>>();
                 }
-                cache[index] = result;
+                _cache[index] = result;
             }
             return result;
         }

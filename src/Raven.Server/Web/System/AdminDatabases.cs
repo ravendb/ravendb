@@ -39,7 +39,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = 200;
                 // TODO: Implement etags
 
-                dbDoc.WriteTo(ResponseBodyStream());
+                context.Write(ResponseBodyStream(), dbDoc);
                 return Task.CompletedTask;
             }
         }

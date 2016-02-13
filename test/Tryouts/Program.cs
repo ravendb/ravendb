@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Blittable.Benchmark;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
 using FastTests.Server.Documents.Indexing;
@@ -26,10 +27,7 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //new DuplicatePageUsage().ShouldNotHappen();
-            //Run();
-            Console.WriteLine(typeof(Raven.Client.DocumentStoreBase));
-            new BasicIndexing().SimpleIndexing();
+            WriteToStreamBenchmark.ManySmallDocs(@"C:\work\json\lines",int.MaxValue);
         }
 
         private static void Run()

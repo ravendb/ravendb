@@ -28,7 +28,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var writer = context.Read(stream, "docs/1");
 
                     var memoryStream = new MemoryStream();
-                    writer.WriteTo(memoryStream, originalPropertyOrder: true);
+                    context.Write(memoryStream, writer);
                     var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
                     JObject.Parse(s); // can parse the output
@@ -58,7 +58,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         {
 
                             var memoryStream = new MemoryStream();
-                            writer.WriteTo(memoryStream, originalPropertyOrder: true);
+                            context.WriteOrdered(memoryStream, writer);
                             var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
                             JObject.Parse(s); // can parse the output
