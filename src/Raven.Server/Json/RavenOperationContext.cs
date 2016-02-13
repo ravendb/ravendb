@@ -46,7 +46,7 @@ namespace Raven.Server.Json
         public byte[] GetManagedBuffer()
         {
             if (_bytesBuffer == null)
-                _bytesBuffer = new byte[1024 * 64];
+                _bytesBuffer = new byte[2];
             return _bytesBuffer;
         }
 
@@ -301,9 +301,10 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    // nothing special needs to be done here, since we know that 
-                    // ObjectJsonParser doesn't need continuations
                     writer.ReadObject();
+                    if (writer.Read() == false)
+                        throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
+                    writer.FinalizeDocument();
                     _disposables.Add(writer);
                     return writer.CreateReader();
                 }
@@ -321,26 +322,27 @@ namespace Raven.Server.Json
             return ParseToMemory(stream, documentId, state);
         }
 
-        private BlittableJsonReaderObject ParseToMemory(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
+        private BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
             var buffer = GetManagedBuffer();
-            using (var parser = new UnmanagedJsonParser(this, state, documentId))
+            using (var parser = new UnmanagedJsonParser(this, state, debugTag))
             {
-                var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
+                var writer = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();
-
+                    writer.ReadObject();
                     while (true)
                     {
                         var read = stream.Read(buffer, 0, buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         parser.SetBuffer(buffer, read);
-                        if (writer.ReadObject())
+                        if (writer.Read())
                             break;
                     }
+                    writer.FinalizeDocument();
 
                     _disposables.Add(writer);
                     return writer.CreateReader();
@@ -363,16 +365,17 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-
+                    writer.ReadObject();
                     while (true)
                     {
                         var read = await stream.ReadAsync(buffer, 0, buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         parser.SetBuffer(buffer, read);
-                        if (writer.ReadObject())
+                        if (writer.Read())
                             break;
                     }
+                    writer.FinalizeDocument();
 
                     _disposables.Add(writer);
                     return writer.CreateReader();
@@ -397,17 +400,17 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-
+                    writer.ReadArray();
                     while (true)
                     {
                         var read = await stream.ReadAsync(buffer, 0, buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         parser.SetBuffer(buffer, read);
-                        if (writer.ReadArray())
+                        if (writer.Read())
                             break;
                     }
-
+                    writer.FinalizeDocument();
                     _disposables.Add(writer);
                     return writer.CreateArrayReader();
                 }
@@ -433,6 +436,7 @@ namespace Raven.Server.Json
                     var writer = new BlittableJsonDocumentBuilder(this, mode, "many/docs", parser, state);
                     try
                     {
+                        writer.ReadObject();
                         CachedProperties.NewDocument();
                         while (true)
                         {
@@ -440,10 +444,10 @@ namespace Raven.Server.Json
                             if (read == 0)
                                 throw new EndOfStreamException("Stream ended without reaching end of json content");
                             parser.SetBuffer(buffer, read);
-                            if (writer.ReadObject())
+                            if (writer.Read())
                                 break;
                         }
-
+                        writer.FinalizeDocument();
                         _disposables.Add(writer);
                         reader = writer.CreateReader();
                     }
@@ -516,7 +520,9 @@ namespace Raven.Server.Json
                 var writer = new BlittableJsonDocumentBuilder(this, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, state);
                 try
                 {
-                    writer.ReadPartialObject(); // here we know we don't need to handle continutations
+                    writer.ReadObject();
+                    if(writer.Read() == false)
+                        throw new InvalidOperationException("Partial json content in object json parser shouldn't happen");
                     writer.FinalizeDocumentWithoutProperties(CachedProperties.Version);
                     _disposables.Add(writer);
                     return writer.CreateReader(CachedProperties);

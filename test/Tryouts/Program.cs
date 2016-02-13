@@ -27,8 +27,8 @@ namespace Tryouts
         {
             //new DuplicatePageUsage().ShouldNotHappen();
             //Run();
-
-            new MultiGetOperations().WithPaging().Wait();
+            Console.WriteLine(typeof(Raven.Client.DocumentStoreBase));
+            new FunctionalityTests().BasicCopyToStream();
         }
 
         private static void Run()

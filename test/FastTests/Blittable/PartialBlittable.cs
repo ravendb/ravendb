@@ -31,7 +31,8 @@ namespace FastTests.Blittable
                     var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk,
                         "test", parser, state);
                     ctx.CachedProperties.NewDocument();
-                    writer.ReadPartialObject();
+
+                    Assert.True(writer.Read());
 
                     writer.FinalizeDocumentWithoutProperties(1);
                     ctx.CachedProperties.Version = 1;

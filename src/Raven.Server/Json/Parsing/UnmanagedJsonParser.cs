@@ -53,32 +53,38 @@ namespace Raven.Server.Json.Parsing
                 case JsonParserTokenContinuation.PartialPreamble:
                     if (EnsureRestOfToken() == false)
                         return false;
+                    _state.Continuation = JsonParserTokenContinuation.None;
                     break; // single case where we don't return 
                 case JsonParserTokenContinuation.PartialString:
                     if (ParseString() == false)
                         return false;
                     _stringBuffer.EnsureSingleChunk(_state);
                     _state.CurrentTokenType = JsonParserToken.String;
+                    _state.Continuation = JsonParserTokenContinuation.None;
                     return true;
                 case JsonParserTokenContinuation.PartialFalse:
                     if (EnsureRestOfToken() == false)
                         return false;
                     _state.CurrentTokenType = JsonParserToken.Float;
+                    _state.Continuation = JsonParserTokenContinuation.None;
                     return true;
                 case JsonParserTokenContinuation.False:
                     if (EnsureRestOfToken() == false)
                         return false;
                     _state.CurrentTokenType = JsonParserToken.False;
+                    _state.Continuation = JsonParserTokenContinuation.None;
                     return true;
                 case JsonParserTokenContinuation.PartialTrue:
                     if (EnsureRestOfToken() == false)
                         return false;
                     _state.CurrentTokenType = JsonParserToken.True;
+                    _state.Continuation = JsonParserTokenContinuation.None;
                     return true;
                 case JsonParserTokenContinuation.PartialNull:
                     if (EnsureRestOfToken() == false)
                         return false;
                     _state.CurrentTokenType = JsonParserToken.Null;
+                    _state.Continuation = JsonParserTokenContinuation.None;
                     return true;
                 default:
                     throw CreateException("Somehow got continuation for single byte token " + _state.Continuation);
