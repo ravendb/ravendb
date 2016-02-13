@@ -10,7 +10,10 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStore : IDisposable
     {
+        private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
+
         private readonly DocumentsStorage _documentsStorage;
+
         private readonly IndexingConfiguration _configuration;
 
         private readonly DatabaseNotifications _databaseNotifications;
@@ -20,8 +23,6 @@ namespace Raven.Server.Documents.Indexes
         private bool _initialized;
 
         private string _path;
-
-        public CollectionOfIndexes _indexes = new CollectionOfIndexes();
 
         public IndexStore(DocumentsStorage documentsStorage, IndexingConfiguration configuration, DatabaseNotifications databaseNotifications)
         {
@@ -109,7 +110,7 @@ namespace Raven.Server.Documents.Indexes
 
         public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
         {
-            return _indexes.GetAutoIndexDefinitionsForCollection(collection); // TODO arek
+            return _indexes.GetDefinitionsOfTypeForCollection<AutoIndexDefinition>(collection);
         }
     }
 }
