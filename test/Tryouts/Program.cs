@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
+using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.Bugs;
 using Newtonsoft.Json;
 using Raven.Server.Json;
@@ -28,7 +29,7 @@ namespace Tryouts
             //new DuplicatePageUsage().ShouldNotHappen();
             //Run();
             Console.WriteLine(typeof(Raven.Client.DocumentStoreBase));
-            new Crud().CanSaveAndLoad().Wait();
+            new BasicIndexing().SimpleIndexing();
         }
 
         private static void Run()

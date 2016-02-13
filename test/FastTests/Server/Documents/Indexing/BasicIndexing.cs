@@ -16,7 +16,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
-    public class Basic : RavenTestBase
+    public class BasicIndexing : RavenTestBase
     {
         [Fact]
         public void CheckDispose()
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 3, TimeSpan.FromSeconds(1)));
+                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 3, TimeSpan.FromSeconds(3)));
                     }
                 }
             }
