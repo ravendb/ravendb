@@ -183,6 +183,25 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
+        [Fact]
+        public void UsingBoolleans()
+        {
+            var json = JsonConvert.SerializeObject(new
+            {
+                Name = "Oren",
+                Dogs = true
+            });
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var ctx = new RavenOperationContext(pool))
+            using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
+            {
+                var ms = new MemoryStream();
+                r.WriteTo(ms, originalPropertyOrder: true);
+
+                Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
+            }
+        }
 
     }
 }

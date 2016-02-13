@@ -28,7 +28,7 @@ namespace Tryouts
             //new DuplicatePageUsage().ShouldNotHappen();
             //Run();
             Console.WriteLine(typeof(Raven.Client.DocumentStoreBase));
-            new FunctionalityTests().BasicCopyToStream();
+            new MutatingJsonTests().CanModifyNestedObjectProperty();
         }
 
         private static void Run()

@@ -43,10 +43,14 @@ namespace Raven.Server.Json
             CachedProperties = new CachedProperties(this);
         }
 
+        private byte[] GetParsingBuffer()
+        {
+            return new byte[1];
+        }
         public byte[] GetManagedBuffer()
         {
             if (_bytesBuffer == null)
-                _bytesBuffer = new byte[2];
+                _bytesBuffer = new byte[4096];
             return _bytesBuffer;
         }
 
@@ -325,7 +329,7 @@ namespace Raven.Server.Json
         private BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
-            var buffer = GetManagedBuffer();
+            var buffer = GetParsingBuffer();
             using (var parser = new UnmanagedJsonParser(this, state, debugTag))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, state);
@@ -358,7 +362,7 @@ namespace Raven.Server.Json
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
-            var buffer = GetManagedBuffer();
+            var buffer = GetParsingBuffer();
             using (var parser = new UnmanagedJsonParser(this, state, documentId))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
@@ -393,7 +397,7 @@ namespace Raven.Server.Json
             BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
-            var buffer = GetManagedBuffer();
+            var buffer = GetParsingBuffer();
             using (var parser = new UnmanagedJsonParser(this, state, debugTag))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, state);
@@ -427,7 +431,7 @@ namespace Raven.Server.Json
         {
             var state = new JsonParserState();
             var returnedArray = new BlittableJsonReaderObject[count];
-            var buffer = GetManagedBuffer();
+            var buffer = GetParsingBuffer();
             using (var parser = new UnmanagedJsonParser(this, state, "many/docs"))
             {
                 for (int i = 0; i < count; i++)

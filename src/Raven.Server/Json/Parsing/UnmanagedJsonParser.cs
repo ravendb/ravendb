@@ -65,12 +65,6 @@ namespace Raven.Server.Json.Parsing
                 case JsonParserTokenContinuation.PartialFalse:
                     if (EnsureRestOfToken() == false)
                         return false;
-                    _state.CurrentTokenType = JsonParserToken.Float;
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    return true;
-                case JsonParserTokenContinuation.False:
-                    if (EnsureRestOfToken() == false)
-                        return false;
                     _state.CurrentTokenType = JsonParserToken.False;
                     _state.Continuation = JsonParserTokenContinuation.None;
                     return true;

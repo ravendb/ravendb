@@ -21,13 +21,12 @@ namespace Raven.Server.Json.Parsing
     public enum JsonParserTokenContinuation
     {
         None                =   0,
-        PartialNull                =   1 << 24,
-        False               =   1 << 25,
-        PartialTrue                =   1 << 26,
-        PartialString              =   1 << 27,
+        PartialNull         =   1 << 24,
+        PartialTrue         =   1 << 26,
+        PartialString       =   1 << 27,
         PartialNumber       =   1 << 28,
         PartialPreamble     =   1 << 29,
-        PartialFalse          =   1 << 30, 
+        PartialFalse        =   1 << 30, 
         PleaseRefillBuffer  =   1 << 31
     }
 }
