@@ -115,7 +115,7 @@ namespace Raven.Server.Json
                         // Register property position, name id (PropertyId) and type (object type and metadata)
                         _writeToken = FinalizeObjectWrite(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
 
-                        continue;
+                        return true;
                     case ContinuationState.ReadObject:
                         if (_state.CurrentTokenType != JsonParserToken.StartObject)
                             throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);

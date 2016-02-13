@@ -30,6 +30,7 @@ namespace Raven.Server.Json.Parsing
         private bool _isNegative;
         private bool _isDouble;
         private bool _isExponent;
+        private bool _escapeMode;
 
         public UnmanagedJsonParser(RavenOperationContext ctx, JsonParserState state, string debugTag)
         {
@@ -358,20 +359,26 @@ namespace Raven.Server.Json.Parsing
                 {
                     var b = _inputBuffer[_pos++];
                     _charPos++;
-                    if (b == _currentQuote)
+                    if (_escapeMode == false)
                     {
-                        _stringBuffer.Write(_inputBuffer, _currentStrStart, _pos - _currentStrStart - 1 /*don't include the last quote*/);
-                        return true;
+                        if (b == _currentQuote)
+                        {
+                            _stringBuffer.Write(_inputBuffer, _currentStrStart, _pos - _currentStrStart - 1
+                                /*don't include the last quote*/);
+                            return true;
+                        }
+                        if (b == (byte) '\\')
+                        {
+                            _escapeMode = true;
+                            _stringBuffer.Write(_inputBuffer, _currentStrStart, _pos - _currentStrStart - 1
+                                /*don't include the escape */);
+                            _currentStrStart = _pos;
+                        }
                     }
-                    if (b == (byte)'\\')
+                    else 
                     {
-                        _stringBuffer.Write(_inputBuffer, _currentStrStart, _pos - _currentStrStart - 1 /*don't include the last quote*/);
-
-                        if (_pos >= _bufSize)
-                            return false;
-
-                        b = _inputBuffer[_pos++];
-                        _currentStrStart = _pos;
+                        _currentStrStart++;
+                        _escapeMode = false;
                         _charPos++;
                         if (b != (byte)'u')
                         {
@@ -426,7 +433,6 @@ namespace Raven.Server.Json.Parsing
                             default:
                                 throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
                         }
-
                     }
                 }
                 // copy the buffer to the native code, then refill
