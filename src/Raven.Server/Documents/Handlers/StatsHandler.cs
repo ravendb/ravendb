@@ -9,7 +9,7 @@ namespace Raven.Server.Documents
     public class StatsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/stats", "GET")]
-        public void Stats()
+        public Task Stats()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -45,6 +45,7 @@ namespace Raven.Server.Documents
                     ["Is64Bits"] = IntPtr.Size == sizeof (long)
                 });
             }
+            return Task.CompletedTask;
         }
     }
 }
