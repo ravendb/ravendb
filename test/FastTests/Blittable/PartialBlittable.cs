@@ -31,14 +31,13 @@ namespace FastTests.Blittable
                     var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk,
                         "test", parser, state);
                     ctx.CachedProperties.NewDocument();
-
+                    writer.ReadObject();
                     Assert.True(writer.Read());
 
                     writer.FinalizeDocumentWithoutProperties(1);
                     ctx.CachedProperties.Version = 1;
                     var reader = writer.CreateReader(ctx.CachedProperties);
 
-                    Console.WriteLine(reader.Size);
                     string str;
                     Assert.True(reader.TryGet("Name", out str));
                     Assert.Equal("Oren", str);

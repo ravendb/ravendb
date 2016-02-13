@@ -28,7 +28,7 @@ namespace Tryouts
             //new DuplicatePageUsage().ShouldNotHappen();
             //Run();
             Console.WriteLine(typeof(Raven.Client.DocumentStoreBase));
-            new FunctionalityTests().FunctionalityTest2();
+            new Crud().CanSaveAndLoad().Wait();
         }
 
         private static void Run()
