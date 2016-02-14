@@ -8,7 +8,7 @@ class deleteDocumentCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {        
-        return this.del('/docs/' + this.docId, null, this.db);
+        return this.del('/document?id=' + this.docId, null, this.db);
     }
 }
 
