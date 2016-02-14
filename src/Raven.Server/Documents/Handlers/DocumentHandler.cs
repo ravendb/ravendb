@@ -5,15 +5,17 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
-
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Documents.Handlers
@@ -96,12 +98,8 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            var includes = HttpContext.Request.Query["include"];
+            var includePath = HttpContext.Request.Query["include"];
             var transformer = HttpContext.Request.Query["transformer"];
-            if (includes.Count > 0)
-            {
-                //TODO: Transformer and includes
-            }
 
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
@@ -112,12 +110,38 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
             writer.WriteStartArray();
-            //TODO: Includes
-            //TODO: Need to handle etags here as well
+
+            if (includePath.Count > 0)
+                WriteIncludes(context, documents, includePath[0], writer);
+            //not sure about etag handling here, so probably etag handling still needs to be added here
             writer.WriteEndArray();
 
             writer.WriteEndObject();
             writer.Flush();
+        }
+
+        private void WriteIncludes(RavenOperationContext context, Document[] documents, string includePath,
+            BlittableJsonTextWriter writer)
+        {
+            bool first = true;
+            foreach (var doc in documents)
+            {
+                foreach (var includedDocId in IncludeUtil.GetDocIdFromInclude(doc.Data, includePath))
+                {
+                    if (includedDocId == null) //precaution, should not happen
+                        continue;
+
+                    var includedDoc = Database.DocumentsStorage.Get(context, includedDocId);
+                    if(includedDoc == null)
+                        continue;					
+
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+                    includedDoc.EnsureMetadata();
+                    context.Write(writer, includedDoc.Data);
+                }
+            }
         }
 
         private unsafe long ComputeEtagsFor(Document[] documents)
