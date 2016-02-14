@@ -375,7 +375,7 @@ namespace Voron.Data.Fixed
 
         private void AddSeparatorToParentPage(FixedSizeTreePage parentPage, int position, long key, long pageNum)
         {
-        	if ((parentPage.NumberOfEntries + 1) * BranchEntrySize > parentPage.PageMaxSpace)
+            if ((parentPage.NumberOfEntries + 1) * BranchEntrySize > parentPage.PageMaxSpace)
             {
                 parentPage = PageSplit(parentPage, key);
                 System.Diagnostics.Debug.Assert(parentPage != null);
@@ -438,19 +438,17 @@ namespace Voron.Data.Fixed
 
                     return allocatePage.Pointer + allocatePage.StartPosition + srcCopyStart + sizeof(long);
                 }
-                else
-                {
-                    byte* newData = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize);
-                    var header = (FixedSizeTreeHeader.Embedded*)newData;
-                    header->ValueSize = _valSize;
-                    header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
-                    header->NumberOfEntries = newEntriesCount;
 
-                    Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
-                        newSize);
+                byte* newData = _parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Embedded) + newSize);
+                var header = (FixedSizeTreeHeader.Embedded*)newData;
+                header->ValueSize = _valSize;
+                header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
+                header->NumberOfEntries = newEntriesCount;
 
-                    return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
-                }
+                Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
+                    newSize);
+
+                return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
             }
         }
 

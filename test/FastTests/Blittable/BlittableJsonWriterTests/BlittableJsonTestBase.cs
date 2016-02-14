@@ -145,7 +145,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     dynamicBlittableJObject.MegaDevices[i].Usages);
             }
             var ms = new MemoryStream();
-            doc.WriteTo(ms, originalPropertyOrder:true);
+            blittableContext.WriteOrdered(ms, doc);
+            
             Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
         }
     }

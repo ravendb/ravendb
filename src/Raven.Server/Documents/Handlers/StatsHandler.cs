@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Threading.Tasks;
+
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/stats", "GET")]
-        public async Task Stats()
+        public Task Stats()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 //TODO: Implement properly and split to dedicated endpoints
                 //TODO: So we don't get so much stuff to ignore in the stats
-                await context.WriteAsync(writer, new DynamicJsonValue
+                context.Write(writer, new DynamicJsonValue
                 {
                     // storage
                     ["StorageEngine"] = "Voron 4.0",
@@ -40,11 +41,12 @@ namespace Raven.Server.Documents
 
                     // documents
                     ["LastDocEtag"] = DocumentsStorage.ReadLastEtag(context.Transaction),
-                    ["CountOfDocuments"] = DocumentsStorage.GetNumberOfDocuments(context),
-                    ["DatabaseId"] = DocumentsStorage.Environment.DbId.ToString(),
+                    ["CountOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
+                    ["DatabaseId"] = Database.DocumentsStorage.Environment.DbId.ToString(),
                     ["Is64Bits"] = IntPtr.Size == sizeof (long)
                 });
             }
+            return Task.CompletedTask;
         }
     }
 }

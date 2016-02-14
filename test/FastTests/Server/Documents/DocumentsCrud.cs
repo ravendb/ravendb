@@ -25,7 +25,7 @@ namespace FastTests.Server.Documents
             configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
 
-            _documentsStorage = new DocumentsStorage("foo", configuration);
+            _documentsStorage = new DocumentsStorage("foo", configuration, new DatabaseNotifications());
             _documentsStorage.Initialize();
             _unmanagedBuffersPool = new UnmanagedBuffersPool("test");
         }
@@ -34,13 +34,13 @@ namespace FastTests.Server.Documents
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
-        public async Task PutAndGetDocumentById(string key)
+        public void PutAndGetDocumentById(string key)
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = key
                 }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -70,13 +70,13 @@ namespace FastTests.Server.Documents
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
-        public async Task CanDelete(string key)
+        public void CanDelete(string key)
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = key
                 }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -107,13 +107,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task CanQueryByGlobalEtag()
+        public void CanQueryByGlobalEtag()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -124,7 +124,7 @@ namespace FastTests.Server.Documents
                 {
                     _documentsStorage.Put(ctx, "users/1", null, doc);
                 }
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
@@ -135,7 +135,7 @@ namespace FastTests.Server.Documents
                 {
                     _documentsStorage.Put(ctx, "users/2", null, doc);
                 }
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
@@ -168,13 +168,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task EtagsArePersisted()
+        public void EtagsArePersisted()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -183,8 +183,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Equal(1, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/1", null, doc);
+                    Assert.Equal(1, putResult.ETag);
                 }
 
                 ctx.Transaction.Commit();
@@ -196,7 +196,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -205,8 +205,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/2", null, doc);
-                    Assert.Equal(2, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/2", null, doc);
+                    Assert.Equal(2, putResult.ETag);
                 }
 
                 ctx.Transaction.Commit();
@@ -214,13 +214,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task EtagsArePersistedWithDeletes()
+        public void EtagsArePersistedWithDeletes()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -229,8 +229,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Equal(1, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/1", null, doc);
+                    Assert.Equal(1, putResult.ETag);
                     _documentsStorage.Delete(ctx, "users/1", null);
                 }
 
@@ -242,7 +242,7 @@ namespace FastTests.Server.Documents
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -251,8 +251,8 @@ namespace FastTests.Server.Documents
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var etag = _documentsStorage.Put(ctx, "users/2", null, doc);
-                    Assert.Equal(2, etag);
+                    var putResult = _documentsStorage.Put(ctx, "users/2", null, doc);
+                    Assert.Equal(2, putResult.ETag);
                 }
 
                 ctx.Transaction.Commit();
@@ -271,19 +271,19 @@ namespace FastTests.Server.Documents
                  //["run.in.memory"] = "false",
                  //["system.path"] = Path.GetTempPath() + "\\crud"
              }));
-            _documentsStorage = new DocumentsStorage("test", new RavenConfiguration());
+            _documentsStorage = new DocumentsStorage("test", new RavenConfiguration(), new DatabaseNotifications());
             _documentsStorage.Initialize(options);
         }
 
 
         [Fact]
-        public async Task CanQueryByPrefix()
+        public void CanQueryByPrefix()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -294,7 +294,7 @@ namespace FastTests.Server.Documents
                 {
                     _documentsStorage.Put(ctx, "users/10", null, doc);
                 }
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
@@ -305,7 +305,7 @@ namespace FastTests.Server.Documents
                 {
                     _documentsStorage.Put(ctx, "users/02", null, doc);
                 }
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
@@ -336,13 +336,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task CanQueryByCollectionEtag()
+        public void CanQueryByCollectionEtag()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -354,7 +354,7 @@ namespace FastTests.Server.Documents
                     _documentsStorage.Put(ctx, "users/1", null, doc);
                 }
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
@@ -365,7 +365,7 @@ namespace FastTests.Server.Documents
                 {
                     _documentsStorage.Put(ctx, "pets/1", null, doc);
                 }
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
@@ -396,13 +396,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task WillVerifyEtags_New()
+        public void WillVerifyEtags_New()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -420,13 +420,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task WillVerifyEtags_Existing()
+        public void WillVerifyEtags_Existing()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -444,13 +444,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task WillVerifyEtags_OnDeleteExisting()
+        public void WillVerifyEtags_OnDeleteExisting()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -481,13 +481,13 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public async Task WillVerifyEtags_ShouldBeNew()
+        public void WillVerifyEtags_ShouldBeNew()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = await ctx.ReadObject(new DynamicJsonValue
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -502,6 +502,56 @@ namespace FastTests.Server.Documents
 
                 ctx.Transaction.Commit();
             }
+        }
+
+        [Fact]
+        public void PutDocumentWithoutId()
+        {
+            var key = "users/";
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                for (int i = 1; i < 5; i++)
+                {
+                    using (var doc =  ctx.ReadObject(new DynamicJsonValue
+                    {
+                        ["ThisDocId"] = $"{i}"
+                    }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    {
+                        var putResult = _documentsStorage.Put(ctx, key, null, doc);
+                        Assert.Equal(i, putResult.ETag);
+                    }
+                }
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                _documentsStorage.Delete(ctx, "users/2", null);
+
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc =  ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["ThisDocId"] = "2"
+                }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    var putResult = _documentsStorage.Put(ctx, key, null, doc);
+                    Assert.Equal(5, putResult.ETag);
+                    Assert.Equal("users/5", putResult.Key);
+                }
+                ctx.Transaction.Commit();
+            }
+
+
         }
 
         public void Dispose()

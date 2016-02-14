@@ -59,7 +59,7 @@ namespace Raven.Server.Web.System
                         ["Disabled"] = false,
                         ["IsAdminCurrentTenant"] = true
                     };
-                    await context.WriteAsync(writer, doc);
+                    context.Write(writer, doc);
                 }
                 writer.WriteEndArray();
                 writer.Flush();

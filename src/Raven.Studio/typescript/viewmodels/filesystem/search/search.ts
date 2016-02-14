@@ -65,7 +65,7 @@ class search extends viewModelBase {
         return new pagedList(fetcher);
     }
 
-    fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
+    fetchFiles(query: string, skip: number, take: number): JQueryPromise<pagedResultSet<any>> {
         var task = new searchByQueryCommand(appUrl.getFileSystem(), query, skip, take).execute();
         return task;
     }
@@ -139,7 +139,7 @@ class search extends viewModelBase {
         this.search();
         this.allFilesPagedItems()
             .fetch(0, 1)
-            .done((results: pagedResultSet) => {
+            .done((results: pagedResultSet<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showMessage("There are no files matching your query.", "Nothing to do");
                 } else {

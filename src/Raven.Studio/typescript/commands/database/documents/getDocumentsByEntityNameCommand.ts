@@ -2,6 +2,7 @@ import commandBase = require("commands/commandBase");
 import collectionInfo = require("models/database/documents/collectionInfo");
 import collection = require("models/database/documents/collection");
 import pagedResultSet = require("common/pagedResultSet");
+import document = require("models/database/documents/document");
 
 class getDocumentsByEntityNameCommand extends commandBase {
 
@@ -9,7 +10,7 @@ class getDocumentsByEntityNameCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<document>> {
         var args = {
             query: "Tag:" + this.collection.name,
             start: this.skip,

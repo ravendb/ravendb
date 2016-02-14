@@ -137,7 +137,7 @@ class timeSeriesPoints extends viewModelBase {
         return list;
     }
 
-    private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResultSet> {
+    private fetchPoints(skip: number, take: number, start: string, end: string): JQueryPromise<pagedResultSet<any>> {
         var doneTask = $.Deferred();
         new getPointsCommand(this.activeTimeSeries(), skip, take, this.type(), this.fields(), this.key(), start, end).execute()
             .done((points: timeSeriesPoint[]) => doneTask.resolve(new pagedResultSet(points, this.isFiltered() ? this.pointsList().itemCount() + points.length : this.pointsCount())))

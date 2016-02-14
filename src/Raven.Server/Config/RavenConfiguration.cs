@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Primitives;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-using Raven.Server.Extensions;
 using Raven.Server.Utils;
+using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 
 namespace Raven.Server.Config
 {
@@ -26,6 +25,8 @@ namespace Raven.Server.Config
         public StorageConfiguration Storage { get; }
 
         public EncryptionConfiguration Encryption { get; }
+
+        public IndexingConfiguration Indexing { get; set; }
 
         public MonitoringConfiguration Monitoring { get; }
 
@@ -66,6 +67,7 @@ namespace Raven.Server.Config
             Replication = new ReplicationConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
+            Indexing = new IndexingConfiguration(() => Core.RunInMemory, () => Core.DataDirectory);
             WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
@@ -138,7 +140,7 @@ namespace Raven.Server.Config
 
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
-            var prop = getKey.ToProperty();
+            var prop = ExpressionExtensions.ToProperty(getKey);
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
         }
 
@@ -159,99 +161,5 @@ namespace Raven.Server.Config
             _configBuilder.AddCommandLine(args);
             Settings = _configBuilder.Build();
         }
-    }
-
-    public class RavenWebHostConfiguration : IConfiguration
-    {
-        private readonly RavenConfiguration _configuration;
-
-        public RavenWebHostConfiguration(RavenConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
-
-
-        public IConfigurationSection GetSection(string key)
-        {
-            switch (key)
-            {
-                case "server.urls":
-                    return new RavenConfigurationSection(key, "", _configuration.Core.ServerUrls.First());
-                default:
-                    throw new NotImplementedException($"{key} should be supported");
-            }
-        }
-
-        public IEnumerable<IConfigurationSection> GetChildren()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IChangeToken GetReloadToken()
-        {
-            throw new NotImplementedException();
-        }
-
-        public string this[string key]
-        {
-            get
-            {
-                switch (key)
-                {
-                    case "webroot":
-                        return "webroot";
-                    case "Hosting:Environment":
-                        return "Production";
-                    case "Hosting:Server":
-                        return "Microsoft.AspNet.Server.Kestrel";
-                    case "Hosting:Application":
-                        return "";
-                    case "server.urls":
-                        return _configuration.Core.ServerUrls.First();
-                    case "HTTP_PLATFORM_PORT":
-                        return "";
-                    /*var url = _configuration.Core.ServerUrls.First();
-                    return url.Substring(url.IndexOf(':', "http://".Length) + 1).TrimEnd('/');*/
-                    default:
-                        throw new NotImplementedException($"{key} should be supported");
-                }
-            }
-            set { throw new NotImplementedException(); }
-        }
-    }
-
-    public class RavenConfigurationSection : IConfigurationSection
-    {
-        public RavenConfigurationSection(string key, string path, string value)
-        {
-            Key = key;
-            Path = path;
-            Value = value;
-        }
-
-        public IConfigurationSection GetSection(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<IConfigurationSection> GetChildren()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IChangeToken GetReloadToken()
-        {
-            throw new NotImplementedException();
-        }
-
-        public string this[string key]
-        {
-            get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); }
-        }
-
-        public string Key { get; }
-        public string Path { get; }
-        public string Value { get; set; }
     }
 }

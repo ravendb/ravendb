@@ -10,13 +10,13 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
     public class ConcurrentAccessTests: BlittableJsonTestBase
     {
         [Fact]
-        public async Task ConcurrentReadsTest()
+        public void ConcurrentReadsTest()
         {
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                /* FileStream file = new FileStream(@"c:\Temp\example.txt",FileMode.Create);
                 employee.WriteTo(file);

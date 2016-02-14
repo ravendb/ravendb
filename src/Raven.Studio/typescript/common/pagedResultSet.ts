@@ -1,5 +1,5 @@
-class pagedResultSet {
-    constructor(public items: Array<any>, public totalResultCount: number, public additionalResultInfo?: any) {
+class pagedResultSet<T> {
+    constructor(public items: Array<T>, public totalResultCount: number, public additionalResultInfo?: any) {
     }
 }
 

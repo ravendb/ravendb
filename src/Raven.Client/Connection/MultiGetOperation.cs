@@ -43,6 +43,14 @@ namespace Raven.Client.Connection
             {
                 requestUri += "?parallel=yes";
             }
+
+            var absoluteUri = new Uri(url).AbsolutePath;
+            foreach (var request in requests)
+            {
+                request.Url = absoluteUri + request.Url;
+                if (request.Query.StartsWith("?") == false)
+                    request.Query = "?" + request.Query;
+            }
         }
 
         public GetRequest[] PreparingForCachingRequest(HttpJsonRequestFactory jsonRequestFactory)
@@ -50,12 +58,13 @@ namespace Raven.Client.Connection
             cachedData = new CachedRequest[requests.Length];
             var requestsForServer = new GetRequest[requests.Length];
             Array.Copy(requests, 0, requestsForServer, 0, requests.Length);
+            
             if (jsonRequestFactory.DisableHttpCaching == false && convention.ShouldCacheRequest(requestUri))
             {
                 for (int i = 0; i < requests.Length; i++)
                 {
                     var request = requests[i];
-                    var cachingConfiguration = jsonRequestFactory.ConfigureCaching(url + request.UrlAndQuery,
+                    var cachingConfiguration = jsonRequestFactory.ConfigureCaching(request.UrlAndQuery,
                                                                                    (key, val) => request.Headers[key] = val);
                     cachedData[i] = cachingConfiguration.CachedRequest;
                     if (cachingConfiguration.SkipServerCheck)

@@ -15,7 +15,7 @@ class getDocRefsCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<pagedResultSet<any>> {
         
         var args = {
             id: this.docId,

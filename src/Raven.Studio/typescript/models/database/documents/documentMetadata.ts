@@ -22,18 +22,6 @@ class documentMetadata {
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
             this.lastModified = dto['Last-Modified'];
-
-            this.lastModifiedFullDate = ko.computed(() => {
-                if (!!this.lastModified) {
-                    var lastModifiedMoment = moment(this.lastModified);
-                    var timeSince = lastModifiedMoment.from(this.now());
-                    var fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
-                    return timeSince + " (" + fullTimeSinceUtc + ")";
-                }
-                return "";
-            });
-            setInterval(() => this.now(new Date()), 60*1000);
-
             this.ravenLastModified = dto['Raven-Last-Modified'];
             this.etag = dto['@etag'];
 
@@ -52,6 +40,17 @@ class documentMetadata {
                     this.nonStandardProps.push(property);
                 }
             }
+
+            this.lastModifiedFullDate = ko.computed(() => {
+                if (!!this.ravenLastModified) {
+                    var lastModifiedMoment = moment(this.ravenLastModified);
+                    var timeSince = lastModifiedMoment.from(this.now());
+                    var fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
+                    return timeSince + " (" + fullTimeSinceUtc + ")";
+                }
+                return "";
+            });
+            setInterval(() => this.now(new Date()), 60 * 1000);
         }
     }
 
@@ -78,6 +77,8 @@ class documentMetadata {
     static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
+        //TODO: that's the original list, since 4.0 we start from scratch as now we don't store metadata as headers, so some of header won't have appliance
+        /*
         var metaPropsToRemove = ["@id", "@etag", "Origin", "Raven-Server-Build", "Raven-Client-Version", "Non-Authoritative-Information", "Raven-Timer-Request",
             "Raven-Authenticated-User", "Raven-Last-Modified", "Has-Api-Key", "Access-Control-Allow-Origin", "Access-Control-Max-Age", "Access-Control-Allow-Methods",
             "Access-Control-Request-Headers", "Access-Control-Allow-Headers", "Reverse-Via", "Persistent-Auth", "Allow", "Content-Disposition", "Content-Encoding",
@@ -86,6 +87,8 @@ class documentMetadata {
             "From", "Host", "If-MatTemp-Index-Scorech", "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Referer", "TE", "User-Agent", "Accept-Ranges",
             "Age", "Allow", "ETag", "Location", "Retry-After", "Server", "Set-Cookie2", "Set-Cookie", "Vary", "Www-Authenticate", "Cache-Control", "Connection", "Date", "Pragma",
             "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning", "X-ARR-LOG-ID", "X-ARR-SSL", "X-Forwarded-For", "X-Original-URL", "Size-In-Kb"];
+            */
+        var metaPropsToRemove = ["@id", "@etag", "Raven-Last-Modified"];
 
         for (var property in metaDto) {
             if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {

@@ -27,7 +27,7 @@ namespace Raven.Server
                 {
                     server.Initialize();
 
-                    Console.WriteLine($"Listening to: {string.Join(", ", configuration.Core.ServerUrls)}");
+                    Console.WriteLine($"Listening to: {string.Join(", ", configuration.Core.ServerUrl)}");
                     Console.WriteLine("Server started, listening to requests...");
 
                     //TODO: Move the command line options to here

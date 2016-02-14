@@ -1,18 +1,21 @@
+using Sparrow;
+using Sparrow.Binary;
+using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Sparrow;
-using Sparrow.Binary;
-using Sparrow.Collections;
+using System.Text;
+using System.Threading.Tasks;
 using Xunit;
+using Xunit.Extensions;
 
 namespace FastTests.Sparrow
 {
-    public class ZFastTrieTest
+    public class ZFastTrieTests
     {
-        private readonly Func<string, BitVector> binarize = x => BitVector.Of(x, true);
+        private readonly Func<string, BitVector> binarize = x => BitVector.Of(true, x);
 
 
         [Fact]

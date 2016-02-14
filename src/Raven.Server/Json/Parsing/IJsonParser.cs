@@ -5,7 +5,7 @@ namespace Raven.Server.Json.Parsing
 {
     public interface IJsonParser : IDisposable
     {
-        Task ReadAsync();
+        bool Read();
         void ValidateFloat();
     }
 }

@@ -2,13 +2,15 @@
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.WebSockets.Protocol;
+
 using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Raven.Server.Json.Parsing;
+using Raven.Server.Routing;
+
 using Constants = Raven.Abstractions.Data.Constants;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
@@ -30,7 +32,7 @@ namespace Raven.Server.Documents
                 BlittableJsonReaderArray commands;
                 try
                 {
-                    commands = await context.ParseArrayToMemory(RequestBodyStream(), "bulk/docs",
+                    commands = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "bulk/docs",
                         // we will prepare the docs to disk in the actual PUT command
                         BlittableJsonDocumentBuilder.UsageMode.None);
                 }
@@ -90,7 +92,7 @@ namespace Raven.Server.Documents
 
                             mutableMetadata["Raven-Last-Modified"] = DateTime.UtcNow.GetDefaultRavenFormat();
 
-                            parsedCommands[i].Document = await context.ReadObject(doc, parsedCommands[i].Key,
+                            parsedCommands[i].Document = context.ReadObject(doc, parsedCommands[i].Key,
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             break;
 
@@ -107,7 +109,7 @@ namespace Raven.Server.Documents
                         switch (parsedCommands[i].Method)
                         {
                             case "PUT":
-                                var newEtag = DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
+                                var putResult = Database.DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
                                     parsedCommands[i].Document);
 
                                 BlittableJsonReaderObject metadata;
@@ -115,15 +117,15 @@ namespace Raven.Server.Documents
 
                                 reply.Add(new DynamicJsonValue
                                 {
-                                    ["Key"] = parsedCommands[i].Key,
-                                    ["Etag"] = newEtag,
+                                    ["Key"] = putResult.Key,
+                                    ["Etag"] = putResult.ETag,
                                     ["Method"] = "PUT",
                                     ["AdditionalData"] = parsedCommands[i].AdditionalData,
                                     ["Metadata"] = metadata
                                 });
                                 break;
                             case "DELETE":
-                                var deleted = DocumentsStorage.Delete(context, parsedCommands[i].Key, parsedCommands[i].Etag);
+                                var deleted = Database.DocumentsStorage.Delete(context, parsedCommands[i].Key, parsedCommands[i].Etag);
                                 reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = parsedCommands[i].Key,
@@ -140,12 +142,10 @@ namespace Raven.Server.Documents
 
                 HttpContext.Response.StatusCode = 201;
 
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                await context.WriteAsync(writer, reply);
-                writer.Flush();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    context.Write(writer, reply);
             }
         }
     }
 }
 
-      

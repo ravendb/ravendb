@@ -23,14 +23,34 @@ namespace Raven.Tests.Core
 
         protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
 
-        public Lazy<RavenServer> Server  = new Lazy<RavenServer>(CreateServer);
+        private static int _currentServerUsages;
+        private static RavenServer _globalServer;
+        private static readonly object ServerLocker = new object();
+        private RavenServer _localServer;
+
+        public RavenServer Server
+        {
+            get
+            {
+                if (_localServer != null)
+                    return _localServer;
+                lock (ServerLocker)
+                {
+                    if (_globalServer == null)
+                        _globalServer = CreateServer();
+                    _currentServerUsages++;
+                    _localServer = _globalServer;
+                }
+                return _globalServer;
+            }
+        }
 
         private static RavenServer CreateServer()
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
 
-            configuration.Core.ServerUrls = new[] { "http://localhost:8080" };
+            configuration.Core.ServerUrl = "http://localhost:8080";
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
@@ -60,16 +80,16 @@ namespace Raven.Tests.Core
             modifyDatabaseDocument?.Invoke(doc);
 
             RavenOperationContext context;
-            using (Server.Value.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                if (Server.Value.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
+                if (Server.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
                     throw new InvalidOperationException($"Database '{databaseName}' already exists");
             }
-            
+
             var store = new DocumentStore
             {
-                Url = UseFiddler(Server.Value.Configuration.Core.ServerUrls.First()),
+                Url = UseFiddler(Server.Configuration.Core.ServerUrl),
                 DefaultDatabase = databaseName,
             };
             store.Initialize();
@@ -80,7 +100,7 @@ namespace Raven.Tests.Core
                 store.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(databaseName, hardDelete: true);
             };
             CreatedStores.Add(store);
-            return store;
+          return store;
         }
 
         private static string UseFiddler(string url)
@@ -115,9 +135,17 @@ namespace Raven.Tests.Core
             {
                 documentStore.Dispose();
             }
-
-            if(Server.IsValueCreated)
-                Server.Value.Dispose();
+            if (_localServer != null)
+            {
+                lock (ServerLocker)
+                {
+                    if (--_currentServerUsages > 0)
+                        return;
+                    _globalServer.Dispose();
+                    _globalServer = null;
+                    _currentServerUsages = 0;
+                }
+            }
         }
     }
 }
