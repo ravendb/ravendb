@@ -29,15 +29,15 @@ namespace Tryouts.Corax
             });
 
         private readonly UnmanagedBuffersPool _pool;
-        private DefaultAnalyzer _analyzer;
+        private IAnalyzer _analyzer;
 
-        public FullTextIndex(StorageEnvironmentOptions options)
+        public FullTextIndex(StorageEnvironmentOptions options, IAnalyzer defaultAnalyzer)
         {
             try
             {
                 _pool = new UnmanagedBuffersPool("Index for " + options.BasePath);
                 _env = new StorageEnvironment(options);
-                _analyzer = new DefaultAnalyzer();
+                _analyzer = defaultAnalyzer;
                 using (var tx = _env.WriteTransaction())
                 {
                     tx.CreateTree("Fields");

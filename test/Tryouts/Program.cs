@@ -15,6 +15,7 @@ using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Tests.Core;
 using Tryouts.Corax;
+using Tryouts.Corax.Analyzers;
 using Voron;
 using Voron.Debugging;
 using Xunit;
@@ -47,7 +48,7 @@ namespace Tryouts
         {
             var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
             storageEnvironmentOptions.ManualFlushing = true;
-            using (var corax = new FullTextIndex(storageEnvironmentOptions))
+            using (var corax = new FullTextIndex(storageEnvironmentOptions, new DefaultAnalyzer()))
             {
                 for (int a = 0; a < 5; a++)
                 {
@@ -96,7 +97,7 @@ namespace Tryouts
         {
             var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
             storageEnvironmentOptions.ManualFlushing = true;
-            using (var corax = new FullTextIndex(storageEnvironmentOptions))
+            using (var corax = new FullTextIndex(storageEnvironmentOptions, new DefaultAnalyzer()))
             {
                 using (var indexer = corax.CreateIndexer())
                 {
