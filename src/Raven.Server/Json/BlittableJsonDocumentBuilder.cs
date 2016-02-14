@@ -252,13 +252,10 @@ namespace Raven.Server.Json
                 if (_state.CurrentTokenType != JsonParserToken.String)
                     throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
 
-
                 var property = CreateLazyStringValueFromParserState();
                 if (_state.EscapePositions.Count > 0)
-                {
                     property.EscapePositions = _state.EscapePositions.ToArray();
-                }
-                
+
                 var propIndex = _context.CachedProperties.GetPropertyId(property);
 
                 maxPropId = Math.Max(maxPropId, propIndex);

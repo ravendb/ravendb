@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 
@@ -32,12 +32,9 @@ namespace Raven.Server.Utils
                     yield return HandlePrefix(docReader, new StringSegment(includePath, 0), indexOfFirstSeparator);
                     break;
                 default:
-            //TODO : test this with other primitive types, probably more code is needed here
-                    string stringValue;
-                    if (docReader.TryGet(includePath, out stringValue))
-                    {
-                        yield return stringValue;
-                    }
+                    object value;
+                    if (docReader.TryGetMember(includePath, out value))
+                        yield return BlittableValueToString(value);
                     break;
             }			
         }
@@ -47,6 +44,10 @@ namespace Raven.Server.Utils
             object val;
             if (!reader.TryGetMember(pathSegment.SubSegment(0, indexOfSeparator), out val))
                 return null;
+        
+            var doubleVal = val as LazyDoubleValue;
+            if (doubleVal != null)
+                val = doubleVal.Inner;
 
             var prefix = pathSegment.SubSegment(indexOfSeparator + 1, pathSegment.Length - indexOfSeparator - 2);
             return prefix[prefix.Length - 1] != '/' ? null : $"{prefix}{val}";
@@ -79,9 +80,10 @@ namespace Raven.Server.Utils
 
             if (index == -1) //whats left is a primitive value property
             {
-                string val;
-                if (docReader.TryGet(includePathSegment, out val))
-                    yield return val;
+                object val;
+                var props = docReader.GetPropertyNames();
+                if (docReader.TryGetMember(includePathSegment, out val))
+                    yield return BlittableValueToString(val);
                 yield break;
             }
 
@@ -115,7 +117,53 @@ namespace Raven.Server.Utils
 
         private static IEnumerable<string> GetIDsFromIncludePath(BlittableJsonReaderArray docReader,
                   StringSegment includePathSegment)
-        {
+        {	    
+            var index = includePathSegment.FirstIndexOf('.', '(');
+            switch ((index == -1) ? ' ' : includePathSegment[index])
+            {
+                case '.':
+                    foreach (var val in docReader)
+                    {
+                        var objReader = val as BlittableJsonReaderObject;
+                        object property;
+                        if (objReader != null && 
+                            objReader.TryGetMember(includePathSegment.SubSegment(0,index),out property))
+                        {
+                            var subReader = property as BlittableJsonReaderObject;
+                            if(subReader != null)
+                                foreach (var id in GetIDsFromIncludePath(subReader, includePathSegment.SubSegment(index + 1)))
+                                yield return id;
+                        }
+                        else
+                        {
+                            yield return BlittableValueToString(val);
+                        }
+                    }
+                    break;
+                case '(':
+                    foreach (var val in docReader)
+                    {
+                        var property = BlittableValueToString(val);
+                        yield return $"{includePathSegment.SubSegment(index + 1, includePathSegment.Length - index - 2)}{property}";
+                    }
+                    break;
+                default:
+                    foreach (var val in docReader)
+                    {
+                        var objReader = val as BlittableJsonReaderObject;
+                        object property;
+                        if (objReader != null && objReader.TryGetMember(includePathSegment.SubSegment(index + 1), out property))
+                            yield return BlittableValueToString(property);
+                        else
+                        {
+                            var returnValue = BlittableValueToString(val);
+                            if (returnValue != null)
+                                yield return returnValue;
+                        }
+                    }
+                    break;
+            }
+
             yield break;
         }
 
@@ -128,5 +176,20 @@ namespace Raven.Server.Utils
 
             return -1;
         }
+
+        private static string BlittableValueToString(object value)
+        {
+            var lazyStringVal = value as LazyStringValue;
+            if (lazyStringVal != null)
+                return lazyStringVal.ToString();
+
+            var lazyDoubleVal = value as LazyDoubleValue;
+            if (lazyDoubleVal != null)
+                return lazyDoubleVal.Inner.ToString();
+
+            var convertible = value as IConvertible;
+            return convertible?.ToString(CultureInfo.InvariantCulture);
+        }
+
     }
 }

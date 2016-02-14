@@ -1,10 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Server.Json.Parsing;
 
 namespace Raven.Server.Json
 {
-    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase
+    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>
     {
         private int _count;
         private byte* _metadataPtr;
@@ -91,5 +93,25 @@ namespace Raven.Server.Json
             return result;
         }
 
+        public IEnumerable<object> Items
+        {
+            get
+            {
+                for (int i = 0; i < _count; i++)
+                    yield return this[i];
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IEnumerator<object> GetEnumerator()
+        {
+            return Items.GetEnumerator();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 }
