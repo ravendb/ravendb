@@ -340,15 +340,13 @@ namespace Tryouts.Corax
                         var property = propertyByIndex.Item1;
 
                         //TODO: implement this without the field allocations
-                        //var slice = new Slice(lazyStringValue.Buffer, (u short)lazyStringValue.Size);
                         var fieldTree = tx.CreateTree(property.ToString());
 
-                        //TODO: right now only supporting strings
-                        var value = (LazyStringValue)propertyByIndex.Item2;
-
-                        var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree,
-                            new Slice(value.Buffer, (ushort)value.Size), 0);
-                        fst.Delete(entryId);
+                        foreach (var slice in GetValuesFor(propertyByIndex.Item2))
+                        {
+                            var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree, slice, 0);
+                            fst.Delete(entryId);
+                        }
                     }
 
                     entries.Delete(tvr.Id);
@@ -376,17 +374,44 @@ namespace Tryouts.Corax
                     //var slice = new Slice(lazyStringValue.Buffer, (u short)lazyStringValue.Size);
                     var fieldTree = tx.CreateTree(property.ToString());
 
-                    //TODO: right now only supporting strings
-                    var value = (LazyStringValue)propertyByIndex.Item2;
-                    if (value.Size > byte.MaxValue)
-                        throw new InvalidOperationException("Field value cannot exceed 255 bytes");
-
-                    var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree,
-                        new Slice(value.Buffer, (ushort)value.Size), 0);
-                    fst.Add(entryId);
+                    foreach (var slice in GetValuesFor(propertyByIndex.Item2))
+                    {
+                        var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree, slice, 0);
+                        fst.Add(entryId);
+                    }
                 }
             }
 
+            private unsafe Slice[] GetValuesFor(object obj)
+            {
+                //TODO: right now only supporting strings
+                var stringValue = obj as LazyStringValue;
+                if (stringValue != null)
+                {
+                    var value = stringValue;
+                    if (value.Size > byte.MaxValue)
+                        throw new InvalidOperationException("Field value cannot exceed 255 bytes");
+
+                    var valueSlice = new Slice(value.Buffer, (ushort)value.Size);
+                    return new[] {valueSlice};
+                }
+                var csv = obj as LazyCompressedStringValue;
+                if (csv != null)
+                    return GetValuesFor(csv.ToLazyStringValue());
+
+                var array = obj as BlittableJsonReaderArray;
+                if (array != null)
+                {
+                    var list = new List<Slice>(array.Count);
+                    for (int i = 0; i < array.Count; i++)
+                    {
+                        list.AddRange(GetValuesFor(array[i]));
+                    }
+                    return list.ToArray();
+                }
+
+                throw new InvalidOperationException("Don't know (yet?) how to index " + obj);
+            }
 
             public void Dispose()
             {

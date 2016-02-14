@@ -16,6 +16,7 @@ namespace Tryouts.Corax.Tests
     public class FullTextSearch : CoraxTest
     {
 
+
         [Fact]
         public void CanIndexAndQueryWithBoolean()
         {
@@ -23,19 +24,19 @@ namespace Tryouts.Corax.Tests
             {
                 indexer.NewEntry(new DynamicJsonValue
                 {
-                    ["Name"] = "Michael",
+                    ["Name"] = "John Doe",
                 }, "users/2");
                 indexer.NewEntry(new DynamicJsonValue
                 {
-                    ["Name"] = "Arek",
+                    ["Name"] = "Michael Smith",
                 }, "users/3");
             }
 
             using (var searcher = _fullTextIndex.CreateSearcher())
             {
                 var ids = searcher.Query(new BooleanQuery(QueryOperator.Or,
-                    new TermQuery("Name", "Arek"),
-                    new TermQuery("Name", "Michael")
+                    new TermQuery("Name", "john"),
+                    new TermQuery("Name", "smith")
                     ), 2);
                 Assert.Equal(new[] { "users/2", "users/3" }, ids);
             }
@@ -48,18 +49,18 @@ namespace Tryouts.Corax.Tests
             {
                 indexer.NewEntry(new DynamicJsonValue
                 {
-                    ["Name"] = "Michael",
+                    ["Name"] = "John Doe",
                 }, "users/2");
                 indexer.NewEntry(new DynamicJsonValue
                 {
-                    ["Name"] = "Arek",
+                    ["Name"] = "Michael Smith",
                 }, "users/3");
             }
 
             using (var searcher = _fullTextIndex.CreateSearcher())
             {
-                var ids = searcher.Query(new TermQuery("Name", "Arek"), 2);
-                Assert.Equal(new[] {"users/3"}, ids);
+                var ids = searcher.Query(new TermQuery("Name", "smith"), 2);
+                Assert.Equal(new[] { "users/3" }, ids);
             }
         }
     }

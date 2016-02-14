@@ -97,7 +97,7 @@ namespace FastTests.Server.Documents.Indexing
 
                         index.Execute(CancellationToken.None);
 
-                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 2, TimeSpan.FromSeconds(1)));
+                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 2, TimeSpan.FromSeconds(15)));
 
                         using (var tx = context.Environment.WriteTransaction())
                         {
