@@ -153,8 +153,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                     Monitor.TryEnter(locker, 30 * 1000, ref lockTaken);
                     if (lockTaken == false)
                     {
-                        throw new TimeoutException("Could not take Esent Compact Lock. Because of a probable bug in Esent, we only allow a single database to be compacted at a given time.\r\n" +
-                                                   "However, we waited for 30 seconds for the compact lock to be released, and gave up. The database wasn't compacted, please try again later, when the other compaction process is over.");
+                        throw new TimeoutException("Couldn't take FS lock for initializing a new FS (Esent bug requires us to lock the storage), we have waited for 30 seconds, aborting.");
                     }
                     Api.JetInit(ref instance);
 
@@ -329,7 +328,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
                 }
                 if (e.Error != JET_err.FileNotFound)
                 {
-                    Debugger.Break();
                     throw;
                 }
             }
