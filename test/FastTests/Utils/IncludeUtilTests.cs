@@ -11,7 +11,7 @@ namespace FastTests.Utils
     public class IncludeUtilTests
     {
         [Fact]
-        public async Task FindDocIdFromPath_with_array_of_nested_objects_should_work1()
+        public void FindDocIdFromPath_with_array_of_nested_objects_should_work1()
         {
             var obj = new DynamicJsonValue
             {
@@ -89,7 +89,7 @@ namespace FastTests.Utils
 
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo").ToList();
                 Assert.Equal(new[] { "foobar/1", "foobar/2", "foobar/3", "foobar/4" }, ids);
@@ -100,7 +100,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_of_nested_objects_should_work2()
+        public void FindDocIdFromPath_with_array_of_nested_objects_should_work2()
         {
             var obj = new DynamicJsonValue
             {
@@ -165,7 +165,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y").ToList();
                 Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
@@ -174,7 +174,7 @@ namespace FastTests.Utils
 
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_of_nested_objects_with_prefix_should_work()
+        public void FindDocIdFromPath_with_array_of_nested_objects_with_prefix_should_work()
         {
             var obj = new DynamicJsonValue
             {
@@ -239,7 +239,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y(ccc/)").ToList();
                 Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
@@ -247,7 +247,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix1()
+        public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix1()
         {
             var obj = new DynamicJsonValue
             {
@@ -259,7 +259,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)").ToList();
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
@@ -267,7 +267,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix2()
+        public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix2()
         {
             var obj = new DynamicJsonValue
             {
@@ -297,7 +297,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)").ToList();
                 Assert.Equal(new[] { "foo/11", "foo/2", "foo/3", "foo/4" }, ids);
@@ -305,7 +305,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_selection_should_work_in_flat_object1()
+        public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object1()
         {
             var obj = new DynamicJsonValue
             {
@@ -317,7 +317,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,").ToList();
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" },ids);
@@ -325,7 +325,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_selection_should_work_in_nested_object2()
+        public void FindDocIdFromPath_with_array_selection_should_work_in_nested_object2()
         {
             var obj = new DynamicJsonValue
             {
@@ -347,7 +347,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.ContactInfoId,").ToList();
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
@@ -358,7 +358,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_selection_should_work_in_flat_object2()
+        public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object2()
         {
             var obj = new DynamicJsonValue
             {
@@ -378,7 +378,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId1,").ToList();
                 Assert.Equal(new object[] { "1", "2", "3" }, ids);
@@ -392,7 +392,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_return_value_for_single_level_nested_path()
+        public void FindDocIdFromPath_should_return_value_for_single_level_nested_path()
         {
             var obj = new DynamicJsonValue
             {
@@ -404,7 +404,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId").First();				
                 Assert.Equal("contacts/1", id);
@@ -413,7 +413,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_prefix()
+        public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_prefix()
         {
             var obj = new DynamicJsonValue
             {
@@ -425,7 +425,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)").FirstOrDefault();
                 Assert.NotNull(id);
@@ -444,7 +444,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_prefix_and_string_value()
+        public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_prefix_and_string_value()
         {
             var obj = new DynamicJsonValue
             {
@@ -456,7 +456,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)").FirstOrDefault();
                 Assert.NotNull(id);
@@ -475,7 +475,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_return_value_for_multiple_level_nested_path()
+        public void FindDocIdFromPath_should_return_value_for_multiple_level_nested_path()
         {
             var obj = new DynamicJsonValue
             {
@@ -495,7 +495,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId1").First();
                 Assert.Equal("contacts/1", id);
@@ -508,7 +508,7 @@ namespace FastTests.Utils
 
 
         [Fact]
-        public async Task FindDocIdFromPath_should_return_empty_for_incorrect_path()
+        public void FindDocIdFromPath_should_return_empty_for_incorrect_path()
         {
             var obj = new DynamicJsonValue
             {
@@ -517,14 +517,14 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 Assert.Empty(IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId"));
             }
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_work_in_flat_object1()
+        public void FindDocIdFromPath_should_work_in_flat_object1()
         {
             var obj = new DynamicJsonValue
             {
@@ -533,7 +533,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId").First();
                 Assert.Equal("contacts/1", id);
@@ -541,7 +541,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_work_in_flat_object2()
+        public void FindDocIdFromPath_should_work_in_flat_object2()
         {
             var obj = new DynamicJsonValue
             {
@@ -553,7 +553,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId").FirstOrDefault();
                 Assert.Equal("12", id);
@@ -565,7 +565,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_return_empty_with_incomplete_prefix_in_flat_object()
+        public void FindDocIdFromPath_should_return_empty_with_incomplete_prefix_in_flat_object()
         {
             var obj = new DynamicJsonValue
             {
@@ -574,14 +574,14 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 Assert.Empty(IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/").ToList());
             }
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_work_with_prefix_in_flat_object()
+        public void FindDocIdFromPath_should_work_with_prefix_in_flat_object()
         {
             var obj = new DynamicJsonValue
             {
@@ -590,7 +590,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/)").First();
                 Assert.Equal("contacts/1", id);
@@ -598,7 +598,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_should_work_with_very_short_prefix_in_flat_object()
+        public void FindDocIdFromPath_should_work_with_very_short_prefix_in_flat_object()
         {
             var obj = new DynamicJsonValue
             {
@@ -607,7 +607,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(c/)").First();
                 Assert.Equal("c/1", id);
@@ -619,7 +619,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_multiple_targets_should_work_in_flat_object()
+        public void FindDocIdFromPath_with_multiple_targets_should_work_in_flat_object()
         {
             var obj = new DynamicJsonValue
             {
@@ -630,7 +630,7 @@ namespace FastTests.Utils
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new RavenOperationContext(pool))
-            using (var reader = await context.ReadObject(obj, "foo"))
+            using (var reader = context.ReadObject(obj, "foo"))
             {
                 var id = IncludeUtil.GetDocIdFromInclude(reader, "AddressInfoId").First();
                 Assert.Equal("addresses/1", id);

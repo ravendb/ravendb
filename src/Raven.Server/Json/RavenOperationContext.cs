@@ -175,7 +175,7 @@ namespace Raven.Server.Json
             if (_fieldNames.TryGetValue(field, out value))
                 return value;
 
-            value = GetLazyString(field);
+            value = GetLazyString(field.Value);
             _fieldNames[field] = value;
             return value;
         }
@@ -188,8 +188,7 @@ namespace Raven.Server.Json
             var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize());
             try
             {
-                var fieldVal = field.Value;
-                fixed (char* pField = fieldVal)
+                fixed (char* pField = field)
                 {
                     var address = (byte*)memory.Address;
                     var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
