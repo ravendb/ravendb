@@ -143,8 +143,17 @@ namespace Raven.Server.Utils
                 case '(':
                     foreach (var val in docReader)
                     {
-                        var property = BlittableValueToString(val);
-                        yield return $"{includePathSegment.SubSegment(index + 1, includePathSegment.Length - index - 2)}{property}";
+                        var objReader = val as BlittableJsonReaderObject;
+                        object property;
+                        if (objReader != null &&
+                            objReader.TryGetMember(includePathSegment.SubSegment(0,index), out property))
+                            yield return $"{includePathSegment.SubSegment(index + 1, includePathSegment.Length - index - 2)}{BlittableValueToString(property)}";
+                        else
+                        {
+                            var value = BlittableValueToString(val);
+                            yield return
+                                $"{includePathSegment.SubSegment(index + 1, includePathSegment.Length - index - 2)}{value}";
+                        }
                     }
                     break;
                 default:

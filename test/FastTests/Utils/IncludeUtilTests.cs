@@ -247,7 +247,7 @@ namespace FastTests.Utils
         }
 
         [Fact]
-        public async Task FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix()
+        public async Task FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix1()
         {
             var obj = new DynamicJsonValue
             {
@@ -263,6 +263,44 @@ namespace FastTests.Utils
             {
                 var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)").ToList();
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
+            }
+        }
+
+        [Fact]
+        public async Task FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix2()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray
+                {
+                    Items = new Queue<object>(new[]
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["Foo"] = 11
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Foo"] = 2
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Foo"] = 3
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Foo"] = 4
+                        },
+                    })
+                }
+            };
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new RavenOperationContext(pool))
+            using (var reader = await context.ReadObject(obj, "foo"))
+            {
+                var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)").ToList();
+                Assert.Equal(new[] { "foo/11", "foo/2", "foo/3", "foo/4" }, ids);
             }
         }
 
