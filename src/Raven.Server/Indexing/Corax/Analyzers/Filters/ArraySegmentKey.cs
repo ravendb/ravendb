@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace Corax.Indexing.Filters
+namespace Raven.Server.Indexing.Corax.Analyzers.Filters
 {
 	public struct ArraySegmentKey<T>
 		where T : IEquatable<T>

@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Tryouts.Corax.Analyzers
+namespace Raven.Server.Indexing.Corax.Analyzers
 {
     public class NopAnalyzer : IAnalyzer, ITokenSource
     {

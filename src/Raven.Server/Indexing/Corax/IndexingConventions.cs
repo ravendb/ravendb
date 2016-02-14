@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Corax
+namespace Raven.Server.Indexing.Corax
 {
 	public class IndexingConventions
 	{

@@ -1,5 +1,6 @@
 ﻿using System;
-using Tryouts.Corax.Analyzers;
+using Raven.Server.Indexing.Corax;
+using Raven.Server.Indexing.Corax.Analyzers;
 using Voron;
 
 namespace Tryouts.Corax.Tests

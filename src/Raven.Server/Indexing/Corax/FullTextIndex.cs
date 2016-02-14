@@ -1,21 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
-using System.Threading.Tasks;
-using Corax.Queries;
+using Raven.Server.Indexing.Corax.Analyzers;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
-using Sparrow;
-using Tryouts.Corax.Analyzers;
 using Voron;
-using Voron.Data.BTrees;
-using Voron.Data.Fixed;
 using Voron.Data.Tables;
-using Voron.Impl;
-using Constants = Raven.Abstractions.Data.Constants;
 
-namespace Tryouts.Corax
+namespace Raven.Server.Indexing.Corax
 {
     public class FullTextIndex : IDisposable
     {
@@ -30,9 +19,14 @@ namespace Tryouts.Corax
             });
 
         public TableSchema EntriesSchema => _entriesSchema;
+        public StorageEnvironment Env => _env;
 
         private readonly UnmanagedBuffersPool _pool;
         private IAnalyzer _analyzer;
+
+        public UnmanagedBuffersPool Pool => _pool;
+
+        public IAnalyzer Analyzer => _analyzer;
 
         public FullTextIndex(StorageEnvironmentOptions options, IAnalyzer defaultAnalyzer)
         {
@@ -46,6 +40,7 @@ namespace Tryouts.Corax
                     tx.CreateTree("Fields");
                     tx.CreateTree("Options");
                     _entriesSchema.Create(tx, "IndexEntries");
+                    
                     tx.Commit();
                 }
             }
@@ -67,364 +62,7 @@ namespace Tryouts.Corax
             return new Searcher(this);
         }
 
-        public class Searcher : IDisposable
-        {
-            private readonly FullTextIndex _parent;
-            private readonly RavenOperationContext _context;
 
-            public Searcher(FullTextIndex parent)
-            {
-                _parent = parent;
-                _context = new RavenOperationContext(_parent._pool)
-                {
-                    Transaction = _parent._env.ReadTransaction()
-                };
-            }
-
-            public unsafe string[] Query(Query query, int take)
-            {
-                var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction);
-                query.Initialize(_parent, _context, entries);
-                var queryMatches = query.Execute();
-
-                Array.Sort(queryMatches, QueryMatchScoreSorter.Instance);
-
-                var entryId = 0L;
-                var entryKey = new Slice((byte*) &entryId, sizeof (long));
-                var results = new string[Math.Min(queryMatches.Length, take)];
-                for (int i = 0; i < results.Length; i++)
-                {
-                    entryId = IPAddress.NetworkToHostOrder(queryMatches[i].DocumentId);
-                    var tvr = entries.ReadByKey(entryKey);
-                    int size;
-                    var entry = new BlittableJsonReaderObject(tvr.Read(1, out size), size, _context);
-                    entry.TryGet(Constants.DocumentIdFieldName, out results[i]);
-                }
-
-                return results;
-            }
-
-            public void Dispose()
-            {
-                _context?.Dispose();
-            }
-        }
-
-        public class Indexer : IDisposable
-        {
-            private readonly FullTextIndex _parent;
-            private readonly RavenOperationContext _context;
-            private readonly int _batchSize;
-            private readonly List<BlittableJsonReaderObject> _newEntries = new List<BlittableJsonReaderObject>();
-            private readonly List<string> _deletes = new List<string>();
-            private long _size;
-            private ITokenSource _tokenSource;
-            private MmapStream _mmapStream;
-            private StreamReader _mmapReader;
-
-
-            public unsafe Indexer(FullTextIndex parent, int batchSize = 1024 * 1024 * 16)
-            {
-                _parent = parent;
-                _batchSize = batchSize;
-                _context = new RavenOperationContext(_parent._pool);
-
-                _mmapStream = new MmapStream(null, 0);
-                _mmapReader = new StreamReader(_mmapStream);
-            }
-
-            public void Delete(string identifier)
-            {
-                _deletes.Add(identifier);
-            }
-
-            public void NewEntry(DynamicJsonValue entry, string identifier)
-            {
-                entry[Constants.DocumentIdFieldName] = identifier;
-                var values = new List<LazyStringValue>();
-                var analyzedEntry = new DynamicJsonValue();
-                foreach (var property in entry.Properties)
-                {
-                    var field = property.Item1;
-                    var value = GetReaderForValue(property.Item2);
-
-                    _tokenSource = _parent._analyzer.CreateTokenSource(field, _tokenSource);
-                    _tokenSource.SetReader(value);
-                    values.Clear();
-                    while (_tokenSource.Next())
-                    {
-                        if (_parent._analyzer.Process(field, _tokenSource) == false)
-                            continue;
-
-                        values.Add(_context.GetLazyString(_tokenSource.Buffer, 0, _tokenSource.Size));
-                    }
-                    if (values.Count > 1)
-                    {
-                        var dynamicJsonArray = new DynamicJsonArray();
-                        foreach (var val in values)
-                        {
-                            dynamicJsonArray.Add(val);
-                        }
-                        analyzedEntry[field] = dynamicJsonArray;
-                    }
-                    else
-                    {
-                        analyzedEntry[field] = values[0];
-                    }
-                }
-                var blitEntry =  _context.ReadObject(analyzedEntry, identifier);
-                _newEntries.Add(blitEntry);
-                _size += blitEntry.Size;
-                if (_size < _batchSize)
-                    return;
-                Flush();
-            }
-
-            private unsafe TextReader GetReaderForValue(object item2)
-            {
-                var s = item2 as string;
-                if (s != null)
-                    return new StringReader(s);
-                var lsv = item2 as LazyStringValue;
-                if (lsv != null)
-                {
-                    _mmapStream.Set(lsv.Buffer, lsv.Size);
-                    _mmapReader.DiscardBufferedData();
-                    return _mmapReader;
-                }
-
-                throw new NotSupportedException("Cannot process " + item2);
-            }
-
-            private unsafe class MmapStream : Stream
-            {
-                private  byte* ptr;
-                private  long len;
-                private long pos;
-
-                public MmapStream(byte* ptr, long len)
-                {
-                    this.ptr = ptr;
-                    this.len = len;
-                }
-
-                public override void Flush()
-                {
-                }
-
-                public override long Seek(long offset, SeekOrigin origin)
-                {
-                    switch (origin)
-                    {
-                        case SeekOrigin.Begin:
-                            Position = offset;
-                            break;
-                        case SeekOrigin.Current:
-                            Position += offset;
-                            break;
-                        case SeekOrigin.End:
-                            Position = len + offset;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException("origin", origin, null);
-                    }
-                    return Position;
-                }
-
-                public override void SetLength(long value)
-                {
-                    throw new NotSupportedException();
-                }
-
-                public override int ReadByte()
-                {
-                    if (Position == len)
-                        return -1;
-                    return ptr[pos++];
-                }
-
-                public override int Read(byte[] buffer, int offset, int count)
-                {
-                    if (pos == len)
-                        return 0;
-                    if (count > len - pos)
-                    {
-                        count = (int) (len - pos);
-                    }
-                    fixed (byte* dst = buffer)
-                    {
-                        Memory.CopyInline(dst + offset, ptr + pos, count);
-                    }
-                    pos += count;
-                    return count;
-                }
-
-                public override void Write(byte[] buffer, int offset, int count)
-                {
-                    throw new NotSupportedException();
-                }
-
-                public override bool CanRead => true;
-
-                public override bool CanSeek => true;
-
-                public override bool CanWrite => false;
-
-                public override long Length => len;
-                public override long Position { get { return pos; } set { pos = value; } }
-
-                public void Set(byte* buffer, int size)
-                {
-                    this.ptr = buffer;
-                    this.len = size;
-                    pos = 0;
-                }
-            }
-
-
-            private unsafe void Flush()
-            {
-                if (_newEntries.Count == 0 && _deletes.Count == 0)
-                    return;
-
-                using (var tx = _parent._env.WriteTransaction())
-                {
-                    var entries = new Table(_parent._entriesSchema, "IndexEntries", tx);
-
-                    var identifiersTree = tx.CreateTree(Constants.DocumentIdFieldName);
-
-                    foreach (var identifier in _deletes)
-                    {
-                        DeleteEntry(tx, entries, identifiersTree, identifier);
-                    }
-
-                    var options = tx.CreateTree("Options");
-
-                    var readResult = options.Read("LastEntryId");
-                    long lastEntryId = 1;
-                    if (readResult != null)
-                        lastEntryId = readResult.Reader.ReadLittleEndianInt64();
-
-                    foreach (var entry in _newEntries)
-                    {
-                        AddEntry(tx, entries, entry, lastEntryId++);
-                        entry.Dispose();
-                    }
-                    options.Add("LastEntryId", new Slice((byte*)&lastEntryId, sizeof(long)));
-                    tx.Commit();
-                }
-                _size = 0;
-                _newEntries.Clear();
-            }
-
-            private unsafe void DeleteEntry(Transaction tx, Table entries, Tree identifiersTree, string identifier)
-            {
-                // this should have just a single item in it
-                var fixedSizeTree = new FixedSizeTree(tx.LowLevelTransaction, identifiersTree, identifier, 0);
-                using (var it = fixedSizeTree.Iterate())
-                {
-                    if (it.Seek(long.MinValue) == false)
-                        return;
-
-                    var entryId = it.CurrentKey;
-                    var bigEndianEntryId = IPAddress.HostToNetworkOrder(entryId);
-
-                    var tvr = entries.ReadByKey(new Slice((byte*)&bigEndianEntryId, sizeof(long)));
-
-                    int size;
-                    var entry = new BlittableJsonReaderObject(tvr.Read(1, out size), size, _context);
-
-                    for (int i = 0; i < entry.Count; i++)
-                    {
-                        var propertyByIndex = entry.GetPropertyByIndex(i);
-                        var property = propertyByIndex.Item1;
-
-                        //TODO: implement this without the field allocations
-                        var fieldTree = tx.CreateTree(property.ToString());
-
-                        foreach (var slice in GetValuesFor(propertyByIndex.Item2))
-                        {
-                            var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree, slice, 0);
-                            fst.Delete(entryId);
-                        }
-                    }
-
-                    entries.Delete(tvr.Id);
-                }
-            }
-
-            private unsafe void AddEntry(Transaction tx, Table entries, BlittableJsonReaderObject entry, long entryId)
-            {
-                long bigEndianId = IPAddress.HostToNetworkOrder(entryId);
-                entries.Set(new TableValueBuilder
-                {
-                    {(byte*)&bigEndianId, sizeof(long)},
-                    {entry.BasePointer, entry.Size}
-                });
-
-                for (int i = 0; i < entry.Count; i++)
-                {
-                    var propertyByIndex = entry.GetPropertyByIndex(i);
-                    var property = propertyByIndex.Item1;
-
-                    if (property.Size > byte.MaxValue)
-                        throw new InvalidOperationException("Field name cannot exceed 255 bytes");
-
-                    //TODO: implement this without the field allocations
-                    //var slice = new Slice(lazyStringValue.Buffer, (u short)lazyStringValue.Size);
-                    var fieldTree = tx.CreateTree(property.ToString());
-
-                    foreach (var slice in GetValuesFor(propertyByIndex.Item2))
-                    {
-                        var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree, slice, 0);
-                        fst.Add(entryId);
-                    }
-                }
-            }
-
-            private unsafe Slice[] GetValuesFor(object obj)
-            {
-                //TODO: right now only supporting strings
-                var stringValue = obj as LazyStringValue;
-                if (stringValue != null)
-                {
-                    var value = stringValue;
-                    if (value.Size > byte.MaxValue)
-                        throw new InvalidOperationException("Field value cannot exceed 255 bytes");
-
-                    var valueSlice = new Slice(value.Buffer, (ushort)value.Size);
-                    return new[] {valueSlice};
-                }
-                var csv = obj as LazyCompressedStringValue;
-                if (csv != null)
-                    return GetValuesFor(csv.ToLazyStringValue());
-
-                var array = obj as BlittableJsonReaderArray;
-                if (array != null)
-                {
-                    var list = new List<Slice>(array.Count);
-                    for (int i = 0; i < array.Count; i++)
-                    {
-                        list.AddRange(GetValuesFor(array[i]));
-                    }
-                    return list.ToArray();
-                }
-
-                throw new InvalidOperationException("Don't know (yet?) how to index " + obj);
-            }
-
-            public void Dispose()
-            {
-                try
-                {
-                    Flush();
-                }
-                finally
-                {
-                    _context?.Dispose();
-                }
-            }
-        }
 
         public void Dispose()
         {

@@ -1,8 +1,6 @@
 ﻿using System.Collections.Generic;
-using Raven.Server.Routing;
-using Tryouts.Corax.Analyzers;
 
-namespace Corax.Indexing.Filters
+namespace Raven.Server.Indexing.Corax.Analyzers.Filters
 {
 	public class StopWordsFilter : IFilter
 	{

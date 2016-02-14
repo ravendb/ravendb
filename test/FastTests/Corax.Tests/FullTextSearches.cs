@@ -5,9 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Corax.Queries;
+using Raven.Server.Indexing.Corax.Queries;
 using Raven.Server.Json.Parsing;
-using Tryouts.Corax.Analyzers;
 using Voron;
 using Xunit;
 

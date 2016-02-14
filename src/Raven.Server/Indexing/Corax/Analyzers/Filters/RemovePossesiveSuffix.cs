@@ -1,8 +1,4 @@
-using System;
-using System.Net.NetworkInformation;
-using Tryouts.Corax.Analyzers;
-
-namespace Corax.Indexing.Filters
+namespace Raven.Server.Indexing.Corax.Analyzers.Filters
 {
 	public class RemovePossesiveSuffix : IFilter
 	{

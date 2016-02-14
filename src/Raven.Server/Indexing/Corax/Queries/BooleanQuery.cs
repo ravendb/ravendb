@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Corax.Queries
+namespace Raven.Server.Indexing.Corax.Queries
 {
 	public class BooleanQuery : Query
 	{

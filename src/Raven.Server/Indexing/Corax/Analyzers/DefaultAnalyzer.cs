@@ -1,8 +1,6 @@
-using Corax.Indexing;
-using Corax.Indexing.Filters;
-using Raven.Server.Json;
+using Raven.Server.Indexing.Corax.Analyzers.Filters;
 
-namespace Tryouts.Corax.Analyzers
+namespace Raven.Server.Indexing.Corax.Analyzers
 {
     public class DefaultAnalyzer : IAnalyzer
     {

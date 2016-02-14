@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Corax.Queries
+﻿namespace Raven.Server.Indexing.Corax.Queries
 {
 	public class QueryMatch
 	{

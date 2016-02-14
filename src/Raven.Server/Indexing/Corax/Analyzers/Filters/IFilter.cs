@@ -1,6 +1,4 @@
-﻿using Tryouts.Corax.Analyzers;
-
-namespace Corax.Indexing.Filters
+﻿namespace Raven.Server.Indexing.Corax.Analyzers.Filters
 {
 	public interface IFilter
 	{

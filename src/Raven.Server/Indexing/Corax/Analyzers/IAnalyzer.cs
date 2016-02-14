@@ -1,6 +1,4 @@
-using Raven.Server.Json;
-
-namespace Tryouts.Corax.Analyzers
+namespace Raven.Server.Indexing.Corax.Analyzers
 {
     public interface IAnalyzer
     {

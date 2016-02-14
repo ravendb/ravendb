@@ -1,8 +1,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
-using Tryouts.Corax.Analyzers;
 
-namespace Corax.Indexing
+namespace Raven.Server.Indexing.Corax.Analyzers
 {
     public class StringTokenizer : ITokenSource
     {
