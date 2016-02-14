@@ -39,8 +39,8 @@ namespace Tryouts
             //WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", 1);
             //Console.WriteLine();
             //WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", int.MaxValue);
-            var basicIndexUsage = new BasicIndexUsage();
-            basicIndexUsage.CanIndexAndQueryWithBoolean();
+            var basicIndexUsage = new FullTextSearch();
+            basicIndexUsage.WillScore();
         }
 
         private static void Run()

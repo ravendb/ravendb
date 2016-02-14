@@ -6,5 +6,6 @@ namespace Corax.Queries
 	{
 		public long DocumentId;
 		public float Score;
+	    public int Matches;
 	}
 }

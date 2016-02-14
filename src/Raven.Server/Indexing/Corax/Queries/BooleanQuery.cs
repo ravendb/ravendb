@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -30,25 +31,27 @@ namespace Corax.Queries
 				return Array.Empty<QueryMatch>();
             if(_subQueries.Length == 1)
                 return _subQueries[0].Execute();
-
-		    //TODO: implement proper merge sort
-
-            var results = new HashSet<QueryMatch>(_subQueries[0].Execute(), QueryMatchComparer.Instance);
-		    for (int index = 1; index < _subQueries.Length; index++)
+            //TODO: Optimize this code
+		    var dictionary = new Dictionary<long, QueryMatch>();
+            for (int i = 0; i < _subQueries.Length; i++)
 		    {
-		        switch (Op)
+		        foreach (var queryMatch in _subQueries[i].Execute())
 		        {
-		            case QueryOperator.And:
-		                results.IntersectWith(_subQueries[index].Execute());
-		                break;
-                    case QueryOperator.Or:
-                        results.UnionWith(_subQueries[index].Execute());
-                        break;
-                    default:
-		                throw new InvalidOperationException("Invalid operation " + Op);
+		            QueryMatch prev;
+		            if (dictionary.TryGetValue(queryMatch.DocumentId, out prev))
+		            {
+		                prev.Score += queryMatch.Score;
+		                prev.Matches++;
+		            }
+		            else
+		            {
+		                dictionary[queryMatch.DocumentId] = queryMatch;
+		            }
 		        }
 		    }
-		    return results.ToArray();
+		    if (Op == QueryOperator.Or)
+		        return dictionary.Values.ToArray();
+		    return dictionary.Values.Where(x => x.Matches == _subQueries.Length).ToArray();
 		}
 
 		public override string ToString()
