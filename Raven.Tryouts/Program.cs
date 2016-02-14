@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using Raven.SlowTests.RavenThreadPool;
 #if !DNXCORE50
 
 using Raven.Tests.Core;
@@ -15,26 +17,23 @@ namespace Raven.Tryouts
         public static void Main(string[] args)
         {
 #if !DNXCORE50
-            for (int i = 0; i < 10; i++)
+
+            try
             {
-                Console.WriteLine("i = " + i);
-                using (var testServerFixture = new TestServerFixture())
+                for (int i = 0; i < 1000; i++)
                 {
-                    for (int j = 0; j < 10; j++)
+                    if(i%50==0)
+                        Console.WriteLine("i = " + i);
+                    using (var test = new ParallelCalculation())
                     {
-                        Console.WriteLine("j = " + j);
-                        using (var querying = new Querying())
-                        {
-                            querying.SetFixture(testServerFixture);
-                            querying.CanStreamQueryResult();
-                        }
-                        using (var querying = new Querying())
-                        {
-                            querying.SetFixture(testServerFixture);
-                            querying.CanGetFacets();
-                        }
+                        test.ThrottlingTest();
                     }
                 }
+            }
+            catch (Exception e)
+            {
+
+                Debugger.Break();
             }
 #endif
         }
