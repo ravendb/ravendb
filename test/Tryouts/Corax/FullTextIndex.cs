@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Corax.Queries;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Sparrow;
@@ -27,6 +28,8 @@ namespace Tryouts.Corax
                 StartIndex = 0,
                 Count = 1
             });
+
+        public TableSchema EntriesSchema => _entriesSchema;
 
         private readonly UnmanagedBuffersPool _pool;
         private IAnalyzer _analyzer;
@@ -67,51 +70,42 @@ namespace Tryouts.Corax
         public class Searcher : IDisposable
         {
             private readonly FullTextIndex _parent;
-            private readonly Transaction _tx;
             private readonly RavenOperationContext _context;
 
             public Searcher(FullTextIndex parent)
             {
                 _parent = parent;
-                _tx = _parent._env.ReadTransaction();
-                _context = new RavenOperationContext(_parent._pool);
+                _context = new RavenOperationContext(_parent._pool)
+                {
+                    Transaction = _parent._env.ReadTransaction()
+                };
             }
 
-            public unsafe string[] Query(string name, string value)
+            public unsafe string[] Query(Query query, int take)
             {
-                var property = _tx.ReadTree(name);
-                if (property == null)
-                    return Array.Empty<string>();
+                var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction);
+                query.Initialize(_parent, _context, entries);
+                var queryMatches = query.Execute();
 
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, property, value, 0);
-                if (fixedSizeTree.NumberOfEntries == 0)
-                    return Array.Empty<string>();
+                Array.Sort(queryMatches, QueryMatchScoreSorter.Instance);
 
-                var docs = new string[fixedSizeTree.NumberOfEntries];
-                var entries = new Table(_parent._entriesSchema, "IndexEntries", _tx);
-
-                long index = 0;
-                long entryId = 0L;
-                var key = new Slice((byte*)&entryId, sizeof(long));
-                using (var it = fixedSizeTree.Iterate())
+                var entryId = 0L;
+                var entryKey = new Slice((byte*) &entryId, sizeof (long));
+                var results = new string[Math.Min(queryMatches.Length, take)];
+                for (int i = 0; i < results.Length; i++)
                 {
-                    entryId = IPAddress.HostToNetworkOrder(it.CurrentKey);
-
-                    var tvr = entries.ReadByKey(key);
+                    entryId = IPAddress.NetworkToHostOrder(queryMatches[i].DocumentId);
+                    var tvr = entries.ReadByKey(entryKey);
                     int size;
-                    var ptr = tvr.Read(1, out size);
-                    var entry = new BlittableJsonReaderObject(ptr, size, _context);
-                    string docId;
-                    entry.TryGet(Constants.DocumentIdFieldName, out docId);
-                    docs[index] = docId;
+                    var entry = new BlittableJsonReaderObject(tvr.Read(1, out size), size, _context);
+                    entry.TryGet(Constants.DocumentIdFieldName, out results[i]);
                 }
 
-                return docs;
+                return results;
             }
 
             public void Dispose()
             {
-                _tx?.Dispose();
                 _context?.Dispose();
             }
         }
@@ -370,27 +364,27 @@ namespace Tryouts.Corax
                     {entry.BasePointer, entry.Size}
                 });
 
-                //for (int i = 0; i < entry.Count; i++)
-                //{
-                //    var propertyByIndex = entry.GetPropertyByIndex(i);
-                //    var property = propertyByIndex.Item1;
+                for (int i = 0; i < entry.Count; i++)
+                {
+                    var propertyByIndex = entry.GetPropertyByIndex(i);
+                    var property = propertyByIndex.Item1;
 
-                //    if (property.Size > byte.MaxValue)
-                //        throw new InvalidOperationException("Field name cannot exceed 255 bytes");
+                    if (property.Size > byte.MaxValue)
+                        throw new InvalidOperationException("Field name cannot exceed 255 bytes");
 
-                //    //TODO: implement this without the field allocations
-                //    //var slice = new Slice(lazyStringValue.Buffer, (u short)lazyStringValue.Size);
-                //    var fieldTree = tx.CreateTree(property.ToString());
+                    //TODO: implement this without the field allocations
+                    //var slice = new Slice(lazyStringValue.Buffer, (u short)lazyStringValue.Size);
+                    var fieldTree = tx.CreateTree(property.ToString());
 
-                //    //TODO: right now only supporting strings
-                //    var value = (LazyStringValue)propertyByIndex.Item2;
-                //    if (value.Size > byte.MaxValue)
-                //        throw new InvalidOperationException("Field value cannot exceed 255 bytes");
+                    //TODO: right now only supporting strings
+                    var value = (LazyStringValue)propertyByIndex.Item2;
+                    if (value.Size > byte.MaxValue)
+                        throw new InvalidOperationException("Field value cannot exceed 255 bytes");
 
-                //    var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree,
-                //        new Slice(value.Buffer, (ushort)value.Size), 0);
-                //    fst.Add(entryId);
-                //}
+                    var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree,
+                        new Slice(value.Buffer, (ushort)value.Size), 0);
+                    fst.Add(entryId);
+                }
             }
 
 

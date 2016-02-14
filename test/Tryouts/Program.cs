@@ -13,11 +13,13 @@ using FastTests.Server.Documents;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.Bugs;
 using Newtonsoft.Json;
+using Raven.Client.Document;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Tests.Core;
 using Tryouts.Corax;
 using Tryouts.Corax.Analyzers;
+using Tryouts.Corax.Tests;
 using Voron;
 using Voron.Debugging;
 using Xunit;
@@ -28,7 +30,10 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            WriteToStreamBenchmark.ManySmallDocs(@"C:\work\json\lines",int.MaxValue);
+            GC.KeepAlive(typeof(DocumentStore));
+            //WriteToStreamBenchmark.ManySmallDocs(@"C:\work\json\lines",int.MaxValue);
+            var basicIndexUsage = new BasicIndexUsage();
+            basicIndexUsage.CanIndexAndQueryWithBoolean();
         }
 
         private static void Run()

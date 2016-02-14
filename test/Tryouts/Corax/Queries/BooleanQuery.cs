@@ -1,19 +1,16 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Corax.Queries
 {
 	public class BooleanQuery : Query
 	{
-		private readonly Query[] _clasues;
+		private readonly Query[] _subQueries;
 
-		public BooleanQuery(QueryOperator op, params Query[] clasues)
+		public BooleanQuery(QueryOperator op, params Query[] subQueries)
 		{
-			_clasues = clasues;
+			_subQueries = subQueries;
 			Op = op;
 		}
 
@@ -21,39 +18,42 @@ namespace Corax.Queries
 
 		protected override void Init()
 		{
-			foreach (var clasue in _clasues)
+			foreach (var sub in _subQueries)
 			{
-				clasue.Initialize(Index, Transaction, Score);
+			    sub.Initialize(Index, Context, IndexEntries);
 			}
-			Boost = _clasues.Sum(x => x.Boost);
 		}
 
-		public override IEnumerable<QueryMatch> Execute()
+		public override QueryMatch[] Execute()
 		{
-			if (_clasues.Length == 0)
-				return Enumerable.Empty<QueryMatch>();
-			var result = _clasues[0].Execute();
-			for (int i = 1; i < _clasues.Length; i++)
-			{
-				var temp = _clasues[i].Execute();
-				switch (Op)
-				{
-					case QueryOperator.And:
-						result = result.Intersect(temp	, QueryMatchComparer.Instance);
-						break;
-					case QueryOperator.Or:
-						result = result.Union(temp, QueryMatchComparer.Instance);
-						break;
-					default:
-						throw new ArgumentOutOfRangeException("Cannot understand " + Op);
-				}	
-			}
-			return result;
+			if (_subQueries.Length == 0)
+				return Array.Empty<QueryMatch>();
+            if(_subQueries.Length == 1)
+                return _subQueries[0].Execute();
+
+		    //TODO: implement proper merge sort
+
+            var results = new HashSet<QueryMatch>(_subQueries[0].Execute(), QueryMatchComparer.Instance);
+		    for (int index = 1; index < _subQueries.Length; index++)
+		    {
+		        switch (Op)
+		        {
+		            case QueryOperator.And:
+		                results.IntersectWith(_subQueries[index].Execute());
+		                break;
+                    case QueryOperator.Or:
+                        results.UnionWith(_subQueries[index].Execute());
+                        break;
+                    default:
+		                throw new InvalidOperationException("Invalid operation " + Op);
+		        }
+		    }
+		    return results.ToArray();
 		}
 
 		public override string ToString()
 		{
-			return string.Join<Query>(" " + Op + " ", _clasues);
+			return string.Join<Query>(" " + Op + " ", _subQueries);
 		}
 	}
 }
