@@ -77,18 +77,18 @@ namespace Raven.Client.Bundles.MoreLikeThis
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var multiLoadOperation = new MultiLoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null, null);
-            MultiLoadResult multiLoadResult;
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null, null);
+            LoadResult loadResult;
             do
             {
-                multiLoadOperation.LogOperation();
-                using (multiLoadOperation.EnterMultiLoadContext())
+                loadOperation.LogOperation();
+                using (loadOperation.EnterLoadContext())
                 {
-                    multiLoadResult = cmd.MoreLikeThis(parameters);
+                    loadResult = cmd.MoreLikeThis(parameters);
                 }
-            } while (multiLoadOperation.SetResult(multiLoadResult));
+            } while (loadOperation.SetResult(loadResult));
 
-            return multiLoadOperation.Complete<T>();
+            return loadOperation.Complete<T>();
         }
 
         public static Task<T[]> MoreLikeThisAsync<T, TIndexCreator>(this IAsyncAdvancedSessionOperations advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
@@ -157,18 +157,18 @@ namespace Raven.Client.Bundles.MoreLikeThis
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var multiLoadOperation = new MultiLoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null, null);
-            MultiLoadResult multiLoadResult;
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null, null);
+            LoadResult loadResult;
             do
             {
-                multiLoadOperation.LogOperation();
-                using (multiLoadOperation.EnterMultiLoadContext())
+                loadOperation.LogOperation();
+                using (loadOperation.EnterLoadContext())
                 {
-                    multiLoadResult = await cmd.MoreLikeThisAsync(parameters).ConfigureAwait(false);
+                    loadResult = await cmd.MoreLikeThisAsync(parameters).ConfigureAwait(false);
                 }
-            } while (multiLoadOperation.SetResult(multiLoadResult));
+            } while (loadOperation.SetResult(loadResult));
 
-            return multiLoadOperation.Complete<T>();
+            return loadOperation.Complete<T>();
         }
     }
 }

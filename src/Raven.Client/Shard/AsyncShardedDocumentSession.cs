@@ -190,7 +190,7 @@ namespace Raven.Client.Shard
 
             return results.ContinueWith(task =>
             {
-                var shardsContainThisDocument = task.Result.Where(x => !Equals(x, default(T))).ToArray();
+                var shardsContainThisDocument = task.Result.Select(arg => arg.FirstOrDefault()).Where(x => !Equals(x, default(T))).ToArray();
                 if (shardsContainThisDocument.Count() > 1)
                 {
                     throw new InvalidOperationException("Found document with id: " + id +
@@ -316,28 +316,28 @@ namespace Raven.Client.Shard
             foreach (var shard in idsToLoad)
             {
                 var currentShardIds = shard.Select(x => x.Id).ToArray();
-                var multiLoadOperations = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key, new ShardRequestData
+                var loadOperations = await shardStrategy.ShardAccessStrategy.ApplyAsync(shard.Key, new ShardRequestData
                 {
                     EntityType = typeof(T),
                     Keys = currentShardIds.ToList()
                 }, async (dbCmd, i) =>
                 {
-                    var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
-                    MultiLoadResult multiLoadResult;
+                    var loadOperation = new LoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
+                    LoadResult loadResult;
                     do
                     {
-                        multiLoadOperation.LogOperation();
-                        using (multiLoadOperation.EnterMultiLoadContext())
+                        loadOperation.LogOperation();
+                        using (loadOperation.EnterLoadContext())
                         {
-                            multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, token: token).ConfigureAwait(false);
+                            loadResult = await dbCmd.GetAsync(currentShardIds, includePaths, token: token).ConfigureAwait(false);
                         }
-                    } while (multiLoadOperation.SetResult(multiLoadResult));
-                    return multiLoadOperation;
+                    } while (loadOperation.SetResult(loadResult));
+                    return loadOperation;
                 }).WithCancellation(token).ConfigureAwait(false);
-                foreach (var multiLoadOperation in multiLoadOperations)
+                foreach (var loadOperation in loadOperations)
                 {
                     token.ThrowIfCancellationRequested();
-                    var loadResults = multiLoadOperation.Complete<T>();
+                    var loadResults = loadOperation.Complete<T>();
                     for (int i = 0; i < loadResults.Length; i++)
                     {
                         if (ReferenceEquals(loadResults[i], null))

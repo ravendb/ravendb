@@ -79,7 +79,7 @@ namespace Raven.Client.Document
             lastRequestedUtc1 = SystemTime.UtcNow;
         }
 
-        protected JsonDocument HandleGetDocumentResult(MultiLoadResult documents)
+        protected JsonDocument HandleGetDocumentResult(LoadResult documents)
         {
             if (documents.Results.Count == 2 && documents.Results[1] != null)
             {

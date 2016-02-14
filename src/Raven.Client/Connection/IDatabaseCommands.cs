@@ -137,7 +137,7 @@ namespace Raven.Client.Connection
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
         /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
-        MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
+        LoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false);
 
         /// <summary>
         ///     Get the low level bulk insert operation
@@ -319,7 +319,7 @@ namespace Raven.Client.Connection
         ///     Return a list of documents that based on the MoreLikeThisQuery.
         /// </summary>
         /// <param name="query">more like this query definition that will be executed</param>
-        MultiLoadResult MoreLikeThis(MoreLikeThisQuery query);
+        LoadResult MoreLikeThis(MoreLikeThisQuery query);
 
         /// <summary>
         ///     Perform a single POST request containing multiple nested GET requests
