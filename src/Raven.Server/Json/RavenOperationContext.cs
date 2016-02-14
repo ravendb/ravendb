@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json.Parsing;
+using Raven.Server.Routing;
 using Sparrow;
 using Sparrow.Binary;
 using Voron;
@@ -21,7 +22,7 @@ namespace Raven.Server.Json
         
         public readonly UnmanagedBuffersPool Pool;
         private UnmanagedBuffersPool.AllocatedMemoryData _tempBuffer;
-        private Dictionary<string, LazyStringValue> _fieldNames;
+        private Dictionary<StringSegment, LazyStringValue> _fieldNames;
         private Dictionary<LazyStringValue, LazyStringValue> _internedFieldNames;
         private Dictionary<string, byte[]> _fieldNamesAsByteArrays;
         private bool _disposed;
@@ -152,9 +153,15 @@ namespace Raven.Server.Json
 
         public unsafe LazyStringValue GetLazyStringFor(string field)
         {
+            return GetLazyStringFor(new StringSegment(field, 0, field.Length));
+        }
+
+
+        public unsafe LazyStringValue GetLazyStringFor(StringSegment field)
+        {
             LazyStringValue value;
             if (_fieldNames == null)
-                _fieldNames = new Dictionary<string, LazyStringValue>();
+                _fieldNames = new Dictionary<StringSegment, LazyStringValue>();
 
             if (_fieldNames.TryGetValue(field, out value))
                 return value;
@@ -165,17 +172,17 @@ namespace Raven.Server.Json
             var memory = GetMemory(maxByteCount+state.GetEscapePositionsSize());
             try
             {
-                fixed (char* pField = field)
+                var fieldVal = field.Value;
+                fixed (char* pField = fieldVal)
                 {
                     var address = (byte*)memory.Address;
                     var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
                     state.WriteEscapePositionsTo(address + actualSize);
-                    _fieldNames[field] = value = new LazyStringValue(field, address, actualSize, this)
+                    _fieldNames[field] = value = new LazyStringValue(fieldVal, address, actualSize, this)
                     {
                         AllocatedMemoryData = memory
                     };
                 }
-
             }
             catch (Exception)
             {

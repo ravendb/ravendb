@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Server.Routing;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 
@@ -21,7 +22,7 @@ namespace Raven.Server.Json
 
         public DynamicJsonValue Modifications;
 
-        private Dictionary<string, object> _objectsPathCache;
+        private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
         public override string ToString()
@@ -221,6 +222,11 @@ namespace Raven.Server.Json
 
         public bool TryGet<T>(string name, out T obj)
         {
+            return TryGet(new StringSegment(name,0,name.Length),out obj);
+        }
+
+        public bool TryGet<T>(StringSegment name, out T obj)
+        {
             object result;
             if (TryGetMember(name, out result) == false)
             {
@@ -256,6 +262,12 @@ namespace Raven.Server.Json
 
         public bool TryGet(string name, out string str)
         {
+            return TryGet(new StringSegment(name,0,name.Length),out str);
+        }
+
+
+        public bool TryGet(StringSegment name, out string str)
+        {
             object result;
             if (TryGetMember(name, out result) == false)
             {
@@ -280,6 +292,12 @@ namespace Raven.Server.Json
 
         public bool TryGetMember(string name, out object result)
         {
+            return TryGetMember(new StringSegment(name,0,name.Length),out result);
+        }
+
+
+        public bool TryGetMember(StringSegment name, out object result)
+        {
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
             {
@@ -298,7 +316,7 @@ namespace Raven.Server.Json
             {
                 if (_objectsPathCache == null)
                 {
-                    _objectsPathCache = new Dictionary<string, object>();
+                    _objectsPathCache = new Dictionary<StringSegment, object>();
                     _objectsPathCacheByIndex = new Dictionary<int, object>();
                 }
                 _objectsPathCache[name] = result;
@@ -330,6 +348,12 @@ namespace Raven.Server.Json
         }
 
         public int GetPropertyIndex(string name)
+        {
+            return GetPropertyIndex(new StringSegment(name,0,name.Length));
+        }
+
+
+        public int GetPropertyIndex(StringSegment name)
         {
             if (_cachedProperties != null)
             {

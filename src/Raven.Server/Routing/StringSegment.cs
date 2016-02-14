@@ -1,19 +1,63 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Routing
 {
     public struct StringSegment : IEquatable<StringSegment>
     {
-        string _string;
-        int _start;
-        int _count;
+        private readonly string _string;
 
-        public StringSegment(string s, int start, int count)
+        public int Length { get; }
+        public int Start { get; }
+
+        private string _valueString;
+        public string Value => _valueString ?? (_valueString = _string.Substring(Start, Length));
+
+        public StringSegment(string s, int start, int count = -1)
         {
             _string = s;
-            _start = start;
-            _count = count;
+            Start = start;
+            Length = count == -1 ? _string.Length - start : count;
+            _valueString = null;			
+
+            if (Start + Length > _string.Length)
+                throw new IndexOutOfRangeException();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public StringSegment SubSegment(int start, int length = -1)
+        {
+            if (length == -1)
+                length = _string.Length - Start - start;			
+            else if (start + length > _string.Length)
+                throw new ArgumentOutOfRangeException(nameof(length));
+
+            return new StringSegment(_string,Start + start,length);
+        }
+
+        public char this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= Start + Length)
+                    throw new IndexOutOfRangeException();
+
+                return _string[Start + index];
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int IndexOfAny(char[] charArray, int startIndex)
+        {
+            var remainingSegmentLength = Length - startIndex;
+
+            //out of boundary, nothing to check
+            if (Start + startIndex >= _string.Length ||
+                remainingSegmentLength <= 0)
+                return -1;
+
+            return _string.IndexOfAny(charArray, Start + startIndex,remainingSegmentLength);
         }
 
         public override bool Equals(object obj)
@@ -28,9 +72,9 @@ namespace Raven.Server.Routing
             unchecked
             {
                 int hashCode = 0;
-                for (int i = 0; i < _count; i++)
+                for (int i = 0; i < Length; i++)
                 {
-                    hashCode = (hashCode * 397) ^ char.ToLowerInvariant(_string[_start + i]);
+                    hashCode = (hashCode * 397) ^ char.ToLowerInvariant(_string[Start + i]);
 
                 }
                 return hashCode;
@@ -39,23 +83,22 @@ namespace Raven.Server.Routing
 
         public bool Equals(string other)
         {
-            if (_count != other.Length)
+            if (Length != other.Length)
                 return false;
-            return string.Compare(_string, _start, other, 0, _count, StringComparison.OrdinalIgnoreCase) == 0;
+            return string.Compare(_string, Start, other, 0, Length, StringComparison.OrdinalIgnoreCase) == 0;
         }
 
         public bool Equals(StringSegment other)
         {
-            if (_count != other._count)
+            if (Length != other.Length)
                 return false;
-            return string.Compare(_string, _start, other._string, other._start, _count, StringComparison.OrdinalIgnoreCase) == 0;
+            return string.Compare(_string, Start, other._string, other.Start, Length, StringComparison.OrdinalIgnoreCase) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override string ToString()
         {
-            _string =  _string.Substring(_start, _count);
-            _start = 0;
-            return _string;
+            return Value;
         }
 
 
@@ -63,11 +106,11 @@ namespace Raven.Server.Routing
         {
             if (_string == null)
                 return true;
-            if (_count == 0)
+            if (Length == 0)
                 return true;
-            for (int i = 0; i < _count; i++)
+            for (int i = 0; i < Length; i++)
             {
-                if (char.IsWhiteSpace(_string[i + _start]) == false)
+                if (char.IsWhiteSpace(_string[i + Start]) == false)
                     return false;
             }
             return true;
