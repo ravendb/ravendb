@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Raven.Server.Indexing.Corax;
 using Raven.Server.Indexing.Corax.Analyzers;
 using Raven.Server.Indexing.Corax.Queries;
 using Raven.Server.Json.Parsing;
@@ -35,10 +36,14 @@ namespace Tryouts.Corax.Tests
 
             using (var searcher = _fullTextIndex.CreateSearcher())
             {
-                var ids = searcher.Query(new BooleanQuery(QueryOperator.Or,
-                    new TermQuery("Name", "Arek"),
-                    new TermQuery("Name", "Michael")
-                    ), 2);
+                var ids = searcher.Query(new QueryDefinition
+                {
+                    Query = new BooleanQuery(QueryOperator.Or,
+                        new TermQuery("Name", "Arek"),
+                        new TermQuery("Name", "Michael")
+                        ),
+                    Take = 2
+                });
                 Assert.Equal(new[] { "users/2", "users/3" }, ids);
             }
         }
@@ -60,7 +65,11 @@ namespace Tryouts.Corax.Tests
 
             using (var searcher = _fullTextIndex.CreateSearcher())
             {
-                var ids = searcher.Query(new TermQuery("Name", "Arek"), 2);
+                var ids = searcher.Query(new QueryDefinition
+                {
+                    Query = new TermQuery("Name", "Arek"),
+                    Take = 2
+                });
                 Assert.Equal(new[] { "users/3" }, ids);
             }
         }

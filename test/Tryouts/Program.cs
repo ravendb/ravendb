@@ -31,7 +31,7 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //GC.KeepAlive(typeof(DocumentStore));
+            GC.KeepAlive(typeof(DocumentStore));
             //WriteToStreamBenchmark.PerformanceAnalysis(@"d:\json\big", Path.GetTempFileName(), 2);
             //////Console.WriteLine("Ready...");
             //////Console.WriteLine();
@@ -40,8 +40,8 @@ namespace Tryouts
             ////WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", 1);
             ////Console.WriteLine();
             ////WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", int.MaxValue);
-            //var basicIndexUsage = new FullTextSearch();
-            //basicIndexUsage.WillScore();
+            var basicIndexUsage = new FullTextSearch();
+            basicIndexUsage.CanSort();
 
             //Run();
         }
