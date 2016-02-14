@@ -31,9 +31,14 @@ namespace Tryouts
         public static void Main(string[] args)
         {
             GC.KeepAlive(typeof(DocumentStore));
-            //WriteToStreamBenchmark.ManySmallDocs(@"C:\work\json\lines",int.MaxValue);
-            var basicIndexUsage = new BasicIndexUsage();
-            basicIndexUsage.CanIndexAndQueryWithBoolean();
+            WriteToStreamBenchmark.PerformanceAnalysis(@"d:\json\big", Path.GetTempFileName(), 2);
+            Console.WriteLine();
+            WriteToStreamBenchmark.PerformanceAnalysis(@"d:\json\big", Path.GetTempFileName(), int.MaxValue);
+            //WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", 1);
+            //Console.WriteLine();
+            //WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", int.MaxValue);
+            //var basicIndexUsage = new BasicIndexUsage();
+            //basicIndexUsage.CanIndexAndQueryWithBoolean();
         }
 
         private static void Run()

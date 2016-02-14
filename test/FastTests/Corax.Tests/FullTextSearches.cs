@@ -13,13 +13,8 @@ using Xunit;
 
 namespace Tryouts.Corax.Tests
 {
-    public class BasicIndexUsage : CoraxTest
+    public class FullTextSearch : CoraxTest
     {
-        protected override IAnalyzer CreateAnalyzer()
-        {
-            return new NopAnalyzer();
-        }
-
 
         [Fact]
         public void CanIndexAndQueryWithBoolean()
@@ -69,23 +64,4 @@ namespace Tryouts.Corax.Tests
         }
     }
 
-    public class CoraxTest : IDisposable
-    {
-        protected readonly FullTextIndex _fullTextIndex;
-
-        protected virtual IAnalyzer CreateAnalyzer()
-        {
-            return new DefaultAnalyzer();
-        }
-
-        public CoraxTest()
-        {
-            _fullTextIndex = new FullTextIndex(StorageEnvironmentOptions.CreateMemoryOnly(), CreateAnalyzer());
-        }
-
-        public void Dispose()
-        {
-            _fullTextIndex?.Dispose();
-        }
-    }
 }
