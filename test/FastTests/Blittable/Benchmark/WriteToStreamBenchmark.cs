@@ -13,7 +13,7 @@ namespace FastTests.Blittable.Benchmark
 {
     public class WriteToStreamBenchmark
     {
-        public static async Task ManySmallDocs(string directory, int take)
+        public static void ManySmallDocs(string directory, int take)
         {
             var files = Directory.GetFiles(directory, "c*.json").OrderBy(f => new FileInfo(f).Length).Take(take);
             foreach (var jsonFile in files)
@@ -45,7 +45,7 @@ namespace FastTests.Blittable.Benchmark
                         string line;
                         while ((line = reader.ReadLine()) != null)
                         {
-                            using (var a = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)),
+                            using (var a = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)),
                                 line))
                             {
                                 size += a.Size;
@@ -58,7 +58,7 @@ namespace FastTests.Blittable.Benchmark
             }
         }
 
-        public static async Task Indexing(string directory)
+        public static void Indexing(string directory)
         {
             var jsonCache = new List<string>();
             var blitCache = new List<BlittableJsonReaderObject>();
@@ -75,14 +75,14 @@ namespace FastTests.Blittable.Benchmark
                         jsonCache.Add(line);
                     }
                 }
-            
+
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
                 using (var blittableContext = new RavenOperationContext(unmanagedPool))
                 {
                     foreach (var line in jsonCache)
                     {
 
-                        using (var doc = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)), "doc1"))
+                        using (var doc = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)), "doc1"))
                         {
                             blitCache.Add(doc);
                         }
@@ -129,7 +129,7 @@ namespace FastTests.Blittable.Benchmark
         }
 
 
-        public async static Task PerformanceAnalysis(string directory, string outputFile, int size)
+        public static void PerformanceAnalysis(string directory, string outputFile, int size)
         {
             using (var fileStream = new FileStream(outputFile, FileMode.Create))
             using (var streamWriter = new StreamWriter(fileStream))
@@ -142,7 +142,7 @@ namespace FastTests.Blittable.Benchmark
                 {
                     foreach (var jsonFile in files)
                     {
-                        Console.Write(string.Format("{0} {1:#,#}", Path.GetFileName(jsonFile), new FileInfo(jsonFile).Length) );
+                        Console.Write(string.Format("{0} {1:#,#}", Path.GetFileName(jsonFile), new FileInfo(jsonFile).Length));
                         streamWriter.Write(Path.GetFileName(jsonFile) + ",");
                         var sp = Stopwatch.StartNew();
                         var jsonOjbect = JObject.Load(new JsonTextReader(File.OpenText(jsonFile)));
@@ -162,13 +162,13 @@ namespace FastTests.Blittable.Benchmark
                         GC.Collect(2);
 
                         sp.Restart();
-                        using (var employee = await blittableContext.Read(File.OpenRead(jsonFile), "doc1"))
+                        using (var employee = blittableContext.Read(File.OpenRead(jsonFile), "doc1"))
                         {
                             streamWriter.Write(sp.ElapsedMilliseconds + ",");
                             using (var stream = new FileStream("output2.junk", FileMode.Create))
                             {
                                 sp.Restart();
-                                employee.WriteTo(stream);
+                                blittableContext.Write(stream, employee);
                                 streamWriter.Write(employee.Size + "," + sp.ElapsedMilliseconds + ",");
                             }
                             Console.WriteLine(" blit - {0:#,#} ms, Props: {1}",

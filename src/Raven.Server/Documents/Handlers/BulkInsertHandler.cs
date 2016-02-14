@@ -13,12 +13,12 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Utils;
-using Raven.Server.Web;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class BulkInsertHandler : DatabaseRequestHandler
     {
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents
                             {
                                 foreach (var doc in batch)
                                 {
-                                    DocumentsStorage.Put(context, doc.Key, null, doc.Data);
+                                    Database.DocumentsStorage.Put(context, doc.Key, null, doc.Data);
                                 }
 
                                 context.Transaction.Commit();

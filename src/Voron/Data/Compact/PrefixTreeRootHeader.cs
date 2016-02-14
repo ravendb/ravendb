@@ -2,15 +2,16 @@
 
 namespace Voron.Data.Compact
 {
+    /// <summary>
+    /// The Prefix Tree Root Header.
+    /// </summary>    
+    /// <remarks>This header extends the <see cref="RootHeader"/> structure.</remarks>    
     //TODO: Change this when we are ready to go.
     //[StructLayout(LayoutKind.Explicit, Pack = 1)]
     [StructLayout(LayoutKind.Sequential)]
     public struct PrefixTreeRootHeader
     {
-        /// <summary>
-        /// The root page for the tree. The first element in the root page is the actual Root Node.
-        /// </summary>
-        public long RootPage;
+        public RootObjectType RootObjectType;
 
         /// <summary>
         /// The table header page for the tree.
@@ -21,6 +22,11 @@ namespace Voron.Data.Compact
         /// This is the amount of elements already stored in the tree. 
         /// </summary>
         public long Items;
+
+        /// <summary>
+        /// This is the translation table header. 
+        /// </summary>
+        public PrefixTreeTranslationTableHeader TranslationTable;
 
         /// <summary>
         /// The head node pointer for the tree. 

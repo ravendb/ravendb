@@ -19,19 +19,19 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents
 {
-    public class DatabasesLandlord : AbstractLandlord<DocumentsStorage>
+    public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
         public event Action<string> OnDatabaseLoaded = delegate { };
 
-        public override async Task<DocumentsStorage> GetResourceInternal(StringSegment resourceName)
+        public override async Task<DocumentDatabase> GetResourceInternal(StringSegment resourceName)
         {
-            Task<DocumentsStorage> db;
+            Task<DocumentDatabase> db;
             if (TryGetOrCreateResourceStore(resourceName, out db))
                 return await db.ConfigureAwait(false);
             return null;
         }
 
-        public override bool TryGetOrCreateResourceStore(StringSegment databaseId, out Task<DocumentsStorage> database)
+        public override bool TryGetOrCreateResourceStore(StringSegment databaseId, out Task<DocumentDatabase> database)
         {
             //TODO: Restore those
             // if (Locks.Contains(DisposingLock))
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
 
                 hasAcquired = true;
 
-                var task = new Task<DocumentsStorage>(() => CreateDocumentsStorage(databaseId, config));
+                var task = new Task<DocumentDatabase>(() => CreateDocumentsStorage(databaseId, config));
                 database = ResourcesStoresCache.GetOrAdd(databaseId, task);
                 if (database == task)
                     task.Start();
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
                     // Note that we return the faulted task anyway, because we need the user to look at the error
                     if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
                     {
-                        Task<DocumentsStorage> val;
+                        Task<DocumentDatabase> val;
                         ResourcesStoresCache.TryRemove(databaseId, out val);
                     }
                 }
@@ -97,12 +97,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DocumentsStorage CreateDocumentsStorage(StringSegment databaseId, RavenConfiguration config)
+        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseId, RavenConfiguration config)
         {
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentsStorage(config.DatabaseName, config);
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config);
 
                 documentDatabase.Initialize();
 

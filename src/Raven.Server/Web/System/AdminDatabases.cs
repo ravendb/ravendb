@@ -39,7 +39,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = 200;
                 // TODO: Implement etags
 
-                dbDoc.WriteTo(ResponseBodyStream());
+                context.Write(ResponseBodyStream(), dbDoc);
                 return Task.CompletedTask;
             }
         }
@@ -81,7 +81,7 @@ namespace Raven.Server.Web.System
                     return;
                 }
 
-                var dbDoc = await context.Read(RequestBodyStream(), dbId);
+                var dbDoc = await context.ReadForDiskAsync(RequestBodyStream(), dbId);
                 
                 //TODO: Fix this
                 //int size;

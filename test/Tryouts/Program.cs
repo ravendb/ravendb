@@ -7,8 +7,10 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Blittable.Benchmark;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
+using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.Bugs;
 using Newtonsoft.Json;
 using Raven.Server.Json;
@@ -26,8 +28,7 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //new DuplicatePageUsage().ShouldNotHappen();
-            Run();
+            WriteToStreamBenchmark.ManySmallDocs(@"C:\work\json\lines",int.MaxValue);
         }
 
         private static void Run()
@@ -63,7 +64,7 @@ namespace Tryouts
                                 //["Active"] = "true",
                                 //["Age"] = (index % 120).ToString(),
                                 //["Name"] = line.Substring(0, Math.Min(15, line.Length))
-                            }, "users/" + (++index)).Wait();
+                            }, "users/" + (++index));
                         }
                     }
                 }
@@ -109,7 +110,7 @@ namespace Tryouts
                             indexer.NewEntry(new DynamicJsonValue
                             {
                                 ["Location"] = line
-                            }, "users/" + (++index)).Wait();
+                            }, "users/" + (++index));
 
                         }
                     }

@@ -1,0 +1,11 @@
+{
+  "version": "1.14.0",
+  "frameworks": {
+    "dnxcore50": {
+      "bin": {
+        "assembly": "dnxcore50\\NetTopologySuite.dll",
+        "pdb": "dnxcore50\\NetTopologySuite.pdb"
+      }
+    }
+  }
+}

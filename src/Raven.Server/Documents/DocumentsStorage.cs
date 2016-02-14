@@ -22,6 +22,9 @@ namespace Raven.Server.Documents
     public unsafe class DocumentsStorage : IDisposable
     {
         private readonly RavenConfiguration _configuration;
+
+        private readonly DatabaseNotifications _notifications;
+
         private readonly TableSchema _docsSchema = new TableSchema();
         private readonly ILog _log;
         private readonly string _name;
@@ -37,11 +40,12 @@ namespace Raven.Server.Documents
         private const string NoCollectionSpecified = "Raven/Empty";
         private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
-        public DocumentsStorage(string name, RavenConfiguration configuration)
+        public DocumentsStorage(string name, RavenConfiguration configuration, DatabaseNotifications notifications)
         {
             _name = name;
             _configuration = configuration;
-            _log = LogManager.GetLogger(typeof (DocumentsStorage).FullName + "." + _name);
+            _notifications = notifications;
+            _log = LogManager.GetLogger(typeof(DocumentsStorage).FullName + "." + _name);
 
             // The documents schema is as follows
             // 4 fields (lowered key, etag, lazy string key, document)
@@ -140,7 +144,7 @@ namespace Raven.Server.Documents
                 lastEtag = readResult.Reader.ReadLittleEndianInt64();
 
             var fst = new FixedSizeTree(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects, "AllDocsEtags",
-                sizeof (long));
+                sizeof(long));
 
             using (var it = fst.Iterate())
             {
@@ -281,21 +285,21 @@ namespace Raven.Server.Documents
             int size;
             var buffer = context.GetNativeTempBuffer(
                 byteCount
-                + sizeof (char)*key.Length // for the lower calls
+                + sizeof(char) * key.Length // for the lower calls
                 , out size);
 
             fixed (char* pChars = key)
             {
-                var destChars = (char*) buffer;
+                var destChars = (char*)buffer;
                 for (var i = 0; i < key.Length; i++)
                 {
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
                 }
 
-                var keyBytes = buffer + key.Length*sizeof (char);
+                var keyBytes = buffer + key.Length * sizeof(char);
 
                 size = Encoding.UTF8.GetBytes(destChars, key.Length, keyBytes, byteCount);
-                return new Slice(keyBytes, (ushort) size);
+                return new Slice(keyBytes, (ushort)size);
             }
         }
 
@@ -327,7 +331,7 @@ namespace Raven.Server.Documents
             var keyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
             var escapePositionsSize = jsonParserState.GetEscapePositionsSize();
             var buffer = context.GetNativeTempBuffer(
-                sizeof (char)*str.Length // for the lower calls
+                sizeof(char) * str.Length // for the lower calls
                 + byteCount // lower key
                 + keyLenSize // the size of var int for the len of the key
                 + byteCount // actual key
@@ -336,17 +340,17 @@ namespace Raven.Server.Documents
 
             fixed (char* pChars = str)
             {
-                var destChars = (char*) buffer;
+                var destChars = (char*)buffer;
                 for (var i = 0; i < str.Length; i++)
                 {
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
                 }
 
-                lowerKey = buffer + str.Length*sizeof (char);
+                lowerKey = buffer + str.Length * sizeof(char);
 
                 lowerSize = Encoding.UTF8.GetBytes(destChars, str.Length, lowerKey, byteCount);
 
-                key = buffer + str.Length*sizeof (char) + byteCount;
+                key = buffer + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
                 keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + keyLenSize, byteCount);
                 JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
@@ -368,7 +372,7 @@ namespace Raven.Server.Documents
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
             ptr = tvr.Read(1, out size);
-            result.Etag = IPAddress.NetworkToHostOrder(*(long*) ptr);
+            result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
             return result;
         }
@@ -393,11 +397,19 @@ namespace Raven.Server.Documents
             {
                 var etagTree = context.Transaction.ReadTree("Etags");
                 var etag = _lastEtag;
-                etagTree.Add(LastEtagSlice, new Slice((byte*) &etag, sizeof (long)));
+                etagTree.Add(LastEtagSlice, new Slice((byte*)&etag, sizeof(long)));
             }
             var collectionName = GetCollectionName(key, doc.Data);
             var table = new Table(_docsSchema, collectionName, context.Transaction);
             table.Delete(doc.StorageId);
+
+            context.Transaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
+            {
+                Type = DocumentChangeTypes.Delete,
+                Etag = expectedEtag,
+                Key = key,
+                CollectionName = collectionName
+            });
 
             return true;
         }
@@ -434,7 +446,7 @@ namespace Raven.Server.Documents
             GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             var newEtag = ++_lastEtag;
-            var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag); 
+            var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
 
             var tbv = new TableValueBuilder
             {
@@ -445,7 +457,7 @@ namespace Raven.Server.Documents
             };
 
 
-            var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort) lowerSize));
+            var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort)lowerSize));
             if (oldValue == null)
             {
                 if (expectedEtag != null && expectedEtag != 0)
@@ -465,6 +477,14 @@ namespace Raven.Server.Documents
                         $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
                 table.Update(oldValue.Id, tbv);
             }
+
+            context.Transaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
+            {
+                Etag = newEtag,
+                CollectionName = collectionName,
+                Key = key,
+                Type = DocumentChangeTypes.Put
+            });
 
             return new PutResult
             {
@@ -494,7 +514,7 @@ namespace Raven.Server.Documents
                 {
                     if (lastKnownBusy + 1 == maybeFree)
                     {
-                        nextIdentityValue =  identities.Increment(key, maybeFree);
+                        nextIdentityValue = identities.Increment(key, maybeFree);
                         return key + nextIdentityValue;
                     }
                     lastKnownFree = maybeFree;
@@ -521,7 +541,7 @@ namespace Raven.Server.Documents
             {
                 collectionName = NoCollectionSpecified;
             }
-            
+
             // we have to have some way to distinguish between dynamic tree names
             // and our fixed ones, otherwise a collection call Docs will corrupt our state
             return "@" + collectionName;
@@ -554,15 +574,15 @@ namespace Raven.Server.Documents
                     yield break;
                 do
                 {
-                    if(context.Transaction.GetRootObjectType(it.CurrentKey) != RootObjectType.VariableSizeTree)
+                    if (context.Transaction.GetRootObjectType(it.CurrentKey) != RootObjectType.VariableSizeTree)
                         continue;
 
                     if (it.CurrentKey[0] != '@') // collection prefix
                         continue;
 
                     var collectionTableName = it.CurrentKey.ToString();
-                    var collectionTable = new Table(_docsSchema, collectionTableName,context.Transaction);
-                   
+                    var collectionTable = new Table(_docsSchema, collectionTableName, context.Transaction);
+
 
                     yield return new CollectionStat
                     {

@@ -7,7 +7,8 @@ namespace Voron.Data.Compact
         public enum NodeType : byte
         {
             Internal = 1,
-            Leaf = 2
+            Leaf = 2,
+            Tombstone = 3
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 48)]
@@ -30,7 +31,8 @@ namespace Voron.Data.Compact
             public fixed byte Padding[36]; // to 48 bytes
 
             public bool IsLeaf => Type == NodeType.Leaf;
-            public bool IsInternal => Type == NodeType.Leaf;
+            public bool IsInternal => Type == NodeType.Internal;
+            public bool IsTombstone => Type == NodeType.Tombstone;
         }
 
         /// <summary>
@@ -101,7 +103,8 @@ namespace Voron.Data.Compact
             }
 
             public bool IsLeaf => Type == NodeType.Leaf;
-            public bool IsInternal => Type == NodeType.Leaf;
+            public bool IsInternal => Type == NodeType.Internal;
+            public bool IsTombstone => Type == NodeType.Tombstone;
         }
 
 
@@ -157,8 +160,20 @@ namespace Voron.Data.Compact
                 this.DataPtr = Constants.InvalidNodeName;
             }
 
+            public void Initialize(short nameLength, long previousPtr = Constants.InvalidNodeName, long nextPtr = Constants.InvalidNodeName)
+            {
+                this.Type = NodeType.Leaf;
+                this.NameLength = nameLength;
+
+                this.NextPtr = nextPtr;
+                this.PreviousPtr = previousPtr;
+                this.ReferencePtr = Constants.InvalidNodeName;
+                this.DataPtr = Constants.InvalidNodeName;
+            }
+
             public bool IsLeaf => Type == NodeType.Leaf;
-            public bool IsInternal => Type == NodeType.Leaf;
+            public bool IsInternal => Type == NodeType.Internal;
+            public bool IsTombstone => Type == NodeType.Tombstone;
         }        
     }
 }

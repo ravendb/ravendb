@@ -15,7 +15,7 @@ namespace FastTests.Blittable
             using (var ctx = new RavenOperationContext(pool))
             {
                 var ms = new MemoryStream(Encoding.UTF8.GetBytes("[\"Oren\",\"Arava\"]"));
-                var array = await ctx.ParseArrayToMemory(ms, "array",BlittableJsonDocumentBuilder.UsageMode.None);
+                var array = await ctx.ParseArrayToMemoryAsync(ms, "array",BlittableJsonDocumentBuilder.UsageMode.None);
                 Assert.Equal("Oren", array.GetStringByIndex(0));
                 Assert.Equal("Arava", array.GetStringByIndex(1));
             }

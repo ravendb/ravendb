@@ -100,7 +100,6 @@ namespace Raven.Server.Routing
 
         }
 
-
         public MatchResult TryMatch(string method, string url)
         {
             var match = new MatchResult
@@ -113,7 +112,7 @@ namespace Raven.Server.Routing
             };
 
             var result = match.SearchTrie(this, method);
-            if (result == null /*|| result.c != result.Key.Length*/)
+            if (result == null)
             {
                 return match;
             }

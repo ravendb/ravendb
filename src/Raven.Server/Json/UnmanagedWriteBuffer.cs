@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Abstractions.Util;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 using Sparrow.Binary;
@@ -39,6 +40,14 @@ namespace Raven.Server.Json
                 Used = 0,
                 Previous = null
             };
+        }
+
+        public void Write(byte[] buffer, int start, int count)
+        {
+            fixed (byte* p = buffer)
+            {
+                Write(p + start, count);
+            }
         }
 
         public void Write(byte* buffer, int length)

@@ -17,6 +17,8 @@ namespace Raven.Server.Json
         public int? LastFoundAt;
 
 
+        public byte this[int index] => Buffer[index];
+
         public LazyStringValue(string str, byte* buffer, int size, RavenOperationContext context)
         {
             String = str;

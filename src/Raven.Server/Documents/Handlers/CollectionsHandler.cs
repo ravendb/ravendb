@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+
 using Microsoft.AspNet.Http;
+
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class CollectionsHandler : DatabaseRequestHandler
     {
@@ -20,17 +21,16 @@ namespace Raven.Server.Documents
                 var collections= new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
-                    ["NumberOfDocuments"] = DocumentsStorage.GetNumberOfDocuments(context),
+                    ["NumberOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
                     ["Collections"] = collections
                 };
 
-                foreach (var collectionStat in DocumentsStorage.GetCollections(context))
+                foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
                 {
                     collections[collectionStat.Name] = collectionStat.Count;
                 }
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                await context.WriteAsync(writer, result);
-                writer.Flush();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    context.Write(writer, result);
             }
         }
 
@@ -42,8 +42,8 @@ namespace Raven.Server.Documents
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
-                var documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
-                await WriteDocumentsAsync(context, documents);
+                var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
+                WriteDocuments(context, documents);
             }
         }
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
                         if (maxEtag == -1)
                             maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction);
 
-                        DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
+                        Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
                         context.Transaction.Commit();
                     }
 

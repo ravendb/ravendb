@@ -1,10 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
@@ -17,6 +14,12 @@ namespace Raven.Server.Config.Categories
         private string workingDirectory;
         private string dataDirectory;
         private string serverUrl;
+
+        [Description("The maximum allowed page size for queries")]
+        [DefaultValue(1024)]
+        [MinValue(10)]
+        [ConfigurationEntry("Raven/MaxPageSize")]
+        public int MaxPageSize { get; set; }
 
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
         [DefaultValue("http://localhost:8080")]
