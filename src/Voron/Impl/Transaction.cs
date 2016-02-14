@@ -21,7 +21,7 @@ namespace Voron.Impl
             get { return _lowLevelTransaction; }
         }
 
-        internal Action<Transaction> AfterCommit = delegate { };
+        public Action AfterCommit = delegate { };
 
         private readonly Dictionary<string, PrefixTree> _prefixTrees = new Dictionary<string, PrefixTree>();
         private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
@@ -62,6 +62,8 @@ namespace Voron.Impl
         {
             CommitTrees();
             _lowLevelTransaction.Commit();
+
+            AfterCommit();
         }
 
         internal void CommitTrees()

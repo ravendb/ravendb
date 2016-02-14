@@ -16,11 +16,17 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var ctx = new RavenOperationContext(pool))
             using (var stream = typeof(UnmanageJsonReaderTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
-            using (var parser = new UnmanagedJsonStreamParser(stream, ctx, new JsonParserState(), "test"))
+            using (var parser = new UnmanagedJsonParser(ctx, new JsonParserState(), "test"))
             {
+                var buffer = new byte[4096];
                 while (stream.Position != stream.Length)
                 {
-                    parser.ReadAsync().Wait();
+                    var read = stream.Read(buffer, 0, buffer.Length);
+                    parser.SetBuffer(buffer, read);
+                    while (parser.Read())
+                    {
+                        
+                    }
                 }
             }
         }

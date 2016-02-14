@@ -7,14 +7,20 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Blittable.Benchmark;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
+using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.Bugs;
 using Newtonsoft.Json;
+using Raven.Client.Document;
+using Raven.Server.Indexing.Corax;
+using Raven.Server.Indexing.Corax.Analyzers;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Tests.Core;
 using Tryouts.Corax;
+using Tryouts.Corax.Tests;
 using Voron;
 using Voron.Debugging;
 using Xunit;
@@ -25,10 +31,19 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //new DuplicatePageUsage().ShouldNotHappen();
-            //Run();
+            GC.KeepAlive(typeof(DocumentStore));
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"d:\json\big", Path.GetTempFileName(), 2);
+            //////Console.WriteLine("Ready...");
+            //////Console.WriteLine();
+            //////Console.ReadLine();
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"d:\json\big", Path.GetTempFileName(), int.MaxValue);
+            ////WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", 1);
+            ////Console.WriteLine();
+            ////WriteToStreamBenchmark.ManySmallDocs(@"d:\json\lines", int.MaxValue);
+            var basicIndexUsage = new FullTextSearch();
+            basicIndexUsage.CanSort();
 
-            new MultiGetOperations().WithPaging().Wait();
+            //Run();
         }
 
         private static void Run()
@@ -47,32 +62,35 @@ namespace Tryouts
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void CheckIndexer()
         {
-            var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath("test55");
             storageEnvironmentOptions.ManualFlushing = true;
-            using (var corax = new FullTextIndex(storageEnvironmentOptions))
+            using (var corax = new FullTextIndex(storageEnvironmentOptions, new DefaultAnalyzer()))
             {
-                for (int a = 0; a < 5; a++)
+                for (int a = 0; a < 10; a++)
                 {
                     using (var indexer = corax.CreateIndexer())
                     {
                         int index = 0;
-                        foreach (var line in File.ReadLines(@"C:\Users\Ayende\Downloads\pr.txt"))
                         {
-                            indexer.NewEntry(new DynamicJsonValue
+                            foreach (var line in File.ReadLines(@"C:\Users\Ayende\Downloads\pr.txt"))
                             {
-                                ["Location"] = line,
-                                //["Active"] = "true",
-                                //["Age"] = (index % 120).ToString(),
-                                //["Name"] = line.Substring(0, Math.Min(15, line.Length))
-                            }, "users/" + (++index)).Wait();
+                                indexer.NewEntry(new DynamicJsonValue
+                                {
+                                    ["Location"] = line,
+                                    ["Active"] = "true",
+                                    ["Age"] = (index % 120).ToString(),
+                                    ["Name"] = line.Substring(0, Math.Min(15, line.Length))
+                                }, "users/" + (++index));
+                            }
                         }
                     }
+                    corax.Env.FlushLogToDataFile();
+
+                    var environmentStats = corax.Env.Stats();
+                    Console.WriteLine(JsonConvert.SerializeObject(environmentStats, Formatting.Indented));
+
                 }
 
-                //corax.Environment.FlushLogToDataFile();
-
-                //var environmentStats = corax.Environment.Stats();
-                //Console.WriteLine(JsonConvert.SerializeObject(environmentStats,Formatting.Indented));
 
                 //using (var searcher = corax.CreateSearcher())
                 //{
@@ -98,7 +116,7 @@ namespace Tryouts
         {
             var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
             storageEnvironmentOptions.ManualFlushing = true;
-            using (var corax = new FullTextIndex(storageEnvironmentOptions))
+            using (var corax = new FullTextIndex(storageEnvironmentOptions, new DefaultAnalyzer()))
             {
                 using (var indexer = corax.CreateIndexer())
                 {
@@ -110,7 +128,7 @@ namespace Tryouts
                             indexer.NewEntry(new DynamicJsonValue
                             {
                                 ["Location"] = line
-                            }, "users/" + (++index)).Wait();
+                            }, "users/" + (++index));
 
                         }
                     }

@@ -15,7 +15,7 @@ class updateServerPrefixHiLoCommand extends commandBase {
             var doc = {
                 ServerPrefix: this.serverPrefix
             };
-            return this.put("/docs/Raven/ServerPrefixForHilo", JSON.stringify(doc), this.db)
+            return this.put("/document?id=Raven/ServerPrefixForHilo", JSON.stringify(doc), this.db)
                 .done(() => this.reportSuccess("Saved ServerPrefix configuration"))
                 .fail((response: JQueryXHR) => this.reportError("Failed to save ServerPrefix configuration", response.responseText, response.statusText));
             

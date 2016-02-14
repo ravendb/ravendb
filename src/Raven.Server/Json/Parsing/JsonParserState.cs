@@ -10,6 +10,8 @@ namespace Raven.Server.Json.Parsing
         public int? CompressedSize;
         public long Long;
         public JsonParserToken CurrentTokenType;
+        public JsonParserTokenContinuation Continuation;
+
         public readonly List<int> EscapePositions = new List<int>();
 
         private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };

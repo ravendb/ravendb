@@ -52,7 +52,7 @@ namespace Raven.Server.Json
             }
         }
 
-        internal const BlittableJsonToken typesMask =
+        internal const BlittableJsonToken TypesMask =
                 BlittableJsonToken.Boolean |
                 BlittableJsonToken.Float |
                 BlittableJsonToken.Integer |
