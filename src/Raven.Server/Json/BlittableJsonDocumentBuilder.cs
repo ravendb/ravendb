@@ -717,7 +717,7 @@ namespace Raven.Server.Json
             return new BlittableJsonReaderObject(ptr, size, _context, this, cachedProperties);
         }
 
-        public unsafe BlittableJsonReaderArray CreateArrayReader()
+        public BlittableJsonReaderArray CreateArrayReader()
         {
             var reader = CreateReader();
             BlittableJsonReaderArray array;
@@ -726,5 +726,10 @@ namespace Raven.Server.Json
             throw new InvalidOperationException("Couldn't find array");
         }
 
+
+        public override string ToString()
+        {
+            return "Building json for " + _debugTag;
+        }
     }
 }

@@ -51,6 +51,13 @@ namespace Raven.Server.Json.Parsing
             {
                 case JsonParserTokenContinuation.None:
                     break;// parse normally
+                case JsonParserTokenContinuation.PartialNaN:
+                    if (EnsureRestOfToken() == false)
+                        return false;
+                    _state.Continuation = JsonParserTokenContinuation.None;
+                    _state.CurrentTokenType = JsonParserToken.Float;
+                    _stringBuffer.EnsureSingleChunk(_state);
+                    return true;
                 case JsonParserTokenContinuation.PartialNumber:
                     if (ParseNumber() == false)
                         return false;
@@ -157,7 +164,7 @@ namespace Raven.Server.Json.Parsing
                         _expectedTokenString = "NaN";
                         if (EnsureRestOfToken() == false)
                         {
-                            _state.Continuation = JsonParserTokenContinuation.PartialFalse;
+                            _state.Continuation = JsonParserTokenContinuation.PartialNaN;
                             return false;
                         }
 

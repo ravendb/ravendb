@@ -336,28 +336,28 @@ namespace Raven.Server.Json
             var buffer = GetParsingBuffer();
             using (var parser = new UnmanagedJsonParser(this, state, debugTag))
             {
-                var writer = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, state);
+                var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();
-                    writer.ReadObject();
+                    builder.ReadObject();
                     while (true)
                     {
                         var read = stream.Read(buffer, 0, buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         parser.SetBuffer(buffer, read);
-                        if (writer.Read())
+                        if (builder.Read())
                             break;
                     }
-                    writer.FinalizeDocument();
+                    builder.FinalizeDocument();
 
-                    _disposables.Add(writer);
-                    return writer.CreateReader();
+                    _disposables.Add(builder);
+                    return builder.CreateReader();
                 }
                 catch (Exception)
                 {
-                    writer.Dispose();
+                    builder.Dispose();
                     throw;
                 }
             }

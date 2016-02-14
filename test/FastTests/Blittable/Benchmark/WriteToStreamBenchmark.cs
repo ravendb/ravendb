@@ -15,7 +15,7 @@ namespace FastTests.Blittable.Benchmark
     {
         public static void ManySmallDocs(string directory, int take)
         {
-            var files = Directory.GetFiles(directory, "c*.json").OrderBy(f => new FileInfo(f).Length).Take(take);
+            var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length).Take(take);
             foreach (var jsonFile in files)
             {
                 Console.Write(Path.GetFileName(jsonFile));
