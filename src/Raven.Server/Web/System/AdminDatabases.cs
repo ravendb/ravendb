@@ -21,7 +21,7 @@ namespace Raven.Server.Web.System
             RavenOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
                 var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
                 if (string.IsNullOrWhiteSpace(id))
@@ -70,7 +70,7 @@ namespace Raven.Server.Web.System
             RavenOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.WriteTransaction();
+                context.OpenWriteTransaction();
                 var dbId = Constants.Database.Prefix + id;
 
                 var etag = HttpContext.Request.Headers["ETag"];

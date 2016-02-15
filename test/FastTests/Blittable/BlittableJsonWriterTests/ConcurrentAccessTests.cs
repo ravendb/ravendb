@@ -15,7 +15,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = GenerateSimpleEntityForFunctionalityTest2();
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
             using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                /* FileStream file = new FileStream(@"c:\Temp\example.txt",FileMode.Create);
@@ -33,7 +33,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             Parallel.ForEach(Enumerable.Range(0, 100), x =>
             {
-                using (var localCtx = new RavenOperationContext(unmanagedPool))
+                using (var localCtx = new RavenOperationContext(unmanagedPool, null))
                 {
                     AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
                 }

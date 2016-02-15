@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
                 // everything here operates on all docs
                 var actualEtag = ComputeAllDocumentsEtag(context);
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var buffer = stackalloc long[2];
 
-            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction);
+            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
             buffer[1] = Database.DocumentsStorage.GetNumberOfDocuments(context);
 
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);

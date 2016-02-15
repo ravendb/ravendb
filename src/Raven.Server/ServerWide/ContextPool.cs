@@ -27,10 +27,7 @@ namespace Raven.Server.ServerWide
         public IDisposable AllocateOperationContext(out RavenOperationContext context)
         {
             if (_contextPool.TryPop(out context) == false)
-                context = new RavenOperationContext(_pool)
-                {
-                    Environment = _env
-                };
+                context = new RavenOperationContext(_pool, _env);
            
             return new ReturnRequestContext
             {

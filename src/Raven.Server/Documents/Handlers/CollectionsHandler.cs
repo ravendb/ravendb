@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
                 var collections= new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
                 WriteDocuments(context, documents);
@@ -59,10 +59,10 @@ namespace Raven.Server.Documents.Handlers
                 long maxEtag = -1;
                 while (true)
                 {
-                    using (context.Transaction = context.Environment.WriteTransaction())
+                    using (context.OpenWriteTransaction())
                     {
                         if (maxEtag == -1)
-                            maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction);
+                            maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
 
                         Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
                         context.Transaction.Commit();

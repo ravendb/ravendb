@@ -31,7 +31,7 @@ namespace Raven.Server.Indexing.Corax
         {
             _parent = parent;
             _batchSize = batchSize;
-            _context = new RavenOperationContext(_parent.Pool);
+            _context = new RavenOperationContext(_parent.Pool, _parent.Env);
             _mmapStream = new MmapStream(null, 0);
             _mmapReader = new StreamReader(_mmapStream);
         }

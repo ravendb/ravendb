@@ -9,7 +9,6 @@ using Raven.Server.Routing;
 using Sparrow;
 using Sparrow.Binary;
 using Voron;
-using Voron.Impl;
 using Voron.Util;
 
 namespace Raven.Server.Json
@@ -33,17 +32,27 @@ namespace Raven.Server.Json
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
-        public Transaction Transaction;
+        public DocumentTransaction Transaction;
         public CachedProperties CachedProperties;
-        public StorageEnvironment Environment;
+        public readonly StorageEnvironment Environment;
         private int _lastStreamSize = 4096;
 
-
-        public RavenOperationContext(UnmanagedBuffersPool pool)
+        public RavenOperationContext(UnmanagedBuffersPool pool, StorageEnvironment environment)
         {
             Pool = pool;
+            Environment = environment;
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
+        }
+
+        public DocumentTransaction OpenReadTransaction()
+        {
+            return Transaction = new DocumentTransaction(this, Environment.ReadTransaction());
+        }
+
+        public DocumentTransaction OpenWriteTransaction()
+        {
+            return Transaction = new DocumentTransaction(this, Environment.WriteTransaction());
         }
 
         private byte[] GetParsingBuffer()

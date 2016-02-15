@@ -17,16 +17,14 @@ namespace Raven.Server.Indexing.Corax
         public Searcher(FullTextIndex parent)
         {
             _parent = parent;
-            _context = new RavenOperationContext(_parent.Pool)
-            {
-                Transaction = _parent.Env.ReadTransaction()
-            };
+            _context = new RavenOperationContext(_parent.Pool, _parent.Env);
+            _context.OpenReadTransaction();
             _context.CachedProperties.Version = 1;
         }
 
         public unsafe string[] Query(QueryDefinition qd)
         {
-            var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction);
+            var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction.InnerTransaction);
             //TODO: implement using heap
             //var heap = new Heap<QueryMatch>(qd.Take, QueryMatchScoreSorter.Instance);
             qd.Query.Initialize(_parent, _context, entries);

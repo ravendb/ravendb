@@ -21,7 +21,7 @@ namespace FastTests.Blittable
         public void CanSkipWritingPropertyNames()
         {
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new RavenOperationContext(pool, null))
             {
                 var buffer = Encoding.UTF8.GetBytes("{\"Name\":\"Oren\"}");
                 var state = new JsonParserState();

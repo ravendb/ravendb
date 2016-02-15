@@ -119,7 +119,7 @@ namespace FastTests.Blittable
         private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new RavenOperationContext(pool, null))
             {
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);

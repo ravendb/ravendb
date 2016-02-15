@@ -36,7 +36,7 @@ namespace FastTests.Blittable.Benchmark
 
                 size = 0;
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-                using (var blittableContext = new RavenOperationContext(unmanagedPool))
+                using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
                 {
                     sp.Restart();
 
@@ -77,7 +77,7 @@ namespace FastTests.Blittable.Benchmark
                 }
 
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-                using (var blittableContext = new RavenOperationContext(unmanagedPool))
+                using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
                 {
                     foreach (var line in jsonCache)
                     {
@@ -112,7 +112,7 @@ namespace FastTests.Blittable.Benchmark
         private static unsafe void BlitIndexing(List<BlittableJsonReaderObject> blitCache)
         {
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
             {
                 foreach (var tuple in blitCache)
                 {
@@ -138,7 +138,7 @@ namespace FastTests.Blittable.Benchmark
 
                 streamWriter.WriteLine("Name,Json Parse Time,Json Size, Json Time, Blit Parse Time,Blit Size, Blit Time");
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-                using (var blittableContext = new RavenOperationContext(unmanagedPool))
+                using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
                 {
                     foreach (var jsonFile in files)
                     {

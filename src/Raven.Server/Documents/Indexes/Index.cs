@@ -243,26 +243,26 @@ namespace Raven.Server.Documents.Indexes
             RavenOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             {
-                using (var tx = context.Environment.ReadTransaction())
+                using (var tx = context.OpenReadTransaction())
                 {
                     return ReadLastMappedEtag(tx);
                 }
             }
         }
 
-        protected long ReadLastMappedEtag(Transaction tx)
+        protected long ReadLastMappedEtag(DocumentTransaction tx)
         {
             return ReadLastEtag(tx, LastMappedEtagSlice);
         }
 
-        protected long ReadLastReducedEtag(Transaction tx)
+        protected long ReadLastReducedEtag(DocumentTransaction tx)
         {
             return ReadLastEtag(tx, LastReducedEtagSlice);
         }
 
-        private static long ReadLastEtag(Transaction tx, Slice key)
+        private static long ReadLastEtag(DocumentTransaction tx, Slice key)
         {
-            var statsTree = tx.CreateTree("Stats");
+            var statsTree = tx.InnerTransaction.CreateTree("Stats");
             var readResult = statsTree.Read(key);
             long lastEtag = 0;
             if (readResult != null)
@@ -271,19 +271,19 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        private void WriteLastMappedEtag(Transaction tx, long etag)
+        private void WriteLastMappedEtag(DocumentTransaction tx, long etag)
         {
             WriteLastEtag(tx, LastMappedEtagSlice, etag);
         }
 
-        private void WriteLastReducedEtag(Transaction tx, long etag)
+        private void WriteLastReducedEtag(DocumentTransaction tx, long etag)
         {
             WriteLastEtag(tx, LastReducedEtagSlice, etag);
         }
 
-        private static unsafe void WriteLastEtag(Transaction tx, Slice key, long etag)
+        private static unsafe void WriteLastEtag(DocumentTransaction tx, Slice key, long etag)
         {
-            var statsTree = tx.CreateTree("Stats");
+            var statsTree = tx.InnerTransaction.CreateTree("Stats");
             statsTree.Add(key, new Slice((byte*)&etag, sizeof(long)));
         }
 
@@ -372,10 +372,8 @@ namespace Raven.Server.Documents.Indexes
                             var count = 0;
                             var earlyExit = false;
 
-                            using (var tx = databaseContext.Environment.ReadTransaction())
+                            using (databaseContext.OpenReadTransaction())
                             {
-                                databaseContext.Transaction = tx;
-
                                 var sw = Stopwatch.StartNew();
                                 var fetchedTotalSize = 0;
                                 foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, pageSize))
@@ -424,10 +422,8 @@ namespace Raven.Server.Documents.Indexes
                             if (count == 0)
                                 break;
 
-                            using (var tx = indexContext.Environment.WriteTransaction())
+                            using (var tx = indexContext.OpenWriteTransaction())
                             {
-                                indexContext.Transaction = tx;
-
                                 WriteLastMappedEtag(tx, lastEtag);
 
                                 tx.Commit();

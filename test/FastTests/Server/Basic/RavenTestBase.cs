@@ -82,7 +82,7 @@ namespace Raven.Tests.Core
             RavenOperationContext context;
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
                 if (Server.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
                     throw new InvalidOperationException($"Database '{databaseName}' already exists");
             }
@@ -94,7 +94,7 @@ namespace Raven.Tests.Core
             };
             store.Initialize();
 
-            await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc);
+            await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
             store.AfterDispose += (sender, args) =>
             {
                 store.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(databaseName, hardDelete: true);

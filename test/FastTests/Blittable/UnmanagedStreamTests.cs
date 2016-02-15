@@ -12,7 +12,7 @@ namespace FastTests.Blittable
         public void EnsureSingleChunk()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool, null))
             {
                 var newStream = ctx.GetStream("tst");
                 var buffer = new byte[1337];
@@ -43,7 +43,7 @@ namespace FastTests.Blittable
         public void BulkWriteAscendingSizeTest()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-                using(var ctx = new RavenOperationContext(unmanagedByteArrayPool))
+                using(var ctx = new RavenOperationContext(unmanagedByteArrayPool, null))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");
@@ -86,7 +86,7 @@ namespace FastTests.Blittable
             var size = 3917701;
            
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool, null))
             {
                 var data = ctx.GetMemory(size);
                 ctx.ReturnMemory(data);
@@ -97,7 +97,7 @@ namespace FastTests.Blittable
         public void BulkWriteDescendingSizeTest()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using(var ctx = new RavenOperationContext(unmanagedByteArrayPool))
+            using(var ctx = new RavenOperationContext(unmanagedByteArrayPool, null))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");
@@ -134,7 +134,7 @@ namespace FastTests.Blittable
         public void SingleByteWritesTest()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool, null))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");

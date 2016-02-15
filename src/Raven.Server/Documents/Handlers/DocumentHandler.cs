@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
                 await GetDocumentsById(context, GetStringValuesQueryString("id"));
             }
         }
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                     ids[i] = array.GetStringByIndex(i);
                 }
 
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
                 await GetDocumentsById(context, new StringValues(ids));
             }
         }
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                context.Transaction = context.Environment.WriteTransaction();
+                context.OpenWriteTransaction();
                 Database.DocumentsStorage.Delete(context, id, etag);
                 context.Transaction.Commit();
 
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Handlers
                 var etag = GetLongFromHeaders("If-Match");
 
                 PutResult putResult;
-                using (context.Transaction = context.Environment.WriteTransaction())
+                using (context.OpenWriteTransaction())
                 {
                     putResult = Database.DocumentsStorage.Put(context, id, etag, doc);
                     context.Transaction.Commit();

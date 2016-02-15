@@ -19,7 +19,7 @@ namespace FastTests.Blittable.Benchmark
             string directory = @"C:\Users\bumax_000\Downloads\JsonExamples";
             var files = Directory.GetFiles(directory, "*.json");
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
             {
                 foreach (var file in files.OrderBy(x=> new FileInfo(x).Length).Take(take))
                 {

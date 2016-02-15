@@ -11,7 +11,7 @@ using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    
+
     public class BlittableFormatTests
     {
         [Theory]
@@ -22,8 +22,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             {
                 var compacted = JObject.Parse(new StreamReader(stream).ReadToEnd()).ToString(Formatting.None);
                 stream.Position = 0;
-                using (var pool = new UnmanagedBuffersPool("test") )
-                using (var context = new RavenOperationContext(pool))
+                using (var pool = new UnmanagedBuffersPool("test"))
+                using (var context = new RavenOperationContext(pool, null))
                 {
                     var writer = context.Read(stream, "docs/1");
 
@@ -44,16 +44,16 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })
             {
                 using (var pool = new UnmanagedBuffersPool("test"))
-                using (var context = new RavenOperationContext(pool))
+                using (var context = new RavenOperationContext(pool, null))
                 {
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
-                    
+
                     using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly
                         .GetManifestResourceStream(resource))
                     {
                         var compacted = JObject.Load(new JsonTextReader(new StreamReader(stream))).ToString(Formatting.None);
                         stream.Position = 0;
-                       
+
                         using (var writer = context.Read(stream, "docs/1 "))
                         {
 

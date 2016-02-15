@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var reply = new DynamicJsonArray();
 
-                using (context.Transaction = context.Environment.WriteTransaction())
+                using (context.OpenWriteTransaction())
                 {
 
                     for (int i = 0; i < parsedCommands.Length; i++)

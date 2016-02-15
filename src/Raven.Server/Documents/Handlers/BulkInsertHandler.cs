@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
 
                         if (batch.Count > 0)
                         {
-                            using (context.Transaction = context.Environment.WriteTransaction())
+                            using (context.OpenWriteTransaction())
                             {
                                 foreach (var doc in batch)
                                 {

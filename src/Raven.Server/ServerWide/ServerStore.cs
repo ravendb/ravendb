@@ -87,7 +87,7 @@ namespace Raven.Server.ServerWide
 
         public BlittableJsonReaderObject Read(RavenOperationContext ctx, string id)
         {
-            var dbs = ctx.Transaction.ReadTree("items");
+            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
             var result = dbs.Read(id);
             if (result == null)
                 return null;
@@ -102,7 +102,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<Item> StartingWith(RavenOperationContext ctx, string prefix, int start, int take)
         {
-            var dbs = ctx.Transaction.ReadTree("items");
+            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
             using (var it = dbs.Iterate())
             {
                 it.RequiredPrefix = prefix;
@@ -137,7 +137,7 @@ namespace Raven.Server.ServerWide
 
         public void Write(RavenOperationContext ctx, string id, BlittableJsonReaderObject doc)
         {
-            var dbs = ctx.Transaction.ReadTree("items");
+            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
 
             var ptr = dbs.DirectAdd(id, doc.Size);
             doc.CopyTo(ptr);

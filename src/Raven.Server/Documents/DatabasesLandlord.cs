@@ -197,7 +197,7 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
                 var id = Constants.Database.Prefix + tenantId;
                 var jsonReaderObject = ServerStore.Read(context, id);

@@ -21,7 +21,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = GenerateSimpleEntityForFunctionalityTest();
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
             using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
@@ -47,7 +47,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 AssertComplexEmployee(str, employee, blittableContext);
@@ -60,7 +60,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = "{\"Alias\":\"Jimmy\",\"Data\":[],\"Name\":\"Trolo\",\"SubData\":{\"SubArray\":[]}}";
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(employee);
@@ -135,7 +135,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new RavenOperationContext(unmanagedPool, null))
             using (var doc =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(doc);
@@ -173,7 +173,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             });
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new RavenOperationContext(pool, null))
             using (var r =  ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();
@@ -193,7 +193,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             });
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new RavenOperationContext(pool, null))
             using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();

@@ -88,7 +88,7 @@ namespace FastTests.Blittable
         private static void AssertEqualAfterRoundTrip(DynamicJsonValue  doc, string expected)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new RavenOperationContext(pool, null))
             {
                 using (var writer = ctx.ReadObject(doc, "foo"))
                 {

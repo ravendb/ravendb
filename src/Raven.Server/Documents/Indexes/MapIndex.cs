@@ -23,13 +23,13 @@ namespace Raven.Server.Documents.Indexes
         protected override bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag)
         {
             long lastDocumentEtag;
-            using (var tx = databaseContext.Environment.ReadTransaction())
+            using (var tx = databaseContext.OpenReadTransaction())
             {
-                lastDocumentEtag = DocumentsStorage.ReadLastEtag(tx);
+                lastDocumentEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
             }
 
             long lastMappedEtag;
-            using (var tx = indexContext.Environment.ReadTransaction())
+            using (var tx = indexContext.OpenReadTransaction())
             {
                 lastMappedEtag = ReadLastMappedEtag(tx);
             }

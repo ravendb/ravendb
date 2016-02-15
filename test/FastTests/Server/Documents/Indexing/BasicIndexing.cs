@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -63,15 +62,10 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications))
                 {
-                    using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty))
+                    using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty), storage.Environment))
                     {
-                        Environment = storage.Environment
-                    })
-                    {
-                        using (var tx = context.Environment.WriteTransaction())
+                        using (var tx = context.OpenWriteTransaction())
                         {
-                            context.Transaction = tx;
-
                             using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
@@ -103,10 +97,8 @@ namespace FastTests.Server.Documents.Indexing
 
                         WaitForIndexMap(index, 2);
 
-                        using (var tx = context.Environment.WriteTransaction())
+                        using (var tx = context.OpenWriteTransaction())
                         {
-                            context.Transaction = tx;
-
                             using (var doc = CreateDocument(context, "key/3", new DynamicJsonValue
                             {
                                 ["Name"] = "William",

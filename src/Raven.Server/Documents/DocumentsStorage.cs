@@ -158,7 +158,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsStartingWith(RavenOperationContext context, string prefix, string matches, string exclude, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction);
+            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
 
             var prefixSlice = GetSliceFromKey(context, prefix);
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(RavenOperationContext context, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction);
+            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], long.MaxValue))
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(RavenOperationContext context, string collection, int start, int take)
         {
-            var table = new Table(_docsSchema, "@" + collection, context.Transaction);
+            var table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue))
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, long etag, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction);
+            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, string collection, long etag, int start, int take)
         {
-            var table = new Table(_docsSchema, "@" + collection, context.Transaction);
+            var table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
 
-            var table = new Table(_docsSchema, context.Transaction);
+            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
 
             var tvr = table.ReadByKey(GetSliceFromKey(context, key));
             if (tvr == null)
@@ -395,17 +395,17 @@ namespace Raven.Server.Documents
 
             if (doc.Etag == _lastEtag)
             {
-                var etagTree = context.Transaction.ReadTree("Etags");
+                var etagTree = context.Transaction.InnerTransaction.ReadTree("Etags");
                 var etag = _lastEtag;
                 etagTree.Add(LastEtagSlice, new Slice((byte*)&etag, sizeof(long)));
             }
 
             string originalCollectionName;
             var collectionName = GetCollectionName(key, doc.Data, out originalCollectionName);
-            var table = new Table(_docsSchema, collectionName, context.Transaction);
+            var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
             table.Delete(doc.StorageId);
 
-            context.Transaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
+            context.Transaction.InnerTransaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
             {
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
@@ -419,7 +419,7 @@ namespace Raven.Server.Documents
         public void DeleteCollection(RavenOperationContext context, string name, List<long> deletedList, long untilEtag)
         {
             name = "@" + name; //todo: avoid this allocation
-            var table = new Table(_docsSchema, name, context.Transaction);
+            var table = new Table(_docsSchema, name, context.Transaction.InnerTransaction);
             table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, untilEtag);
         }
 
@@ -434,8 +434,8 @@ namespace Raven.Server.Documents
 
             string originalCollectionName;
             var collectionName = GetCollectionName(key, document, out originalCollectionName);
-            _docsSchema.Create(context.Transaction, collectionName);
-            var table = new Table(_docsSchema, collectionName, context.Transaction);
+            _docsSchema.Create(context.Transaction.InnerTransaction, collectionName);
+            var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
             if (key[key.Length - 1] == '/')
             {
@@ -481,7 +481,7 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
-            context.Transaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
+            context.Transaction.InnerTransaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
             {
                 Etag = newEtag,
                 CollectionName = originalCollectionName,
@@ -498,7 +498,7 @@ namespace Raven.Server.Documents
 
         private string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, RavenOperationContext context)
         {
-            var identities = context.Transaction.ReadTree("Identities");
+            var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
             var nextIdentityValue = identities.Increment(key, 1);
 
             var finalKey = key + nextIdentityValue;
@@ -554,14 +554,14 @@ namespace Raven.Server.Documents
 
         public long IdentityFor(RavenOperationContext ctx, string key)
         {
-            var identities = ctx.Transaction.ReadTree("Identities");
+            var identities = ctx.Transaction.InnerTransaction.ReadTree("Identities");
             return identities.Increment(key, 1);
         }
 
         public long GetNumberOfDocuments(RavenOperationContext context)
         {
             var fstIndex = _docsSchema.FixedSizeIndexes["AllDocsEtags"];
-            var fst = context.Transaction.FixedTreeFor(fstIndex.NameAsSlice, sizeof(long));
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.NameAsSlice, sizeof(long));
             return fst.NumberOfEntries;
         }
 
@@ -573,20 +573,20 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CollectionStat> GetCollections(RavenOperationContext context)
         {
-            using (var it = context.Transaction.LowLevelTransaction.RootObjects.Iterate())
+            using (var it = context.Transaction.InnerTransaction.LowLevelTransaction.RootObjects.Iterate())
             {
                 if (it.Seek(Slice.BeforeAllKeys) == false)
                     yield break;
                 do
                 {
-                    if (context.Transaction.GetRootObjectType(it.CurrentKey) != RootObjectType.VariableSizeTree)
+                    if (context.Transaction.InnerTransaction.GetRootObjectType(it.CurrentKey) != RootObjectType.VariableSizeTree)
                         continue;
 
                     if (it.CurrentKey[0] != '@') // collection prefix
                         continue;
 
                     var collectionTableName = it.CurrentKey.ToString();
-                    var collectionTable = new Table(_docsSchema, collectionTableName, context.Transaction);
+                    var collectionTable = new Table(_docsSchema, collectionTableName, context.Transaction.InnerTransaction);
 
 
                     yield return new CollectionStat

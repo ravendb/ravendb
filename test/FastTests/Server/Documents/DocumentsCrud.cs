@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Abstractions.Exceptions;
@@ -36,9 +35,9 @@ namespace FastTests.Server.Documents
         [InlineData("לכובע שלי שלוש פינות")]
         public void PutAndGetDocumentById(string key)
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc = ctx.ReadObject(new DynamicJsonValue
                 {
@@ -50,9 +49,9 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 var document = _documentsStorage.Get(ctx, key);
                 Assert.NotNull(document);
@@ -72,9 +71,9 @@ namespace FastTests.Server.Documents
         [InlineData("לכובע שלי שלוש פינות")]
         public void CanDelete(string key)
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -86,18 +85,18 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 _documentsStorage.Delete(ctx, key, null);
 
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 var document = _documentsStorage.Get(ctx, key);
                 Assert.Null(document);
@@ -109,9 +108,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByGlobalEtag()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -149,9 +148,9 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 var documents = _documentsStorage.GetDocumentsAfter(ctx, 0, 0, 100).ToList();
                 Assert.Equal(3, documents.Count);
@@ -170,9 +169,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void EtagsArePersisted()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -192,9 +191,9 @@ namespace FastTests.Server.Documents
 
             Restart();
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -216,9 +215,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void EtagsArePersistedWithDeletes()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -239,9 +238,9 @@ namespace FastTests.Server.Documents
 
             Restart();
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
@@ -279,9 +278,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByPrefix()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -319,9 +318,9 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 var documents = _documentsStorage.GetDocumentsStartingWith(ctx, "users/", null, null, 0, 100).ToList();
                 Assert.Equal(2, documents.Count);
@@ -338,9 +337,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByCollectionEtag()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -379,9 +378,9 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 var documents = _documentsStorage.GetDocumentsAfter(ctx, "Users", 0, 0, 10).ToList();
                 Assert.Equal(2, documents.Count);
@@ -398,9 +397,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_New()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -422,9 +421,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_Existing()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -446,9 +445,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteExisting()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -470,9 +469,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteNotThere()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 Assert.Throws<ConcurrencyException>(() => _documentsStorage.Delete(ctx, "users/1", 3));
 
@@ -483,9 +482,9 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_ShouldBeNew()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
@@ -508,9 +507,9 @@ namespace FastTests.Server.Documents
         public void PutDocumentWithoutId()
         {
             var key = "users/";
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 for (int i = 1; i < 5; i++)
                 {
@@ -526,18 +525,18 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 _documentsStorage.Delete(ctx, "users/2", null);
 
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentsStorage.Environment))
             {
-                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+                ctx.OpenWriteTransaction();
 
                 using (var doc =  ctx.ReadObject(new DynamicJsonValue
                 {
