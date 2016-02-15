@@ -4,7 +4,7 @@
 
 ### What to Use RavenDB for and When to Use It
 
-A relational database requires a database schema to define columns and rows in tables. RavenDB is a schema-free NoSQL (non-relational) database that allows you to just store your stuff.  It is built in .NET, has both a .NET client api and a JAVA client api, and uses JSON documents for storage of data.  Sharding is supported which means data can be split across multipe servers and in addition, ACID transactions guarantee reliable processing.  RavenDB excels when speed, large datasets, scaling, or ease of use are a concern.
+A relational database requires a database schema to define columns and rows in tables. RavenDB is a schema-free NoSQL (non-relational) database that allows you to just store your stuff.  It is built in .NET, has both a .NET client API and a JAVA client API, and uses JSON documents for storage of data.  Sharding is supported, which means data can be split across multipe servers.  In addition, ACID transactions guarantee reliable processing.  RavenDB excels when speed, large datasets, scaling, and/or ease-of-use are a concern.
 
 Issue tracker: http://issues.hibernatingrhinos.com
 
