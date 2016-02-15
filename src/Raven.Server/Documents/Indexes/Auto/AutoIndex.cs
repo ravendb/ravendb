@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             Debug.Assert(Definition.Collections.Any(x => string.Equals(x, collection, StringComparison.OrdinalIgnoreCase)), "Collection does not match.");
 
-            var indexDocument = new Lucene.Net.Documents.Document();
+            var indexDocument = IndexPersistence.DocumentConverter.CreateDocument();
 
             foreach (var field in IndexPersistence.DocumentConverter.GetFields(_fields, document))
                 indexDocument.Add(field);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,6 +8,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -68,7 +70,7 @@ namespace FastTests.Server.Documents.Indexing
                         {
                             context.Transaction = tx;
 
-                            using (var doc =  CreateDocument(context, "key/1", new DynamicJsonValue
+                            using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -80,7 +82,7 @@ namespace FastTests.Server.Documents.Indexing
                                 storage.Put(context, "key/1", null, doc);
                             }
 
-                            using (var doc =  CreateDocument(context, "key/2", new DynamicJsonValue
+                            using (var doc = CreateDocument(context, "key/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -97,7 +99,7 @@ namespace FastTests.Server.Documents.Indexing
 
                         index.Execute(CancellationToken.None);
 
-                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 2, TimeSpan.FromSeconds(15)));
+                        WaitForIndexMap(index, 2);
 
                         using (var tx = context.Environment.WriteTransaction())
                         {
@@ -118,10 +120,16 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 3, TimeSpan.FromSeconds(15)));
+                        WaitForIndexMap(index, 3);
                     }
                 }
             }
+        }
+
+        private static void WaitForIndexMap(Index index, long etag)
+        {
+            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
+            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == etag, timeout));
         }
 
         private static BlittableJsonReaderObject CreateDocument(RavenOperationContext context, string key, DynamicJsonValue value)

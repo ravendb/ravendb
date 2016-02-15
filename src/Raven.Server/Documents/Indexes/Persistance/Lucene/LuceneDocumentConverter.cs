@@ -17,6 +17,15 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>(Comparer);
 
+        private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
+
+        public global::Lucene.Net.Documents.Document CreateDocument()
+        {
+            // no need to clear the fields and their values, because one document converter
+            // is binded to one index instance which means that fields will be the same and values will be overwritten
+            return _document;
+        }
+
         public IEnumerable<AbstractField> GetFields(string[] paths, Document document)
         {
             yield return new Field(Constants.DocumentIdFieldName, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
