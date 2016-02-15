@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -359,62 +358,86 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var start = 0;
                     var pageSize = _indexingConfiguration.MaxNumberOfItemsToFetchForMap;
-                    while (true)
+
+                    IndexPersistence.Write(addToIndex =>
                     {
-                        var count = 0;
-                        var earlyExit = false;
-                        var indexDocuments = new List<Lucene.Net.Documents.Document>();
-                        using (var tx = databaseContext.Environment.ReadTransaction())
+                        while (true)
                         {
-                            databaseContext.Transaction = tx;
+                            var count = 0;
+                            var earlyExit = false;
 
-                            var sw = Stopwatch.StartNew();
-                            var fetchedTotalSize = 0;
-                            foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, pageSize))
+                            using (var tx = databaseContext.Environment.ReadTransaction())
                             {
-                                cancellationToken.ThrowIfCancellationRequested();
+                                databaseContext.Transaction = tx;
 
-                                count++;
-                                fetchedTotalSize += document.Data.Size;
-
-                                indexDocuments.Add(ConvertDocument(collection, document));
-
-                                Debug.Assert(document.Etag >= lastEtag);
-
-                                lastEtag = document.Etag;
-
-                                if (sw.Elapsed > _indexingConfiguration.FetchingDocumentsFromDiskTimeout.AsTimeSpan || fetchedTotalSize >= _indexingConfiguration.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
+                                var sw = Stopwatch.StartNew();
+                                var fetchedTotalSize = 0;
+                                foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, pageSize))
                                 {
-                                    earlyExit = count != pageSize;
-                                    break;
-                                };
+                                    cancellationToken.ThrowIfCancellationRequested();
+
+                                    count++;
+                                    fetchedTotalSize += document.Data.Size;
+                                    lastEtag = document.Etag;
+
+                                    Debug.Assert(document.Etag >= lastEtag);
+
+                                    Lucene.Net.Documents.Document convertedDocument;
+                                    try
+                                    {
+                                        convertedDocument = ConvertDocument(collection, document);
+                                    }
+                                    catch (Exception)
+                                    {
+                                        // TODO [ppekrol] log that conversion failed, we need to keep going, add indexing errors
+                                        continue;
+                                    }
+
+                                    if (convertedDocument == null)
+                                        continue;
+
+                                    try
+                                    {
+                                        addToIndex(convertedDocument);
+                                    }
+                                    catch (Exception)
+                                    {
+                                        // TODO [ppekrol] log?
+                                        continue;
+                                    }
+
+                                    if (sw.Elapsed > _indexingConfiguration.FetchingDocumentsFromDiskTimeout.AsTimeSpan || fetchedTotalSize >= _indexingConfiguration.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
+                                    {
+                                        earlyExit = count != pageSize;
+                                        break;
+                                    }
+                                }
                             }
+
+                            if (count == 0)
+                                break;
+
+                            using (var tx = indexContext.Environment.WriteTransaction())
+                            {
+                                indexContext.Transaction = tx;
+
+                                WriteLastMappedEtag(tx, lastEtag);
+
+                                tx.Commit();
+                            }
+
+                            if (earlyExit)
+                            {
+                                start += count;
+                                continue;
+                            }
+
+                            if (count < pageSize)
+                                break;
+
+                            start += count;
                         }
-
-                        if (indexDocuments.Count == 0)
-                            break;
-
-                        using (var tx = indexContext.Environment.WriteTransaction())
-                        {
-                            indexContext.Transaction = tx;
-
-                            IndexPersistence.Write(indexContext, indexDocuments, cancellationToken);
-                            WriteLastMappedEtag(tx, lastEtag);
-
-                            tx.Commit();
-                        }
-
-                        if (earlyExit)
-                        {
-                            start += indexDocuments.Count;
-                            continue;
-                        }
-
-                        if (count < pageSize)
-                            break;
-
-                        start += pageSize;
-                    }
+                    });
                 }
             }
         }
