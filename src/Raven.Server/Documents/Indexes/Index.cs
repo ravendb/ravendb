@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes
                     var statsTree = tx.ReadTree("Stats");
                     var result = statsTree.Read(TypeSlice);
                     if (result == null)
-                        throw new InvalidOperationException();
+                        throw new InvalidOperationException($"Stats tree does not contain 'Type' entry in index '{indexId}'.");
 
                     var type = (IndexType)result.Reader.ReadLittleEndianInt32();
 
@@ -111,20 +111,16 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexDefinitionBase Definition { get; }
 
-        public string Name => Definition.Name;
+        public string Name => Definition?.Name;
 
         public bool ShouldRun { get; private set; } = true;
 
-
         protected void Initialize(DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
-            if (_initialized)
-                throw new InvalidOperationException();
-
             lock (_locker)
             {
                 if (_initialized)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
                 var options = indexingConfiguration.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
@@ -147,14 +143,12 @@ namespace Raven.Server.Documents.Indexes
         protected unsafe void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
             if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
-            if (_initialized)
-                throw new InvalidOperationException();
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
             lock (_locker)
             {
-                if (_initialized) throw new InvalidOperationException();
+                if (_initialized)
+                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
                 try
                 {
@@ -191,18 +185,15 @@ namespace Raven.Server.Documents.Indexes
         public void Execute(CancellationToken cancellationToken)
         {
             if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
             if (_initialized == false)
-                throw new InvalidOperationException();
-
-            if (_indexingTask != null)
-                throw new InvalidOperationException();
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' was not initialized.");
 
             lock (_locker)
             {
                 if (_indexingTask != null)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"Index '{Name} ({IndexId})' is executing.");
 
                 _indexingTask = Task.Factory.StartNew(() => ExecuteIndexing(cancellationToken), TaskCreationOptions.LongRunning);
             }
@@ -210,13 +201,10 @@ namespace Raven.Server.Documents.Indexes
 
         public void Dispose()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
             lock (_locker)
             {
                 if (_disposed)
-                    throw new ObjectDisposedException(nameof(Index));
+                    throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
                 _disposed = true;
 
@@ -236,13 +224,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected string[] Collections
-        {
-            get
-            {
-                return Definition.Collections;
-            }
-        }
+        protected string[] Collections => Definition.Collections;
 
         protected abstract bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag);
 
@@ -428,7 +410,7 @@ namespace Raven.Server.Documents.Indexes
         public QueryResult Query(IndexQuery query)
         {
             if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
             throw new NotImplementedException();
         }
