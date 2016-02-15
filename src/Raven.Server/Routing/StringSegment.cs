@@ -40,7 +40,7 @@ namespace Raven.Server.Routing
         {
             get
             {
-                if (index < 0 || index >= Start + Length)
+                if (index < 0 || index >= Length)
                     throw new IndexOutOfRangeException();
 
                 return _string[Start + index];
@@ -69,7 +69,12 @@ namespace Raven.Server.Routing
                 remainingSegmentLength <= 0)
                 return -1;
 
-            return _string.IndexOfAny(charArray, Start + startIndex,remainingSegmentLength);
+            //zero based index since we are in a segment
+            var indexOfAny = _string.IndexOfAny(charArray, Start + startIndex,remainingSegmentLength);
+            if (indexOfAny == -1)
+                return -1;
+
+            return indexOfAny - Start;
         }
 
         public override bool Equals(object obj)

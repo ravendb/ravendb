@@ -95,9 +95,255 @@ namespace FastTests.Utils
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo",ids);
                 Assert.Equal(new[] { "foobar/1", "foobar/2", "foobar/3", "foobar/4" }, ids);
 
+                ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,X.Y",ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/2", "ccc/3", "ccc/5" }, ids);
             }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_of_arrays_with_simple_values_should_work()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray
+                {
+                    Items = new Queue<object>(new[]
+                    {
+                        GetStringArray("foo"),
+                        GetStringArray("bar"),
+                        GetStringArray("foobar")
+                    })				
+                }
+            };
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new RavenOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,", ids);
+                Assert.Equal(new[] {"foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3" , "foobar/1", "foobar/2", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,(abc/)", ids);
+                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_of_arrays_of_objects_should_work()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray
+                {
+                    Items = new Queue<object>(new[]
+                    {
+                        GetObjectArray("foo"),
+                        GetObjectArray("bar"),
+                        GetObjectArray("foobar")
+                    })
+                }
+            };
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new RavenOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Foo", ids);
+                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Foo(abc/)", ids);
+                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work1()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray
+                {
+                    Items = new Queue<object>(new[]
+                    {
+                        GetNestedObjectArray("foo"),
+                        GetNestedObjectArray("bar"),
+                        GetNestedObjectArray("foobar")
+                    })
+                }
+            };
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new RavenOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Bar.Foo", ids);
+                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Bar.Foo(abc/)", ids);
+                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work2()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray
+                {
+                    Items = new Queue<object>(new[]
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["Foo"] = GetNestedObjectArray("foo")
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Foo"] = GetNestedObjectArray("bar")
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Foo"] = GetNestedObjectArray("foobar")
+                        },
+                    })
+                }
+            };
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new RavenOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo,Bar.Foo", ids);
+                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo,Bar.Foo(abc/)", ids);
+                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+            }
+        }
+
+        [Fact]
+        public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work3()
+        {
+            var obj = new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["ContactInfoId"] = new DynamicJsonArray
+                {
+                    Items = new Queue<object>(new[]
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["BarX"] = new DynamicJsonValue
+                            {
+                                ["Foo"] = GetNestedObjectArray("foo")
+                            }
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["BarX"] = new DynamicJsonValue
+                            {
+                                ["Foo"] = GetNestedObjectArray("bar")
+                            }
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["BarX"] = new DynamicJsonValue
+                            {
+                                ["Foo"] = GetNestedObjectArray("foobar")
+                            }
+                        },
+                    })
+                }
+            };
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var context = new RavenOperationContext(pool))
+            using (var reader = context.ReadObject(obj, "foo"))
+            {
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,BarX.Foo,Bar.Foo", ids);
+                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,BarX.Foo,Bar.Foo(abc/)", ids);
+                Assert.Equal(new[] { "abc/foo/1", "abc/foo/2", "abc/foo/3", "abc/bar/1", "abc/bar/2", "abc/bar/3", "abc/foobar/1", "abc/foobar/2", "abc/foobar/3" }, ids);
+            }
+        }
+
+        private static DynamicJsonArray GetStringArray(string prefix)
+        {
+            return new DynamicJsonArray
+            {
+                Items = new Queue<object>(new [] { $"{prefix}/1", $"{prefix}/2", $"{prefix}/3" })
+            };
+        }
+
+        private static DynamicJsonArray GetObjectArray(string prefix)
+        {
+            var array = new DynamicJsonArray
+            {
+                Items = new Queue<object>(new[]
+                {
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = $"{prefix}/1"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = $"{prefix}/2"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = $"{prefix}/3"
+                    },
+                })
+            };
+            return array;
+        }
+
+        private static DynamicJsonArray GetNestedObjectArray(string prefix)
+        {
+            var array = new DynamicJsonArray
+            {
+                Items = new Queue<object>(new[]
+                {
+                    new DynamicJsonValue
+                    {
+                        ["Bar"] = new DynamicJsonValue
+                        {
+                            ["Foo"] = $"{prefix}/1"
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Bar"] = new DynamicJsonValue
+                        {
+                            ["Foo"] = $"{prefix}/2"
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Bar"] = new DynamicJsonValue
+                        {
+                            ["Foo"] = $"{prefix}/3"
+                        }
+                    },
+                })
+            };
+            return array;
         }
 
         [Fact]
