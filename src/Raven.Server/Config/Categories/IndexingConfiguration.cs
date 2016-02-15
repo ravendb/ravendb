@@ -58,12 +58,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
         public int MaxNumberOfItemsToFetchForReduce { get; set; }
 
-        [Description("Number of seconds after which index will stop reading documents from disk")]
-        [DefaultValue(5)]
+        [Description("Number of seconds after which index will stop reading documents from disk and writing documents to index")]
+        [DefaultValue(10)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Indexing/FetchingDocumentsFromDiskTimeoutInSec")]
+        [ConfigurationEntry("Raven/Indexing/DocumentProcessingTimeout")]
         [ConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
-        public TimeSetting FetchingDocumentsFromDiskTimeout { get; set; }
+        public TimeSetting DocumentProcessingTimeout { get; set; }
 
         [Description("Maximum number of megabytes after which index will stop reading documents from disk")]
         [DefaultValue(256)]

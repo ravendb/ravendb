@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Indexes
                                         continue;
                                     }
 
-                                    if (sw.Elapsed > _indexingConfiguration.FetchingDocumentsFromDiskTimeout.AsTimeSpan || fetchedTotalSize >= _indexingConfiguration.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
+                                    if (sw.Elapsed > _indexingConfiguration.DocumentProcessingTimeout.AsTimeSpan || fetchedTotalSize >= _indexingConfiguration.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
                                     {
                                         earlyExit = count != pageSize;
                                         break;
