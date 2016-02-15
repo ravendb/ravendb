@@ -18,6 +18,7 @@ using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow;
+using StringSegment = Raven.Server.Routing.StringSegment;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -86,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             });*/
             var includes = HttpContext.Request.Query["include"];
-            var documents = new List<Document>(ids.Count + (includes.Count*ids.Count));
+            var documents = new List<Document>(ids.Count + (includes.Count * ids.Count));
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (string id in ids)
             {
@@ -125,25 +126,25 @@ namespace Raven.Server.Documents.Handlers
 
         private void LoadIncludes(RavenOperationContext context, List<Document> documents, StringValues includes)
         {
-            var includeResults = new HashSet<long>();
             // ReSharper disable LoopCanBeConvertedToQuery
-            foreach (var doc in documents)
+            var includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var include in includes)
             {
-                foreach (var include in includes)
+                foreach (var doc in documents)
                 {
-                    foreach (var includedDocId in IncludeUtil.GetDocIdFromInclude(doc.Data, include))
-                    {
-                        if (includedDocId == null) //precaution, should not happen
-                            continue;
-                        var includedDoc = Database.DocumentsStorage.Get(context, includedDocId);
-                        if (includedDoc == null)
-                            continue;
-                        if (includeResults.Add(includedDoc.StorageId) == false)
-                            continue;
-
-                        documents.Add(includedDoc);
-                    }
+                    IncludeUtil.GetDocIdFromInclude(doc.Data, new StringSegment(include, 0), includedIds);
                 }
+            }
+
+            foreach (var includedDocId in includedIds)
+            {
+                if (includedDocId == null) //precaution, should not happen
+                    continue;
+                var includedDoc = Database.DocumentsStorage.Get(context, includedDocId);
+                if (includedDoc == null)
+                    continue;
+
+                documents.Add(includedDoc);
             }
             // ReSharper restore LoopCanBeConvertedToQuery
         }

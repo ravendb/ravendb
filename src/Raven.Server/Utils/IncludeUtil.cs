@@ -10,7 +10,7 @@ namespace Raven.Server.Utils
     {
         private static readonly char[] IncludeSeparators = { '.', ',', '(' };
 
-        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, List<string> includedIds)
+        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, HashSet<string> includedIds)
         {
             var indexOfFirstSeparator = includePath.IndexOfAny(IncludeSeparators, 0);
             object reader;
