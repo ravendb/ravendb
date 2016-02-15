@@ -771,13 +771,13 @@ namespace Raven.Client.Connection.Async
             return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
         }
 
-        public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null,
+        public Task<LoadResult> GetAsync(string[] keys, string[] includes, string transformer = null,
                                               Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Get, operationMetadata => DirectGetAsync(operationMetadata, keys, includes, transformer, transformerParameters, metadataOnly, token), token);
         }
 
-        private async Task<MultiLoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
+        private async Task<LoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
                                                            Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default(CancellationToken))
         {
             var path = operationMetadata.Url + "/document?";
@@ -821,7 +821,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        private async Task<MultiLoadResult> CompleteMultiGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
+        private async Task<LoadResult> CompleteMultiGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
                                                            Dictionary<string, RavenJToken> transformerParameters, RavenJToken result, CancellationToken token = default(CancellationToken))
         {
             ErrorResponseException responseException;
@@ -850,7 +850,7 @@ namespace Raven.Client.Connection.Async
                     }
                 }
 
-                var multiLoadResult = new MultiLoadResult
+                var multiLoadResult = new LoadResult
                 {
                     Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
                     Results = documents.Count == 0 ? results : keys.Select(key => documents.ContainsKey(key) ? documents[key] : null).ToList()
@@ -933,7 +933,7 @@ namespace Raven.Client.Connection.Async
             return UpdateByIndexImpl(indexName, queryToUpdate, notNullOptions, requestData, HttpMethods.Patch, token);
         }
 
-        public async Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken))
+        public async Task<LoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken))
         {
             var requestUrl = query.GetRequestUri();
             EnsureIsNotNullOrEmpty(requestUrl, "url");
@@ -946,7 +946,7 @@ namespace Raven.Client.Connection.Async
                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
             }, token).ConfigureAwait(false);
-            return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
+            return ((RavenJObject)result).Deserialize<LoadResult>(convention);
         }
 
         public Task<long> NextIdentityForAsync(string name, CancellationToken token = default(CancellationToken))
