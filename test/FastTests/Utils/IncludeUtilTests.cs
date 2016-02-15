@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Utils;
@@ -91,10 +91,11 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo",ids);
                 Assert.Equal(new[] { "foobar/1", "foobar/2", "foobar/3", "foobar/4" }, ids);
 
-                ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,X.Y").ToList();
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,X.Y",ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/2", "ccc/3", "ccc/5" }, ids);
             }
         }
@@ -167,7 +168,8 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y",ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
             }
         }
@@ -241,7 +243,8 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y(ccc/)").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y(ccc/)",ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
             }
         }
@@ -261,7 +264,8 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)",ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
             }
         }
@@ -299,7 +303,8 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)",ids);
                 Assert.Equal(new[] { "foo/11", "foo/2", "foo/3", "foo/4" }, ids);
             }
         }
@@ -319,7 +324,8 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,",ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" },ids);
             }
         }
@@ -349,10 +355,12 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.ContactInfoId,").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.ContactInfoId,",ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
 
-                ids = IncludeUtil.GetDocIdFromInclude(reader, "Foo.ContactInfoId2,").ToList();
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.ContactInfoId2,",ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
             }
         }
@@ -380,13 +388,16 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId1,").ToList();
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId1,",ids);
                 Assert.Equal(new object[] { "1", "2", "3" }, ids);
 
-                ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2,").ToList();
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2,",ids);
                 Assert.Equal(new object[] { "1.1", "2.2", "3.3" }, ids);
 
-                ids = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3,").ToList();
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3,",ids);
                 Assert.Equal(new object[] { "1", "2", "3" }, ids);
             }
         }
@@ -406,8 +417,9 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId").First();				
-                Assert.Equal("contacts/1", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId",ids);				
+                Assert.Equal("contacts/1", ids.FirstOrDefault());
 
             }
         }
@@ -427,19 +439,26 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)").FirstOrDefault();
-                Assert.NotNull(id);
-                Assert.Equal("contacts/1", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)",ids);                
+                Assert.Equal("contacts/1", ids.FirstOrDefault());
 
                 //edge cases
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId()").FirstOrDefault();
-                Assert.Equal("1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(c/)").FirstOrDefault();
-                Assert.Equal("c/1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(ca/)").FirstOrDefault();
-                Assert.Equal("ca/1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(/)").FirstOrDefault();
-                Assert.Equal("/1", id);
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId()", ids);
+                Assert.Equal("1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(c/)", ids);
+                Assert.Equal("c/1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(ca/)", ids);
+                Assert.Equal("ca/1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(/)", ids);
+                Assert.Equal("/1", ids.FirstOrDefault());
             }
         }
 
@@ -458,19 +477,26 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)").FirstOrDefault();
-                Assert.NotNull(id);
-                Assert.Equal("contacts/megadevice", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)",ids);
+                Assert.Equal("contacts/megadevice", ids.FirstOrDefault());
 
                 //edge cases
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId()").FirstOrDefault();
-                Assert.Equal("megadevice", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(c/)").FirstOrDefault();
-                Assert.Equal("c/megadevice", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(ca/)").FirstOrDefault();
-                Assert.Equal("ca/megadevice", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(/)").FirstOrDefault();
-                Assert.Equal("/megadevice", id);
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId()",ids);
+                Assert.Equal("megadevice", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(c/)",ids);
+                Assert.Equal("c/megadevice", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(ca/)",ids);
+                Assert.Equal("ca/megadevice", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(/)",ids);
+                Assert.Equal("/megadevice", ids.FirstOrDefault());
             }
         }
 
@@ -497,12 +523,17 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId1").First();
-                Assert.Equal("contacts/1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId2").First();
-                Assert.Equal("contacts/2", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.AdressInfo").First();
-                Assert.Equal("address/1", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId1",ids);
+                Assert.Equal("contacts/1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId2",ids);
+                Assert.Equal("contacts/2", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.AdressInfo",ids);
+                Assert.Equal("address/1", ids.FirstOrDefault());
             }
         }
 
@@ -519,7 +550,10 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                Assert.Empty(IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId"));
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId", ids);
+
+                Assert.Empty(ids);
             }
         }
 
@@ -535,8 +569,9 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId").First();
-                Assert.Equal("contacts/1", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId",ids);
+                Assert.Equal("contacts/1", ids.FirstOrDefault());
             }
         }
 
@@ -555,12 +590,17 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId").FirstOrDefault();
-                Assert.Equal("12", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2").FirstOrDefault();
-                Assert.Equal("56", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3").FirstOrDefault();
-                Assert.Equal("78.89", id);				
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId",ids);
+                Assert.Equal("12", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2",ids);
+                Assert.Equal("56", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3",ids);
+                Assert.Equal("78.89", ids.FirstOrDefault());				
             }
         }
 
@@ -576,7 +616,10 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                Assert.Empty(IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/").ToList());
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/", ids);
+                Assert.Empty(ids);
             }
         }
 
@@ -592,8 +635,10 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/)").First();
-                Assert.Equal("contacts/1", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/)",ids);
+                Assert.Equal("contacts/1", ids.FirstOrDefault());
             }
         }
 
@@ -609,12 +654,18 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(c/)").First();
-                Assert.Equal("c/1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(ca/)").First();
-                Assert.Equal("ca/1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(caa/)").First();
-                Assert.Equal("caa/1", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(c/)",ids);
+                Assert.Equal("c/1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(ca/)",ids);
+                Assert.Equal("ca/1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(caa/)",ids);
+                Assert.Equal("caa/1", ids.FirstOrDefault());
             }
         }
 
@@ -632,12 +683,18 @@ namespace FastTests.Utils
             using (var context = new RavenOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
-                var id = IncludeUtil.GetDocIdFromInclude(reader, "AddressInfoId").First();
-                Assert.Equal("addresses/1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId").First();
-                Assert.Equal("contacts/1", id);
-                id = IncludeUtil.GetDocIdFromInclude(reader, "CarInfoId").First();
-                Assert.Equal("cars/1", id);
+                var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                IncludeUtil.GetDocIdFromInclude(reader, "AddressInfoId",ids);
+                Assert.Equal("addresses/1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId",ids);
+                Assert.Equal("contacts/1", ids.FirstOrDefault());
+
+                ids.Clear();
+                IncludeUtil.GetDocIdFromInclude(reader, "CarInfoId",ids);
+                Assert.Equal("cars/1", ids.FirstOrDefault());
             }
         }
     }

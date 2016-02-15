@@ -14,6 +14,8 @@ namespace Raven.Server.Utils
         {
             var indexOfFirstSeparator = includePath.IndexOfAny(IncludeSeparators, 0);
             object reader;
+
+            //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
             if (docReader.TryGetMember(includePath.SubSegment(0, indexOfFirstSeparator), out reader) == false)
                 return;
 
@@ -28,22 +30,7 @@ namespace Raven.Server.Utils
                 case ',':
                     var subArray = reader as BlittableJsonReaderArray;
                     if (subArray != null)
-                    {
-                        for (int i = 0; i < subArray.Length; i++)
-                        {
-                            var item = subArray[i];
-                            var arrayObject = item as BlittableJsonReaderObject;
-                            if (arrayObject != null)
-                            {
-                                GetDocIdFromInclude(arrayObject, pathSegment, includedIds);
-                            }
-                            else
-                            {
-                                //TODO: handle array
-                                //TODO: handle simple value
-                            }
-                        }
-                    }
+                        HandleArrayReader(subArray, pathSegment, includedIds);
                     break;
                 case '(':
                     if (includePath[includePath.Length - 1] != ')') //precaution
@@ -61,6 +48,26 @@ namespace Raven.Server.Utils
                     }
                     return;
             }			
+        }
+
+        private static void HandleArrayReader(BlittableJsonReaderArray array, StringSegment pathSegment, HashSet<string> includedIds)
+        {
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < array.Length; i++)
+            {
+                var item = array[i];
+                var arrayObject = item as BlittableJsonReaderObject;
+                if (arrayObject != null)
+                {
+                    GetDocIdFromInclude(arrayObject, pathSegment, includedIds);
+                }
+                else
+                {				    
+                    var includedId = BlittableValueToString(item);
+                    if (includedId != null)
+                        includedIds.Add(includedId);
+                }
+            }
         }
 
         private static string HandlePrefix(BlittableJsonReaderObject reader, StringSegment pathSegment, int indexOfSeparator)

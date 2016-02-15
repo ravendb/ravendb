@@ -221,8 +221,8 @@ namespace Raven.Server.Indexing.Corax
             var array = obj as BlittableJsonReaderArray;
             if (array != null)
             {
-                var list = new List<Slice>(array.Count);
-                for (int i = 0; i < array.Count; i++)
+                var list = new List<Slice>(array.Length);
+                for (int i = 0; i < array.Length; i++)
                 {
                     list.AddRange(GetValuesFor(array[i]));
                 }

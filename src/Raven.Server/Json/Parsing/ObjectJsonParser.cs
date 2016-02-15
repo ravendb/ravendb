@@ -219,7 +219,7 @@ namespace Raven.Server.Json.Parsing
                     }
                     var modifications = bjra.Modifications;
                     modifications.SourceIndex++;
-                    if (modifications.SourceIndex < bjra.Count)
+                    if (modifications.SourceIndex < bjra.Length)
                     {
                         if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
                         {
