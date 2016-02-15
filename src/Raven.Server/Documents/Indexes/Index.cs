@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Json;
@@ -60,6 +61,8 @@ namespace Raven.Server.Documents.Indexes
         private bool _disposed;
 
         private readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
+
+        private IndexingConfiguration _indexingConfiguration;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -154,6 +157,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Debug.Assert(Definition != null);
 
+                    _indexingConfiguration = indexingConfiguration;
                     _environment = environment;
                     _documentsStorage = documentsStorage;
                     _databaseNotifications = databaseNotifications;
@@ -354,26 +358,36 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var collection in Collections)
                 {
                     var start = 0;
-                    const int PageSize = 1024 * 10;
-
+                    var pageSize = _indexingConfiguration.MaxNumberOfItemsToFetchForMap;
                     while (true)
                     {
                         var count = 0;
+                        var earlyExit = false;
                         var indexDocuments = new List<Lucene.Net.Documents.Document>();
                         using (var tx = databaseContext.Environment.ReadTransaction())
                         {
                             databaseContext.Transaction = tx;
 
-                            foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, PageSize))
+                            var sw = Stopwatch.StartNew();
+                            var fetchedTotalSize = 0;
+                            foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, pageSize))
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
 
-                                indexDocuments.Add(ConvertDocument(collection, document));
                                 count++;
+                                fetchedTotalSize += document.Data.Size;
+
+                                indexDocuments.Add(ConvertDocument(collection, document));
 
                                 Debug.Assert(document.Etag >= lastEtag);
 
                                 lastEtag = document.Etag;
+
+                                if (sw.Elapsed > _indexingConfiguration.FetchingDocumentsFromDiskTimeout.AsTimeSpan || fetchedTotalSize >= _indexingConfiguration.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
+                                {
+                                    earlyExit = count != pageSize;
+                                    break;
+                                };
                             }
                         }
 
@@ -390,10 +404,16 @@ namespace Raven.Server.Documents.Indexes
                             tx.Commit();
                         }
 
-                        if (count < PageSize)
+                        if (earlyExit)
+                        {
+                            start += indexDocuments.Count;
+                            continue;
+                        }
+
+                        if (count < pageSize)
                             break;
 
-                        start += PageSize;
+                        start += pageSize;
                     }
                 }
             }
