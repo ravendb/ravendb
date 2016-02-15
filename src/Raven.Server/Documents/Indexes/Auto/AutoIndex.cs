@@ -10,12 +10,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndex : MapIndex<AutoIndexDefinition>
     {
-        private readonly string[] _fields;
-
         private AutoIndex(int indexId, AutoIndexDefinition definition)
             : base(indexId, IndexType.Auto, definition)
         {
-            _fields = definition.MapFields.ToArray();
         }
 
         public static AutoIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
@@ -42,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
             var indexDocument = IndexPersistence.DocumentConverter.CreateDocument();
 
-            foreach (var field in IndexPersistence.DocumentConverter.GetFields(_fields, document))
+            foreach (var field in IndexPersistence.DocumentConverter.GetFields(null, document)) //TODO arek
                 indexDocument.Add(field);
 
             return indexDocument;

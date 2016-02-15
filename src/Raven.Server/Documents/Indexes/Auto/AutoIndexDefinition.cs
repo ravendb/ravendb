@@ -8,6 +8,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoIndexDefinition : IndexDefinitionBase
     {
         private readonly AutoIndexField[] _fields;
+        private readonly Dictionary<string, AutoIndexField> _fieldsByName = new Dictionary<string, AutoIndexField>(); 
 
         private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
 
@@ -24,16 +25,26 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
 
             _fields = fields;
+
+            _fieldsByName = _fields.ToDictionary(x => x.Name, x => x);
         }
 
-        public IEnumerable<string> MapFields => _fields.Select(x => x.Name); // TODO arek - maybe remove that
+        public int CountOfMapFields => _fields.Length;
 
         public bool ContainsField(string field)
         {
             if (field.EndsWith("_Range"))
                 field = field.Substring(0, field.Length - 6);
-            
-            return _fields.Select(x => x.Name).Contains(field);
+
+            return _fieldsByName.ContainsKey(field);
+        }
+
+        public AutoIndexField GetField(string field)
+        {
+            if (field.EndsWith("_Range"))
+                field = field.Substring(0, field.Length - 6);
+
+            return _fieldsByName[field];
         }
 
         private static string FindIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
