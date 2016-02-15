@@ -332,11 +332,7 @@ namespace Raven.Server.Documents.Indexes
             if (notification.Type != DocumentChangeTypes.Put)
                 return;
 
-            var collectionName = notification.CollectionName; // TODO [ppekrol]
-            if (collectionName.StartsWith("@"))
-                collectionName = collectionName.Substring(1);
-
-            if (Collections.Any(x => string.Equals(x, collectionName, StringComparison.OrdinalIgnoreCase)) == false)
+            if (Collections.Any(x => string.Equals(x, notification.CollectionName, StringComparison.OrdinalIgnoreCase)) == false)
                 return;
 
             _mre.Set();

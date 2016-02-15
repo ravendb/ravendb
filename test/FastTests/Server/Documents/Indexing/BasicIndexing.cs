@@ -68,7 +68,7 @@ namespace FastTests.Server.Documents.Indexing
                         {
                             context.Transaction = tx;
 
-                            using (var doc =  CreateDocumentAsync(context, "key/1", new DynamicJsonValue
+                            using (var doc =  CreateDocument(context, "key/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -80,7 +80,7 @@ namespace FastTests.Server.Documents.Indexing
                                 storage.Put(context, "key/1", null, doc);
                             }
 
-                            using (var doc =  CreateDocumentAsync(context, "key/2", new DynamicJsonValue
+                            using (var doc =  CreateDocument(context, "key/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -103,7 +103,7 @@ namespace FastTests.Server.Documents.Indexing
                         {
                             context.Transaction = tx;
 
-                            using (var doc = CreateDocumentAsync(context, "key/3", new DynamicJsonValue
+                            using (var doc = CreateDocument(context, "key/3", new DynamicJsonValue
                             {
                                 ["Name"] = "William",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -124,7 +124,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        private static BlittableJsonReaderObject CreateDocumentAsync(RavenOperationContext context, string key, DynamicJsonValue value)
+        private static BlittableJsonReaderObject CreateDocument(RavenOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }

@@ -399,7 +399,9 @@ namespace Raven.Server.Documents
                 var etag = _lastEtag;
                 etagTree.Add(LastEtagSlice, new Slice((byte*)&etag, sizeof(long)));
             }
-            var collectionName = GetCollectionName(key, doc.Data);
+
+            string originalCollectionName;
+            var collectionName = GetCollectionName(key, doc.Data, out originalCollectionName);
             var table = new Table(_docsSchema, collectionName, context.Transaction);
             table.Delete(doc.StorageId);
 
@@ -408,7 +410,7 @@ namespace Raven.Server.Documents
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
                 Key = key,
-                CollectionName = collectionName
+                CollectionName = originalCollectionName
             });
 
             return true;
@@ -430,7 +432,8 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
 
-            var collectionName = GetCollectionName(key, document);
+            string originalCollectionName;
+            var collectionName = GetCollectionName(key, document, out originalCollectionName);
             _docsSchema.Create(context.Transaction, collectionName);
             var table = new Table(_docsSchema, collectionName, context.Transaction);
 
@@ -481,7 +484,7 @@ namespace Raven.Server.Documents
             context.Transaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
             {
                 Etag = newEtag,
-                CollectionName = collectionName,
+                CollectionName = originalCollectionName,
                 Key = key,
                 Type = DocumentChangeTypes.Put
             });
@@ -528,7 +531,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static string GetCollectionName(string key, BlittableJsonReaderObject document)
+        private static string GetCollectionName(string key, BlittableJsonReaderObject document, out string originalCollectionName)
         {
             string collectionName;
             BlittableJsonReaderObject metadata;
@@ -541,6 +544,8 @@ namespace Raven.Server.Documents
             {
                 collectionName = NoCollectionSpecified;
             }
+
+            originalCollectionName = collectionName;
 
             // we have to have some way to distinguish between dynamic tree names
             // and our fixed ones, otherwise a collection call Docs will corrupt our state
