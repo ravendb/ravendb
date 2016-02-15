@@ -111,12 +111,13 @@ namespace Raven.Server.Documents.Handlers
             var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
+
             WriteDocuments(context, writer, documents, 0, ids.Count);
+
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
-            writer.WriteStartArray();
+
             WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
-            writer.WriteEndArray();
 
             writer.WriteEndObject();
             writer.Flush();
