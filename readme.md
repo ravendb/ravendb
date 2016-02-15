@@ -2,6 +2,8 @@
 
 ## A 2nd generation document database
 
+RavenDB has one ultimate paradigm: "Data Made Simple".  It is the premier NoSQL database built in .NET for .NET.  Both schema-free and easy to use, RavenDB specializes in combining the best aspects of relational and document databases.  With no rigid schemas required, it does not suffer from the same limitations traditional relational databases, such as MySQL, do.  With an emphasis on high performance and security, the results are clear: faster, more reliable applications built for scalablity and flexibility with many built-in bundles and custom plugins available.
+
 Issue tracker: http://issues.hibernatingrhinos.com
 
 You can start the Raven Service by executing /server/raven.server.exe, and then you can then visit
