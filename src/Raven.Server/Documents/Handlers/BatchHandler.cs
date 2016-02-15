@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var parsedCommands = new CommandData[commands.Length];
 
-                for (int i = 0; i < commands.Count; i++)
+                for (int i = 0; i < commands.Length; i++)
                 {
                     var cmd = commands.GetByIndex<BlittableJsonReaderObject>(i);
 

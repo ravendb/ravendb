@@ -34,8 +34,6 @@ namespace Raven.Server.Json
 
         public int Length => _count;
 
-        public int Count => _count;
-
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
 
         public T GetByIndex<T>(int index)

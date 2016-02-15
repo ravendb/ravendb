@@ -48,6 +48,18 @@ namespace Raven.Server.Routing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator StringSegment(string str)
+        {
+            return new StringSegment(str,0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator string(StringSegment segment)
+        {
+            return segment.Value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOfAny(char[] charArray, int startIndex)
         {
             var remainingSegmentLength = Length - startIndex;

@@ -65,8 +65,8 @@ namespace Raven.Server.Documents.Handlers
                 var array = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "queries",
                     BlittableJsonDocumentBuilder.UsageMode.None);
 
-                var ids = new string[array.Count];
-                for (int i = 0; i < array.Count; i++)
+                var ids = new string[array.Length];
+                for (int i = 0; i < array.Length; i++)
                 {
                     ids[i] = array.GetStringByIndex(i);
                 }
