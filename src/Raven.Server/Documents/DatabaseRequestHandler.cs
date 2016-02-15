@@ -29,13 +29,35 @@ namespace Raven.Server.Documents
                 WriteDocuments(context, writer, documents);
         }
 
-        public static void WriteDocuments(RavenOperationContext context, BlittableJsonTextWriter writer, IEnumerable<Document> documents)
+        public static void WriteDocuments(RavenOperationContext context, BlittableJsonTextWriter writer, 
+            IEnumerable<Document> documents)
         {
             writer.WriteStartArray();
 
             bool first = true;
             foreach (var document in documents)
             {
+                if (document == null)
+                    continue;
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+                document.EnsureMetadata();
+                context.Write(writer, document.Data);
+            }
+
+            writer.WriteEndArray();
+        }
+
+        public static void WriteDocuments(RavenOperationContext context, BlittableJsonTextWriter writer,
+            List<Document> documents, int start, int count)
+        {
+            writer.WriteStartArray();
+
+            bool first = true;
+            for (int index = start; index < count; index++)
+            {
+                var document = documents[index];
                 if (document == null)
                     continue;
                 if (first == false)
