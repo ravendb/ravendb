@@ -30,7 +30,8 @@
     "jszip-utils": "^0.0.2",
     "jszip": "^2.5.0",
     "text": "requirejs-text#^2.0.14",
-    "font-awesome": "fontawesome#^4.5.0"
+    "font-awesome": "fontawesome#^4.5.0",
+    "animate.css": "^3.5.1"
   },
   "resolutions": {
     "jquery": "^2.2.0",

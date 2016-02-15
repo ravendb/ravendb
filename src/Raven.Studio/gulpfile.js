@@ -2,6 +2,7 @@
 var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
+    fileExists = require('file-exists'),
     del = require('del'),
     runSequence = require('run-sequence');
 
@@ -10,7 +11,10 @@ var paths = {
     tsSource: './typescript/**/*.ts',
     typings: './typings/**/*.d.ts',
     tsOutput: './wwwroot/App/',
-    lessSource: ['./wwwroot/Content/app.less', './wwwroot/Content/bootstrap.less', './wwwroot/Content/dynatree-custom.less'],
+    lessSource: [
+        './wwwroot/Content/app.less',
+        './wwwroot/Content/bootstrap.less',
+        './wwwroot/Content/dynatree.custom.less'],
     lessTarget: './wwwroot/Content/',
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
@@ -24,7 +28,7 @@ var paths = {
         'wwwroot/lib/nprogress/nprogress.css',
         //TODO 'wwwroot/lib/jquery-ui/themes/base/all.css',
         'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
-        'wwwroot/Content/dynatree-custom.css',
+        'wwwroot/Content/dynatree.custom.css',
         'wwwroot/lib/nvd3/build/nv.d3.css',
         'wwwroot/Content/app.css',
         'wwwroot/lib/animate.css/animate.css'
@@ -123,15 +127,27 @@ gulp.task('release-process-index', function() {
         .pipe(gulp.dest(paths.releaseTarget));
 });
 
-gulp.task('release-process-css', function() {
+gulp.task('release-process-css', function () {
+    for (var i = 0; i < paths.cssToMerge.length; i++) {
+        if (!fileExists(paths.cssToMerge[i])) {
+            throw new Error("Unable to find file: " + paths.cssToMerge[i]);
+        }
+    }
+
     return gulp.src(paths.cssToMerge)
-        .pipe(plugins.concatCss('styles.css'))
+        .pipe(plugins.concatCss('styles.css', { rebaseUrls: false }))
         .pipe(plugins.cssnano())
         .pipe(gulp.dest(paths.releaseTarget + "App"));
 });
 
 gulp.task('release-process-ext-js', function() {
     var externalLibs = paths.externalLibs.map(function (x) { return paths.bowerSource + x; });
+
+    for (var i = 0; i < externalLibs.length; i++) {
+        if (!fileExists(externalLibs[i])) {
+            throw new Error("Unable to find file: " + externalLibs[i]);
+        }
+    }
 
     return gulp.src(externalLibs)
         .pipe(plugins.concat('external-libs.js'))
@@ -144,8 +160,11 @@ gulp.task('release-durandal', function() {
         baseDir: 'wwwroot/App',
         extraModules: ['transitions/fadeIn', 'widgets/virtualTable/viewmodel'],
         almond: true,
-        minify: true
-        //TODO: don't generate map file!
+        minify: true,
+        rjsConfigAdapter: function (cfg) {
+            cfg.generateSourceMaps = false;
+            return cfg;
+        }
     })
    .pipe(gulp.dest(paths.releaseTarget + 'App'));
 });
@@ -156,5 +175,4 @@ gulp.task('build', function (callback) {
       ['less', 'ts-compile'],
       ['release-copy-favicon', 'release-copy-images', 'release-copy-fonts', 'release-process-index', 'release-process-css', 'release-process-ext-js', 'release-durandal'],
       callback);
-    //TODO: check if all includes css and js files exists to avoid issues with missing files in release build
 });

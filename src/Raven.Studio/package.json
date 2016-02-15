@@ -4,6 +4,7 @@
   "private": true,
   "devDependencies": {
     "del": "^2.2.0",
+    "file-exists": "^1.0.0",
     "gulp": "^3.9.0",
     "gulp-bower": "0.0.13",
     "gulp-concat": "^2.6.0",
