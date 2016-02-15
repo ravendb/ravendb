@@ -16,6 +16,7 @@
     "gulp-load-plugins": "^1.2.0",
     "gulp-processhtml": "^1.1.0",
     "gulp-sourcemaps": "^1.5.2",
+    "gulp-strip-css-comments": "^1.2.0",
     "gulp-tsd": "0.1.0",
     "gulp-typescript": "^2.10.0",
     "gulp-uglify": "^1.5.2",

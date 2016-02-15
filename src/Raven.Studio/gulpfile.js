@@ -26,7 +26,7 @@ var paths = {
         'wwwroot/lib/font-awesome/css/font-awesome.css',
         'wwwroot/lib/Durandal/css/durandal.css',
         'wwwroot/lib/nprogress/nprogress.css',
-        //TODO 'wwwroot/lib/jquery-ui/themes/base/all.css',
+        'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
         'wwwroot/Content/dynatree.custom.css',
         'wwwroot/lib/nvd3/build/nv.d3.css',
@@ -127,7 +127,17 @@ gulp.task('release-process-index', function() {
         .pipe(gulp.dest(paths.releaseTarget));
 });
 
-gulp.task('release-process-css', function () {
+/**
+ * Due to https://github.com/mariocasciaro/gulp-concat-css/issues/26 we have to process jquery and remove comments 
+ * to enable parsing 
+ */
+gulp.task('fix-jquery-ui', function() {
+    return gulp.src('./wwwroot/lib/jquery-ui/themes/base/**/*.css')
+        .pipe(plugins.stripCssComments())
+        .pipe(gulp.dest("./wwwroot/lib/jquery-ui/themes/base-wo-comments/"));
+});
+
+gulp.task('release-process-css', ['fix-jquery-ui'], function () {
     for (var i = 0; i < paths.cssToMerge.length; i++) {
         if (!fileExists(paths.cssToMerge[i])) {
             throw new Error("Unable to find file: " + paths.cssToMerge[i]);
