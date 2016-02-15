@@ -1215,7 +1215,7 @@ namespace Raven.Tests.Smuggler
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportImportSmugglerMaxSplitExportFileSize()
         {
-            var fileToExportTo = CreateTestExportFile(1, 200000); 
+            var fileToExportTo = CreateTestExportFile(1, 150000); 
             var splittedFileToExportTo = Path.GetTempFileName();
             Assert.NotNull(splittedFileToExportTo);
             try
@@ -1233,14 +1233,13 @@ namespace Raven.Tests.Smuggler
 
                     Assert.True(File.Exists(splittedFileToExportTo));
                     Assert.True(File.Exists($"{splittedFileToExportTo}.part001"));
-                    Assert.True(File.Exists($"{splittedFileToExportTo}.part002"));
-                    Assert.False(File.Exists($"{splittedFileToExportTo}.part003"));
+                    Assert.False(File.Exists($"{splittedFileToExportTo}.part002"));
 
                     using (var session = store.OpenSession())
                     {
-                        session.Delete("testdoc/199997");
+                        session.Delete("testdoc/149997");
                         session.SaveChanges();
-                        var o = session.Load<object>("testdoc/199997");
+                        var o = session.Load<object>("testdoc/149997");
                         Assert.Null(o);
                     }
 
@@ -1249,7 +1248,7 @@ namespace Raven.Tests.Smuggler
 
                     using (var session = store.OpenSession())
                     {
-                        var o = session.Load<object>("testdoc/199997");
+                        var o = session.Load<object>("testdoc/149997");
                         Assert.NotNull(o);
                     }
                 }
@@ -1266,7 +1265,7 @@ namespace Raven.Tests.Smuggler
         public async Task CanExportImportIncrementalSmugglerMaxSplitExportFileSize()
         {
             var fileToExportTo = CreateTestExportFile(1, 10000);
-            var fileToExportIncrementalTo = CreateTestExportFile(10001, 200000);
+            var fileToExportIncrementalTo = CreateTestExportFile(10001, 150000);
             var mainFileToExportTo = Path.GetTempFileName();
             Assert.NotNull(mainFileToExportTo);
             var directoryToExportIncrementalTo =
@@ -1294,17 +1293,16 @@ namespace Raven.Tests.Smuggler
                     secondaryFileToExportTo = operState.FilePath;
                     Assert.True(File.Exists(secondaryFileToExportTo));
                     Assert.True(File.Exists($"{secondaryFileToExportTo}.part001"));
-                    Assert.True(File.Exists($"{secondaryFileToExportTo}.part002"));
-                    Assert.False(File.Exists($"{secondaryFileToExportTo}.part003"));
+                    Assert.False(File.Exists($"{secondaryFileToExportTo}.part002"));
 
                     using (var session = store.OpenSession())
                     {
                         session.Delete("testdoc/20000");
-                        session.Delete("testdoc/199997");
+                        session.Delete("testdoc/149997");
                         session.SaveChanges();
                         var o = session.Load<object>("testdoc/20000");
                         Assert.Null(o);
-                        o = session.Load<object>("testdoc/199997");
+                        o = session.Load<object>("testdoc/149997");
                         Assert.Null(o);
                     }
 
@@ -1315,7 +1313,7 @@ namespace Raven.Tests.Smuggler
                     {
                         var o = session.Load<object>("testdoc/20000");
                         Assert.NotNull(o);
-                        o = session.Load<object>("testdoc/199997");
+                        o = session.Load<object>("testdoc/149997");
                         Assert.NotNull(o);
                     }
                 }
