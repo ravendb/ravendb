@@ -1233,7 +1233,8 @@ namespace Raven.Tests.Smuggler
 
                     Assert.True(File.Exists(splittedFileToExportTo));
                     Assert.True(File.Exists($"{splittedFileToExportTo}.part001"));
-                    Assert.False(File.Exists($"{splittedFileToExportTo}.part002"));
+                    Assert.True(File.Exists($"{splittedFileToExportTo}.part002"));
+                    Assert.False(File.Exists($"{splittedFileToExportTo}.part003"));
 
                     using (var session = store.OpenSession())
                     {
@@ -1293,7 +1294,8 @@ namespace Raven.Tests.Smuggler
                     secondaryFileToExportTo = operState.FilePath;
                     Assert.True(File.Exists(secondaryFileToExportTo));
                     Assert.True(File.Exists($"{secondaryFileToExportTo}.part001"));
-                    Assert.False(File.Exists($"{secondaryFileToExportTo}.part002"));
+                    Assert.True(File.Exists($"{secondaryFileToExportTo}.part002"));
+                    Assert.False(File.Exists($"{secondaryFileToExportTo}.part003"));
 
                     using (var session = store.OpenSession())
                     {
