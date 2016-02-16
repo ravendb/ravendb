@@ -32,17 +32,5 @@ namespace Raven.Server.Documents.Indexes.Auto
 
             return instance;
         }
-
-        protected override Lucene.Net.Documents.Document ConvertDocument(string collection, Document document)
-        {
-            Debug.Assert(Definition.Collections.Any(x => string.Equals(x, collection, StringComparison.OrdinalIgnoreCase)), "Collection does not match.");
-
-            var indexDocument = IndexPersistence.DocumentConverter.CreateDocument();
-
-            foreach (var field in IndexPersistence.DocumentConverter.GetFields(null, document)) //TODO arek
-                indexDocument.Add(field);
-
-            return indexDocument;
-        }
     }
 }

@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Config;
@@ -15,6 +15,7 @@ using Raven.Server.Json.Parsing;
 using Raven.Tests.Core;
 
 using Xunit;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -56,6 +57,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             var notifications = new DatabaseNotifications();
             var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
+            indexingConfiguration.Initialize(new ConfigurationBuilder().Build());
 
             using (var storage = CreateDocumentsStorage(notifications))
             {

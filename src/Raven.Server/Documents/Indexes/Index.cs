@@ -10,6 +10,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
+using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 
@@ -72,7 +73,11 @@ namespace Raven.Server.Documents.Indexes
             Type = type;
             Definition = definition;
             IndexPersistence = new LuceneIndexPersistance();
+
+            DocumentConverter = new LuceneDocumentConverter(definition.MapFields);
         }
+
+        public LuceneDocumentConverter DocumentConverter { get; }
 
         public static Index Open(int indexId, string path, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
         {
@@ -216,6 +221,8 @@ namespace Raven.Server.Documents.Indexes
                 _indexingTask?.Wait();
                 _indexingTask = null;
 
+                DocumentConverter?.Dispose();
+
                 _environment?.Dispose();
                 _environment = null;
 
@@ -230,8 +237,6 @@ namespace Raven.Server.Documents.Indexes
         protected string[] Collections => Definition.Collections;
 
         protected abstract bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag);
-
-        protected abstract Lucene.Net.Documents.Document ConvertDocument(string collection, Document document);
 
         public long GetLastMappedEtag()
         {
@@ -345,6 +350,7 @@ namespace Raven.Server.Documents.Indexes
         {
             RavenOperationContext databaseContext;
             RavenOperationContext indexContext;
+
             using (_documentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
@@ -383,9 +389,10 @@ namespace Raven.Server.Documents.Indexes
                                     Debug.Assert(document.Etag >= lastEtag);
 
                                     Lucene.Net.Documents.Document convertedDocument;
+                                    
                                     try
                                     {
-                                        convertedDocument = ConvertDocument(collection, document);
+                                        convertedDocument = DocumentConverter.ConvertToCachedDocument(document);
                                     }
                                     catch (Exception)
                                     {

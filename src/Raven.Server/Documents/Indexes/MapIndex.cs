@@ -1,5 +1,5 @@
 ﻿using System;
-
+using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Indexes
@@ -36,11 +36,6 @@ namespace Raven.Server.Documents.Indexes
 
             lastEtag = lastMappedEtag;
             return lastDocumentEtag > lastMappedEtag;
-        }
-
-        protected override Lucene.Net.Documents.Document ConvertDocument(string collection, Document document)
-        {
-            throw new NotImplementedException();
         }
     }
 }

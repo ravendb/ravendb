@@ -31,6 +31,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public int CountOfMapFields => _fields.Length;
 
+        public override IndexField[] MapFields => _fields; // TODO arek
+
         public bool ContainsField(string field)
         {
             if (field.EndsWith("_Range"))

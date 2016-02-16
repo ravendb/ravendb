@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoIndexField
+    public class AutoIndexField : IndexField
     {
         public AutoIndexField(string name, SortOptions? sortOption = null, bool highlighted = false)
         {
@@ -11,10 +11,8 @@ namespace Raven.Server.Documents.Indexes.Auto
             Highlighted = highlighted;
         }
 
-        public string Name { get; }
+        public override FieldStorage Storage => FieldStorage.No;
 
-        public SortOptions? SortOption { get; }
-
-        public bool Highlighted { get; }
+        public override FieldIndexing Indexing => FieldIndexing.Default;
     }
 }

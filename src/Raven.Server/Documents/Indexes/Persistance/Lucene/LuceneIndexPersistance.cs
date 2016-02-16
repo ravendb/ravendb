@@ -6,7 +6,6 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 
 using Raven.Server.Config.Categories;
-
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
 
@@ -27,13 +26,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         private bool _disposed;
 
         private bool _initialized;
-
-        public LuceneIndexPersistance()
-        {
-            DocumentConverter = new LuceneDocumentConverter();
-        }
-
-        public LuceneDocumentConverter DocumentConverter { get; private set; }
 
         public void Initialize(IndexingConfiguration indexingConfiguration)
         {
@@ -79,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         public void Write(Action<Action<global::Lucene.Net.Documents.Document>> addToIndex)
         {
             if (_disposed)
-                throw new ObjectDisposedException(nameof(LuceneDocumentConverter));
+                throw new ObjectDisposedException(nameof(LuceneIndexPersistance));
 
             if (_initialized == false)
                 throw new InvalidOperationException();
