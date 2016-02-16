@@ -1,18 +1,21 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
-
+using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core;
 
 using Xunit;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -21,25 +24,24 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckDispose()
         {
-            var notifications = new DatabaseNotifications();
             var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
 
-            using (var storage = CreateDocumentsStorage(notifications))
+            using (var database = CreateDocumentDatabase())
             {
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
+                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery()));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
+                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
                 index.Execute(CancellationToken.None);
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
+                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
                     index.Execute(cts.Token);
 
                     cts.Cancel();
@@ -52,23 +54,18 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void SimpleIndexing()
         {
-            var notifications = new DatabaseNotifications();
             var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
+            indexingConfiguration.Initialize(new ConfigurationBuilder().Build());
 
-            using (var storage = CreateDocumentsStorage(notifications))
+            using (var database = CreateDocumentDatabase())
             {
-                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications))
+                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database))
                 {
-                    using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty))
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
-                        Environment = storage.Environment
-                    })
-                    {
-                        using (var tx = context.Environment.WriteTransaction())
+                        using (var tx = context.OpenWriteTransaction())
                         {
-                            context.Transaction = tx;
-
-                            using (var doc =  CreateDocumentAsync(context, "key/1", new DynamicJsonValue
+                            using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -77,10 +74,10 @@ namespace FastTests.Server.Documents.Indexing
                                 }
                             }))
                             {
-                                storage.Put(context, "key/1", null, doc);
+                                database.DocumentsStorage.Put(context, "key/1", null, doc);
                             }
 
-                            using (var doc =  CreateDocumentAsync(context, "key/2", new DynamicJsonValue
+                            using (var doc = CreateDocument(context, "key/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -89,7 +86,7 @@ namespace FastTests.Server.Documents.Indexing
                                 }
                             }))
                             {
-                                storage.Put(context, "key/2", null, doc);
+                                database.DocumentsStorage.Put(context, "key/2", null, doc);
                             }
 
                             tx.Commit();
@@ -97,13 +94,11 @@ namespace FastTests.Server.Documents.Indexing
 
                         index.Execute(CancellationToken.None);
 
-                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 2, TimeSpan.FromSeconds(15)));
+                        WaitForIndexMap(index, 2);
 
-                        using (var tx = context.Environment.WriteTransaction())
+                        using (var tx = context.OpenWriteTransaction())
                         {
-                            context.Transaction = tx;
-
-                            using (var doc = CreateDocumentAsync(context, "key/3", new DynamicJsonValue
+                            using (var doc = CreateDocument(context, "key/3", new DynamicJsonValue
                             {
                                 ["Name"] = "William",
                                 [Constants.Metadata] = new DynamicJsonValue
@@ -112,29 +107,35 @@ namespace FastTests.Server.Documents.Indexing
                                 }
                             }))
                             {
-                                storage.Put(context, "key/3", null, doc);
+                                database.DocumentsStorage.Put(context, "key/3", null, doc);
                             }
 
                             tx.Commit();
                         }
 
-                        Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == 3, TimeSpan.FromSeconds(15)));
+                        WaitForIndexMap(index, 3);
                     }
                 }
             }
         }
 
-        private static BlittableJsonReaderObject CreateDocumentAsync(RavenOperationContext context, string key, DynamicJsonValue value)
+        private static void WaitForIndexMap(Index index, long etag)
+        {
+            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
+            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == etag, timeout));
+        }
+
+        private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        private static DocumentsStorage CreateDocumentsStorage(DatabaseNotifications notifications)
+        private static DocumentDatabase CreateDocumentDatabase()
         {
-            var storage = new DocumentsStorage("Test", new RavenConfiguration { Core = { RunInMemory = true } }, notifications);
-            storage.Initialize();
+            var documentDatabase = new DocumentDatabase("Test", new RavenConfiguration { Core = { RunInMemory = true } });
+            documentDatabase.Initialize();
 
-            return storage;
+            return documentDatabase;
         }
     }
 }

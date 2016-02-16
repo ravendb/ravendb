@@ -6,6 +6,7 @@ using Microsoft.AspNet.Http;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -13,12 +14,12 @@ namespace Raven.Server.Documents.Handlers
     {
         [RavenAction("/databases/*/collections/stats", "GET")]
         public async Task GetCollectionStats()
-            {
-            RavenOperationContext context;
+        {
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
-                var collections= new DynamicJsonValue();
+                context.OpenReadTransaction();
+                var collections = new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
                     ["NumberOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
@@ -37,10 +38,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/docs", "GET")]
         public async Task GetCollectionDocuments()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
                 WriteDocuments(context, documents);
@@ -52,17 +53,17 @@ namespace Raven.Server.Documents.Handlers
         {
             var deletedList = new List<long>();
             long totalDocsDeletes = 0;
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             var collection = GetStringQueryString("name");
             using (ContextPool.AllocateOperationContext(out context))
             {
                 long maxEtag = -1;
                 while (true)
                 {
-                    using (context.Transaction = context.Environment.WriteTransaction())
+                    using (context.OpenWriteTransaction())
                     {
                         if (maxEtag == -1)
-                            maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction);
+                            maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
 
                         Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
                         context.Transaction.Commit();

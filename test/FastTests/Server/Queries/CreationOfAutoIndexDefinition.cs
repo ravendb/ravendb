@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
@@ -36,7 +35,7 @@ namespace FastTests.Server.Queries
 
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
-            Assert.Equal("Term", definition.MapFields.ToArray()[0]);
+            Assert.True(definition.ContainsField("Term"));
             Assert.Equal("Auto/Users/ByTerm", definition.Name);
         }
 
@@ -49,7 +48,7 @@ namespace FastTests.Server.Queries
 
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
-            Assert.Equal("Term", definition.MapFields.ToArray()[0]);
+            Assert.True(definition.ContainsField("Term"));
             Assert.Equal("Auto/Users/ByTerm", definition.Name);
         }
 
@@ -63,8 +62,8 @@ namespace FastTests.Server.Queries
 
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
-            Assert.Contains("Term", definition.MapFields);
-            Assert.Contains("Term2", definition.MapFields);
+            Assert.True(definition.ContainsField("Term"));
+            Assert.True(definition.ContainsField("Term2"));
             Assert.Equal("Auto/Users/ByTermAndTerm2", definition.Name);
         }
 
@@ -78,10 +77,10 @@ namespace FastTests.Server.Queries
 
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
-            Assert.Contains("Term", definition.MapFields);
-            Assert.Contains("Term2", definition.MapFields);
-            Assert.Contains("Term3", definition.MapFields);
-            Assert.Contains("Term4", definition.MapFields);
+            Assert.True(definition.ContainsField("Term"));
+            Assert.True(definition.ContainsField("Term2"));
+            Assert.True(definition.ContainsField("Term3"));
+            Assert.True(definition.ContainsField("Term4"));
             Assert.Equal("Auto/Users/ByTermAndTerm2AndTerm3AndTerm4", definition.Name);
         }
 
@@ -95,9 +94,9 @@ namespace FastTests.Server.Queries
 
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
-            Assert.Contains("Term", definition.MapFields);
-            Assert.Contains("Term2", definition.MapFields);
-            Assert.Contains("Term3", definition.MapFields);
+            Assert.True(definition.ContainsField("Term"));
+            Assert.True(definition.ContainsField("Term2"));
+            Assert.True(definition.ContainsField("Term3"));
             Assert.Equal("Auto/Users/ByTermAndTerm2AndTerm3", definition.Name);
         }
 
@@ -110,7 +109,7 @@ namespace FastTests.Server.Queries
 
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
-            Assert.Contains("Tags,Name", definition.MapFields.ToArray()[0]);
+            Assert.True(definition.ContainsField("Tags,Name"));
             Assert.Equal("Auto/Users/ByTags_Name", definition.Name);
         }
 
@@ -124,7 +123,7 @@ namespace FastTests.Server.Queries
 
             Assert.Equal(1, definition.Collections.Length);
             Assert.Equal("Users", definition.Collections[0]);
-            Assert.Contains("User.Name", definition.MapFields.ToArray()[0]);
+            Assert.True(definition.ContainsField("User.Name"));
             Assert.Equal("Auto/Users/ByUser_Name", definition.Name);
         }
 

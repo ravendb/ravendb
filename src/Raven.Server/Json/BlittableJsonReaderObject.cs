@@ -5,6 +5,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Server.Routing;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Sparrow;
 
 namespace Raven.Server.Json
@@ -33,7 +36,7 @@ namespace Raven.Server.Json
             return new StreamReader(memoryStream).ReadToEnd();
         }
 
-        public BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context, 
+        public BlittableJsonReaderObject(byte* mem, int size, MemoryOperationContext context, 
             BlittableJsonDocumentBuilder builder = null,
             CachedProperties cachedProperties = null)
         {

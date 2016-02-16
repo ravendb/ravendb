@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 namespace Raven.Server.Json
 {
     /// <summary>
@@ -17,7 +20,7 @@ namespace Raven.Server.Json
     /// </summary>
     public class CachedProperties : IComparer<BlittableJsonDocumentBuilder.PropertyTag>
     {
-        private readonly RavenOperationContext _context;
+        private readonly MemoryOperationContext _context;
 
         private class PropertyName
         {
@@ -38,7 +41,7 @@ namespace Raven.Server.Json
 
         public int PropertiesDiscovered;
 
-        public CachedProperties(RavenOperationContext context)
+        public CachedProperties(MemoryOperationContext context)
         {
             _context = context;
         }

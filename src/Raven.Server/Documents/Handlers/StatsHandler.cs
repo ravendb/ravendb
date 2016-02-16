@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -12,10 +14,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/stats", "GET")]
         public Task Stats()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 //TODO: Implement properly and split to dedicated endpoints
                 //TODO: So we don't get so much stuff to ignore in the stats
@@ -40,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
                     ["Prefetches"] = new DynamicJsonArray(),
 
                     // documents
-                    ["LastDocEtag"] = DocumentsStorage.ReadLastEtag(context.Transaction),
+                    ["LastDocEtag"] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
                     ["CountOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
                     ["DatabaseId"] = Database.DocumentsStorage.Environment.DbId.ToString(),
                     ["Is64Bits"] = IntPtr.Size == sizeof (long)

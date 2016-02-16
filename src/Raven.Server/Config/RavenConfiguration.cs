@@ -97,6 +97,7 @@ namespace Raven.Server.Config
             Memory.Initialize(Settings);
             Storage.Initialize(Settings);
             Encryption.Initialize(Settings);
+            Indexing.Initialize(Settings);
             Monitoring.Initialize(Settings);
             Expiration.Initialize(Settings);
             Versioning.Initialize(Settings);

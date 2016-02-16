@@ -1,9 +1,10 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.AspNet.WebSockets.Protocol;
+
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
-using Constants = Raven.Abstractions.Data.Constants;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.System
 {
@@ -36,16 +37,16 @@ namespace Raven.Server.Web.System
 
         private async Task ReturnResources(string prefix)
         {
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 writer.WriteStartArray();
                 var first = true;
                 foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
                 {
-                    if(first == false)
+                    if (first == false)
                         writer.WriteComma();
                     first = false;
 

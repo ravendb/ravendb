@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Compact;
 using Voron.Data.Fixed;
-using Voron.Debugging;
-using Voron.Impl.FileHeaders;
 
 namespace Voron.Impl
 {

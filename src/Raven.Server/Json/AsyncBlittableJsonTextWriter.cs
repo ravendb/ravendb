@@ -1,6 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Sparrow;
 
 namespace Raven.Server.Json
@@ -22,7 +26,7 @@ namespace Raven.Server.Json
         private int _pos;
         private readonly byte[] _buffer;
 
-        public AsyncBlittableJsonTextWriter(RavenOperationContext context, Stream stream)
+        public AsyncBlittableJsonTextWriter(MemoryOperationContext context, Stream stream)
         {
             _stream = stream;
             _buffer = context.GetManagedBuffer();
