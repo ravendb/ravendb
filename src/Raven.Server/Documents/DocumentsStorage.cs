@@ -5,7 +5,7 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
-using Raven.Server.Config;
+using Raven.Server.Documents.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide;
@@ -21,9 +21,7 @@ namespace Raven.Server.Documents
 {
     public unsafe class DocumentsStorage : IDisposable
     {
-        private readonly RavenConfiguration _configuration;
-
-        private readonly DatabaseNotifications _notifications;
+        private readonly DocumentDatabase _documentDatabase;
 
         private readonly TableSchema _docsSchema = new TableSchema();
         private readonly ILog _log;
@@ -40,11 +38,10 @@ namespace Raven.Server.Documents
         private const string NoCollectionSpecified = "Raven/Empty";
         private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
-        public DocumentsStorage(string name, RavenConfiguration configuration, DatabaseNotifications notifications)
+        public DocumentsStorage(DocumentDatabase documentDatabase)
         {
-            _name = name;
-            _configuration = configuration;
-            _notifications = notifications;
+            _documentDatabase = documentDatabase;
+            _name = _documentDatabase.Name;
             _log = LogManager.GetLogger(typeof(DocumentsStorage).FullName + "." + _name);
 
             // The documents schema is as follows
@@ -85,11 +82,11 @@ namespace Raven.Server.Documents
         {
             if (_log.IsDebugEnabled)
             {
-                _log.Debug("Starting to open document storage for {0}", _configuration.Core.RunInMemory ? "<memory>" : _configuration.Core.DataDirectory);
+                _log.Debug("Starting to open document storage for {0}", _documentDatabase.Configuration.Core.RunInMemory ? "<memory>" : _documentDatabase.Configuration.Core.DataDirectory);
             }
-            var options = _configuration.Core.RunInMemory
+            var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(_configuration.Core.DataDirectory);
+                : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
 
             try
             {
@@ -405,7 +402,9 @@ namespace Raven.Server.Documents
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
             table.Delete(doc.StorageId);
 
-            context.Transaction.InnerTransaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
+            DeleteDocumentFromIndexesForCollection(context, key, originalCollectionName);
+
+            context.Transaction.InnerTransaction.AfterCommit += () => _documentDatabase.Notifications.RaiseNotifications(new DocumentChangeNotification
             {
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
@@ -481,7 +480,7 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
-            context.Transaction.InnerTransaction.AfterCommit += () => _notifications.RaiseNotifications(new DocumentChangeNotification
+            context.Transaction.InnerTransaction.AfterCommit += () => _documentDatabase.Notifications.RaiseNotifications(new DocumentChangeNotification
             {
                 Etag = newEtag,
                 CollectionName = originalCollectionName,
@@ -595,6 +594,18 @@ namespace Raven.Server.Documents
                         Count = collectionTable.NumberOfEntries
                     };
                 } while (it.MoveNext());
+            }
+        }
+
+        private void DeleteDocumentFromIndexesForCollection(RavenOperationContext context, string key, string collection)
+        {
+            foreach (var index in _documentDatabase.IndexStore.GetIndexesForCollection(collection))
+            {
+                var task = context.Transaction.GetOrAddTask(
+                    x => x.IndexId == index.IndexId,
+                    () => new RemoveFromIndexTask(index.IndexId));
+
+                task.AddKey(key);
             }
         }
     }

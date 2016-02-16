@@ -15,19 +15,22 @@ namespace Raven.Server.Documents
     {
         private readonly DateTime createdAt = SystemTime.UtcNow;
 
-        private readonly List<DocumentTask> _tasks;
+        private readonly List<DocumentsTask> _tasks;
 
         private readonly RavenOperationContext _context;
 
         public readonly Transaction InnerTransaction;
 
-        public DocumentTransaction(RavenOperationContext context, Transaction transaction)
+        private readonly TasksStorage _tasksStorage;
+
+        public DocumentTransaction(RavenOperationContext context, Transaction transaction, TasksStorage tasksStorage)
         {
             _context = context;
             InnerTransaction = transaction;
+            _tasksStorage = tasksStorage;
 
             if (InnerTransaction.LowLevelTransaction.Flags == TransactionFlags.ReadWrite)
-                _tasks = new List<DocumentTask>();
+                _tasks = new List<DocumentsTask>();
         }
 
         public void Commit()
@@ -38,8 +41,8 @@ namespace Raven.Server.Documents
             InnerTransaction.Commit();
         }
 
-        public T GetTask<T>(Func<T, bool> predicate, Func<T> newTask)
-            where T : DocumentTask
+        public T GetOrAddTask<T>(Func<T, bool> predicate, Func<T> newTask)
+            where T : DocumentsTask
         {
             var task = _tasks
                 .OfType<T>()
@@ -65,9 +68,7 @@ namespace Raven.Server.Documents
         private void SaveTasks()
         {
             foreach (var task in _tasks)
-            {
-                Tasks.AddTask(task, createdAt);
-            }
+                _tasksStorage.AddTask(_context, task, createdAt);
         }
     }
 }

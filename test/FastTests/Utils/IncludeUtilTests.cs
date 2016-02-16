@@ -22,7 +22,7 @@ namespace FastTests.Utils
                     {
                         ["C"] = new DynamicJsonArray
                         {
-                            Items = new Queue<object>(new []
+                            Items = new Queue<object>(new[]
                             {
                                 new DynamicJsonValue
                                 {
@@ -88,15 +88,15 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo", ids);
                 Assert.Equal(new[] { "foobar/1", "foobar/2", "foobar/3", "foobar/4" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,X.Y",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,X.Y", ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/2", "ccc/3", "ccc/5" }, ids);
             }
         }
@@ -114,17 +114,17 @@ namespace FastTests.Utils
                         GetStringArray("foo"),
                         GetStringArray("bar"),
                         GetStringArray("foobar")
-                    })				
+                    })
                 }
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,", ids);
-                Assert.Equal(new[] {"foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3" , "foobar/1", "foobar/2", "foobar/3" }, ids);
+                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
 
                 ids.Clear();
                 IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,(abc/)", ids);
@@ -150,7 +150,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -181,7 +181,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -221,7 +221,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -270,7 +270,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -287,7 +287,7 @@ namespace FastTests.Utils
         {
             return new DynamicJsonArray
             {
-                Items = new Queue<object>(new [] { $"{prefix}/1", $"{prefix}/2", $"{prefix}/3" })
+                Items = new Queue<object>(new[] { $"{prefix}/1", $"{prefix}/2", $"{prefix}/3" })
             };
         }
 
@@ -411,11 +411,11 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y", ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
             }
         }
@@ -486,11 +486,11 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y(ccc/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y(ccc/)", ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
             }
         }
@@ -507,11 +507,11 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
             }
         }
@@ -546,11 +546,11 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)", ids);
                 Assert.Equal(new[] { "foo/11", "foo/2", "foo/3", "foo/4" }, ids);
             }
         }
@@ -567,12 +567,12 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,",ids);
-                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" },ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,", ids);
+                Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
             }
         }
 
@@ -598,15 +598,15 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.ContactInfoId,",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.ContactInfoId,", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.ContactInfoId2,",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.ContactInfoId2,", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
             }
         }
@@ -631,19 +631,19 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId1,",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId1,", ids);
                 Assert.Equal(new object[] { "1", "2", "3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2,",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2,", ids);
                 Assert.Equal(new object[] { "1.1", "2.2", "3.3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3,",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3,", ids);
                 Assert.Equal(new object[] { "1", "2", "3" }, ids);
             }
         }
@@ -660,11 +660,11 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId",ids);				
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId", ids);
                 Assert.Equal("contacts/1", ids.FirstOrDefault());
 
             }
@@ -682,11 +682,11 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)",ids);                
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)", ids);
                 Assert.Equal("contacts/1", ids.FirstOrDefault());
 
                 //edge cases
@@ -720,28 +720,28 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(contacts/)", ids);
                 Assert.Equal("contacts/megadevice", ids.FirstOrDefault());
 
                 //edge cases
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId()",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId()", ids);
                 Assert.Equal("megadevice", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(c/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(c/)", ids);
                 Assert.Equal("c/megadevice", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(ca/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(ca/)", ids);
                 Assert.Equal("ca/megadevice", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo.ContactInfoId(/)", ids);
                 Assert.Equal("/megadevice", ids.FirstOrDefault());
             }
         }
@@ -766,19 +766,19 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId1",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId1", ids);
                 Assert.Equal("contacts/1", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId2",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.ExtendedInfo3.ContactInfoId2", ids);
                 Assert.Equal("contacts/2", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.AdressInfo",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ExtendedInfo1.ExtendedInfo2.AdressInfo", ids);
                 Assert.Equal("address/1", ids.FirstOrDefault());
             }
         }
@@ -793,7 +793,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = "contacts/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -812,11 +812,11 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = "contacts/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId", ids);
                 Assert.Equal("contacts/1", ids.FirstOrDefault());
             }
         }
@@ -833,20 +833,20 @@ namespace FastTests.Utils
                 ["ContactInfoId3"] = 78.89, //this one is double
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId", ids);
                 Assert.Equal("12", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2", ids);
                 Assert.Equal("56", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3",ids);
-                Assert.Equal("78.89", ids.FirstOrDefault());				
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3", ids);
+                Assert.Equal("78.89", ids.FirstOrDefault());
             }
         }
 
@@ -859,7 +859,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -878,12 +878,12 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(contacts/)", ids);
                 Assert.Equal("contacts/1", ids.FirstOrDefault());
             }
         }
@@ -897,20 +897,20 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(c/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(c/)", ids);
                 Assert.Equal("c/1", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(ca/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(ca/)", ids);
                 Assert.Equal("ca/1", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(caa/)",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId(caa/)", ids);
                 Assert.Equal("caa/1", ids.FirstOrDefault());
             }
         }
@@ -926,20 +926,20 @@ namespace FastTests.Utils
                 ["CarInfoId"] = "cars/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new RavenOperationContext(pool, null))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                IncludeUtil.GetDocIdFromInclude(reader, "AddressInfoId",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "AddressInfoId", ids);
                 Assert.Equal("addresses/1", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId", ids);
                 Assert.Equal("contacts/1", ids.FirstOrDefault());
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "CarInfoId",ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "CarInfoId", ids);
                 Assert.Equal("cars/1", ids.FirstOrDefault());
             }
         }

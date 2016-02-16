@@ -3,20 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 
 namespace Raven.Server.Documents.Indexes
 {
     public class IndexStore : IDisposable
     {
+        private readonly DocumentDatabase _documentDatabase;
+
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
-
-        private readonly DocumentsStorage _documentsStorage;
-
-        private readonly IndexingConfiguration _configuration;
-
-        private readonly DatabaseNotifications _databaseNotifications;
 
         private readonly object _locker = new object();
 
@@ -24,11 +19,9 @@ namespace Raven.Server.Documents.Indexes
 
         private string _path;
 
-        public IndexStore(DocumentsStorage documentsStorage, IndexingConfiguration configuration, DatabaseNotifications databaseNotifications)
+        public IndexStore(DocumentDatabase documentDatabase)
         {
-            _documentsStorage = documentsStorage;
-            _configuration = configuration;
-            _databaseNotifications = databaseNotifications;
+            _documentDatabase = documentDatabase;
         }
 
         public void Initialize()
@@ -41,11 +34,11 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException();
 
-                if (_configuration.RunInMemory == false)
+                if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
-                    _path = _configuration.IndexStoragePath;
-                    if (System.IO.Directory.Exists(_path) == false && _configuration.RunInMemory == false)
-                        System.IO.Directory.CreateDirectory(_path);
+                    _path = _documentDatabase.Configuration.Indexing.IndexStoragePath;
+                    if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
+                        Directory.CreateDirectory(_path);
                 }
 
                 Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
@@ -76,7 +69,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var indexId = _indexes.GetNextIndexId();
 
-            _indexes.Add(AutoIndex.CreateNew(indexId, definition, _documentsStorage, _configuration, _databaseNotifications));
+            _indexes.Add(AutoIndex.CreateNew(indexId, definition, _documentDatabase.DocumentsStorage, _documentDatabase.Configuration.Indexing, _documentDatabase.Notifications));
 
             return indexId;
         }
@@ -94,7 +87,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void OpenIndexes()
         {
-            if (_configuration.RunInMemory)
+            if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
             foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
@@ -103,7 +96,7 @@ namespace Raven.Server.Documents.Indexes
                 if (int.TryParse(indexDirectory.Name, out indexId) == false)
                     continue;
 
-                var index = Index.Open(indexId, indexDirectory.FullName, _documentsStorage, _configuration, _databaseNotifications);
+                var index = Index.Open(indexId, indexDirectory.FullName, _documentDatabase.DocumentsStorage, _documentDatabase.Configuration.Indexing, _documentDatabase.Notifications);
                 _indexes.Add(index);
             }
         }
@@ -111,6 +104,11 @@ namespace Raven.Server.Documents.Indexes
         public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
         {
             return _indexes.GetDefinitionsOfTypeForCollection<AutoIndexDefinition>(collection);
+        }
+
+        public IEnumerable<Index> GetIndexesForCollection(string collection)
+        {
+            throw new NotImplementedException();
         }
     }
 }

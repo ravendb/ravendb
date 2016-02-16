@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Indexing
         public LuceneDocumentConverterTests()
         {
             _pool = new UnmanagedBuffersPool("foo");
-            _ctx = new RavenOperationContext(_pool);
+            _ctx = new RavenOperationContext(_pool, null);
         }
 
         [Fact]

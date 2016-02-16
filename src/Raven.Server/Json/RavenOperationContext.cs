@@ -47,12 +47,12 @@ namespace Raven.Server.Json
 
         public DocumentTransaction OpenReadTransaction()
         {
-            return Transaction = new DocumentTransaction(this, Environment.ReadTransaction());
+            return Transaction = new DocumentTransaction(this, Environment.ReadTransaction(), null);
         }
 
         public DocumentTransaction OpenWriteTransaction()
         {
-            return Transaction = new DocumentTransaction(this, Environment.WriteTransaction());
+            return Transaction = new DocumentTransaction(this, Environment.WriteTransaction(), null);
         }
 
         private byte[] GetParsingBuffer()

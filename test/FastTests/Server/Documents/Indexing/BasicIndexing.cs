@@ -23,25 +23,24 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckDispose()
         {
-            var notifications = new DatabaseNotifications();
             var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
 
-            using (var storage = CreateDocumentsStorage(notifications))
+            using (var database = CreateDocumentDatabase())
             {
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
+                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications);
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery()));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
+                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications);
                 index.Execute(CancellationToken.None);
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications);
+                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications);
                     index.Execute(cts.Token);
 
                     cts.Cancel();
@@ -54,15 +53,14 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void SimpleIndexing()
         {
-            var notifications = new DatabaseNotifications();
             var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
             indexingConfiguration.Initialize(new ConfigurationBuilder().Build());
 
-            using (var storage = CreateDocumentsStorage(notifications))
+            using (var database = CreateDocumentDatabase())
             {
-                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), storage, indexingConfiguration, notifications))
+                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications))
                 {
-                    using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty), storage.Environment))
+                    using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty), database.DocumentsStorage.Environment))
                     {
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -75,7 +73,7 @@ namespace FastTests.Server.Documents.Indexing
                                 }
                             }))
                             {
-                                storage.Put(context, "key/1", null, doc);
+                                database.DocumentsStorage.Put(context, "key/1", null, doc);
                             }
 
                             using (var doc = CreateDocument(context, "key/2", new DynamicJsonValue
@@ -87,7 +85,7 @@ namespace FastTests.Server.Documents.Indexing
                                 }
                             }))
                             {
-                                storage.Put(context, "key/2", null, doc);
+                                database.DocumentsStorage.Put(context, "key/2", null, doc);
                             }
 
                             tx.Commit();
@@ -108,7 +106,7 @@ namespace FastTests.Server.Documents.Indexing
                                 }
                             }))
                             {
-                                storage.Put(context, "key/3", null, doc);
+                                database.DocumentsStorage.Put(context, "key/3", null, doc);
                             }
 
                             tx.Commit();
@@ -131,12 +129,12 @@ namespace FastTests.Server.Documents.Indexing
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        private static DocumentsStorage CreateDocumentsStorage(DatabaseNotifications notifications)
+        private static DocumentDatabase CreateDocumentDatabase()
         {
-            var storage = new DocumentsStorage("Test", new RavenConfiguration { Core = { RunInMemory = true } }, notifications);
-            storage.Initialize();
+            var documentDatabase = new DocumentDatabase("Test", new RavenConfiguration { Core = { RunInMemory = true } });
+            documentDatabase.Initialize();
 
-            return storage;
+            return documentDatabase;
         }
     }
 }
