@@ -208,8 +208,20 @@ namespace Voron.Impl
                 return currentPage;
             }
 
-            var newPage = AllocatePage(1, num); // allocate new page in a log file but with the same number
-            Memory.Copy(newPage.Pointer, currentPage.Pointer, Environment.Options.PageSize);
+            int pageSize;
+            Page newPage;
+            if ( currentPage.IsOverflow )
+            {
+                newPage = AllocateOverflowPage(currentPage.OverflowSize, num);
+                pageSize = currentPage.OverflowSize;
+            }
+            else
+            {
+                newPage = AllocatePage(1, num); // allocate new page in a log file but with the same number
+                pageSize = Environment.Options.PageSize;
+            }
+            
+            Memory.CopyInline(newPage.Pointer, currentPage.Pointer, pageSize);
 
             return newPage;
         }
