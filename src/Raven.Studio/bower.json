@@ -1,0 +1,40 @@
+{
+  "name": "Raven.Studio",
+  "private": true,
+  "dependencies": {
+    "jquery": "^2.2.0",
+    "knockout": "^3.4.0",
+    "requirejs": "^2.1.22",
+    "blockUI": "blockui#*",
+    "nprogress": "^0.2.0",
+    "knockout.dirtyFlag": "https://raw.githubusercontent.com/CodeSeven/KoLite/86525c983dcc6f895f17391e03cfaf994a29e9b4/knockout.dirtyFlag.js",
+    "knockout-delegatedEvents": "^0.6.1",
+    "knockout-postbox": "^0.5.2",
+    "moment": "^2.11.2",
+    "bootstrap": "^3.3.6",
+    "spin.js": "^2.3.2",
+    "jwerty": "^0.3.2",
+    "jquery-fullscreen": "^1.1.4",
+    "eonasdan-bootstrap-datetimepicker": "bootstrap3-datetimepicker#^4.17.37",
+    "bootstrap-contextmenu": "^0.3.4",
+    "bootstrap-multiselect": "^0.9.13",
+    "bootstrap-select": "^1.9.4",
+    "jquery-ui": "jquery.ui#^1.11.4",
+    "jquery.dynatree": "^1.2.8",
+    "Durandal": "durandal#^2.1.0",
+    "forge": "^0.6.38",
+    "d3": "^3.5.15",
+    "nvd3": "^1.8.2",
+    "dagre-d3": "^0.4.17",
+    "ace": "^1.2.3",
+    "jszip-utils": "^0.0.2",
+    "jszip": "^2.5.0",
+    "text": "requirejs-text#^2.0.14",
+    "font-awesome": "fontawesome#^4.5.0",
+    "animate.css": "^3.5.1"
+  },
+  "resolutions": {
+    "jquery": "^2.2.0",
+    "requirejs": "^2.1.22"
+  }
+}
