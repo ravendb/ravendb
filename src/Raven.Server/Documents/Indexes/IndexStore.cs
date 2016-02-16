@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IEnumerable<Index> GetIndexesForCollection(string collection)
         {
-            throw new NotImplementedException();
+            return _indexes.GetForCollection(collection);
         }
     }
 }

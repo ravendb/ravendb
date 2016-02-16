@@ -39,14 +39,19 @@ namespace Raven.Server.Documents.Indexes
             return _indexesByName.TryGetValue(name, out index);
         }
 
-        public List<T> GetDefinitionsOfTypeForCollection<T>(string collection) where T : IndexDefinitionBase
+        public List<Index> GetForCollection(string collection)
         {
             List<Index> indexes;
 
             if (_indexesByCollection.TryGetValue(collection, out indexes) == false)
-                return Enumerable.Empty<T>().ToList();
+                return Enumerable.Empty<Index>().ToList();
 
-            return indexes.Where(x => x.Definition is T).Select(x => (T) x.Definition).ToList();
+            return indexes;
+        }
+
+        public List<T> GetDefinitionsOfTypeForCollection<T>(string collection) where T : IndexDefinitionBase
+        {
+            return GetForCollection(collection).Where(x => x.Definition is T).Select(x => (T)x.Definition).ToList();
         }
 
         public int GetNextIndexId()
