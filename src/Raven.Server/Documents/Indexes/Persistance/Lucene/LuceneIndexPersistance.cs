@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 
 using Raven.Server.Config.Categories;
-using Raven.Server.Json;
-
 using Directory = Lucene.Net.Store.Directory;
 using Version = Lucene.Net.Util.Version;
 
@@ -30,13 +26,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         private bool _disposed;
 
         private bool _initialized;
-
-        public LuceneIndexPersistance()
-        {
-            DocumentConverter = new LuceneDocumentConverter();
-        }
-
-        public LuceneDocumentConverter DocumentConverter { get; private set; }
 
         public void Initialize(IndexingConfiguration indexingConfiguration)
         {
@@ -79,10 +68,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }
         }
 
-        public void Write(RavenOperationContext context, List<global::Lucene.Net.Documents.Document> documents, CancellationToken cancellationToken)
+        public void Write(Action<Action<global::Lucene.Net.Documents.Document>> addToIndex)
         {
             if (_disposed)
-                throw new ObjectDisposedException(nameof(LuceneDocumentConverter));
+                throw new ObjectDisposedException(nameof(LuceneIndexPersistance));
 
             if (_initialized == false)
                 throw new InvalidOperationException();
@@ -107,12 +96,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                                 throw new InvalidOperationException();
                             }
 
-                            foreach (var document in documents)
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-
-                                AddDocumentToIndex(_indexWriter, document, analyzer);
-                            }
+                            addToIndex(document => AddDocumentToIndex(_indexWriter, document, analyzer));
                         }
                         catch (Exception)
                         {
@@ -140,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }
         }
 
-        private void AddDocumentToIndex(LuceneIndexWriter indexWriter, global::Lucene.Net.Documents.Document luceneDoc, Analyzer analyzer)
+        private static void AddDocumentToIndex(LuceneIndexWriter indexWriter, global::Lucene.Net.Documents.Document luceneDoc, Analyzer analyzer)
         {
             indexWriter.AddDocument(luceneDoc, analyzer);
 
@@ -151,7 +135,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 }
             }
         }
-
 
         private void Flush()
         {

@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryRunner
     {
+        private const string DynamicIndexPrefix = "dynamic/";
+
         private readonly IndexStore _indexStore;
 
         public DynamicQueryRunner(IndexStore indexStore)
@@ -19,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public QueryResult Execute(string dynamicIndexName, IndexQuery query)
         {
-            var collection = dynamicIndexName.Substring("dynamic/".Length);
+            var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
             var map = DynamicQueryMapping.Create(collection, query);
 

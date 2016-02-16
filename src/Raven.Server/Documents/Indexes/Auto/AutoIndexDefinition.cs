@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
         private readonly AutoIndexField[] _fields;
-
-        private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
+        private readonly Dictionary<string, AutoIndexField> _fieldsByName;
 
         public AutoIndexDefinition(string collection, AutoIndexField[] fields)
             : base(FindIndexName(collection, fields), new[] { collection })
@@ -24,21 +22,33 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
 
             _fields = fields;
+
+            _fieldsByName = _fields.ToDictionary(x => x.Name, x => x);
         }
 
-        public IEnumerable<string> MapFields => _fields.Select(x => x.Name); // TODO arek - maybe remove that
+        public int CountOfMapFields => _fields.Length;
+
+        public override IndexField[] MapFields => _fields; // TODO arek
 
         public bool ContainsField(string field)
         {
             if (field.EndsWith("_Range"))
                 field = field.Substring(0, field.Length - 6);
-            
-            return _fields.Select(x => x.Name).Contains(field);
+
+            return _fieldsByName.ContainsKey(field);
+        }
+
+        public AutoIndexField GetField(string field)
+        {
+            if (field.EndsWith("_Range"))
+                field = field.Substring(0, field.Length - 6);
+
+            return _fieldsByName[field];
         }
 
         private static string FindIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {
-            var combinedFields = string.Join("And", fields.Select(x => ReplaceInvalidCharacterForFields.Replace(x.Name, "_")).OrderBy(x => x));
+            var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
             var sortOptions = fields.Where(x => x.SortOption != null).Select(x => x.Name).ToArray();
             if (sortOptions.Length > 0)

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries.Sort;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -180,79 +182,61 @@ namespace Raven.Server.Documents.Queries.Dynamic
             //    }
             //}
 
-            //if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
-            //{
-            //    var sortInfo = DynamicQueryMapping.GetSortInfo(s => { }, indexQuery);
+            foreach (var sortInfo in query.SortDescriptors) // with matching sort options
+            {
+                var sortField = sortInfo.Field;
 
-            //    foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
-            //    {
-            //        var sortField = sortedField.Field;
-            //        if (sortField.StartsWith(Constants.AlphaNumericFieldName) ||
-            //            sortField.StartsWith(Constants.RandomFieldName) ||
-            //            sortField.StartsWith(Constants.CustomSortFieldName))
-            //        {
-            //            sortField = SortFieldHelper.CustomField(sortField).Name;
-            //        }
+                if (sortField.StartsWith(Constants.AlphaNumericFieldName) ||
+                    sortField.StartsWith(Constants.RandomFieldName) ||
+                    sortField.StartsWith(Constants.CustomSortFieldName))
+                {
+                    sortField = SortFieldHelper.CustomField(sortField).Name;
+                }
 
-            //        var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortField);
+                var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortField);
 
-            //        if (normalizedFieldName.EndsWith("_Range"))
-            //            normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
+                if (normalizedFieldName.EndsWith("_Range"))
+                    normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
 
-            //        // if the field is not in the output, then we can't sort on it. 
-            //        if (abstractViewGenerator.ContainsField(normalizedFieldName) == false)
-            //        {
-            //            explain(indexName,
-            //                    () =>
-            //                    "Rejected because index does not contains field '" + normalizedFieldName + "' which we need to sort on");
-            //            currentBestState = DynamicQueryMatchType.Partial;
-            //            continue;
-            //        }
+                // if the field is not in the output, then we can't sort on it. 
+                if (definition.ContainsField(normalizedFieldName) == false)
+                {
+                    explain(indexName,
+                            () => $"Rejected because index does not contains field '{normalizedFieldName}' which we need to sort on");
+                    currentBestState = DynamicQueryMatchType.Partial;
+                    continue;
+                }
 
-            //        var dynamicSortInfo = sortInfo.FirstOrDefault(x => x.Field == normalizedFieldName);
+                var autoIndexField = definition.GetField(normalizedFieldName);
 
-            //        if (dynamicSortInfo == null)// no sort order specified, we don't care, probably
-            //            continue;
+                if (sortInfo.FieldType != autoIndexField.SortOption)
+                {
+                    if (autoIndexField.SortOption == null)
+                    {
+                        switch (sortInfo.FieldType) // if field is not sorted, we check if we asked for the default sorting
+                        {
+                            case SortOptions.String:
+                            case SortOptions.None:
+                                continue;
+                        }
+                    }
 
-            //        SortOptions value;
-            //        if (indexDefinition.SortOptions.TryGetValue(normalizedFieldName, out value) == false)
-            //        {
-            //            switch (dynamicSortInfo.FieldType)// if we can't find the value, we check if we asked for the default sorting
-            //            {
-            //                case SortOptions.String:
-            //                case SortOptions.None:
-            //                    continue;
-            //                default:
-            //                    explain(indexName,
-            //                            () => "The specified sort type is different than the default for field: " + normalizedFieldName);
-            //                    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //            }
-            //        }
-
-            //        if (value != dynamicSortInfo.FieldType)
-            //        {
-            //            explain(indexName,
-            //                    () =>
-            //                    "The specified sort type (" + dynamicSortInfo.FieldType + ") is different than the one specified for field '" +
-            //                    normalizedFieldName + "' (" + value + ")");
-            //            return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //        }
-            //    }
-            //}
-            
-            if (currentBestState != DynamicQueryMatchType.Complete) // TODO arek
-                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                    explain(indexName, () =>
+                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{normalizedFieldName}' ({autoIndexField.SortOption})");
+                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                }
+            }
 
             if (currentBestState == DynamicQueryMatchType.Complete && (priority == IndexingPriority.Idle || priority == IndexingPriority.Abandoned))
             {
                 currentBestState = DynamicQueryMatchType.Partial;
-                explain(indexName, () => String.Format("The index (name = {0}) is disabled or abandoned. The preference is for active indexes - making a partial match", indexName));
+                explain(indexName, () => $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match");
             }
 
             return new DynamicQueryMatchResult(indexName, currentBestState)
             {
                 LastMappedEtag = index.GetLastMappedEtag(),
-                NumberOfMappedFields = definition.MapFields.Count() // TODO arek
+                NumberOfMappedFields = definition.CountOfMapFields
             };
         }
     }

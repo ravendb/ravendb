@@ -5,6 +5,9 @@ using System.Net;
 using Raven.Server.Indexing.Corax.Analyzers;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -17,7 +20,7 @@ namespace Raven.Server.Indexing.Corax
     public class Indexer : IDisposable
     {
         private readonly FullTextIndex _parent;
-        private readonly RavenOperationContext _context;
+        private readonly MemoryOperationContext _context;
         private readonly int _batchSize;
         private readonly List<BlittableJsonReaderObject> _newEntries = new List<BlittableJsonReaderObject>();
         private readonly List<string> _deletes = new List<string>();
@@ -26,12 +29,11 @@ namespace Raven.Server.Indexing.Corax
         private MmapStream _mmapStream;
         private StreamReader _mmapReader;
 
-
         public unsafe Indexer(FullTextIndex parent, int batchSize = 1024 * 1024 * 16)
         {
             _parent = parent;
             _batchSize = batchSize;
-            _context = new RavenOperationContext(_parent.Pool);
+            _context = new MemoryOperationContext(_parent.Pool);
             _mmapStream = new MmapStream(null, 0);
             _mmapReader = new StreamReader(_mmapStream);
         }

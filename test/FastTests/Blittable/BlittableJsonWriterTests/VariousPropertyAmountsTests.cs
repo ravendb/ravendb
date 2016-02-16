@@ -2,6 +2,9 @@
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
@@ -35,7 +38,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var str = GetJsonString(maxValue);
 
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
 
@@ -61,7 +64,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 var ms = new MemoryStream();

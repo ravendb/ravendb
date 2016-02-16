@@ -6,6 +6,8 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Linq;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Json.Parsing
 {
@@ -90,11 +92,11 @@ namespace Raven.Server.Json.Parsing
     public unsafe class ObjectJsonParser : IJsonParser
     {
         private readonly JsonParserState _state;
-        private readonly RavenOperationContext _ctx;
+        private readonly MemoryOperationContext _ctx;
         private readonly Stack<object> _elements = new Stack<object>();
         private static readonly Encoding Utf8Encoding = Encoding.UTF8;
 
-        public ObjectJsonParser(JsonParserState state, object root, RavenOperationContext ctx)
+        public ObjectJsonParser(JsonParserState state, object root, MemoryOperationContext ctx)
         {
             _state = state;
             _ctx = ctx;

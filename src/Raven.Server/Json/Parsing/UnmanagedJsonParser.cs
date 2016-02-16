@@ -3,6 +3,9 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 namespace Raven.Server.Json.Parsing
 {
     public unsafe class UnmanagedJsonParser : IJsonParser
@@ -32,7 +35,7 @@ namespace Raven.Server.Json.Parsing
         private bool _isExponent;
         private bool _escapeMode;
 
-        public UnmanagedJsonParser(RavenOperationContext ctx, JsonParserState state, string debugTag)
+        public UnmanagedJsonParser(MemoryOperationContext ctx, JsonParserState state, string debugTag)
         {
             _state = state;
             _stringBuffer = ctx.GetStream(debugTag);

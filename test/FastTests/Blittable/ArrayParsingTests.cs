@@ -2,6 +2,9 @@
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Blittable
@@ -12,7 +15,7 @@ namespace FastTests.Blittable
         public async Task CanParseSimpleArray()
         {
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new MemoryOperationContext(pool))
             {
                 var ms = new MemoryStream(Encoding.UTF8.GetBytes("[\"Oren\",\"Arava\"]"));
                 var array = await ctx.ParseArrayToMemoryAsync(ms, "array",BlittableJsonDocumentBuilder.UsageMode.None);
