@@ -5,15 +5,22 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Primitives;
+
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow;
+using StringSegment = Raven.Server.Routing.StringSegment;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
@@ -55,11 +62,11 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var array = await context.ParseArrayToMemory(RequestBodyStream(), "queries",
+                var array = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "queries",
                     BlittableJsonDocumentBuilder.UsageMode.None);
 
-                var ids = new string[array.Count];
-                for (int i = 0; i < array.Count; i++)
+                var ids = new string[array.Length];
+                for (int i = 0; i < array.Length; i++)
                 {
                     ids[i] = array.GetStringByIndex(i);
                 }
@@ -69,7 +76,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async Task GetDocumentsById(RavenOperationContext context, StringValues ids)
+        private Task GetDocumentsById(RavenOperationContext context, StringValues ids)
         {
             /* TODO: Call AddRequestTraceInfo
             AddRequestTraceInfo(sb =>
@@ -79,49 +86,75 @@ namespace Raven.Server.Documents
                     sb.Append("\t").Append(id).AppendLine();
                 }
             });*/
-
-            var documents = new Document[ids.Count];
-            for (int i = 0; i < ids.Count; i++)
+            var includes = HttpContext.Request.Query["include"];
+            var documents = new List<Document>(ids.Count + (includes.Count * ids.Count));
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (string id in ids)
             {
-                documents[i] = Database.DocumentsStorage.Get(context, ids[i]);
+                documents.Add(Database.DocumentsStorage.Get(context, id));
             }
+
+            LoadIncludes(context, documents, includes);
 
             long actualEtag = ComputeEtagsFor(documents);
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
             {
                 HttpContext.Response.StatusCode = 304;
-                return;
+                return Task.CompletedTask;
             }
 
-            var includes = HttpContext.Request.Query["include"];
-            var transformer = HttpContext.Request.Query["transformer"];
-            if (includes.Count > 0)
-            {
-                //TODO: Transformer and includes
-            }
+            //TODO: Transformers
+            //var transformer = HttpContext.Request.Query["transformer"];
 
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
             var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
             writer.WriteStartObject();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
-            await WriteDocumentsAsync(context, writer, documents);
+
+            WriteDocuments(context, writer, documents, 0, ids.Count);
+
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
-            writer.WriteStartArray();
-            //TODO: Includes
-            //TODO: Need to handle etags here as well
-            writer.WriteEndArray();
+
+            WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
 
             writer.WriteEndObject();
             writer.Flush();
+
+            return Task.CompletedTask;
         }
 
-        private unsafe long ComputeEtagsFor(Document[] documents)
+        private void LoadIncludes(RavenOperationContext context, List<Document> documents, StringValues includes)
+        {
+            // ReSharper disable LoopCanBeConvertedToQuery
+            var includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var include in includes)
+            {
+                foreach (var doc in documents)
+                {
+                    IncludeUtil.GetDocIdFromInclude(doc.Data, new StringSegment(include, 0), includedIds);
+                }
+            }
+
+            foreach (var includedDocId in includedIds)
+            {
+                if (includedDocId == null) //precaution, should not happen
+                    continue;
+                var includedDoc = Database.DocumentsStorage.Get(context, includedDocId);
+                if (includedDoc == null)
+                    continue;
+
+                documents.Add(includedDoc);
+            }
+            // ReSharper restore LoopCanBeConvertedToQuery
+        }
+
+        private unsafe long ComputeEtagsFor(List<Document> documents)
         {
             // This method is efficient because we aren't materializing any values
             // except the etag, which we need
-            if (documents.Length == 1)
+            if (documents.Count == 1)
             {
                 return documents[0]?.Etag ?? -1;
             }
@@ -130,11 +163,11 @@ namespace Raven.Server.Documents
             var ctx = Hashing.Streamed.XXHash64.BeginProcess();
             long* buffer = stackalloc long[4];//32 bytes
             Memory.Set((byte*)buffer, 0, sizeof(long) * 4);// not sure is stackalloc force init
-            for (int i = 0; i < documents.Length; i += 4)
+            for (int i = 0; i < documents.Count; i += 4)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    if (i + j >= documents.Length)
+                    if (i + j >= documents.Count)
                         break;
                     var document = documents[i + j];
                     buffer[i] = document?.Etag ?? -1;
@@ -143,7 +176,6 @@ namespace Raven.Server.Documents
                 // it will still be consistent, and that is what we care here.
                 ctx = Hashing.Streamed.XXHash64.Process(ctx, (byte*)buffer, sizeof(long) * 4);
             }
-
             return (long)Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
@@ -187,7 +219,7 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrWhiteSpace(id))
                     throw new ArgumentException("The 'id' query string parameter must have a non empty value");
 
-                var doc = await context.ReadForDisk(RequestBodyStream(), id);
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id);
 
                 var etag = GetLongFromHeaders("If-Match");
 
@@ -208,7 +240,7 @@ namespace Raven.Server.Documents
                 };
 
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                await context.WriteAsync(writer, reply);
+                context.Write(writer, reply);
                 writer.Flush();
             }
         }

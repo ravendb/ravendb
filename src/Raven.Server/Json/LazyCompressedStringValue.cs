@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Voron.Util;
 
 namespace Raven.Server.Json
@@ -10,6 +11,11 @@ namespace Raven.Server.Json
         public readonly int UncompressedSize;
         public readonly int CompressedSize;
         public string String;
+
+        public LazyStringValue ToLazyStringValue()
+        {
+            return new LazyStringValue(null, DecompressToTempBuffer(), UncompressedSize, _context);
+        }
 
         public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, RavenOperationContext context)
         {

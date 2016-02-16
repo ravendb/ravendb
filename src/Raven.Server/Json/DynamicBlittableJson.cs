@@ -19,7 +19,7 @@ namespace Raven.Server.Json
 
             public int Length => BlittableJsonReaderArray.Length;
 
-            public int Count => BlittableJsonReaderArray.Count;
+            public int Count => BlittableJsonReaderArray.Length;
 
             public override bool TryGetMember(GetMemberBinder binder, out object result)
             {

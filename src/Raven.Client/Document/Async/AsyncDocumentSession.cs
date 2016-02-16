@@ -125,7 +125,7 @@ namespace Raven.Client.Document.Async
             if (IsLoaded(id))
                  return new Lazy<Task<T>>(() => LoadAsync<T>(id, token));
                
-            var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id), handleInternalMetadata: HandleInternalMetadata);
+            var lazyLoadOperation = new LazyLoadOperation<T>(new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id), id);
             return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
 
@@ -191,8 +191,8 @@ namespace Raven.Client.Document.Async
 
         public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken))
         {
-            var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, null, null);
-            var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
+            var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, null, null);
+            var lazyOp = new LazyMoreLikeThisOperation<TResult>(loadOperation, query);
             return AddLazyOperation<TResult[]>(lazyOp, null, token);
         }
 
@@ -347,8 +347,8 @@ namespace Raven.Client.Document.Async
          /// </summary>
          public Lazy<Task<T[]>> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval, CancellationToken token = default (CancellationToken))
          {
-             var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
-             var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+             var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+             var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
              return AddLazyOperation(lazyOp, onEval,token);
          }
 
@@ -651,7 +651,7 @@ namespace Raven.Client.Document.Async
         }
 
         /// <summary>
-        /// Begins the async multi-load operation, with the specified ids after applying
+        /// Begins the async load operation, with the specified ids after applying
         /// conventions on the provided ids to get the real document ids.
         /// </summary>
         /// <remarks>
@@ -669,7 +669,7 @@ namespace Raven.Client.Document.Async
         }
 
         /// <summary>
-        /// Begins the async multi-load operation, with the specified ids after applying
+        /// Begins the async load operation, with the specified ids after applying
         /// conventions on the provided ids to get the real document ids.
         /// </summary>
         /// <remarks>
@@ -686,7 +686,7 @@ namespace Raven.Client.Document.Async
         }
 
         /// <summary>
-        /// Begins the async multi-load operation, with the specified ids after applying
+        /// Begins the async load operation, with the specified ids after applying
         /// conventions on the provided ids to get the real document ids.
         /// </summary>
         /// <remarks>
@@ -740,7 +740,7 @@ namespace Raven.Client.Document.Async
                 var result = await AsyncDatabaseCommands.GetAsync(id, token).ConfigureAwait(false);
 
                 if (loadOperation.SetResult(result) == false)
-                    return loadOperation.Complete<T>();
+                    return loadOperation.Complete<T>().FirstOrDefault();
 
                 return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token).ConfigureAwait(false);
             }
@@ -820,8 +820,8 @@ namespace Raven.Client.Document.Async
             IncrementRequestCount();
 
             var includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
-            var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token).ConfigureAwait(false);
-            return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
+            var loadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token).ConfigureAwait(false);
+            return new LoadTransformerOperation(this, transformer, ids).Complete<T>(loadResult);
       
         }
 
@@ -831,13 +831,13 @@ namespace Raven.Client.Document.Async
             {
                 return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(id => LoadAsync<T>(id,token)).ToArray()).WithCancellation(token).ConfigureAwait(false));
             }
-            var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
-            var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+            var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+            var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
             return AddLazyOperation(lazyOp, onEval);
         }
 
         /// <summary>
-        /// Begins the async multi load operation
+        /// Begins the async load operation
         /// </summary>
         public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes,CancellationToken token = default (CancellationToken))
         {
@@ -849,24 +849,24 @@ namespace Raven.Client.Document.Async
             }
 
             IncrementRequestCount();
-            var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
+            var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
 
-            multiLoadOperation.LogOperation();
+            loadOperation.LogOperation();
             var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-            MultiLoadResult result;
+            LoadResult result;
             do
             {
-                multiLoadOperation.LogOperation();
-                using (multiLoadOperation.EnterMultiLoadContext())
+                loadOperation.LogOperation();
+                using (loadOperation.EnterLoadContext())
                 {
                     result = await AsyncDatabaseCommands.GetAsync(ids, includePaths, token: token).ConfigureAwait(false);
                 }
-            } while (multiLoadOperation.SetResult(result));
-            return multiLoadOperation.Complete<T>();
+            } while (loadOperation.SetResult(result));
+            return loadOperation.Complete<T>();
         }
 
         /// <summary>
-        /// Begins the async multi load operation
+        /// Begins the async load operation
         /// </summary>
         public async Task<T[]> LoadAsyncInternal<T>(string[] ids, CancellationToken token = default(CancellationToken))
         {
@@ -881,18 +881,18 @@ namespace Raven.Client.Document.Async
             if (idsOfNotExistingObjects.Length > 0)
             {
                 IncrementRequestCount();
-                var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
-                MultiLoadResult multiLoadResult;
+                var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
+                LoadResult loadResult;
                 do
                 {
-                    multiLoadOperation.LogOperation();
-                    using (multiLoadOperation.EnterMultiLoadContext())
+                    loadOperation.LogOperation();
+                    using (loadOperation.EnterLoadContext())
                     {
-                        multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null).ConfigureAwait(false);
+                        loadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null).ConfigureAwait(false);
                     }
-                } while (multiLoadOperation.SetResult(multiLoadResult));
+                } while (loadOperation.SetResult(loadResult));
 
-                multiLoadOperation.Complete<T>();
+                loadOperation.Complete<T>();
             }
 
             var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token).ConfigureAwait(false)).ToArray();

@@ -1,0 +1,129 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Raven.Server.Json;
+using Raven.Server.Routing;
+
+namespace Raven.Server.Utils
+{
+    public static class IncludeUtil
+    {
+        private static readonly char[] IncludeSeparators = { '.', ',', '(' };
+        private const char PrefixSeparator = '(';
+        private const char ArraySeparator = ',';
+
+        public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, HashSet<string> includedIds)
+        {
+            var indexOfFirstSeparator = includePath.IndexOfAny(IncludeSeparators, 0);
+            object reader;
+
+            //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
+            if (docReader.TryGetMember(includePath.SubSegment(0, indexOfFirstSeparator), out reader) == false)
+                return;
+
+            var pathSegment = includePath.SubSegment(indexOfFirstSeparator + 1);
+            switch (indexOfFirstSeparator != -1 ? includePath[indexOfFirstSeparator] : ' ')
+            {
+                case '.':
+                    var subObject = reader as BlittableJsonReaderObject;
+                    if(subObject != null)
+                        GetDocIdFromInclude(subObject, pathSegment, includedIds);
+                    return;
+                case ',':
+                    var subArray = reader as BlittableJsonReaderArray;
+                    if (subArray != null)
+                        HandleArrayReader(subArray, pathSegment, includedIds);
+                    break;
+                case '(':
+                    if (includePath[includePath.Length - 1] != ')') //precaution
+                        return;
+                    
+                    var idWithPrefix = HandlePrefix(docReader, includePath, indexOfFirstSeparator);
+                    if(idWithPrefix != null)
+                        includedIds.Add(idWithPrefix);
+                    break;
+                default:
+                    object value;
+                    if (docReader.TryGetMember(includePath, out value))
+                    {
+                        var includedId = BlittableValueToString(value);
+                        if(includedId != null)
+                            includedIds.Add(includedId);
+                    }
+                    return;
+            }			
+        }
+
+        private static void HandleArrayReader(BlittableJsonReaderArray array, StringSegment pathSegment, HashSet<string> includedIds)
+        {
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < array.Length; i++)
+            {
+                var item = array[i];
+                var arrayObject = item as BlittableJsonReaderObject;
+                if (arrayObject != null)
+                {
+                    GetDocIdFromInclude(arrayObject, pathSegment, includedIds);
+                }
+                else
+                {
+                    var arrayReader = item as BlittableJsonReaderArray;
+                    if (arrayReader != null)
+                    {
+                        var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(IncludeSeparators, 0);
+                        var subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
+                        HandleArrayReader(arrayReader,
+                            subSegment,			                
+                            includedIds);
+                        continue;
+                    }
+
+                    var includedId = BlittableValueToString(item);
+                    if (includedId != null)
+                    {
+                        includedIds.Add(pathSegment.Length > 0 && pathSegment[0] == PrefixSeparator ? 
+                            ValueWithPrefix(pathSegment, 0, item) : includedId);
+                    }
+                }
+            }
+        }
+
+        private static string HandlePrefix(BlittableJsonReaderObject reader, StringSegment pathSegment, int indexOfSeparator)
+        {
+            object val;
+            if (!reader.TryGetMember(pathSegment.SubSegment(0, indexOfSeparator), out val))
+                return null;
+        
+            var doubleVal = val as LazyDoubleValue;
+            if (doubleVal != null)
+                val = doubleVal.Inner;
+
+            return ValueWithPrefix(pathSegment, indexOfSeparator, val);
+        }
+
+        private static string ValueWithPrefix(StringSegment pathSegment, int indexOfSeparator, object val)
+        {
+            var prefix = pathSegment.SubSegment(indexOfSeparator + 1, pathSegment.Length - indexOfSeparator - 2);
+            return (prefix.Length > 0) && (prefix[prefix.Length - 1] != '/') ? null : $"{prefix}{val}";
+        }
+
+        private static string BlittableValueToString(object value)
+        {
+            var lazyStringVal = value as LazyStringValue;
+            if (lazyStringVal != null)
+                return lazyStringVal.ToString();
+
+            var lazyCompressedStringValue = value as LazyCompressedStringValue;
+            if (lazyCompressedStringValue != null)
+                return lazyCompressedStringValue.ToString();
+
+            var lazyDoubleVal = value as LazyDoubleValue;
+            if (lazyDoubleVal != null)
+                return lazyDoubleVal.Inner.ToString();
+
+            var convertible = value as IConvertible;
+            return convertible?.ToString(CultureInfo.InvariantCulture);
+        }
+
+    }
+}

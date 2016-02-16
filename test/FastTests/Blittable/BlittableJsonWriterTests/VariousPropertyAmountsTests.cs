@@ -29,14 +29,14 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
-        public async Task FlatBoundarySizeFieldsAmount(int maxValue)
+        public void FlatBoundarySizeFieldsAmount(int maxValue)
         {
             //var maxValue = short.MaxValue + 1000;
             var str = GetJsonString(maxValue);
 
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
 
                 dynamic dynamicBlittableJObject = new DynamicBlittableJson(employee);
@@ -54,7 +54,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
-        public async Task FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
+        public void FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
         {
 
             var str = GetJsonString(maxValue);
@@ -62,10 +62,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 var ms = new MemoryStream();
-                employee.WriteTo(ms, originalPropertyOrder: true);
+                blittableContext.WriteOrdered(ms, employee);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
             }

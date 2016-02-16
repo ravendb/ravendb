@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-
+using Raven.Server.Routing;
 namespace Raven.Server.Json.Parsing
 {
     public unsafe class JsonParserState
@@ -10,6 +10,8 @@ namespace Raven.Server.Json.Parsing
         public int? CompressedSize;
         public long Long;
         public JsonParserToken CurrentTokenType;
+        public JsonParserTokenContinuation Continuation;
+
         public readonly List<int> EscapePositions = new List<int>();
 
         private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };
@@ -53,6 +55,11 @@ namespace Raven.Server.Json.Parsing
         }
 
         public void FindEscapePositionsIn(string str)
+        {
+            FindEscapePositionsIn(new StringSegment(str,0,str.Length));				
+        }
+
+        public void FindEscapePositionsIn(StringSegment str)
         {
             EscapePositions.Clear();
             var lastEscape = 0;

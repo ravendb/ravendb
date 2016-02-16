@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Server.Indexes;
+
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.Web;
@@ -22,14 +23,14 @@ namespace Raven.Server.Documents
             IndexStore = context.Database.IndexStore;
         }
 
-        protected async Task WriteDocumentsAsync(RavenOperationContext context, IEnumerable<Document> documents)
+        protected void  WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
         {
-            var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-            await WriteDocumentsAsync(context, writer, documents);
-            writer.Flush();
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                WriteDocuments(context, writer, documents);
         }
 
-        public static async Task WriteDocumentsAsync(RavenOperationContext context, BlittableJsonTextWriter writer, IEnumerable<Document> documents)
+        public static void WriteDocuments(RavenOperationContext context, BlittableJsonTextWriter writer, 
+            IEnumerable<Document> documents)
         {
             writer.WriteStartArray();
 
@@ -42,7 +43,28 @@ namespace Raven.Server.Documents
                     writer.WriteComma();
                 first = false;
                 document.EnsureMetadata();
-                await context.WriteAsync(writer, document.Data);
+                context.Write(writer, document.Data);
+            }
+
+            writer.WriteEndArray();
+        }
+
+        public static void WriteDocuments(RavenOperationContext context, BlittableJsonTextWriter writer,
+            List<Document> documents, int start, int count)
+        {
+            writer.WriteStartArray();
+
+            bool first = true;
+            for (int index = start; index < count; index++)
+            {
+                var document = documents[index];
+                if (document == null)
+                    continue;
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+                document.EnsureMetadata();
+                context.Write(writer, document.Data);
             }
 
             writer.WriteEndArray();

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Text;
 using Sparrow;
 
@@ -16,6 +15,8 @@ namespace Raven.Server.Json
         public UnmanagedBuffersPool.AllocatedMemoryData AllocatedMemoryData;
         public int? LastFoundAt;
 
+
+        public byte this[int index] => Buffer[index];
 
         public LazyStringValue(string str, byte* buffer, int size, RavenOperationContext context)
         {

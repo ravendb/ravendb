@@ -4,18 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
+
 using Microsoft.AspNet.Http;
-using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
+
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.Web;
-using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class MultiGetHandler : DatabaseRequestHandler
     {
@@ -25,7 +23,7 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var requests = await context.ParseArrayToMemory(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);
+                var requests = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);
 
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 writer.WriteStartArray();
@@ -56,7 +54,7 @@ namespace Raven.Server.Documents
                         writer.WritePropertyName(statusProperty);
                         writer.WriteInteger(400);
                         writer.WritePropertyName(resultProperty);
-                        await context.WriteAsync(writer, new DynamicJsonValue
+                        context.Write(writer, new DynamicJsonValue
                         {
                             ["Error"] = $"There is no handler for path: {method} {url}{query}"
                         });

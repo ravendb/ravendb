@@ -7,7 +7,7 @@ namespace Raven.Abstractions.Data
             
         }
 
-        public MultiLoadResult Result { get; set; }
+        public LoadResult Result { get; set; }
         public long? Etag { get; set; }
     }
 }

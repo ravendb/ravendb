@@ -182,7 +182,7 @@ namespace Raven.Client.Changes
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
-                notification => string.Equals(notification.Id, docId, StringComparison.OrdinalIgnoreCase));
+                notification => string.Equals(notification.Key, docId, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -240,7 +240,7 @@ namespace Raven.Client.Changes
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
-                notification => notification.Id != null && notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
+                notification => notification.Key != null && notification.Key.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
