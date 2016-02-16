@@ -13,12 +13,12 @@ class deleteCollectionCommand extends commandBase {
 
     execute(): JQueryPromise<void> {
         this.reportInfo("Deleting " + this.displayCollectionName);
-
-        var url = "/collections/docs";
         var args = {
             name: this.collectionName
         };
-        return this.del(url, args, this.db);
+        var url = "/collections/docs" + this.urlEncodeArgs(args);
+       
+        return this.del(url, null, this.db, { dataType: undefined });
     }
 }
 
