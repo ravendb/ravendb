@@ -12,6 +12,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Data;
+using System.Runtime.InteropServices;
 
 namespace Voron.Impl
 {
@@ -212,7 +213,7 @@ namespace Voron.Impl
             Page newPage;
             if ( currentPage.IsOverflow )
             {
-                newPage = AllocateOverflowPage(currentPage.OverflowSize, num);
+                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num);
                 pageSize = currentPage.OverflowSize;
             }
             else
@@ -221,7 +222,7 @@ namespace Voron.Impl
                 pageSize = Environment.Options.PageSize;
             }
             
-            Memory.CopyInline(newPage.Pointer, currentPage.Pointer, pageSize);
+            Memory.CopyInline(newPage.Pointer, currentPage.Pointer, pageSize);            
 
             return newPage;
         }
@@ -280,7 +281,7 @@ namespace Voron.Impl
             return AllocatePage(numberOfPages, pageNumber.Value);
         }
 
-        public Page AllocateOverflowPage(long headerSize, long dataSize, long? pageNumber = null)
+        private Page AllocateOverflowPage(long headerSize, long dataSize, long? pageNumber = null)
         {
             long pageSize = this.DataPager.PageSize;
             long overflowSize = headerSize + dataSize;
@@ -291,16 +292,26 @@ namespace Voron.Impl
 
             long numberOfPages = (overflowSize / pageSize) + (overflowSize % pageSize == 0 ? 0 : 1);
 
-            var overflowPage = AllocatePage((int)numberOfPages);
+            var overflowPage = AllocatePage((int)numberOfPages, pageNumber);
             overflowPage.Flags = PageFlags.Overflow;
             overflowPage.OverflowSize = (int)overflowSize;
 
             return overflowPage;
         }
 
-        public Page AllocateOverflowPage(long dataSize, long? pageNumber = null)
+        public Page AllocateOverflowPage(long dataSize, long? pageNumber = null) 
         {
-            return AllocateOverflowPage(sizeof(PageHeader), dataSize, pageNumber);                 
+            return AllocateOverflowPage(sizeof(PageHeader), dataSize, pageNumber);
+        }
+
+        public Page AllocateOverflowPage<T>(long dataSize, long? pageNumber = null) where T : struct
+        {
+            return AllocateOverflowPage(Marshal.SizeOf<T>(), dataSize, pageNumber);
+        }
+
+        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null)
+        {
+            return AllocateOverflowPage(0, pageSize, pageNumber);
         }
 
         private Page AllocatePage(int numberOfPages, long pageNumber)
@@ -374,15 +385,13 @@ namespace Voron.Impl
 
             for (int i = 0; i < value.NumberOfPages; i++)
             {
-                var pageFromScratchBuffer = new PageFromScratchBuffer(value.ScratchFileNumber,
-                    value.PositionInScratchBuffer + i, 1, 1);
+                var pageFromScratchBuffer = new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 1, 1);
                 _transactionPages.Add(pageFromScratchBuffer);
                 _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
                 _dirtyOverflowPages.Remove(pageNumber + i);
                 _dirtyPages.Add(pageNumber + i);
 
-                var newPage = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber,
-                    value.PositionInScratchBuffer + i);
+                var newPage = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer + i);
                 newPage.PageNumber = pageNumber + i;
                 newPage.Flags = PageFlags.Single;
             }

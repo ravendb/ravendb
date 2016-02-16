@@ -1,4 +1,7 @@
-﻿using Sparrow;
+﻿//#define DETAILED_DEBUG
+//#define DETAILED_DEBUG_H
+
+using Sparrow;
 using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
@@ -23,7 +26,7 @@ namespace Voron.Data.Compact
     /// </summary>
     public unsafe partial class PrefixTree
     {
-        private readonly static ObjectPool<Stack<IntPtr>> nodesStackPool = new ObjectPool<Stack<IntPtr>>(() => new Stack<IntPtr>());
+        private readonly static ObjectPool<Stack<long>> nodesStackPool = new ObjectPool<Stack<long>>(() => new Stack<long>());
 
         private readonly LowLevelTransaction _tx;
         private readonly Tree _parent;
@@ -88,8 +91,9 @@ namespace Voron.Data.Compact
             Console.WriteLine(string.Format("Add(Binary: {1}, Key: {0})", key.ToString(), searchKey.ToBinaryString()));
 #endif
             if (Count == 0)
-            {                                                                
-                Leaf* rootLeaf = CreateLeaf(Constants.RootNodeName, 0, key, dataPtr);
+            {
+                Leaf* rootLeaf;
+                var newNodeName = CreateLeaf(Constants.RootNodeName, 0, dataPtr, out rootLeaf);
 
                 // We add the leaf after the head.                  
                 Leaf* head = &(_state.Pointer->Head);
@@ -100,192 +104,365 @@ namespace Voron.Data.Compact
                 return true;
             }
 
-            throw new NotImplementedException();
-//            var hashState = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
+            // TODO: Check if we can use the key instead of the BitVector representation instead. 
+            var hashState = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
-//            // We look for the parent of the exit node for the key.
-//            var stack = nodesStackPool.Allocate();
-//            try
-//            {
-//                var cutPoint = FindParentExitNode(searchKey, hashState, stack);
 
-//                var exitNode = cutPoint.Exit;
+            // We look for the parent of the exit node for the key.
+            var stack = nodesStackPool.Allocate();
+            try
+            {
+                var cutPoint = FindParentExitNode(searchKey, hashState, stack);
 
-//#if DETAILED_DEBUG        
-//                Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != null ? this.ToDebugString((Node*)cutPoint.Parent) : "null", this.ToDebugString(cutPoint.Exit), cutPoint.LongestPrefix));
-//#endif
+                var exitNodeName = cutPoint.Exit;
+                var exitNode = this.ModifyNodeByName(exitNodeName);
 
-//                // If the exit node is a leaf and the key is equal to the LCP                 
-//                if (exitNode->IsLeaf && GetKeySize(((Leaf*)exitNode)->DataPtr) == cutPoint.LongestPrefix)
-//                    return false; // Then we are done (we found the key already).
+#if DETAILED_DEBUG        
+                Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != Constants.InvalidNodeName ? this.ToDebugString((Node*)cutPoint.Parent) : "null", this.ToDebugString(exitNode), cutPoint.LongestPrefix));
+#endif
 
-//                int exitNodeHandleLength = this.GetHandleLength(exitNode);
-//                bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
-//                bool isCutLow = cutPoint.LongestPrefix >= exitNodeHandleLength;  // Is this cut point low or high? 
-//                bool isRightChild = cutPoint.IsRightChild; // Saving this because pointers will get invalidated on update.
+                // If the exit node is a leaf and the key is equal to the LCP                 
+                if (exitNode->IsLeaf && GetKeySize(((Leaf*)exitNode)->DataPtr) == cutPoint.LongestPrefix)
+                    return false; // Then we are done (we found the key already).
 
-//#if DETAILED_DEBUG
-//                Console.WriteLine(string.Format("Cut {0}; exit to the {1}", isCutLow ? "low" : "high", exitDirection ? "right" : "left"));
-//#endif           
-//                long exitNodeName = GetNameFromNode(exitNode);
-//                long leftChildName = GetLeftChildName(exitNodeName);
-//                long rightChildName = GetRightChildName(exitNodeName);
-//                long newExitNodeName;
+                int exitNodeHandleLength = this.GetHandleLength(exitNode);
 
-//                Internal* newInternal;
-//                Leaf* newLeaf;
+                bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
+                bool isCutLow = cutPoint.LongestPrefix >= exitNodeHandleLength;  // Is this cut point low or high? 
+                bool isRightChild = cutPoint.IsRightChild; // Saving this because pointers will get invalidated on update.
+                bool isExitNodeRoot = exitNodeName == Constants.RootNodeName; // We need to evaluate this before changing the layout.
 
-//                // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property)
-//                if ( exitDirection ) 
-//                {
-//                    // The old node is moved to the left position.
-//                    exitNode = MoveNode(leftChildName, exitNode);
-//                    newExitNodeName = leftChildName;
+#if DETAILED_DEBUG
+                Console.WriteLine(string.Format("Cut {0}; exit to the {1}", isCutLow ? "low" : "high", exitDirection ? "right" : "left"));
+#endif           
+                long newInternalName;
+                Internal* newInternal;
+                long newLeafNodeName;
+                Leaf* newLeaf;
 
-//                    // The new leaf is inserted into the right position.
-//                    newLeaf = CreateLeaf(rightChildName, cutPoint.LongestPrefix + 1, key, value, length, version);
-//                    // Link the new internal node with the new leaf and the old node.   
-//                    newInternal = CreateInternal(exitNodeName, exitNode->NameLength, cutPoint.LongestPrefix);
+                // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property)
+                if (exitDirection)
+                {
+                    // The new leaf is inserted into the right position.
+                    newLeafNodeName = CreateLeaf(Constants.InvalidNodeName, (short)(cutPoint.LongestPrefix + 1), dataPtr, out newLeaf);
 
-//                    newInternal->ReferencePtr = rightChildName;
-//                    newLeaf->ReferencePtr = exitNodeName;
+                    // Link the new internal node with the new leaf and the old node.   
+                    newInternalName = CreateInternal(Constants.InvalidNodeName, exitNode->NameLength, cutPoint.LongestPrefix, out newInternal);                    
 
-//                    newInternal->RightPtr = rightChildName;
-//                    newInternal->JumpRightPtr = rightChildName;
-//                    newInternal->LeftPtr = leftChildName;
-//                    newInternal->JumpLeftPtr = isCutLow && exitNode->IsInternal ? ((Internal*)exitNode)->JumpLeftPtr : leftChildName;
-//                }
-//                else
-//                {
-//                    // The old node is moved to the right position.
-//                    exitNode = MoveNode(rightChildName, exitNode);
-//                    newExitNodeName = rightChildName;
+                    newInternal->RightPtr = newLeafNodeName;
+                    newInternal->JumpRightPtr = newLeafNodeName;
 
-//                    // The new leaf is inserted into the left position.
-//                    newLeaf = CreateLeaf(leftChildName, cutPoint.LongestPrefix + 1, key, value, length, version);
-//                    // Link the new internal node with the new leaf and the old node.   
-//                    newInternal = CreateInternal(exitNodeName, exitNode->NameLength, cutPoint.LongestPrefix);
+                    newInternal->LeftPtr = cutPoint.Exit;
+                    newInternal->JumpLeftPtr = isCutLow && exitNode->IsInternal ? ((Internal*)exitNode)->JumpLeftPtr : cutPoint.Exit;
+                }
+                else
+                {
+                    // The new leaf is inserted into the left position.
+                    newLeafNodeName = CreateLeaf(Constants.InvalidNodeName, (short) (cutPoint.LongestPrefix + 1), dataPtr, out newLeaf);
+                    // Link the new internal node with the new leaf and the old node.   
+                    newInternalName = CreateInternal(Constants.InvalidNodeName, exitNode->NameLength, cutPoint.LongestPrefix, out newInternal);
 
-//                    newInternal->ReferencePtr = leftChildName;
-//                    newLeaf->ReferencePtr = exitNodeName;
+                    newInternal->LeftPtr = newLeafNodeName;
+                    newInternal->JumpLeftPtr = newLeafNodeName;
 
-//                    newInternal->RightPtr = rightChildName;
-//                    newInternal->JumpRightPtr = leftChildName;
-//                    newInternal->LeftPtr = leftChildName;
-//                    newInternal->JumpLeftPtr = isCutLow && exitNode->IsInternal ? ((Internal*)exitNode)->JumpRightPtr : rightChildName;
-//                }
+                    newInternal->RightPtr = cutPoint.Exit;
+                    newInternal->JumpRightPtr = isCutLow && exitNode->IsInternal ? ((Internal*)exitNode)->JumpRightPtr : cutPoint.Exit;
+                }
 
-//                // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
-//                Debug.Assert(newInternal->IsInternal && this.Name(ReadNodeByName(newInternal->LeftPtr))[this.GetExtentLength(newInternal)] == false);
-//                Debug.Assert(newInternal->IsInternal && this.Name(ReadNodeByName(newInternal->RightPtr))[this.GetExtentLength(newInternal)] == false);
+                newInternal->ReferencePtr = newLeafNodeName;
+                newLeaf->ReferencePtr = newInternalName;
 
-//                // TODO: Given that we are using an implicit representation is this necessary?
-//                //       Wouldnt be the same naming the current node and save 4 bytes per node?
+                ValidateInternalNode(newInternalName, newInternal);
 
-//                // If the exit node is not the root
-//                if (exitNodeName != Constants.RootNodeName)
-//                {
-//                    // Update the parent exit node.
-//                    if (isRightChild)
-//                    {
-//                        cutPoint.Parent->RightPtr = exitNodeName;
-//                    }
-//                    else
-//                    {
-//                        cutPoint.Parent->LeftPtr = exitNodeName;
-//                    }
-//                }
+                // TODO: Given that we are using an implicit representation is this necessary?
+                //       Wouldnt be the same naming the current node and save 4 bytes per node?
 
-//                // Update the jump table after the insertion.
-//                if (exitDirection)
-//                    UpdateRightJumpsAfterInsertion(newInternal, exitNode, isRightChild, newLeaf, stack);
-//                else
-//                    UpdateLeftJumpsAfterInsertion(newInternal, exitNode, isRightChild, newLeaf, stack);
+                // If the exit node is not the root
+                if (!isExitNodeRoot)
+                {
+                    var cutPointParentNode = (Internal*) this.ModifyNodeByName(cutPoint.Parent);
+                    Debug.Assert(cutPointParentNode->IsInternal);
 
-//                // If the cut point was low and the exit node internal
-//                if (isCutLow && exitNode->IsInternal)
-//                {
-//#if DETAILED_DEBUG_H
-//                        Console.WriteLine("Replace Cut-Low");
-//#endif
-//                    uint hash = InternalTable.CalculateHashForBits(searchKey, hashState, exitNodeHandleLength);
+                    // Update the parent exit node.
+                    if (isRightChild)
+                    {
+                        cutPointParentNode->RightPtr = exitNodeName;
+                    }
+                    else
+                    {
+                        cutPointParentNode->LeftPtr = exitNodeName;
+                    }
+                }
 
-//                    Debug.Assert(exitNodeHandleLength == this.GetHandleLength(exitNode));
-//                    Debug.Assert(hash == InternalTable.CalculateHashForBits(this.Handle(exitNode), hashState, exitNodeHandleLength));
+                // Update the jump table after the insertion.
+                if (exitDirection)
+                    UpdateRightJumpsAfterInsertion(newInternalName, exitNodeName, isRightChild, newLeafNodeName, newLeaf->NameLength, stack);
+                else
+                    UpdateLeftJumpsAfterInsertion(newInternalName, exitNodeName, isRightChild, newLeafNodeName, newLeaf->NameLength, stack);
 
-//                    // TODO: As we are using an implicit representation do we even need to use a new node name?
-//                    this.NodesTable.Replace(exitNodeName, exitNodeName, hash);
+                // If the cut point was low and the exit node internal
+                if (isCutLow && exitNode->IsInternal)
+                {
+#if DETAILED_DEBUG_H
+                    Console.WriteLine("Replace Cut-Low");
+#endif
+                    uint hash = InternalTable.CalculateHashForBits(searchKey, hashState, exitNodeHandleLength);
 
-//                    // TODO: Review the use of short in NameLength and change to ushort. 
-//                    exitNode->NameLength = (short)(cutPoint.LongestPrefix + 1);
+                    Debug.Assert(exitNodeHandleLength == this.GetHandleLength(exitNode));
+                    Debug.Assert(hash == InternalTable.CalculateHashForBits(this.Handle(exitNode), hashState, exitNodeHandleLength));
 
-//#if DETAILED_DEBUG_H
-//                        Console.WriteLine("Insert Cut-Low");
-//#endif
+                    // TODO: As we are using an implicit representation do we even need to use a new node name?
+                    this.NodesTable.Replace(newInternalName, newInternalName, hash); // Check if this is correct.
 
-//                    hash = InternalTable.CalculateHashForBits(this.Name(exitNode), hashState, this.GetHandleLength(exitNode), cutPoint.LongestPrefix);
-//                    this.NodesTable.Add(newExitNodeName, hash);
+                    // TODO: Review the use of short in NameLength and change to ushort. 
+                    exitNode->NameLength = (short)(cutPoint.LongestPrefix + 1);
 
-//                    //  We update the jumps for the exit node.                
-//                    UpdateJumps(exitNode);
-//                }
-//                else
-//                {
-//                    //  We add the internal node to the jump table.                
-//                    exitNode->NameLength = (short)(cutPoint.LongestPrefix + 1);
-//#if DETAILED_DEBUG_H
-//                        Console.WriteLine("Insert Cut-High");
-//#endif
-//                    uint hash = InternalTable.CalculateHashForBits(searchKey, hashState, this.GetHandleLength(newInternal));
+#if DETAILED_DEBUG_H
+                    Console.WriteLine("Insert Cut-Low");
+#endif
 
-//                    this.NodesTable.Add(exitNodeName, hash);
-//                }
+                    hash = InternalTable.CalculateHashForBits(this.Name(exitNode), hashState, this.GetHandleLength(exitNode), cutPoint.LongestPrefix);
+                    this.NodesTable.Add(exitNodeName, hash);
 
-//                // Link the new leaf with it's predecessor and successor.
-//                if (exitDirection)
-//                {
-//                    var rightLeafName = this.GetRightLeaf(exitNodeName);
-//                    var rightLeaf = ModifyNodeByName(rightLeafName);
-//                    AddAfter(rightLeafName, rightLeaf, newLeafName, newLeaf);
-//                }                    
-//                else
-//                {
-//                    var leftLeafName = this.GetLeftLeaf(exitNodeName);
-//                    var leftLeaf = ModifyNodeByName(leftLeafName);
-//                    AddBefore(leftLeafName, leftLeaf, newLeafName, newLeaf);
-//                }
-                    
+                    //  We update the jumps for the exit node.                
+                    UpdateJumps(exitNodeName);
+                }
+                else
+                {
+                    //  We add the internal node to the jump table.                
+                    exitNode->NameLength = (short)(cutPoint.LongestPrefix + 1);
 
-//                _state.Items++; // This will cause the state to set IsModified = true; If this call is removed, add it explicitely
+#if DETAILED_DEBUG_H
+                    Console.WriteLine("Insert Cut-High");
+#endif
+                    uint hash = InternalTable.CalculateHashForBits(searchKey, hashState, this.GetHandleLength(newInternal));
 
-//#if DETAILED_DEBUG
-//                Console.WriteLine(this.NodesTable.DumpNodesTable(this));
-//#endif
+                    this.NodesTable.Add(newInternalName, hash);
+                }
 
-//                return true;
-//            }
-//            finally
-//            {
-//                stack.Clear();
-//                nodesStackPool.Free(stack);
-//            }
+                // Link the new leaf with it's predecessor and successor.
+                if (exitDirection)
+                {
+                    var rightLeafName = this.GetRightLeaf(exitNodeName);
+                    var rightLeaf = (Leaf*)this.ModifyNodeByName(rightLeafName);
+                    Debug.Assert(rightLeaf->IsLeaf);
+
+                    AddAfter(rightLeafName, rightLeaf, newLeafNodeName, newLeaf);
+                }
+                else
+                {
+                    var leftLeafName = this.GetLeftLeaf(exitNodeName);
+                    var leftLeaf = (Leaf*)this.ModifyNodeByName(leftLeafName);
+                    Debug.Assert(leftLeaf->IsLeaf);
+
+                    AddBefore(leftLeafName, leftLeaf, newLeafNodeName, newLeaf);
+                }
+
+                Debug.Assert(newInternal->JumpLeftPtr != PrefixTree.Constants.InvalidNodeName);
+                Debug.Assert(newInternal->JumpRightPtr != PrefixTree.Constants.InvalidNodeName);
+
+                _state.Items++; // This will cause the state to set IsModified = true; If this call is removed, add it explicitely
+
+#if DETAILED_DEBUG
+                Console.WriteLine(this.NodesTable.DumpNodesTable(this));
+#endif
+
+                return true;
+            }
+            finally
+            {
+                stack.Clear();
+                nodesStackPool.Free(stack);
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private void ValidateInternalNode(long internalNodeName, Internal* nodePtr)
+        {     
+            var internalPtr = this.ReadNodeByName(internalNodeName);
+            Debug.Assert(nodePtr == internalPtr); // Ensure that trying to read returns the same node. 
+            Debug.Assert(nodePtr->IsInternal);
+
+            var extentLength = this.GetExtentLength(nodePtr); // Retrieve the extent of the internal node. 
+
+            // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
+            var leftLeaf = ReadNodeByName(nodePtr->LeftPtr);
+            var rightLeaf = ReadNodeByName(nodePtr->RightPtr);
+
+            Debug.Assert(this.Name(leftLeaf)[extentLength] == false);
+            Debug.Assert(this.Name(rightLeaf)[extentLength] == true);
+        }
+
+        private void UpdateRightJumpsAfterInsertion(long insertedNodeName, long exitNodeName, bool isRightChild, long insertedLeafName, long insertedLeafNameLength, Stack<long> stack)
+        {
+            if (!isRightChild)
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are left descendant of ß.
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Pop();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    // TODO: Check this, it doesnt have much sense now that we dont use live pointers.
+                    if (toFix->JumpLeftPtr != exitNodeName)
+                        break;
+
+                    int jumpLength = this.GetJumpLength( toFix );
+                    if (jumpLength < insertedLeafNameLength)
+                    {
+                        toFix = (Internal*)this.ModifyNodeByName(toFixNodeName); // Now we need to modify
+                        toFix->JumpLeftPtr = insertedNodeName;
+                    }
+                }
+            }
+            else
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are right descendant of ß.
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Peek();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    int jumpLength = this.GetJumpLength(toFix);
+                    if (toFix->JumpRightPtr != exitNodeName || jumpLength >= insertedLeafNameLength)
+                        break;
+
+                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName); // Now we need to modify
+                    toFix->JumpRightPtr = insertedNodeName;
+
+                    stack.Pop();
+                }
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Pop();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    var exitNode = this.ReadNodeByName(exitNodeName);
+                    while (exitNode->IsInternal && toFix->JumpRightPtr != exitNodeName)
+                    {
+                        exitNodeName = ((Internal*)exitNode)->JumpRightPtr;
+                        exitNode = this.ReadNodeByName(exitNodeName);
+                    }
+
+                    // As soon as we cannot find a matching descendant, we can stop updating
+                    if (toFix->JumpRightPtr != exitNodeName)
+                        return;
+
+                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName); // Now we need to modify
+                    toFix->JumpRightPtr = insertedLeafName;
+                }
+            }
         }
 
 
-
-        private void UpdateLeftJumpsAfterInsertion(Internal* newInternal, Node* exitNode, bool isRightChild, Leaf* newLeaf, Stack<IntPtr> stack)
+        private void UpdateLeftJumpsAfterInsertion(long insertedNodeName, long exitNodeName, bool isRightChild, long insertedLeafName, long insertedLeafNameLength, Stack<long> stack)
         {
-            throw new NotImplementedException();
+            // See: Algorithm 2 of [1]
+
+            if (isRightChild)
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are right descendant of ß.
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Pop();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    if (toFix->JumpRightPtr != exitNodeName)
+                        break;
+
+                    int jumpLength = this.GetJumpLength(toFix);
+                    if (jumpLength < insertedLeafNameLength)
+                    {
+                        toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                        toFix->JumpRightPtr = insertedNodeName;
+                    }                        
+                }
+            }
+            else
+            {
+                // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
+                // need to update only pointers to nodes that are left descendant of ß.
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Peek();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    int jumpLength = this.GetJumpLength(toFix);
+
+                    if (toFix->JumpLeftPtr != exitNodeName || jumpLength >= insertedLeafNameLength)
+                        break;
+
+                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFix->JumpLeftPtr = insertedNodeName;
+
+                    stack.Pop();
+                }
+
+                while (stack.Count != 0)
+                {
+                    var toFixNodeName = stack.Pop();
+                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    Debug.Assert(toFix->IsInternal);
+
+                    var exitNode = this.ReadNodeByName(exitNodeName);
+                    while (exitNode->IsInternal && toFix->JumpLeftPtr != insertedNodeName)
+                    {
+                        exitNodeName = ((Internal*)exitNode)->JumpLeftPtr;
+                        exitNode = this.ReadNodeByName(exitNodeName);
+                    }
+
+                    // As soon as we cannot find a matching descendant, we can stop updating
+                    if (toFix->JumpLeftPtr != insertedNodeName)
+                        return;
+
+                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFix->JumpLeftPtr = insertedLeafName;
+                }
+            }
         }
 
-        private void UpdateRightJumpsAfterInsertion(Internal* newInternal, Node* exitNode, bool isRightChild, Leaf* newLeaf, Stack<IntPtr> stack)
-        {
-            throw new NotImplementedException();
-        }
 
-        private void UpdateJumps(Node* exitNode)
+        private void UpdateJumps(long nodeName)
         {
-            throw new NotImplementedException();
+            var node = (Internal*)this.ModifyNodeByName(nodeName);
+            Debug.Assert(node->IsInternal);
+
+            int jumpLength = this.GetJumpLength(node);
+
+            long jumpNodeName = node->LeftPtr;
+            Node* jumpNode = this.ReadNodeByName(nodeName);
+            while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
+            {
+                jumpNodeName = ((Internal*)jumpNode)->JumpLeftPtr;
+                jumpNode = this.ReadNodeByName(jumpNodeName);
+            }
+
+            Debug.Assert(PrefixTreeOperations.Intersects(jumpNode, jumpLength));            
+            node->JumpLeftPtr = jumpNodeName;
+
+            jumpNodeName = node->RightPtr;
+            jumpNode = this.ReadNodeByName(nodeName);
+            while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
+            {
+                jumpNodeName = ((Internal*)jumpNode)->JumpRightPtr;
+                jumpNode = this.ReadNodeByName(jumpNodeName);
+            }
+
+            Debug.Assert(PrefixTreeOperations.Intersects(jumpNode, jumpLength));
+            node->JumpRightPtr = jumpNodeName;
         }
 
 
@@ -296,7 +473,7 @@ namespace Voron.Data.Compact
 #endif
             // If there is only a single element, then the exit point is the root.
             if (_state.Items == 1)
-                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Extent(this.Root)), Constants.InvalidNodeName, Constants.RootNodeName, searchKey);
+                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Extent(this.Root)), Constants.InvalidNodeName, Constants.RootNodeName, Constants.InvalidNodeName, searchKey);
 
             int length = searchKey.Count;
 
@@ -318,7 +495,7 @@ namespace Voron.Data.Compact
 
             // Fat Binary Search just worked with high probability and gave use the parex(key) node. 
             if (this.IsExitNodeOf(candidateNode, searchKey.Count, lcpLength))
-                return new CutPoint(lcpLength, parexOrExitNodeName, candidateNodeName, searchKey);
+                return new CutPoint(lcpLength, parexOrExitNodeName, candidateNodeName, parexOrExitNode->RightPtr, searchKey);
 
             // We need to find the length of the longest common prefix between the key and the extent of the parex(key).
             lcpLength = Math.Min(parexOrExitNode->ExtentLength, lcpLength);
@@ -336,7 +513,7 @@ namespace Voron.Data.Compact
 
                 // If the exit node is the root, there is obviously no parent to be found.
                 if (parexOrExitNodeName == Constants.RootNodeName)
-                    return new CutPoint(lcpLength, Constants.InvalidNodeName, parexOrExitNodeName, searchKey);
+                    return new CutPoint(lcpLength, Constants.InvalidNodeName, parexOrExitNodeName, Constants.InvalidNodeName, searchKey);
 
                 stackTopNodeName = stack.Peek();
 
@@ -345,7 +522,7 @@ namespace Voron.Data.Compact
 
                 startPoint = stackTopNode->ExtentLength;
                 if (startPoint == parexOrExitNode->NameLength - 1)
-                    return new CutPoint(lcpLength, stackTopNodeName, parexOrExitNodeName, searchKey);
+                    return new CutPoint(lcpLength, stackTopNodeName, parexOrExitNodeName, stackTopNode->RightPtr, searchKey);
 
                 // Find parex(key) or fail spectacularly (with very low probability). 
                 int stackSize = stack.Count;
@@ -353,24 +530,23 @@ namespace Voron.Data.Compact
                 long parexNodeName = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode->NameLength, isExact: false);
 
                 Internal* parexNode = (Internal*)ReadNodeByName(parexNodeName);
-                var parexLeftName = parexNode->LeftPtr;
-                var parexRightName = parexNode->RightPtr;
-
-                if (parexLeftName == parexOrExitNodeName || parexRightName == parexOrExitNodeName)
-                    return new CutPoint(lcpLength, parexNodeName, parexOrExitNodeName, searchKey);
+                if (parexNode->LeftPtr == parexOrExitNodeName || parexNode->RightPtr == parexOrExitNodeName)
+                    return new CutPoint(lcpLength, parexNodeName, parexOrExitNodeName, parexNode->RightPtr, searchKey);
 
                 // It seems we just failed and found an unrelated node, we should restart in exact mode and also clear the stack of what we added during the last search.
                 while (stack.Count > stackSize)
                     stack.Pop();
 
                 parexNodeName = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode->NameLength, isExact: true);
+                parexNode = (Internal*)ReadNodeByName(parexNodeName);
 
-                return new CutPoint(lcpLength, parexNodeName, parexOrExitNodeName, searchKey);
+                return new CutPoint(lcpLength, parexNodeName, parexOrExitNodeName, parexNode->RightPtr, searchKey);
             }
 
             // The search process failed with very low probability.
             stack.Clear();
             parexOrExitNodeName = FatBinarySearch(searchKey, state, stack, -1, length, isExact: true);
+            parexOrExitNode = (Internal*)ReadNodeByName(parexOrExitNodeName);
 
             if (parexOrExitNode->ExtentLength < length && searchKey[parexOrExitNode->ExtentLength])
                 candidateNodeName = parexOrExitNode->RightPtr;
@@ -383,23 +559,25 @@ namespace Voron.Data.Compact
 
             // Fat Binary Search just worked with high probability and gave use the parex(key) node. 
             if (this.IsExitNodeOf(candidateNode, searchKey.Count, lcpLength))
-                return new CutPoint(lcpLength, parexOrExitNodeName, candidateNodeName, searchKey);
+                return new CutPoint(lcpLength, parexOrExitNodeName, candidateNodeName, parexOrExitNode->RightPtr, searchKey);
 
             stack.Pop();
 
             // If the exit node is the root, there is obviously no parent to be found.
             if (parexOrExitNodeName == Constants.RootNodeName)
-                return new CutPoint(lcpLength, Constants.InvalidNodeName, Constants.RootNodeName, searchKey);
+                return new CutPoint(lcpLength, Constants.InvalidNodeName, Constants.RootNodeName, Constants.InvalidNodeName, searchKey);
 
             stackTopNodeName = stack.Peek();
             stackTopNode = (Internal*)ReadNodeByName(stackTopNodeName);
 
             startPoint = stackTopNode->ExtentLength;
             if (startPoint == parexOrExitNode->NameLength - 1)
-                return new CutPoint(lcpLength, stackTopNodeName, parexOrExitNodeName, searchKey);
+                return new CutPoint(lcpLength, stackTopNodeName, parexOrExitNodeName, stackTopNode->RightPtr, searchKey);
 
             long parentNodeName = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode->NameLength, isExact: true);
-            return new CutPoint(lcpLength, parentNodeName, parexOrExitNodeName, searchKey);
+            var parentNode = (Internal*)ReadNodeByName(parentNodeName);
+
+            return new CutPoint(lcpLength, parentNodeName, parexOrExitNodeName, parentNode->RightPtr, searchKey);
         }
 
         /// <summary>
@@ -464,14 +642,12 @@ namespace Voron.Data.Compact
 
             // We look for the parent of the exit node for the key.
             var exitNode = FindExitNode(key);
-            var leafNode = ReadNodeByName(exitNode.Exit);
+            var node = ReadNodeByName(exitNode.Exit);
 
             // If the exit node is a leaf and the key is equal to the LCP 
-            Debug.Assert(leafNode->IsLeaf);
-            var exitNodeAsLeaf = (Leaf*)leafNode;
-            if (exitNodeAsLeaf != null && GetKeySize(exitNodeAsLeaf->DataPtr) == exitNode.LongestPrefix)
+            if (node->IsLeaf && GetKeySize(((Leaf*)node)->DataPtr) == exitNode.LongestPrefix)
             {
-                value = exitNodeAsLeaf->DataPtr;
+                value = ((Leaf*)node)->DataPtr;
 
                 return true; // Then we are done (we found the key already).
             }
@@ -487,12 +663,10 @@ namespace Voron.Data.Compact
 
             // We look for the parent of the exit node for the key.
             var exitNode = FindExitNode(key);
-            var leafNode = ReadNodeByName(exitNode.Exit);
+            var node = ReadNodeByName(exitNode.Exit);
 
             // If the exit node is a leaf and the key is equal to the LCP 
-            Debug.Assert(leafNode->IsLeaf);
-            var exitNodeAsLeaf = (Leaf*)leafNode;
-            if (exitNodeAsLeaf != null && GetKeySize(exitNodeAsLeaf->DataPtr) == exitNode.LongestPrefix)
+            if (node->IsLeaf && GetKeySize(((Leaf*)node)->DataPtr) == exitNode.LongestPrefix)
                 return true; // Then we are done (we found the key already).
 
             return false;
@@ -501,7 +675,7 @@ namespace Voron.Data.Compact
         public Slice Successor(Slice key)
         {
             if (Count == 0)
-                throw new KeyNotFoundException();
+                return Slice.AfterAllKeys;
 
             var nodeName = SuccessorInternal(key);
             if (nodeName == Constants.TailNodeName)
@@ -515,7 +689,7 @@ namespace Voron.Data.Compact
         public Slice Predecessor(Slice key)
         {
             if (Count == 0)
-                throw new KeyNotFoundException();
+                return Slice.BeforeAllKeys;
 
             var nodeName = PredecessorInternal(key);
             if (nodeName == Constants.HeadNodeName)
@@ -529,19 +703,6 @@ namespace Voron.Data.Compact
         public Slice FirstKey()
         {
             if (Count == 0)
-                throw new KeyNotFoundException();
-
-            Debug.Assert(_state.Head.PreviousPtr == Constants.InvalidNodeName);
-            Debug.Assert(_state.Head.NextPtr != Constants.InvalidNodeName);
-
-            var refHead = (Leaf*)ReadNodeByName(_state.Head.NextPtr);
-            Debug.Assert(refHead->IsLeaf); // Linked list elements are always leaves.
-            return this.ReadKey(refHead->DataPtr);
-        }
-
-        public Slice FirstKeyOrDefault()
-        {
-            if (Count == 0)
                 return Slice.BeforeAllKeys;
 
             Debug.Assert(_state.Head.PreviousPtr == Constants.InvalidNodeName);
@@ -553,19 +714,6 @@ namespace Voron.Data.Compact
         }
 
         public Slice LastKey()
-        {
-            if (Count == 0)
-                throw new KeyNotFoundException();
-
-            Debug.Assert(_state.Tail.PreviousPtr != Constants.InvalidNodeName);
-            Debug.Assert(_state.Tail.NextPtr == Constants.InvalidNodeName);
-
-            var refTail = (Leaf*)ReadNodeByName(_state.Tail.PreviousPtr);
-            Debug.Assert(refTail->IsLeaf); // Linked list elements are always leaves.
-            return this.ReadKey(refTail->DataPtr);
-        }
-
-        public Slice LastKeyOrDefault()
         {
             if (Count == 0)
                 return Slice.AfterAllKeys;
@@ -794,15 +942,15 @@ namespace Voron.Data.Compact
             return top;
         }
 
-        private string DumpStack(Stack<IntPtr> stack)
+        private string DumpStack(Stack<long> stack)
         {
             var builder = new StringBuilder();
             builder.Append("[");
 
             bool first = true;
-            foreach (var nodePtr in stack)
+            foreach (var nodeName in stack)
             {
-                var node = (Node*)nodePtr.ToPointer();
+                Node* node = this.ReadNodeByName(nodeName);
                 if (!first)
                     builder.Append(", ");
 
@@ -897,14 +1045,9 @@ namespace Voron.Data.Compact
             }
 
 #if DETAILED_DEBUG
-            Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}", startBit, endBit + 1, this.ToDebugString((Node*)top)));
+            Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}", startBit, endBit + 1, this.ToDebugString(this.ReadNodeByName(top))));
 #endif
             return top;
-        }
-
-        internal long GetNameFromNode(Node* exitNode)
-        {
-            throw new NotImplementedException();
         }
 
         internal Node* ReadNodeByName(long nodeName)
@@ -924,14 +1067,14 @@ namespace Voron.Data.Compact
 
             Debug.Assert(nodeName >= PrefixTree.Constants.RootNodeName);
 
-            var location = _translationTable.MapVirtualToPhysical(nodeName, TranslationTableMapMode.Read);
+            var location = _translationTable.MapVirtualToPhysical(nodeName);
             if (location.PageNumber == Constants.InvalidPage)
                 return null;
 
             // TODO: Cache last access, it may be the very same page.
 
             var page = _tx.GetPage(location.PageNumber).ToPrefixTreePage();
-            return (Node*)(page.DataPointer + location.Offset);
+            return (Node*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
         }
 
         private Node* ModifyNodeByName(long nodeName)
@@ -954,14 +1097,14 @@ namespace Voron.Data.Compact
 
             Debug.Assert(nodeName >= PrefixTree.Constants.RootNodeName);
 
-            var location = _translationTable.MapVirtualToPhysical(nodeName, TranslationTableMapMode.ReadOrAllocate);
+            var location = _translationTable.MapVirtualToPhysical(nodeName);
             if (location.PageNumber == Constants.InvalidPage)
                 return null;
 
             // TODO: Cache last access, it may be the very same page.
 
             var page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();
-            return (Node*)(page.DataPointer + location.Offset);
+            return (Node*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
         }
 
         private static bool IsTombstone(long nodeName)
@@ -969,35 +1112,36 @@ namespace Voron.Data.Compact
             return nodeName < PrefixTree.Constants.TombstoneNodeName;                
         }
 
-        private Internal* CreateInternal(long nodeName, short nameLength, int extentLength)
+        private long CreateInternal(long parentNode, short nameLength, short extentLength, out Internal* ptr)
         {
-            throw new NotImplementedException();
-        }
+            long nodeName = _translationTable.AllocateNodeName(parentNode);
 
-        private Leaf* CreateLeaf(long nodeName, short nameLength, Slice key, long dataPtr)
-        {
-            var location = _translationTable.MapVirtualToPhysical(nodeName, TranslationTableMapMode.ReadOrAllocate);
+            var location = _translationTable.MapVirtualToPhysical(nodeName);
             PrefixTreePage page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();
 
-            var node = (Leaf*)(page.DataPointer + location.Offset);
-            Debug.Assert(node->Type == 0);
-            node->Initialize(nameLength);
-            node->DataPtr = dataPtr;
+            ptr = (Internal*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
+            Debug.Assert(ptr->Type == NodeType.Uninitialized);
+            ptr->Initialize(nameLength, extentLength);
 
-            return node;
+            return nodeName;
         }
 
-        private long ToRelativeName(long nodeName)
+        private long CreateLeaf(long parentNode, short nameLength, long dataPtr, out Leaf* ptr)
         {
-            return nodeName % _translationTable.NodesPerChunk;
+            long nodeName = _translationTable.AllocateNodeName(parentNode);
+
+            var location = _translationTable.MapVirtualToPhysical(nodeName);
+            PrefixTreePage page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();            
+
+            ptr = (Leaf*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
+            Debug.Assert(ptr->Type == 0);
+            ptr->Initialize(nameLength);
+            ptr->DataPtr = dataPtr;
+
+            Debug.Assert(page.FreeSpace.Get((int)location.NodeOffset) == false);
+
+            return nodeName;
         }
-
-        private Node* MoveNode(long leftChildName, Node* exitNode)
-        {
-            throw new NotImplementedException();
-        }
-
-
 
         private void AddBefore(long successorName, Leaf* successor, long newNodeName, Leaf* newNode)
         {
@@ -1010,8 +1154,6 @@ namespace Voron.Data.Compact
             previousNode->NextPtr = newNodeName;
             successor->PreviousPtr = newNodeName;
         }
-
-
 
         private void AddAfter(long predecessorName, Leaf* predecessor, long newNodeName, Leaf* newNode)
         {

@@ -140,7 +140,7 @@ namespace Voron.Data.Compact
                 // Calculate the next power of 2.
                 newCapacity = Bits.NextPowerOf2(newCapacity);
 
-                // This is the ammount of pages required to allocate the whole table in contiguous disk space.
+                // This is the amount of pages required to allocate the whole table in contiguous disk space.                
                 int entriesPerPage = tx.DataPager.PageMaxSpace / sizeof(Entry);
                 int pages = (newCapacity / entriesPerPage) + 1;
 
@@ -156,7 +156,9 @@ namespace Voron.Data.Compact
                 tableHeader->NextGrowthThreshold = newCapacity * 4 / LoadFactor;
 
                 // Initialize the whole memory block with the initial values. 
-                var firstEntriesPage = tx.GetPage(page.PageNumber + 1);                
+                var firstEntriesPage = tx.ModifyPage(page.PageNumber + 1);
+                firstEntriesPage.Flags |= PageFlags.ZFastTreePage;
+
                 byte* srcPtr = firstEntriesPage.DataPointer;
                 BlockCopyMemoryHelper.Memset((Entry*)srcPtr, entriesPerPage, new Entry(kUnused, kUnused, kInvalidNode));
 
@@ -165,8 +167,9 @@ namespace Voron.Data.Compact
                 int length = tx.DataPager.PageMaxSpace;
                 for ( int i = 2; i < pages; i++ )
                 {
-                    var dataPage = tx.GetPage(page.PageNumber + i);
-                    byte* destPtr = dataPage.DataPointer + sizeof(PageHeader);
+                    var dataPage = tx.ModifyPage(page.PageNumber + i);
+                    dataPage.Flags |= PageFlags.ZFastTreePage;
+                    byte* destPtr = dataPage.DataPointer;
 
                     Memory.Copy(destPtr, srcPtr, length);
                 }
@@ -259,13 +262,13 @@ namespace Voron.Data.Compact
 
                 // TODO: Cache the last page (it will be probably be a hit).
 
-                Page page = _tx.GetPage(tablePage + pageNumber + 1);
-                var entry = (Entry*)page.Pointer;
+                Page page = _tx.ModifyPage(tablePage + pageNumber + 1);
+                var entry = (Entry*)page.DataPointer;
 
                 entry = entry + entryNumber;
-                entry->Hash = kDeleted;
-                entry->Signature = kUnused;
-                entry->NodePtr = kInvalidNode;
+                entry->Hash = uhash;
+                entry->Signature = signature;
+                entry->NodePtr = nodePtr;
             }
 
             public void Remove(long nodePtr, uint signature)
@@ -388,7 +391,7 @@ namespace Voron.Data.Compact
                     if ((nSignature & kSignatureMask) == signature)
                     {
                         Node* node = this.owner.ReadNodeByName(entry->NodePtr);
-                        if (this.owner.GetExtentLength(node) == prefixLength)
+                        if (this.owner.GetHandleLength(node) == prefixLength)
                         {
                             Node* referenceNodePtr = this.owner.ReadNodeByName(node->ReferencePtr);
                             if ( key.IsPrefix(this.owner.Name(referenceNodePtr), prefixLength))
@@ -430,7 +433,7 @@ namespace Voron.Data.Compact
                         if ((nSignature & kDuplicatedMask) == 0) 
                             return pos;
                         
-                        if (this.owner.GetExtentLength(node) == prefixLength)
+                        if (this.owner.GetHandleLength(node) == prefixLength)
                         {
                             Node* referenceNodePtr = this.owner.ReadNodeByName(node->ReferencePtr);
                             if (key.IsPrefix(this.owner.Name(referenceNodePtr), prefixLength))

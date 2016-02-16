@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Voron;
+using Voron.Data.Compact;
 using Voron.Data.Tables;
 using Xunit;
 
@@ -35,8 +35,8 @@ namespace FastTests.Voron.Compact
                 var tree = tx.ReadPrefixTree(Name);
 
                 Assert.Equal(0, tree.Count);
-                Assert.Equal(Slice.BeforeAllKeys, tree.FirstKeyOrDefault());
-                Assert.Equal(Slice.AfterAllKeys, tree.LastKeyOrDefault());
+                Assert.Equal(Slice.BeforeAllKeys, tree.FirstKey());
+                Assert.Equal(Slice.AfterAllKeys, tree.LastKey());
 
                 StructuralVerify(tree);
             }
@@ -117,10 +117,78 @@ namespace FastTests.Voron.Compact
                 Assert.Equal(Slice.BeforeAllKeys, tree.Predecessor(key));
                 Assert.Equal(Slice.BeforeAllKeys, tree.Predecessor("aq"));
                 Assert.Equal(key, tree.Predecessor("pq"));
-
-
             }
         }
 
+        private long AddToPrefixTree(PrefixTree tree, Table table, string key, string value)
+        {
+            return AddToPrefixTree(tree, table, new Slice(Encoding.UTF8.GetBytes(key)), value);
+        }
+
+        private long AddToPrefixTree(PrefixTree tree, Table table, Slice key, string value)
+        {
+            long recordId = SetHelper(table, key, value);
+            Assert.True(tree.Add(key, recordId));
+            return recordId;
+        }
+
+        [Fact]
+        public void Structure_MultipleBranchInsertion()
+        {
+            InitializeStorage();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table(DocsSchema, "docs", tx);
+                var tree = tx.CreatePrefixTree(Name);
+
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8Jp3", "8Jp3"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "GX37", "GX37"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "f04o", "f04o"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "KmGx", "KmGx"));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                StructuralVerify(tree);
+
+                Assert.Equal(4, tree.Count);
+            }
+        }
+
+        [Fact]
+        public void Structure_MultipleBranch_OrderPreservation()
+        {
+            InitializeStorage();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table(DocsSchema, "docs", tx);
+                var tree = tx.CreatePrefixTree(Name);
+
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8Jp3", "8Jp3"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "V6sl", "V6sl"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "GX37", "GX37"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "f04o", "f04o"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "KmGx", "KmGx"));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                StructuralVerify(tree);
+
+                Assert.Equal(5, tree.Count);
+            }
+        }
     }
 }

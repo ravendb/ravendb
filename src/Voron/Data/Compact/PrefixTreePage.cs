@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Sparrow;
+using Sparrow.Binary;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -41,34 +43,14 @@ namespace Voron.Data.Compact
         }
 
         /// <summary>
-        /// This is the relative index of the parent node at the parent page.
-        /// </summary>
-        public int ParentNodeName
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Header->ParentNodeName; }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set { Header->ParentNodeName = value; }
-        }
-
-
-        /// <summary>
-        /// This is the virtual tree number for the parent tree. This number can be calculated from the VirtualPage
-        /// but for performance reasons it makes sense to store it instead.
-        /// </summary>
-        public long ParentChunk
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Header->ParentChunk; }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set { Header->ParentChunk = value; }
-        }
-
-        /// <summary>
-        /// This is the tree number following the growth strategy for the tree structure. This virtual trees
+        /// This is the tree number following the growth strategy for the tree structure. This virtual chunks
         /// are used to navigate the whole-tree in a cache concious fashion and are part of a virtual numbering of the nodes
         /// used for fast retrieval of node offsets.
         /// </summary>
+        /// <remarks>
+        /// While we would try to ensure multiple trees to share as much as possible chunks we cannot ensure 
+        /// that is going to be the case without running a defrag operation. 
+        /// </remarks>
         public long Chunk
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -77,22 +59,29 @@ namespace Voron.Data.Compact
             set { Header->Chunk = value; }
         }
 
-        /// <summary>
-        /// This is the root node name for the current tree in the whole-tree. This number can be calculated from the VirtualPage
-        /// but for performance reasons it makes sense to store it instead.
-        /// </summary>
-        public long RootNodeName
+        public ushort NodesPerChunk
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Header->RootNodeName; }
+            get { return Header->NodesPerChunk; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set { Header->RootNodeName = value; }
+            set { Header->NodesPerChunk = value; }
         }
 
+        public PtrBitVector FreeSpace
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return new PtrBitVector((ulong*)DataPointer + Header->NodesPerChunk * sizeof(PrefixTree.Node), Header->NodesPerChunk); }
+        }
 
         public override string ToString()
         {
             return $"#{PageNumber}";
+        }
+
+        public void Initialize()
+        {
+            byte* freeSpace = DataPointer + Header->NodesPerChunk * sizeof(PrefixTree.Node);
+            Memory.SetInline(freeSpace, 0xFF, Header->NodesPerChunk / BitVector.BitsPerByte + 1);
         }
 
         /// <summary>
@@ -105,17 +94,6 @@ namespace Voron.Data.Compact
         {            
             // TODO: Check if the formula is correct. 
             return nodeNameInTree * sizeof(PrefixTree.Node);
-        }
-
-        /// <summary>
-        /// Will return a pointer to the actual node in the tree
-        /// </summary>
-        /// <param name="nodeNameInTree">the relative name of the node in the tree.</param>
-        /// <returns>the node for that node</returns>
-        public PrefixTree.Node* GetNodeByName(long nodeNameInTree)
-        {            
-            return (PrefixTree.Node*)(DataPointer + sizeof(PrefixTree.Node) * nodeNameInTree);
-            throw new NotImplementedException();
         }
     }
 }
