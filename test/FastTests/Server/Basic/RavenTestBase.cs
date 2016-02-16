@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Server;
@@ -92,6 +93,7 @@ namespace Raven.Tests.Core
                 Url = UseFiddler(Server.Configuration.Core.ServerUrl),
                 DefaultDatabase = databaseName,
             };
+            ModifyStore(store);
             store.Initialize();
 
             await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc);
@@ -101,6 +103,11 @@ namespace Raven.Tests.Core
             };
             CreatedStores.Add(store);
           return store;
+        }
+
+        protected virtual void ModifyStore(DocumentStore store)
+        {
+            
         }
 
         private static string UseFiddler(string url)

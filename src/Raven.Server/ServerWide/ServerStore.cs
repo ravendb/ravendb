@@ -24,6 +24,8 @@ namespace Raven.Server.ServerWide
     {
         private CancellationTokenSource shutdownNotification;
 
+        public CancellationToken ServerShutdown => shutdownNotification.Token;
+
         private static readonly ILog Log = LogManager.GetLogger(typeof(ServerStore));
 
         private StorageEnvironment _env;

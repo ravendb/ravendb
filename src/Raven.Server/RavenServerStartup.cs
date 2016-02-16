@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Http;
+using Microsoft.AspNet.WebSockets.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Server.Routing;
@@ -17,6 +18,12 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
+            app.UseWebSockets(new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(30),
+                ReceiveBufferSize = 4096,
+            });
+
             var router = app.ApplicationServices.GetService<RequestRouter>();
             app.Run(async context =>
             {

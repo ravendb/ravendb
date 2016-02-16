@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -22,15 +24,9 @@ namespace Raven.Client.Changes
     {
         private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteChangesClientBase<TChangesApi, TConnectionState, TConventions>));
 
-        private Timer clientSideHeartbeatTimer;
-
         private readonly string url;
         private readonly OperationCredentials credentials;
-        private readonly HttpJsonRequestFactory jsonRequestFactory;
-        private readonly Action onDispose;                
-
-        private IDisposable connection;
-        private DateTime lastHeartbeat;
+        private readonly Action onDispose;
 
         private static int connectionCounter;
         private readonly string id;
@@ -42,14 +38,13 @@ namespace Raven.Client.Changes
             string url,
             string apiKey,
             ICredentials credentials,
-            HttpJsonRequestFactory jsonRequestFactory,
             TConventions conventions,
             Action onDispose)
         {
             // Precondition
             var api = this as TChangesApi;
             if (api == null)
-                throw new InvalidCastException(string.Format("The derived class does not implements {0}. Make sure the {0} interface is implemented by this class.", typeof(TChangesApi).Name));
+                throw new InvalidCastException(string.Format("The derived class does not implements {0}. Make sure the {0} interface is implemented by this class.", typeof (TChangesApi).Name));
 
             ConnectionStatusChanged = LogOnConnectionStatusChanged;
 
@@ -57,16 +52,27 @@ namespace Raven.Client.Changes
 
             this.url = url;
             this.credentials = new OperationCredentials(apiKey, credentials);
-            this.jsonRequestFactory = jsonRequestFactory;
-            this.onDispose = onDispose;            
+            this.onDispose = onDispose;
             Conventions = conventions;
-            Task = EstablishConnection()
-                        .ObserveException()
-                        .ContinueWith(task =>
-                        {
-                            task.AssertNotFailed();
-                            return this as TChangesApi;
-                        });
+            webSocket = new ClientWebSocket();
+
+            ConnectionTask = EstablishConnection()
+                .ObserveException()
+                .ContinueWith(task =>
+                {
+                    task.AssertNotFailed();
+                    return this as TChangesApi;
+                });
+        }
+
+        private async Task EstablishConnection()
+        {
+            if (disposed)
+                return;
+
+            var uri = new Uri(url + "/changes");
+            logger.Info("Trying to connect to {0}", uri);
+            await webSocket.ConnectAsync(uri, CancellationToken.None);
         }
 
         protected TConventions Conventions { get; private set; }
@@ -80,7 +86,7 @@ namespace Raven.Client.Changes
         }
 
 
-        public Task<TChangesApi> Task { get; private set; }
+        public Task<TChangesApi> ConnectionTask { get; private set; }
 
         public void WaitForAllPendingSubscriptions()
         {
@@ -90,73 +96,25 @@ namespace Raven.Client.Changes
             }
         }
 
-        private async Task EstablishConnection()
+        static UTF8Encoding encoder = new UTF8Encoding();
+
+        private const int receiveChunkSize = 256;
+
+        private static async Task Receive(ClientWebSocket webSocket)
         {
-            if (disposed)
-                return;
-
-            if (clientSideHeartbeatTimer != null)
+            byte[] buffer = new byte[receiveChunkSize];
+            while (webSocket.State == WebSocketState.Open)
             {
-                clientSideHeartbeatTimer.Dispose();
-                clientSideHeartbeatTimer = null;
+                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                }
+                else
+                {
+                    
+                }
             }
-
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.Get, credentials, Conventions)
-            {
-                AvoidCachingRequest = true,
-                DisableRequestCompression = true
-            };
-
-            logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);
-            bool retry = false;
-            IObservable<string> serverEvents = null;
-            try
-            {
-                serverEvents = await jsonRequestFactory.CreateHttpJsonRequest(requestParams)
-                                                       .ServerPullAsync().ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                logger.WarnException("Could not connect to server: " + url + " and id " + id, e);
-
-                Connected = false;
-                ConnectionStatusChanged(this, EventArgs.Empty);
-
-                if (disposed)
-                    throw;
-
-                bool timeout;
-                if (HttpConnectionHelper.IsServerDown(e, out timeout) == false)
-                    throw;
-
-                if (HttpConnectionHelper.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.ServiceUnavailable))
-                    throw;
-
-                logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
-                retry = true;
-            }
-
-            if (retry)
-            {
-                await Time.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
-                await EstablishConnection().ConfigureAwait(false);
-                return;
-            }
-            if (disposed)
-            {
-                Connected = false;
-                ConnectionStatusChanged(this, EventArgs.Empty);
-                throw new ObjectDisposedException(this.GetType().Name);
-            }
-
-            Connected = true;
-            ConnectionStatusChanged(this, EventArgs.Empty);
-            connection = (IDisposable)serverEvents;
-            serverEvents.Subscribe(this);
-
-            clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
-
-            await SubscribeOnServer().ConfigureAwait(false);
         }
 
         private void ClientSideHeartbeat(object _)
@@ -167,8 +125,6 @@ namespace Raven.Client.Changes
             OnError(new TimeoutException("Over 45 seconds have passed since we got a server heartbeat, even though we should get one every 10 seconds or so.\r\n" +
                                          "This connection is now presumed dead, and will attempt reconnection"));
         }
-
-        private Task lastSendTask;
 
         protected Task Send(string command, string value)
         {
@@ -220,6 +176,7 @@ namespace Raven.Client.Changes
         }
 
         private volatile bool disposed;
+        private readonly ClientWebSocket webSocket;
 
         public Task DisposeAsync()
         {
@@ -228,17 +185,13 @@ namespace Raven.Client.Changes
             disposed = true;
             onDispose();
 
-            if (clientSideHeartbeatTimer != null)
-                clientSideHeartbeatTimer.Dispose();
-            clientSideHeartbeatTimer = null;
 
             return Send("disconnect", null).
                 ContinueWith(_ =>
                 {
                     try
                     {
-                        if (connection != null)
-                            connection.Dispose();
+                        webSocket?.Dispose();
                     }
                     catch (Exception e)
                     {
@@ -254,25 +207,6 @@ namespace Raven.Client.Changes
             logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
 
             RenewConnection();
-        }
-
-        private void RenewConnection()
-        {
-            Time.Delay(TimeSpan.FromSeconds(15))
-                .ContinueWith(_ => EstablishConnection())
-                .Unwrap()
-                .ObserveException()
-                .ContinueWith(task =>
-                {
-                    if (task.IsFaulted == false)
-                        return;
-
-                    foreach (var keyValuePair in Counters)
-                    {
-                        keyValuePair.Value.Error(task.Exception);
-                    }
-                    Counters.Clear();
-                });
         }
 
         public void OnNext(string dataFromConnection)
@@ -302,7 +236,7 @@ namespace Raven.Client.Changes
 
         protected Task AfterConnection(Func<Task> action)
         {
-            return Task.ContinueWith(task =>
+            return ConnectionTask.ContinueWith(task =>
             {
                 task.AssertNotFailed();
                 return action();

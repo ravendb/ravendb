@@ -528,19 +528,17 @@ namespace Raven.Client.Document
             database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
 
             var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-            if (string.IsNullOrEmpty(database) == false &&
-                string.Equals(database, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.IsNullOrEmpty(database) == false)
                 dbUrl = dbUrl + "/databases/" + database;
 
             using (NoSynchronizationContext.Scope())
             {
                 return new RemoteDatabaseChanges(dbUrl,
-                        ApiKey,
+                    ApiKey,
                     Credentials,
-                    jsonRequestFactory,
                     Conventions,
                     () => databaseChanges.Remove(database),
-                    (key, etag, conflictIds, metadata) => ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
+                    (key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
             }
         }
 

@@ -34,10 +34,10 @@ namespace Raven.Client.Changes
 
         public RemoteDatabaseChanges(string url, string apiKey,
                                        ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
+                                       DocumentConvention conventions,
                                        Action onDispose,                                
                                        Func<string, long?, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+            : base(url, apiKey, credentials, conventions, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }
@@ -329,7 +329,7 @@ namespace Raven.Client.Changes
                 {
                     if (watchedBulkInserts.Contains(id)) // might have been removed in the meantime
                         return Send("watch-bulk-operation", id);
-                    return Task;
+                    return ConnectionTask;
                 });
 
                 return new DatabaseConnectionState(
@@ -351,7 +351,7 @@ namespace Raven.Client.Changes
                         {
                             if (watchedBulkInserts.Contains(id)) // might have been removed in the meantime
                                 return Send("watch-bulk-operation", id);
-                            return Task;
+                            return ConnectionTask;
                         });
                     },
                     documentSubscriptionTask);

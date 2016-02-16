@@ -83,7 +83,6 @@ namespace Raven.Client.TimeSeries
                 var client = new TimeSeriesChangesClient(tenantUrl,
                     Credentials.ApiKey,
                     Credentials.Credentials,
-                    JsonRequestFactory,
                     TimeSeriesConvention,
                     () => timeSeriesChanges.Remove(timeSeries));
 

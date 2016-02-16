@@ -94,7 +94,6 @@ namespace Raven.Client.Counters
                 var client = new CountersChangesClient(tenantUrl,
                     Credentials.ApiKey,
                     Credentials.Credentials,
-                    JsonRequestFactory,
                     CountersConvention,
                     () => counterStorageChanges.Remove(counterStorage));
 
