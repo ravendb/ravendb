@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
@@ -8,7 +9,8 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents
 {
-    public abstract class AbstractLandlord<TResource> : IDisposable
+    public abstract class AbstractLandlord<TResource> : IDisposable 
+        where TResource : IDisposable
     {
         protected static readonly ILog Log = LogManager.GetLogger(typeof(AbstractLandlord<TResource>).FullName);
 
@@ -35,6 +37,18 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            var tasks = ResourcesStoresCache.Select(resourceTask => resourceTask.Value.ContinueWith(task =>
+            {
+                try
+                {
+                    task.Result.Dispose();
+                }
+                catch (Exception)
+                {
+                    /* Nothing we can do here */
+                }
+            })).ToArray();
+            Task.WaitAll(tasks);
             ResourcesStoresCache.Clear();
 
             try

@@ -51,7 +51,7 @@ namespace Raven.Server.ServerWide
         {
             shutdownNotification = new CancellationTokenSource();
 
-            AbstractLowMemoryNotification.Initialize(shutdownNotification.Token, Configuration);
+            AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
 
             if (Log.IsDebugEnabled)
             {
@@ -148,7 +148,6 @@ namespace Raven.Server.ServerWide
         public void Dispose()
         {
             shutdownNotification.Cancel();
-
 
             ContextPool?.Dispose();
 

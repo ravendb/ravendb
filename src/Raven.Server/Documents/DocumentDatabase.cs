@@ -8,13 +8,12 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
-        private readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
         public DocumentDatabase(string name, RavenConfiguration configuration)
         {
             Name = name;
             Configuration = configuration;
-            CancellationToken = CancellationTokenSource.Token;
 
             Notifications = new DatabaseNotifications();
             DocumentsStorage = new DocumentsStorage(name, configuration, Notifications);
@@ -27,7 +26,7 @@ namespace Raven.Server.Documents
 
         public RavenConfiguration Configuration { get; }
 
-        public CancellationToken CancellationToken { get; }
+        public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
         public DocumentsStorage DocumentsStorage { get; }
 
@@ -43,6 +42,7 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            _databaseShutdown.Cancel();
             DocumentsStorage.Dispose();
         }
     }
