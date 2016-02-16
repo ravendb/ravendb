@@ -140,7 +140,7 @@ namespace Voron.Data.Compact
             int freeSpaceTableSize = (int) (_innerCopy.Items / BitVector.BitsPerByte) + 1;
 
             // We will allocate at least two pages to force an overflow page.
-            var _table = _tx.AllocateOverflowPage((int) (_innerCopy.Items * sizeof(long)) + freeSpaceTableSize);
+            var _table = _tx.AllocateOverflowPage<PageHeader>((int) (_innerCopy.Items * sizeof(long)) + freeSpaceTableSize);
             Debug.Assert(_table.IsOverflow); // Making sure we got an overflow page.
             _innerCopy.PageNumber = _table.PageNumber;
 
@@ -166,7 +166,7 @@ namespace Voron.Data.Compact
             Debug.Assert(chunkIdx != PrefixTree.Constants.InvalidPage);
 
             // We need to allocate a new chunk page and store the physical page number in here.
-            var page = _tx.AllocateOverflowPage(sizeof(PrefixTreePageHeader), _innerCopy.ChunkSize);
+            var page = _tx.AllocateOverflowPage<PrefixTreePageHeader>(_innerCopy.ChunkSize);
 
             var chunk = page.ToPrefixTreePage();
             chunk.Chunk = chunkIdx;
@@ -186,7 +186,11 @@ namespace Voron.Data.Compact
             {               
                 long name;
                 if ( TryAllocateNodeInChunk(chunkId, out name))
+                {
+                    Debug.Assert(((long*)_tx.GetPage(_innerCopy.PageNumber).DataPointer)[chunkId] != -1);
                     return name;
+                }
+                    
 
                 chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
             }
@@ -245,7 +249,7 @@ namespace Voron.Data.Compact
                 
                 // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
                 chunkPage = _tx.ModifyPage(chunkPageNumber).ToPrefixTreePage();
-                chunkPage.FreeSpace.Set(idx); // We mark the node as used.
+                chunkPage.FreeSpace.Set(idx, false); // We mark the node as used.
 
                 name = chunkIdx * _innerCopy.NodesPerChunk + idx; // Convert relative naming to virtual node name.
                 return true;
