@@ -123,13 +123,8 @@ namespace FastTests.Voron.Compact
 
                 Console.WriteLine(string.Format("Node {0} (name length: {1}) Jump left: {2} Jump right: {3}", tree.ToDebugString(node), nameLength, tree.ToDebugString(jumpLeft), tree.ToDebugString(jumpRight)));
 
-                var translationTable = tree.State.TranslationTable;
-
-                var left = translationTable.GetLeftChildName(nodeName);
-                var right = translationTable.GetRightChildName(nodeName);
-
-                return 1 + DumpNodes(tree, left, nodeName, internalNode->ExtentLength + 1, depth + 1)
-                         + DumpNodes(tree, right, nodeName, internalNode->ExtentLength + 1, depth + 1);
+                return 1 + DumpNodes(tree, internalNode->LeftPtr, nodeName, internalNode->ExtentLength + 1, depth + 1)
+                         + DumpNodes(tree, internalNode->RightPtr, nodeName, internalNode->ExtentLength + 1, depth + 1);
             }
             else
             {
@@ -289,30 +284,28 @@ namespace FastTests.Voron.Compact
                 int jumpLength = tree.GetJumpLength(internalNode);
                 Assert.NotEqual(PrefixTree.Constants.InvalidNodeName, internalNode->ReferencePtr);
 
-                var translationTable = tree.State.TranslationTable;
-
-                var jumpLeftName = translationTable.GetLeftChildName(nodeName);
+                var jumpLeftName = internalNode->LeftPtr;
                 var jumpLeft = tree.ReadNodeByName(jumpLeftName);
                 while (jumpLeft->IsInternal && jumpLength > ((PrefixTree.Internal*)jumpLeft)->ExtentLength)
                 {
-                    jumpLeftName = translationTable.GetLeftChildName(jumpLeftName);
+                    jumpLeftName = ((PrefixTree.Internal*)jumpLeft)->LeftPtr;
                     jumpLeft = tree.ReadNodeByName(jumpLeftName);
                 }                    
 
                 Assert.Equal(internalNode->JumpLeftPtr, jumpLeftName);
 
-                var jumpRightName = translationTable.GetRightChildName(nodeName);
+                var jumpRightName = internalNode->RightPtr;
                 var jumpRight = tree.ReadNodeByName(jumpRightName);
                 while (jumpRight->IsInternal && jumpLength > ((PrefixTree.Internal*)jumpRight)->ExtentLength)
                 {
-                    jumpRightName = translationTable.GetRightChildName(jumpRightName);
+                    jumpRightName = ((PrefixTree.Internal*)jumpRight)->RightPtr;
                     jumpRight = tree.ReadNodeByName(jumpRightName);
                 }                    
 
                 Assert.Equal(internalNode->JumpRightPtr, jumpRightName);
 
-                var left = translationTable.GetLeftChildName(nodeName);
-                var right = translationTable.GetRightChildName(nodeName);
+                var left = internalNode->LeftPtr;
+                var right = internalNode->RightPtr;
 
                 return 1 + VisitNodes(tree, left, nodeName, internalNode->ExtentLength + 1, nodes, leaves, references)
                          + VisitNodes(tree, right, nodeName, internalNode->ExtentLength + 1, nodes, leaves, references);

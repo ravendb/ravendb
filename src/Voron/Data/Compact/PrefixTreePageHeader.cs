@@ -22,32 +22,21 @@ namespace Voron.Data.Compact
         [FieldOffset(12)]
         public PageFlags Flags;
 
-        /// <summary>
-        /// This is the relative index of the parent node at the parent page.
-        /// </summary>
         [FieldOffset(14)]
-        public int ParentNodeName;
+        public ushort NodesPerChunk;
 
         /// <summary>
-        /// This is the virtual tree number for the parent tree. This number can be calculated from the VirtualPage
-        /// but for performance reasons it makes sense to store it instead.
-        /// </summary>
-        [FieldOffset(18)]        
-        public long ParentChunk;
-
-        /// <summary>
-        /// This is the root node name for the current tree in the whole-tree. This number can be calculated from the VirtualPage
-        /// but for performance reasons it makes sense to store it instead.
-        /// </summary>
-        [FieldOffset(26)]
-        public long RootNodeName;
-
-        /// <summary>
-        /// This is the tree number following the growth strategy for the tree structure. This virtual trees
+        /// This is the tree number following the growth strategy for the tree structure. This virtual chunks
         /// are used to navigate the whole-tree in a cache concious fashion and are part of a virtual numbering of the nodes
         /// used for fast retrieval of node offsets.
         /// </summary>
-        [FieldOffset(34)]
+        /// <remarks>
+        /// While we would try to ensure multiple trees to share as much as possible chunks we cannot ensure 
+        /// that is going to be the case without running a defrag operation. 
+        /// </remarks>
+        [FieldOffset(16)]
         public long Chunk;
+
+
     }
 }

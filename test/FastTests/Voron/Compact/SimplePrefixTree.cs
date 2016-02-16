@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Voron;
 using Voron.Data.Compact;
 using Voron.Data.Tables;
@@ -144,15 +143,10 @@ namespace FastTests.Voron.Compact
                 var tree = tx.CreatePrefixTree(Name);
 
                 Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8Jp3", "8Jp3"));
-                DumpTree(tree);
                 Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "GX37", "GX37"));
-                DumpTree(tree);
                 Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "f04o", "f04o"));
-                DumpTree(tree);
                 Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "KmGx", "KmGx"));
-                DumpTree(tree);
 
-                DumpKeys(tree);
                 StructuralVerify(tree);
 
                 tx.Commit();
@@ -164,6 +158,36 @@ namespace FastTests.Voron.Compact
                 StructuralVerify(tree);
 
                 Assert.Equal(4, tree.Count);
+            }
+        }
+
+        [Fact]
+        public void Structure_MultipleBranch_OrderPreservation()
+        {
+            InitializeStorage();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table(DocsSchema, "docs", tx);
+                var tree = tx.CreatePrefixTree(Name);
+
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8Jp3", "8Jp3"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "V6sl", "V6sl"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "GX37", "GX37"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "f04o", "f04o"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "KmGx", "KmGx"));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                StructuralVerify(tree);
+
+                Assert.Equal(5, tree.Count);
             }
         }
     }
