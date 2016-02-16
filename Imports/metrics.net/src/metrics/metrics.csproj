@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{3FBA902F-4F7E-434D-BE22-89C162B6F92D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>metrics</RootNamespace>
+    <AssemblyName>metrics</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\bin\lib\net40\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\bin\lib\net40\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>..\..\bin\lib\net40\metrics.xml</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>metrics.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Core\CallbackTimerMetric.cs" />
+    <Compile Include="Core\HistogramMetric.cs" />
+    <Compile Include="Core\ManualTimerMetric.cs" />
+    <Compile Include="Core\PerSecondCounterMetric.cs" />
+    <Compile Include="Core\TimerMetricBase.cs" />
+    <Compile Include="Reporting\HumanReadableReportFormatter.cs" />
+    <Compile Include="Reporting\IReportFormatter.cs" />
+    <Compile Include="Reporting\JsonReportFormatter.cs" />
+    <Compile Include="Reporting\ReporterBase.cs" />
+    <Compile Include="Core\TimerMetric.cs" />
+    <Compile Include="MachineMetrics.cs" />
+    <Compile Include="Reporting\ConsoleReporter.cs" />
+    <Compile Include="Reporting\IReporter.cs" />
+    <Compile Include="Reporting\SampledFileReporter.cs" />
+    <Compile Include="Stats\DateTimeSupplier.cs" />
+    <Compile Include="Stats\IDateTimeSupplier.cs" />
+    <Compile Include="Stats\LimitedTimeSample.cs" />
+    <Compile Include="Support\Volatile.cs" />
+    <Compile Include="Support\VolatileDouble.cs" />
+    <Compile Include="Support\AtomicLong.cs" />
+    <Compile Include="Core\CounterMetric.cs" />
+    <Compile Include="Core\GaugeMetric.cs" />
+    <Compile Include="HealthCheck.cs" />
+    <Compile Include="HealthChecks.cs" />
+    <Compile Include="Core\ICopyable.cs" />
+    <Compile Include="Core\IMetered.cs" />
+    <Compile Include="Core\IMetric.cs" />
+    <Compile Include="Core\MeterMetric.cs" />
+    <Compile Include="Core\MetricName.cs" />
+    <Compile Include="Metrics.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Stats\EWMA.cs" />
+    <Compile Include="Stats\ExponentiallyDecayingSample.cs" />
+    <Compile Include="Stats\ISample.cs" />
+    <Compile Include="Stats\UniformSample.cs" />
+    <Compile Include="Support\Random.cs" />
+    <Compile Include="Support\ReadOnlyDictionary.cs" />
+    <Compile Include="TimeUnit.cs" />
+    <Compile Include="Support\VolatileLong.cs" />
+    <Compile Include="Util\NamedThreadFactory.cs" />
+    <Compile Include="Support\ThreadGroup.cs" />
+    <Compile Include="Util\Serializer.cs" />
+    <Compile Include="Util\Utils.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="metrics.snk" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

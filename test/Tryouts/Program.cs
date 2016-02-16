@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Blittable;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
@@ -26,12 +27,11 @@ namespace Tryouts
         public static void Main(string[] args)
         {
             //new DuplicatePageUsage().ShouldNotHappen();
-            Run();
+            new MetricsTests().MetricsTest();
         }
 
         private static void Run()
         {
-
             ForceInit();
 
             var sp = Stopwatch.StartNew();
