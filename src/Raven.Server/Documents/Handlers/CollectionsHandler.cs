@@ -6,6 +6,7 @@ using Microsoft.AspNet.Http;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -13,12 +14,12 @@ namespace Raven.Server.Documents.Handlers
     {
         [RavenAction("/databases/*/collections/stats", "GET")]
         public async Task GetCollectionStats()
-            {
-            RavenOperationContext context;
+        {
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                var collections= new DynamicJsonValue();
+                var collections = new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
                     ["NumberOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/docs", "GET")]
         public async Task GetCollectionDocuments()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var deletedList = new List<long>();
             long totalDocsDeletes = 0;
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             var collection = GetStringQueryString("name");
             using (ContextPool.AllocateOperationContext(out context))
             {

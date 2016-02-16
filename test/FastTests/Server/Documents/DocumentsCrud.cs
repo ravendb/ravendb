@@ -7,22 +7,26 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Server.Documents
 {
     public class DocumentsCrud : IDisposable
     {
+        private RavenConfiguration _configuration;
         private DocumentDatabase _documentDatabase;
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
         public DocumentsCrud()
         {
-            var configuration = new RavenConfiguration();
-            configuration.Core.RunInMemory = true;
-            configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
+            _configuration = new RavenConfiguration();
+            _configuration.Core.RunInMemory = true;
+            _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
+            _configuration.Initialize();
 
-            _documentDatabase = new DocumentDatabase("foo", configuration);
+            _documentDatabase = new DocumentDatabase("foo", _configuration);
             _documentDatabase.Initialize();
 
             _unmanagedBuffersPool = new UnmanagedBuffersPool("test");
@@ -34,7 +38,7 @@ namespace FastTests.Server.Documents
         [InlineData("לכובע שלי שלוש פינות")]
         public void PutAndGetDocumentById(string key)
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -48,7 +52,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -70,7 +74,7 @@ namespace FastTests.Server.Documents
         [InlineData("לכובע שלי שלוש פינות")]
         public void CanDelete(string key)
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -84,7 +88,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -93,7 +97,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -107,7 +111,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByGlobalEtag()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -147,7 +151,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -168,7 +172,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void EtagsArePersisted()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -190,7 +194,7 @@ namespace FastTests.Server.Documents
 
             Restart();
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -214,7 +218,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void EtagsArePersistedWithDeletes()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -237,7 +241,7 @@ namespace FastTests.Server.Documents
 
             Restart();
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
                 using (var doc = ctx.ReadObject(new DynamicJsonValue
@@ -264,14 +268,19 @@ namespace FastTests.Server.Documents
             _documentDatabase.Dispose();
             options.OwnsPagers = true;
 
-            _documentDatabase = new DocumentDatabase("test", new RavenConfiguration());
+            _configuration = new RavenConfiguration();
+            _configuration.Core.RunInMemory = true;
+            _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
+            _configuration.Initialize();
+
+            _documentDatabase = new DocumentDatabase("test", _configuration);
             _documentDatabase.Initialize(options);
         }
 
         [Fact]
         public void CanQueryByPrefix()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -311,7 +320,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -330,7 +339,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void CanQueryByCollectionEtag()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -371,7 +380,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -390,7 +399,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_New()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -414,7 +423,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_Existing()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -438,7 +447,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteExisting()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -462,7 +471,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_OnDeleteNotThere()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -475,7 +484,7 @@ namespace FastTests.Server.Documents
         [Fact]
         public void WillVerifyEtags_ShouldBeNew()
         {
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -500,7 +509,7 @@ namespace FastTests.Server.Documents
         public void PutDocumentWithoutId()
         {
             var key = "users/";
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -518,7 +527,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 
@@ -527,7 +536,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool, _documentDatabase.DocumentsStorage.Environment))
+            using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))
             {
                 ctx.OpenWriteTransaction();
 

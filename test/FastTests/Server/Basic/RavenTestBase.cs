@@ -13,6 +13,8 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 namespace Raven.Tests.Core
@@ -79,7 +81,7 @@ namespace Raven.Tests.Core
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
             modifyDatabaseDocument?.Invoke(doc);
 
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();

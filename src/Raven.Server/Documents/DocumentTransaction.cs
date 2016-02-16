@@ -4,7 +4,7 @@ using System.Linq;
 
 using Raven.Abstractions;
 using Raven.Server.Documents.Tasks;
-using Raven.Server.Json;
+using Raven.Server.ServerWide.Context;
 
 using Voron;
 using Voron.Impl;
@@ -17,13 +17,13 @@ namespace Raven.Server.Documents
 
         private readonly List<DocumentsTask> _tasks;
 
-        private readonly RavenOperationContext _context;
+        private readonly DocumentsOperationContext _context;
 
         public readonly Transaction InnerTransaction;
 
         private readonly TasksStorage _tasksStorage;
 
-        public DocumentTransaction(RavenOperationContext context, Transaction transaction, TasksStorage tasksStorage)
+        public DocumentTransaction(DocumentsOperationContext context, Transaction transaction, TasksStorage tasksStorage)
         {
             _context = context;
             InnerTransaction = transaction;

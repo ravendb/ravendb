@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core;
 
 using Xunit;
@@ -60,7 +61,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications))
                 {
-                    using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty), database.DocumentsStorage.Environment))
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -124,7 +125,7 @@ namespace FastTests.Server.Documents.Indexing
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == etag, timeout));
         }
 
-        private static BlittableJsonReaderObject CreateDocument(RavenOperationContext context, string key, DynamicJsonValue value)
+        private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }

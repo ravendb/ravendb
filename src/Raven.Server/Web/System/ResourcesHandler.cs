@@ -3,6 +3,8 @@
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.System
 {
@@ -35,7 +37,7 @@ namespace Raven.Server.Web.System
 
         private async Task ReturnResources(string prefix)
         {
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();

@@ -10,6 +10,8 @@ using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.System
 {
@@ -18,7 +20,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases/$", "GET")]
         public Task Get()
         {
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
@@ -49,12 +51,12 @@ namespace Raven.Server.Web.System
             object securedSettings;
             if (obj.TryGetMember("SecuredSettings", out securedSettings) == false)
             {
-                
+
             }
         }
 
         [RavenAction("/admin/databases/$", "PUT")]
-     
+
         public async Task Put()
         {
             var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
@@ -67,7 +69,7 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenWriteTransaction();
@@ -82,7 +84,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var dbDoc = await context.ReadForDiskAsync(RequestBodyStream(), dbId);
-                
+
                 //TODO: Fix this
                 //int size;
                 //var buffer = context.GetNativeTempBuffer(dbDoc.SizeInBytes, out size);
@@ -108,11 +110,11 @@ namespace Raven.Server.Web.System
                 context.Transaction.Commit();
 
                 HttpContext.Response.StatusCode = 201;
-                
+
             }
         }
 
-        private bool CheckExistingDatabaseName(RavenOperationContext context, string id, string dbId, string etag, out string errorMessage)
+        private bool CheckExistingDatabaseName(TransactionOperationContext context, string id, string dbId, string etag, out string errorMessage)
         {
             var database = ServerStore.Read(context, dbId);
             var isExistingDatabase = database != null;

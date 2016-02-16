@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -12,7 +14,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/stats", "GET")]
         public Task Stats()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();

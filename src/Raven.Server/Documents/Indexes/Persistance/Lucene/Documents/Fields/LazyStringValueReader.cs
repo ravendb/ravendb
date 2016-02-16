@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields
         public LazyStringReader()
         {
             _mmapStream = new MmapStream(null, 0);
-            _reader = new StreamReader(_mmapStream, new UTF8Encoding()); // TODO arek - enconding should be the same as index's RavenOperationContext has
+            _reader = new StreamReader(_mmapStream, new UTF8Encoding()); // TODO arek - enconding should be the same as index's MemoryOperationContext has
         }
 
         public TextReader GetTextReaderFor(LazyStringValue value)
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields
             _reader.DiscardBufferedData();
 
             if (_buffer == null || _buffer.Length < value.Size)
-                _buffer = new char[Bits.NextPowerOf2(value.Size)]; // TODO arek - should we take it from RavenOperationContext ?
+                _buffer = new char[Bits.NextPowerOf2(value.Size)]; // TODO arek - should we take it from MemoryOperationContext ?
 
             _reader.ReadBlock(_buffer, 0, value.Size);
 

@@ -16,6 +16,8 @@ using Raven.Abstractions.Util;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using StringSegment = Raven.Server.Routing.StringSegment;
@@ -33,7 +35,7 @@ namespace Raven.Server.Documents.Handlers
             if (string.IsNullOrWhiteSpace(ids[0]))
                 throw new ArgumentException("Query string value 'id' must have a non empty value");
 
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var document = Database.DocumentsStorage.Get(context, ids[0]);
@@ -48,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/document", "GET", "/databases/{databaseName:string}/document?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
         public async Task Get()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
@@ -59,7 +61,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/document", "POST", "/databases/{databaseName:string}/document body{documentsIds:string[]}")]
         public async Task PostGet()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var array = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "queries",
@@ -76,7 +78,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private Task GetDocumentsById(RavenOperationContext context, StringValues ids)
+        private Task GetDocumentsById(DocumentsOperationContext context, StringValues ids)
         {
             /* TODO: Call AddRequestTraceInfo
             AddRequestTraceInfo(sb =>
@@ -125,7 +127,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private void LoadIncludes(RavenOperationContext context, List<Document> documents, StringValues includes)
+        private void LoadIncludes(DocumentsOperationContext context, List<Document> documents, StringValues includes)
         {
             // ReSharper disable LoopCanBeConvertedToQuery
             var includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -182,7 +184,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/document", "DELETE", "/databases/{databaseName:string}/document?id={documentId:string}")]
         public Task Delete()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var ids = HttpContext.Request.Query["id"];
@@ -208,7 +210,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/document", "PUT", "/databases/{databaseName:string}/document?id={documentId:string}")]
         public async Task Put()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var ids = HttpContext.Request.Query["id"];
@@ -248,7 +250,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/document", "PATCH", "/databases/{databaseName:string}/document?id={documentId:string}")]
         public async Task Patch()
         {
-            RavenOperationContext context;
+            MemoryOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 // TODO: We should implement here ScriptedPatchRequest as the EVAL function in v3.5. We retire the v3.0 PATCH method.

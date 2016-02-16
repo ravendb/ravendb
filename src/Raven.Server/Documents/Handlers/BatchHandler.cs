@@ -7,6 +7,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 using Constants = Raven.Abstractions.Data.Constants;
 
@@ -26,7 +28,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 BlittableJsonReaderArray commands;

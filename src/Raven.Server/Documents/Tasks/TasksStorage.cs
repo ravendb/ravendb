@@ -2,6 +2,8 @@
 using System.Net;
 
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 using Voron.Data.Tables;
 
@@ -22,7 +24,7 @@ namespace Raven.Server.Documents.Tasks
             _tasksSchema.DefineFixedSizeIndex("IndexIds", new TableSchema.FixedSizeSchemaIndexDef { StartIndex = 0 });
         }
 
-        public unsafe DocumentsTask GetMergedTask(RavenOperationContext context, int indexId, DocumentsTask.DocumentsTaskType type)
+        public unsafe DocumentsTask GetMergedTask(DocumentsOperationContext context, int indexId, DocumentsTask.DocumentsTaskType type)
         {
             DocumentsTask task = null;
             var totalKeysToProcess = 0;
@@ -64,7 +66,7 @@ namespace Raven.Server.Documents.Tasks
             return task;
         }
 
-        public unsafe void AddTask(RavenOperationContext context, DocumentsTask task, DateTime addedAt)
+        public unsafe void AddTask(DocumentsOperationContext context, DocumentsTask task, DateTime addedAt)
         {
             var tableName = GetTaskTableName(task.Type);
             _tasksSchema.Create(context.Transaction.InnerTransaction, tableName);

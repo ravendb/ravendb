@@ -12,7 +12,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 using Voron;
 using Voron.Impl;
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironment _environment;
 
-        private ContextPool _contextPool;
+        private TransactionContextPool _contextPool;
 
         private bool _disposed;
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes
                     _documentsStorage = documentsStorage;
                     _databaseNotifications = databaseNotifications;
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
-                    _contextPool = new ContextPool(_unmanagedBuffersPool, _environment);
+                    _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
 
                     using (var tx = _environment.WriteTransaction())
                     {
@@ -236,11 +236,11 @@ namespace Raven.Server.Documents.Indexes
 
         protected string[] Collections => Definition.Collections;
 
-        protected abstract bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag);
+        protected abstract bool IsStale(TransactionOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag);
 
         public long GetLastMappedEtag()
         {
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             {
                 using (var tx = context.OpenReadTransaction())
@@ -250,19 +250,19 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected long ReadLastMappedEtag(DocumentTransaction tx)
+        protected long ReadLastMappedEtag(Transaction tx)
         {
             return ReadLastEtag(tx, LastMappedEtagSlice);
         }
 
-        protected long ReadLastReducedEtag(DocumentTransaction tx)
+        protected long ReadLastReducedEtag(Transaction tx)
         {
             return ReadLastEtag(tx, LastReducedEtagSlice);
         }
 
-        private static long ReadLastEtag(DocumentTransaction tx, Slice key)
+        private static long ReadLastEtag(Transaction tx, Slice key)
         {
-            var statsTree = tx.InnerTransaction.CreateTree("Stats");
+            var statsTree = tx.CreateTree("Stats");
             var readResult = statsTree.Read(key);
             long lastEtag = 0;
             if (readResult != null)
@@ -271,19 +271,19 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        private void WriteLastMappedEtag(DocumentTransaction tx, long etag)
+        private void WriteLastMappedEtag(Transaction tx, long etag)
         {
             WriteLastEtag(tx, LastMappedEtagSlice, etag);
         }
 
-        private void WriteLastReducedEtag(DocumentTransaction tx, long etag)
+        private void WriteLastReducedEtag(Transaction tx, long etag)
         {
             WriteLastEtag(tx, LastReducedEtagSlice, etag);
         }
 
-        private static unsafe void WriteLastEtag(DocumentTransaction tx, Slice key, long etag)
+        private static unsafe void WriteLastEtag(Transaction tx, Slice key, long etag)
         {
-            var statsTree = tx.InnerTransaction.CreateTree("Stats");
+            var statsTree = tx.CreateTree("Stats");
             statsTree.Add(key, new Slice((byte*)&etag, sizeof(long)));
         }
 
@@ -348,8 +348,8 @@ namespace Raven.Server.Documents.Indexes
 
         private void ExecuteMap(CancellationToken cancellationToken)
         {
-            RavenOperationContext databaseContext;
-            RavenOperationContext indexContext;
+            DocumentsOperationContext databaseContext;
+            TransactionOperationContext indexContext;
 
             using (_documentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.Indexes
                                     Debug.Assert(document.Etag >= lastEtag);
 
                                     Lucene.Net.Documents.Document convertedDocument;
-                                    
+
                                     try
                                     {
                                         convertedDocument = DocumentConverter.ConvertToCachedDocument(document);

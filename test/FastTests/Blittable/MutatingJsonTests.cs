@@ -10,6 +10,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Blittable
@@ -119,7 +122,7 @@ namespace FastTests.Blittable
         private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new RavenOperationContext(pool, null))
+            using (var ctx = new MemoryOperationContext(pool))
             {
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);

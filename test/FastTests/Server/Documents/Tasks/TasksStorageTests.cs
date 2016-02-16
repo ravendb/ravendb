@@ -5,6 +5,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Tasks;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Context;
 
 using Xunit;
 
@@ -17,7 +18,7 @@ namespace FastTests.Server.Documents.Tasks
         {
             using (var database = CreateDocumentDatabase())
             using (var tasksStorage = new TasksStorage())
-            using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty), database.DocumentsStorage.Environment))
+            using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -47,7 +48,7 @@ namespace FastTests.Server.Documents.Tasks
         {
             using (var database = CreateDocumentDatabase())
             using (var tasksStorage = new TasksStorage())
-            using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty), database.DocumentsStorage.Environment))
+            using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -84,7 +85,7 @@ namespace FastTests.Server.Documents.Tasks
         {
             using (var database = CreateDocumentDatabase())
             using (var tasksStorage = new TasksStorage())
-            using (var context = new RavenOperationContext(new UnmanagedBuffersPool(string.Empty), database.DocumentsStorage.Environment))
+            using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {

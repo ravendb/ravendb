@@ -4,6 +4,9 @@ using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Server.Indexing.Corax.Queries;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Voron;
 using Voron.Data.Tables;
 
@@ -12,19 +15,19 @@ namespace Raven.Server.Indexing.Corax
     public class Searcher : IDisposable
     {
         private readonly FullTextIndex _parent;
-        private readonly RavenOperationContext _context;
+        private readonly TransactionOperationContext _context;
 
         public Searcher(FullTextIndex parent)
         {
             _parent = parent;
-            _context = new RavenOperationContext(_parent.Pool, _parent.Env);
+            _context = new TransactionOperationContext(_parent.Pool, _parent.Env);
             _context.OpenReadTransaction();
             _context.CachedProperties.Version = 1;
         }
 
         public unsafe string[] Query(QueryDefinition qd)
         {
-            var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction.InnerTransaction);
+            var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction);
             //TODO: implement using heap
             //var heap = new Heap<QueryMatch>(qd.Take, QueryMatchScoreSorter.Instance);
             qd.Query.Initialize(_parent, _context, entries);
@@ -61,11 +64,11 @@ namespace Raven.Server.Indexing.Corax
 
     public unsafe class EntrySorter : IComparer<QueryMatch>
     {
-        private readonly RavenOperationContext _context;
+        private readonly MemoryOperationContext _context;
         private readonly Table _entries;
         private readonly QueryDefinition.OrderBy[] _sort;
 
-        public EntrySorter(RavenOperationContext context, Table entries, QueryDefinition.OrderBy[] sort)
+        public EntrySorter(MemoryOperationContext context, Table entries, QueryDefinition.OrderBy[] sort)
         {
             _context = context;
             _entries = entries;

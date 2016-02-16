@@ -3,6 +3,9 @@ using System.IO;
 using System.Reflection;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
@@ -14,7 +17,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         public void CanReadAll(string name)
         {
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new RavenOperationContext(pool, null))
+            using (var ctx = new MemoryOperationContext(pool))
             using (var stream = typeof(UnmanageJsonReaderTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             using (var parser = new UnmanagedJsonParser(ctx, new JsonParserState(), "test"))
             {

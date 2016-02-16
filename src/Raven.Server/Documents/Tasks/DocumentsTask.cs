@@ -7,6 +7,8 @@
 using System;
 
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Tasks
 {
@@ -27,7 +29,7 @@ namespace Raven.Server.Documents.Tasks
             IndexId = indexId;
         }
 
-        public abstract BlittableJsonReaderObject ToJson(RavenOperationContext context);
+        public abstract BlittableJsonReaderObject ToJson(MemoryOperationContext context);
 
         public static DocumentsTask ToTask(BlittableJsonReaderObject json)
         {

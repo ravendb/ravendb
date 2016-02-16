@@ -3,20 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+
 using Sparrow;
 using Sparrow.Binary;
-using Voron;
+
 using Voron.Util;
 
-namespace Raven.Server.Json
+namespace Raven.Server.ServerWide.Context
 {
     /// <summary>
     /// Single threaded for contexts
     /// </summary>
-    public class RavenOperationContext : IDisposable
+    public class MemoryOperationContext : IDisposable
     {
         private Stack<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
 
@@ -32,27 +35,16 @@ namespace Raven.Server.Json
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
-        public DocumentTransaction Transaction;
+
         public CachedProperties CachedProperties;
-        public readonly StorageEnvironment Environment;
+
         private int _lastStreamSize = 4096;
 
-        public RavenOperationContext(UnmanagedBuffersPool pool, StorageEnvironment environment)
+        public MemoryOperationContext(UnmanagedBuffersPool pool)
         {
             Pool = pool;
-            Environment = environment;
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
-        }
-
-        public DocumentTransaction OpenReadTransaction()
-        {
-            return Transaction = new DocumentTransaction(this, Environment.ReadTransaction(), null);
-        }
-
-        public DocumentTransaction OpenWriteTransaction()
-        {
-            return Transaction = new DocumentTransaction(this, Environment.WriteTransaction(), null);
         }
 
         private byte[] GetParsingBuffer()
@@ -232,7 +224,7 @@ namespace Raven.Server.Json
                     var actualSize = Encoding.GetBytes(pChars + start, count, address, memory.SizeInBytes);
                     state.WriteEscapePositionsTo(address + actualSize);
                     value = new LazyStringValue(null, address, actualSize, this);
-            }
+                }
             }
             catch (Exception)
             {
@@ -493,26 +485,22 @@ namespace Raven.Server.Json
             _lastStreamSize = Math.Max(_lastStreamSize, sizeInBytes);
         }
 
-        public void Reset()
+        public virtual void Reset()
         {
             foreach (var disposable in _disposables)
             {
                 disposable.Dispose();
             }
             _disposables.Clear();
-
-            Transaction?.Dispose();
         }
-
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
         {
             using (var writer = new BlittableJsonTextWriter(this, stream))
             {
                 writer.WriteToOrdered(json);
+            }
         }
-        }
-
 
         public void WriteOrdered(Stream stream, BlittableJsonReaderObject json)
         {
@@ -567,7 +555,7 @@ namespace Raven.Server.Json
                     writer.FinalizeDocumentWithoutProperties(CachedProperties.Version);
                     _disposables.Add(writer);
                     return writer.CreateReader(CachedProperties);
-    }
+                }
                 catch (Exception)
                 {
                     writer.Dispose();
@@ -597,7 +585,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-               writer.WritePropertyName(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                writer.WritePropertyName(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
 
                 if (parser.Read() == false)
                     throw new InvalidOperationException("Object json parser can't return partial results");

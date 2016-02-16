@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 using Sparrow;
 
@@ -19,7 +21,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs")]
         public async Task GetDocuments()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
@@ -58,7 +60,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private unsafe long ComputeAllDocumentsEtag(RavenOperationContext context)
+        private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)
         {
             var buffer = stackalloc long[2];
 

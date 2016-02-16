@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Xunit;
 
@@ -88,7 +90,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -119,7 +121,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -150,7 +152,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -181,7 +183,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -221,7 +223,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -270,7 +272,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -411,7 +413,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -486,7 +488,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -507,7 +509,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -546,7 +548,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -567,7 +569,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -598,7 +600,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -631,7 +633,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -660,7 +662,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -682,7 +684,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -720,7 +722,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -766,7 +768,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -793,7 +795,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = "contacts/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -812,7 +814,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = "contacts/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -833,7 +835,7 @@ namespace FastTests.Utils
                 ["ContactInfoId3"] = 78.89, //this one is double
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -859,7 +861,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -878,7 +880,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -897,7 +899,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -926,7 +928,7 @@ namespace FastTests.Utils
                 ["CarInfoId"] = "cars/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new RavenOperationContext(pool, null))
+            using (var context = new MemoryOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

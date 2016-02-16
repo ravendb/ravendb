@@ -9,6 +9,8 @@ using System.Collections.Generic;
 
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Tasks
 {
@@ -72,7 +74,7 @@ namespace Raven.Server.Documents.Tasks
             //}
         }
 
-        public override BlittableJsonReaderObject ToJson(RavenOperationContext context)
+        public override BlittableJsonReaderObject ToJson(MemoryOperationContext context)
         {
             var keys = new DynamicJsonArray();
             foreach (var key in _keys)

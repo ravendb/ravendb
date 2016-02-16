@@ -21,12 +21,12 @@ namespace Raven.Server.Indexing.Corax.Queries
 
         public override QueryMatch[] Execute()
         {
-            var property = Context.Transaction.InnerTransaction.ReadTree(_field);
+            var property = Context.Transaction.ReadTree(_field);
             if (property == null)
                 return Array.Empty<QueryMatch>();
 
 
-            var fixedSizeTree = new FixedSizeTree(Context.Transaction.InnerTransaction.LowLevelTransaction, property, _term, 0);
+            var fixedSizeTree = new FixedSizeTree(Context.Transaction.LowLevelTransaction, property, _term, 0);
             using (var it = fixedSizeTree.Iterate())
             {
                 if (it.Seek(long.MinValue) == false)

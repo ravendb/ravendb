@@ -1,6 +1,4 @@
-﻿using System;
-using Raven.Server.Documents.Indexes.Persistance.Lucene;
-using Raven.Server.Json;
+﻿using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -20,12 +18,12 @@ namespace Raven.Server.Documents.Indexes
         {
         }
 
-        protected override bool IsStale(RavenOperationContext databaseContext, RavenOperationContext indexContext, out long lastEtag)
+        protected override bool IsStale(TransactionOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag)
         {
             long lastDocumentEtag;
             using (var tx = databaseContext.OpenReadTransaction())
             {
-                lastDocumentEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                lastDocumentEtag = DocumentsStorage.ReadLastEtag(tx);
             }
 
             long lastMappedEtag;
