@@ -9,6 +9,8 @@ namespace Raven.Server.Utils
     public static class IncludeUtil
     {
         private static readonly char[] IncludeSeparators = { '.', ',', '(' };
+        private const char PrefixSeparator = '(';
+        private const char ArraySeparator = ',';
 
         public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, HashSet<string> includedIds)
         {
@@ -35,8 +37,10 @@ namespace Raven.Server.Utils
                 case '(':
                     if (includePath[includePath.Length - 1] != ')') //precaution
                         return;
-
-                    includedIds.Add(HandlePrefix(docReader, includePath.SubSegment(0, indexOfFirstSeparator), indexOfFirstSeparator));
+                    
+                    var idWithPrefix = HandlePrefix(docReader, includePath, indexOfFirstSeparator);
+                    if(idWithPrefix != null)
+                        includedIds.Add(idWithPrefix);
                     break;
                 default:
                     object value;
@@ -62,10 +66,24 @@ namespace Raven.Server.Utils
                     GetDocIdFromInclude(arrayObject, pathSegment, includedIds);
                 }
                 else
-                {				    
+                {
+                    var arrayReader = item as BlittableJsonReaderArray;
+                    if (arrayReader != null)
+                    {
+                        var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(IncludeSeparators, 0);
+                        var subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
+                        HandleArrayReader(arrayReader,
+                            subSegment,			                
+                            includedIds);
+                        continue;
+                    }
+
                     var includedId = BlittableValueToString(item);
                     if (includedId != null)
-                        includedIds.Add(includedId);
+                    {
+                        includedIds.Add(pathSegment.Length > 0 && pathSegment[0] == PrefixSeparator ? 
+                            ValueWithPrefix(pathSegment, 0, item) : includedId);
+                    }
                 }
             }
         }
@@ -80,18 +98,13 @@ namespace Raven.Server.Utils
             if (doubleVal != null)
                 val = doubleVal.Inner;
 
-            var prefix = pathSegment.SubSegment(indexOfSeparator + 1, pathSegment.Length - indexOfSeparator - 2);
-            return prefix[prefix.Length - 1] != '/' ? null : $"{prefix}{val}";
+            return ValueWithPrefix(pathSegment, indexOfSeparator, val);
         }
 
-        private static int FirstIndexOf(this StringSegment str, params char[] chars)
+        private static string ValueWithPrefix(StringSegment pathSegment, int indexOfSeparator, object val)
         {
-            for (var inx = 0; inx < str.Length; inx++)
-                foreach(var c in chars)
-                    if (str[inx] == c)
-                        return inx;
-
-            return -1;
+            var prefix = pathSegment.SubSegment(indexOfSeparator + 1, pathSegment.Length - indexOfSeparator - 2);
+            return (prefix.Length > 0) && (prefix[prefix.Length - 1] != '/') ? null : $"{prefix}{val}";
         }
 
         private static string BlittableValueToString(object value)
