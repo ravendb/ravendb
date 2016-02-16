@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Lucene.Net.Documents;
@@ -11,6 +12,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 {
     public class LuceneDocumentConverter : IDisposable
     {
+        private const string IsArrayFieldSuffix = "_IsArray";
+
+        private const string TrueString = "true";
+
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
 
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<Field>> _fieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<Field>>(Comparer);
@@ -19,7 +24,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
 
+        private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
+
         private readonly IndexField[] _fields;
+
         private bool _fieldsAdded;
 
         public LuceneDocumentConverter(IndexField[] fields)
@@ -47,6 +55,18 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             return _document;
         }
 
+        
+        private IEnumerable<AbstractField> GetFields(Document document)
+        {
+            yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+            
+            foreach (var indexField in _fields)
+            {
+                foreach (var luceneField in GetRegularFields(indexField, _blittableTraverser.Read(document.Data, indexField.Name)))
+                    yield return luceneField;
+            }
+        }
+
         /// <summary>
         /// This method generate the fields for indexing documents in lucene from the values.
         /// Given a name and a value, it has the following behavior:
@@ -58,50 +78,67 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        private IEnumerable<AbstractField> GetFields(Document document)
+        private IEnumerable<AbstractField> GetRegularFields(IndexField field, object value)
         {
-            yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-            
-            foreach (var field in _fields)
+            var path = field.Name;
+
+            var indexing = field.Indexing.GetLuceneValue(@default: Field.Index.ANALYZED_NO_NORMS);
+            var storage = field.Storage.GetLuceneValue(@default: Field.Store.NO);
+
+            if (value == null)
             {
-                var path = field.Name;
-
-                var indexing = field.Indexing.GetLuceneValue(@default: Field.Index.ANALYZED_NO_NORMS);
-                var storage = field.Storage.GetLuceneValue(@default: Field.Store.NO);
-
-                object value;
-                if (document.Data.TryGetMember(path, out value) == false)
-                {
-                    yield return GetOrCreateField(path, Constants.NullValue, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
-                    continue;
-                }
-
-                if (Equals(value, string.Empty))
-                {
-                    yield return GetOrCreateField(path, Constants.EmptyString, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
-                    continue;
-                }
-
-                var lazyStringValue = value as LazyStringValue;
-
-                if (lazyStringValue != null)
-                {
-                    yield return GetOrCreateField(path, null, lazyStringValue, storage, indexing);
-                    continue;
-                }
-
-                if (value is LazyDoubleValue)
-                {
-                    yield return GetOrCreateField(path, null, ((LazyDoubleValue) value).Inner, storage, indexing);
-                }
-                else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
-                {
-                    yield return GetOrCreateField(path, ((IConvertible) value).ToString(CultureInfo.InvariantCulture), null, storage, indexing);
-                }
-
-                foreach (var numericField in GetOrCreateNumericField(field, value, storage))
-                    yield return numericField;
+                yield return GetOrCreateField(path, Constants.NullValue, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
+                yield break;
             }
+
+            if (Equals(value, string.Empty))
+            {
+                yield return GetOrCreateField(path, Constants.EmptyString, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
+                yield break;
+            }
+
+            var lazyStringValue = value as LazyStringValue;
+
+            if (lazyStringValue != null)
+            {
+                yield return GetOrCreateField(path, null, lazyStringValue, storage, indexing);
+                yield break;
+            }
+
+            var itemsToIndex = value as IEnumerable;
+            if (itemsToIndex != null)
+            {
+                int count = 1;
+
+                if (true) // TODO arek (nestedArray == false)
+                    yield return GetOrCreateField(path + IsArrayFieldSuffix, TrueString, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+
+                foreach (var itemToIndex in itemsToIndex)
+                {
+                    //if (!CanCreateFieldsForNestedArray(itemToIndex, fieldIndexingOptions))
+                    //    continue;
+
+                    //multipleItemsSameFieldCount.Add(count++);
+                    foreach (var fieldFromCollection in GetRegularFields(field, itemToIndex))
+                        yield return fieldFromCollection;
+
+                    //multipleItemsSameFieldCount.RemoveAt(multipleItemsSameFieldCount.Count - 1);
+                }
+
+                yield break;
+            }
+
+            if (value is LazyDoubleValue)
+            {
+                yield return GetOrCreateField(path, null, ((LazyDoubleValue)value).Inner, storage, indexing);
+            }
+            else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them // TODO arek - do we still need that?
+            {
+                yield return GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, storage, indexing); // TODO arek - ToString()? anything better?
+            }
+
+            foreach (var numericField in GetOrCreateNumericField(field, value, storage))
+                yield return numericField;
         }
 
         private Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, Field.Store store, Field.Index index, Field.TermVector termVector = Field.TermVector.NO)
@@ -116,9 +153,9 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
                 LazyStringReader reader = null;
 
                 if (lazyValue != null && store.IsStored() == false && index.IsIndexed())
-                    field = new Field(name, (reader = new LazyStringReader()).GetTextReaderFor(lazyValue));
+                    field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), (reader = new LazyStringReader()).GetTextReaderFor(lazyValue));
                 else
-                    field = new Field(name, value ?? (reader = new LazyStringReader()).GetStringFor(lazyValue), store, index);
+                    field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), value ?? (reader = new LazyStringReader()).GetStringFor(lazyValue), store, index);
 
                 field.Boost = 1;
                 field.OmitNorms = true;
@@ -155,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             {
                 _numericFieldsCache[cacheKey] = cached = new CachedFieldItem<NumericField>
                 {
-                    Field = numericField = new NumericField(fieldName, storage, true)
+                    Field = numericField = new NumericField(IndexField.ReplaceInvalidCharactersInFieldName(fieldName), storage, true)
                 };
             }
             else
@@ -167,7 +204,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
             if (value is LazyDoubleValue)
             {
-                var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner));
+                var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner)); // TODO arek - 
 
                 if (sortOption == SortOptions.Float)
                     yield return numericField.SetFloatValue(Convert.ToSingle(doubleValue));
@@ -188,6 +225,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
                     yield return numericField.SetIntValue(Convert.ToInt32((long)value));
                 else
                     yield return numericField.SetLongValue((long)value);
+            }
+            else
+            {
+                throw new NotImplementedException($"Could not create numeric field from type: {value.GetType().FullName}");
             }
         }
 

@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
         private readonly AutoIndexField[] _fields;
-        private readonly Dictionary<string, AutoIndexField> _fieldsByName = new Dictionary<string, AutoIndexField>(); 
-
-        private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
+        private readonly Dictionary<string, AutoIndexField> _fieldsByName;
 
         public AutoIndexDefinition(string collection, AutoIndexField[] fields)
             : base(FindIndexName(collection, fields), new[] { collection })
@@ -51,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         private static string FindIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {
-            var combinedFields = string.Join("And", fields.Select(x => ReplaceInvalidCharacterForFields.Replace(x.Name, "_")).OrderBy(x => x));
+            var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
             var sortOptions = fields.Where(x => x.SortOption != null).Select(x => x.Name).ToArray();
             if (sortOptions.Length > 0)

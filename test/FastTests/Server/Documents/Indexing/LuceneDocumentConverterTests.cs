@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void returns_null_value_if_property_is_not_present_in_document()
+        public void Returns_null_value_if_property_is_not_present_in_document()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void returns_empty_string_value_if_property_has_empty_string()
+        public void Returns_empty_string_value_if_property_has_empty_string()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
@@ -67,7 +67,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void conversion_of_string_value()
+        public void Conversion_of_string_value()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
@@ -87,7 +87,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void reuses_cached_document_instance()
+        public void Reuses_cached_document_instance()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void conversion_of_numeric_fields()
+        public void Conversion_of_numeric_fields()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
@@ -147,9 +147,71 @@ namespace FastTests.Server.Documents.Indexing
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 
+        [Fact]
+        public void Conversion_of_nested_string_value()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new AutoIndexField("Address.City"),
+            });
+
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Address"] = new DynamicJsonValue
+                {
+                    ["City"] = "NYC"
+                }
+            }, "users/1");
+
+            var result = _sut.ConvertToCachedDocument(doc);
+
+            Assert.Equal(2, result.GetFields().Count);
+            Assert.Equal("NYC", result.GetField("Address_City").ReaderValue.ReadToEnd());
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
+        [Fact]
+        public void Conversion_of_string_value_nested_inside_collection()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new AutoIndexField("Friends,Name"),
+            });
+
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Friends"] = new DynamicJsonArray
+                {
+                    Items = new Queue<object>(new[]
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["Name"] = "Joe"
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Name"] = "John"
+                        }
+                    })
+                }
+            }, "users/1");
+
+            var result = _sut.ConvertToCachedDocument(doc);
+            
+            Assert.Equal(4, result.GetFields().Count);
+            Assert.Equal(2, result.GetFields("Friends_Name").Length);
+
+            Assert.Equal("Joe", result.GetFields("Friends_Name")[0].ReaderValue.ReadToEnd());
+            Assert.Equal("John", result.GetFields("Friends_Name")[1].ReaderValue.ReadToEnd());
+
+            Assert.Equal("true", result.GetField("Friends_Name_IsArray").StringValue);
+
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
         public Document create_doc(DynamicJsonValue document, string id)
         {
-            var data = _ctx.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            var data = _ctx.ReadObject(document, id);
 
             _docs.Add(data);
 
