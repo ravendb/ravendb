@@ -28,20 +28,20 @@ namespace FastTests.Server.Documents.Indexing
 
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications);
+                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery()));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications);
+                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
                 index.Execute(CancellationToken.None);
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications);
+                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
                     index.Execute(cts.Token);
 
                     cts.Cancel();
@@ -59,7 +59,7 @@ namespace FastTests.Server.Documents.Indexing
 
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database.DocumentsStorage, indexingConfiguration, database.Notifications))
+                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database))
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {

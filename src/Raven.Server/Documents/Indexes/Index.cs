@@ -6,11 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Documents.Tasks;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 
@@ -44,9 +44,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
-        private DocumentsStorage _documentsStorage;
-
-        private DatabaseNotifications _databaseNotifications;
+        private DocumentDatabase _documentDatabase;
 
         private Task _indexingTask;
 
@@ -61,8 +59,6 @@ namespace Raven.Server.Documents.Indexes
         private bool _disposed;
 
         private readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
-
-        private IndexingConfiguration _indexingConfiguration;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -79,7 +75,7 @@ namespace Raven.Server.Documents.Indexes
 
         public LuceneDocumentConverter DocumentConverter { get; }
 
-        public static Index Open(int indexId, string path, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
+        public static Index Open(int indexId, string path, DocumentDatabase documentDatabase)
         {
             var options = StorageEnvironmentOptions.ForPath(path);
             try
@@ -99,7 +95,7 @@ namespace Raven.Server.Documents.Indexes
                     switch (type)
                     {
                         case IndexType.Auto:
-                            return AutoIndex.Open(indexId, environment, documentsStorage, indexingConfiguration, databaseNotifications);
+                            return AutoIndex.Open(indexId, environment, documentDatabase);
                         default:
                             throw new NotImplementedException();
                     }
@@ -122,22 +118,22 @@ namespace Raven.Server.Documents.Indexes
 
         public bool ShouldRun { get; private set; } = true;
 
-        protected void Initialize(DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
+        protected void Initialize(DocumentDatabase documentDatabase)
         {
             lock (_locker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
-                var options = indexingConfiguration.RunInMemory
+                var options = documentDatabase.Configuration.Indexing.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly()
-                    : StorageEnvironmentOptions.ForPath(Path.Combine(indexingConfiguration.IndexStoragePath, IndexId.ToString()));
+                    : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
 
                 options.SchemaVersion = 1;
 
                 try
                 {
-                    Initialize(new StorageEnvironment(options), documentsStorage, indexingConfiguration, databaseNotifications);
+                    Initialize(new StorageEnvironment(options), documentDatabase);
                 }
                 catch (Exception)
                 {
@@ -147,7 +143,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected unsafe void Initialize(StorageEnvironment environment, DocumentsStorage documentsStorage, IndexingConfiguration indexingConfiguration, DatabaseNotifications databaseNotifications)
+        protected unsafe void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -161,10 +157,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Debug.Assert(Definition != null);
 
-                    _indexingConfiguration = indexingConfiguration;
+                    _documentDatabase = documentDatabase;
                     _environment = environment;
-                    _documentsStorage = documentsStorage;
-                    _databaseNotifications = databaseNotifications;
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
 
@@ -178,7 +172,7 @@ namespace Raven.Server.Documents.Indexes
                         tx.Commit();
                     }
 
-                    IndexPersistence.Initialize(indexingConfiguration);
+                    IndexPersistence.Initialize(_documentDatabase.Configuration.Indexing);
 
                     _initialized = true;
                 }
@@ -293,7 +287,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
-                    _databaseNotifications.OnDocumentChange += HandleDocumentChange;
+                    _documentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
 
                     while (ShouldRun)
                     {
@@ -303,6 +297,7 @@ namespace Raven.Server.Documents.Indexes
 
                             cts.Token.ThrowIfCancellationRequested();
 
+                            ExecuteCleanup(cts.Token);
                             ExecuteMap(cts.Token);
 
                             _mre.Wait(cts.Token);
@@ -327,8 +322,25 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
-                    _databaseNotifications.OnDocumentChange -= HandleDocumentChange;
+                    _documentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
                 }
+            }
+        }
+
+        private void ExecuteCleanup(CancellationToken token)
+        {
+            DocumentsOperationContext context;
+            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenWriteTransaction();
+
+                var task = _documentDatabase.TasksStorage.GetMergedTask(context, IndexId, DocumentsTask.DocumentsTaskType.RemoveFromIndex);
+                if (task == null)
+                    return;
+
+                task.Execute(context, token);
+
+                context.Transaction.Commit();
             }
         }
 
@@ -337,7 +349,7 @@ namespace Raven.Server.Documents.Indexes
             if (_mre.IsSet)
                 return;
 
-            if (notification.Type != DocumentChangeTypes.Put)
+            if (notification.Type != DocumentChangeTypes.Put && notification.Type != DocumentChangeTypes.Delete)
                 return;
 
             if (Collections.Any(x => string.Equals(x, notification.CollectionName, StringComparison.OrdinalIgnoreCase)) == false)
@@ -351,7 +363,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
 
-            using (_documentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
+            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
                 long lastEtag;
@@ -359,11 +371,13 @@ namespace Raven.Server.Documents.Indexes
                     return;
 
                 lastEtag++;
+                var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfItemsToFetchForMap;
 
                 foreach (var collection in Collections)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     var start = 0;
-                    var pageSize = _indexingConfiguration.MaxNumberOfItemsToFetchForMap;
 
                     IndexPersistence.Write(addToIndex =>
                     {
@@ -376,7 +390,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 var sw = Stopwatch.StartNew();
                                 var fetchedTotalSize = 0;
-                                foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, pageSize))
+                                foreach (var document in _documentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, pageSize))
                                 {
                                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -411,7 +425,7 @@ namespace Raven.Server.Documents.Indexes
                                         continue;
                                     }
 
-                                    if (sw.Elapsed > _indexingConfiguration.DocumentProcessingTimeout.AsTimeSpan || fetchedTotalSize >= _indexingConfiguration.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
+                                    if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan || fetchedTotalSize >= _documentDatabase.Configuration.Indexing.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
                                     {
                                         earlyExit = count != pageSize;
                                         break;

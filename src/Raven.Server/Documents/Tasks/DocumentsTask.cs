@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Tasks
 
         public abstract void Merge(DocumentsTask task);
 
-        public abstract void Execute();
+        public abstract void Execute(DocumentsOperationContext context, CancellationToken token);
 
         protected DocumentsTask(int indexId)
         {

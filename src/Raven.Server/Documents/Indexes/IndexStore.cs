@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var indexId = _indexes.GetNextIndexId();
 
-            _indexes.Add(AutoIndex.CreateNew(indexId, definition, _documentDatabase.DocumentsStorage, _documentDatabase.Configuration.Indexing, _documentDatabase.Notifications));
+            _indexes.Add(AutoIndex.CreateNew(indexId, definition, _documentDatabase));
 
             return indexId;
         }
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes
                 if (int.TryParse(indexDirectory.Name, out indexId) == false)
                     continue;
 
-                var index = Index.Open(indexId, indexDirectory.FullName, _documentDatabase.DocumentsStorage, _documentDatabase.Configuration.Indexing, _documentDatabase.Notifications);
+                var index = Index.Open(indexId, indexDirectory.FullName, _documentDatabase);
                 _indexes.Add(index);
             }
         }

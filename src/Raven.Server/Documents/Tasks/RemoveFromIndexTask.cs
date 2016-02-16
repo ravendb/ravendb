@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.Tasks
             _keys.UnionWith(removeFromIndexTask._keys);
         }
 
-        public override void Execute()
+        public override void Execute(DocumentsOperationContext context, CancellationToken token)
         {
             var keysToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             //try

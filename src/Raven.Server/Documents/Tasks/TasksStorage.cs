@@ -1,8 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Voron.Data.Tables;
@@ -29,7 +29,17 @@ namespace Raven.Server.Documents.Tasks
             DocumentsTask task = null;
             var totalKeysToProcess = 0;
             var tableName = GetTaskTableName(type);
-            var table = new Table(_tasksSchema, tableName, context.Transaction.InnerTransaction);
+            Table table;
+            try
+            {
+                table = new Table(_tasksSchema, tableName, context.Transaction.InnerTransaction);
+            }
+            catch (InvalidDataException)
+            {
+                // TODO [ppekrol] what to do if 'tableName' does not exist?
+                return null;
+            }
+
             foreach (var tvr in table.SeekForwardFrom(_tasksSchema.FixedSizeIndexes["IndexIds"], indexId))
             {
                 if (totalKeysToProcess >= 5 * 1024)
