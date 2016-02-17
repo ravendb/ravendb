@@ -24,7 +24,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
 
-        private readonly HashSet<string> _fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 
@@ -40,11 +39,8 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         // returned document needs to be written do index right after conversion because the same cached instance is used here
         public global::Lucene.Net.Documents.Document ConvertToCachedDocument(Document document)
         {
-            foreach (var fieldName in _fieldNames)
-            {
-                _document.RemoveFields(fieldName);
-            }
-
+            _document.GetFields().Clear();
+          
             foreach (var field in GetFields(document))
             {
                 _document.Add(field);
@@ -247,8 +243,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         private string CreateFieldName(string name)
         {
             var result = IndexField.ReplaceInvalidCharactersInFieldName(name);
-
-            _fieldNames.Add(result);
 
             return result;
         }
