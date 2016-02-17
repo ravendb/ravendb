@@ -404,7 +404,7 @@ namespace Raven.Server.Documents
 
             DeleteDocumentFromIndexesForCollection(context, key, originalCollectionName);
 
-            context.Transaction.RegisterNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
@@ -480,7 +480,7 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
-            context.Transaction.RegisterNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
                 Etag = newEtag,
                 CollectionName = originalCollectionName,

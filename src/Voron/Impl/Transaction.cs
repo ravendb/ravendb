@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Compact;
@@ -17,8 +17,6 @@ namespace Voron.Impl
         {
             get { return _lowLevelTransaction; }
         }
-
-        public Action AfterCommit = delegate { };
 
         private readonly Dictionary<string, PrefixTree> _prefixTrees = new Dictionary<string, PrefixTree>();
         private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
@@ -37,7 +35,7 @@ namespace Voron.Impl
             var header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead((Slice)treeName);
             if (header != null)
             {
-                if(header->RootObjectType != RootObjectType.VariableSizeTree)
+                if (header->RootObjectType != RootObjectType.VariableSizeTree)
                     throw new InvalidOperationException("Tried to opened " + treeName + " as a variable size tree, but it is actually a " + header->RootObjectType);
 
                 tree = Tree.Open(_lowLevelTransaction, this, header);
@@ -59,8 +57,6 @@ namespace Voron.Impl
         {
             CommitTrees();
             _lowLevelTransaction.Commit();
-
-            AfterCommit();
         }
 
         internal void CommitTrees()
@@ -74,7 +70,7 @@ namespace Voron.Impl
                     var childTree = multiValueTree.Value;
 
                     var trh =
-                        (TreeRootHeader*) parentTree.DirectAdd(key, sizeof (TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
+                        (TreeRootHeader*)parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
                     childTree.State.CopyTo(trh);
                 }
             }
@@ -92,7 +88,7 @@ namespace Voron.Impl
                 }
             }
 
-            foreach ( var prefixTree in PrefixTrees )
+            foreach (var prefixTree in PrefixTrees)
             {
                 // FEDERICO: This should never happen, why it happens on tree still eludes me. 
                 if (prefixTree == null)
@@ -249,7 +245,7 @@ namespace Voron.Impl
                 throw new InvalidOperationException("No such tree: '" + name + "' and cannot create trees in read transactions");
 
             Slice key = name;
-            
+
             tree = PrefixTree.Create(LowLevelTransaction, LowLevelTransaction.RootObjects, name);
             tree.Name = name;
 
@@ -297,7 +293,7 @@ namespace Voron.Impl
             if (val == null)
                 return RootObjectType.None;
 
-            return ((RootHeader*) val)->RootObjectType;
+            return ((RootHeader*)val)->RootObjectType;
         }
     }
 
