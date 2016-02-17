@@ -26,54 +26,56 @@ namespace Raven.Server.Documents.Handlers
 
                 var connection = new NotificationsClientConnection(webSocket, Database);
                 Database.Notifications.Connect(connection);
-
-                RavenOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
+                try
                 {
-                    var buffer = context.GetManagedBuffer();
-                    var receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
-                    var jsonParserState = new JsonParserState();
-                    using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
+                    //TODO: select small context size (maybe pool just for them?)
+                    RavenOperationContext context;
+                    using (ContextPool.AllocateOperationContext(out context))
                     {
-                        var result = await receiveAsync;
-                        receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
-                        parser.SetBuffer(buffer, result.Count);
-
-                        while (true)
+                        var buffer = context.GetManagedBuffer();
+                        var receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
+                        var jsonParserState = new JsonParserState();
+                        using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                         {
-                            using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
+                            var result = await receiveAsync;
+                            receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
+                            parser.SetBuffer(buffer, result.Count);
+
+                            while (true)
                             {
-                                builder.ReadObject();
-                                
-                                while (builder.Read() == false)
+                                using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
                                 {
-                                    result = await receiveAsync;
-                                    receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
-                                    parser.SetBuffer(buffer, result.Count);
+                                    builder.ReadObject();
+
+                                    while (builder.Read() == false)
+                                    {
+                                        result = await receiveAsync;
+                                        receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
+                                        parser.SetBuffer(buffer, result.Count);
+                                    }
+
+                                    builder.FinalizeDocument();
+
+                                    var reader = builder.CreateReader();
+                                    string command, commandParameter;
+                                    if (reader.TryGet("Command", out command) == false)
+                                    {
+                                        // Write error
+                                        throw new NotImplementedException();
+                                        // TBD: what should be done here
+                                    }
+
+                                    reader.TryGet("Param", out commandParameter);
+
+                                    HandelCommand(connection, command, commandParameter);
                                 }
-
-                                builder.FinalizeDocument();
-
-                                var reader = builder.CreateReader();
-                                string command, commandParameter;
-                                if (reader.TryGet("Command", out command) == false)
-                                {
-                                    // Write error
-                                    throw new NotImplementedException();
-                                    // TBD: what should be done here
-                                }
-
-                                reader.TryGet("Param", out commandParameter);
-
-                                if (Match(command, "disconnect"))
-                                {
-                                    Database.Notifications.Disconnect(connection);
-                                    break;
-                                }
-                                HandelCommand(connection, command, commandParameter);
                             }
                         }
                     }
+                }
+                finally
+                {
+                    Database.Notifications.Disconnect(connection);
                 }
             }
         }
