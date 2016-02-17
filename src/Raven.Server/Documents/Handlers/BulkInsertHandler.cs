@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers
@@ -58,25 +60,23 @@ namespace Raven.Server.Documents.Handlers
             {
                 var buffer = new byte[1024];
                 string input = null;
-                
-                
-                    var receiveAsync =
-                        await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                
-                    input = Encoding.UTF8.GetString(buffer, 0, receiveAsync.Count);
-                    Console.WriteLine(input);
-                    var size = Encoding.UTF8.GetBytes(input.Reverse().ToArray(), 0, input.Length, buffer, 0);
-                    await
-                        webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, size), WebSocketMessageType.Text, true,
-                            CancellationToken.None);
-                
-                
+
+
+                var receiveAsync =
+                    await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+
+                input = Encoding.UTF8.GetString(buffer, 0, receiveAsync.Count);
+                Console.WriteLine(input);
+                var size = Encoding.UTF8.GetBytes(input.Reverse().ToArray(), 0, input.Length, buffer, 0);
+                await
+                    webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, size), WebSocketMessageType.Text, true,
+                        CancellationToken.None);
 
                 var batch = new List<Document>();
                 var requestBody = HttpContext.Request.Body;
                 var reader = new BinaryReader(requestBody);
 
-                RavenOperationContext context;
+                DocumentsOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     while (true)
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
 
 
                         using (var batchStream = new PartialStream(requestBody, compressedBatchSize))
-                            //TODO: We need to figure out a way to reuse this stream, creating it each time means big allocations
+                        //TODO: We need to figure out a way to reuse this stream, creating it each time means big allocations
                         using (var stream = new GZipStream(batchStream, CompressionMode.Decompress, leaveOpen: true))
                         {
                             var batchReader = new BinaryReader(stream);
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
 
                         if (batch.Count > 0)
                         {
-                            using (context.Transaction = context.Environment.WriteTransaction())
+                            using (context.OpenWriteTransaction())
                             {
                                 foreach (var doc in batch)
                                 {
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Handlers
             return;
         }
 
-        private unsafe LazyStringValue LazyStringFromKey(string id, RavenOperationContext context)
+        private unsafe LazyStringValue LazyStringFromKey(string id, MemoryOperationContext context)
         {
             return new LazyStringValue(id, null, 0, context);
         }

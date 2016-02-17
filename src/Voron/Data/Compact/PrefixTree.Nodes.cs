@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.Compact
 {
@@ -6,6 +8,7 @@ namespace Voron.Data.Compact
     {
         public enum NodeType : byte
         {
+            Uninitialized = 0,
             Internal = 1,
             Leaf = 2,
             Tombstone = 3
@@ -33,6 +36,7 @@ namespace Voron.Data.Compact
             public bool IsLeaf => Type == NodeType.Leaf;
             public bool IsInternal => Type == NodeType.Internal;
             public bool IsTombstone => Type == NodeType.Tombstone;
+            public bool IsUninitialized => !IsLeaf && !IsInternal && !IsTombstone;
         }
 
         /// <summary>
@@ -91,7 +95,7 @@ namespace Voron.Data.Compact
 
             public Internal(short nameLength = 0, short extentLength = 0)
             {
-                this.Type = NodeType.Leaf;
+                this.Type = NodeType.Internal;
                 this.NameLength = nameLength;
                 this.ExtentLength = extentLength;
 
@@ -99,12 +103,26 @@ namespace Voron.Data.Compact
                 this.RightPtr = Constants.InvalidNodeName;
                 this.JumpLeftPtr = Constants.InvalidNodeName;
                 this.JumpRightPtr = Constants.InvalidNodeName;
-                this.LeftPtr = Constants.InvalidNodeName;              
+                this.LeftPtr = Constants.InvalidNodeName;
             }
 
             public bool IsLeaf => Type == NodeType.Leaf;
             public bool IsInternal => Type == NodeType.Internal;
             public bool IsTombstone => Type == NodeType.Tombstone;
+            public bool IsUninitialized => !IsLeaf && !IsInternal && !IsTombstone;
+
+            internal void Initialize(short nameLength, short extentLength)
+            {
+                this.Type = NodeType.Internal;
+                this.NameLength = nameLength;
+                this.ExtentLength = extentLength;
+
+                this.ReferencePtr = Constants.InvalidNodeName;
+                this.RightPtr = Constants.InvalidNodeName;
+                this.JumpLeftPtr = Constants.InvalidNodeName;
+                this.JumpRightPtr = Constants.InvalidNodeName;
+                this.LeftPtr = Constants.InvalidNodeName;
+            }
         }
 
 
@@ -174,6 +192,7 @@ namespace Voron.Data.Compact
             public bool IsLeaf => Type == NodeType.Leaf;
             public bool IsInternal => Type == NodeType.Internal;
             public bool IsTombstone => Type == NodeType.Tombstone;
-        }        
+            public bool IsUninitialized => !IsLeaf && !IsInternal && !IsTombstone;
+        }
     }
 }

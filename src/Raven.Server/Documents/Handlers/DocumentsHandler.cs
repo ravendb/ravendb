@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 using Sparrow;
 
@@ -19,10 +21,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs")]
         public async Task GetDocuments()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
                 // everything here operates on all docs
                 var actualEtag = ComputeAllDocumentsEtag(context);
@@ -58,11 +60,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private unsafe long ComputeAllDocumentsEtag(RavenOperationContext context)
+        private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)
         {
             var buffer = stackalloc long[2];
 
-            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction);
+            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
             buffer[1] = Database.DocumentsStorage.GetNumberOfDocuments(context);
 
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);

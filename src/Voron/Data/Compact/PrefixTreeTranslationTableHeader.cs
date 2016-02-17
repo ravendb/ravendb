@@ -1,4 +1,5 @@
 ﻿using Sparrow;
+using Sparrow.Binary;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -22,10 +23,19 @@ namespace Voron.Data.Compact
         public long InnerNodesPerChunk;        
     }
 
-    public enum TranslationTableMapMode
+    [StructLayout(LayoutKind.Explicit, Size = 16, Pack = 1)]
+    public struct PrefixTreeNodeLocationPtr
     {
-        Read,
-        ReadOrAllocate
+        [FieldOffset(0)]
+        public long PageNumber;
+
+        [FieldOffset(8)]
+        public long NodeOffset;
+
+        public bool IsValid
+        {
+            get { return PageNumber != -1; }
+        }
     }
 
     public unsafe class PrefixTreeTranslationTableMutableState
@@ -111,32 +121,166 @@ namespace Voron.Data.Compact
             header->TranslationTable = _innerCopy;
         }
 
+        public PtrBitVector GetFreeSpaceTable( Page page )
+        {
+            byte* location = page.DataPointer + _innerCopy.Items * sizeof(long);
+            return new PtrBitVector( (ulong*)location, (int) _innerCopy.Items);
+        }
+
         public void Initialize ( int chunkTreeDepth )
-        {            
+        {
             _innerCopy.NodesPerChunk = (int)Math.Pow(2, chunkTreeDepth) - 1;
             _innerCopy.InnerNodesPerChunk = (int)Math.Pow(2, chunkTreeDepth - 1) - 1;
-            _innerCopy.ChunkSize = _innerCopy.NodesPerChunk * sizeof(PrefixTree.Node);
+            _innerCopy.ChunkSize = _innerCopy.NodesPerChunk * sizeof(PrefixTree.Node) + (_innerCopy.NodesPerChunk / BitVector.BitsPerByte) + 1;
             _innerCopy.Items = PrefixTree.Constants.TranslationTableInitialItems;
 
+            if (_innerCopy.NodesPerChunk >= ushort.MaxValue - 1)
+                throw new NotSupportedException($"Requesting more than {ushort.MaxValue - 2} nodes per chunk is not supported.");
+
+            int freeSpaceTableSize = (int) (_innerCopy.Items / BitVector.BitsPerByte) + 1;
+
             // We will allocate at least two pages to force an overflow page.
-            var table = _tx.AllocateOverflowPage((int) (_innerCopy.Items * sizeof(long)));
-            Debug.Assert(table.IsOverflow); // Making sure we got an overflow page.
-            _innerCopy.PageNumber = table.PageNumber;
+            var _table = _tx.AllocateOverflowPage<PageHeader>((int) (_innerCopy.Items * sizeof(long)) + freeSpaceTableSize);
+            Debug.Assert(_table.IsOverflow); // Making sure we got an overflow page.
+            _innerCopy.PageNumber = _table.PageNumber;
 
-            Memory.SetInline(table.DataPointer, 0xFF, table.OverflowSize);
+            // We are actually filling the page mapping to PrefixTree.Constants.InvalidPage and also the free space as all free in a single call :)
+            Memory.SetInline(_table.DataPointer, 0xFF, _table.OverflowSize);
 
-            Debug.Assert(((long*)table.DataPointer)[0] == PrefixTree.Constants.InvalidPage); // Make sure we are writing invalid page in memory.
-            Debug.Assert(((long*)table.DataPointer)[table.OverflowSize / sizeof(long) - 1] == PrefixTree.Constants.InvalidPage); // Make sure we are writing invalid page in memory.            
+            Debug.Assert(((long*)_table.DataPointer)[0] == PrefixTree.Constants.InvalidPage); // Make sure we are writing invalid page in memory.
+            Debug.Assert(((long*)_table.DataPointer)[_table.OverflowSize / sizeof(long) - 1] == PrefixTree.Constants.InvalidPage); // Make sure we are writing invalid page in memory.            
 
             IsModified = true;
         }
 
-        public PageLocationPtr MapVirtualToPhysical(long nodeName, TranslationTableMapMode mode = TranslationTableMapMode.Read)
+        public bool AreNodesInSameChunk( long na, long nb )
         {
-            Debug.Assert(nodeName >= PrefixTree.Constants.RootNodeName);
-            Debug.Assert(_tx.Flags == TransactionFlags.ReadWrite || (_tx.Flags == TransactionFlags.Read && mode == TranslationTableMapMode.Read), "Allocate mode for mapping outside of a write transaction is an invalid operation");
+            long naChunkIdx = na / _innerCopy.NodesPerChunk;
+            long nbChunkIdx = nb / _innerCopy.NodesPerChunk;
 
-            if (nodeName < PrefixTree.Constants.RootNodeName) // This shouldnt happen at all. 
+            return naChunkIdx == nbChunkIdx;
+        }
+
+        private PrefixTreePage AllocateChunk(long chunkIdx)
+        {
+            Debug.Assert(chunkIdx != PrefixTree.Constants.InvalidPage);
+
+            // We need to allocate a new chunk page and store the physical page number in here.
+            var page = _tx.AllocateOverflowPage<PrefixTreePageHeader>(_innerCopy.ChunkSize);
+
+            var chunk = page.ToPrefixTreePage();
+            chunk.Chunk = chunkIdx;
+            chunk.NodesPerChunk = (ushort)_innerCopy.NodesPerChunk;
+            chunk.Initialize();
+
+            Debug.Assert(page.IsOverflow); // Making sure we got an overflow page (and didnt messed up the format).
+
+            return chunk;
+        }
+
+        private long AllocateNodeInChunkSlow()
+        {
+            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
+            int chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
+            while (chunkId >= 0)
+            {               
+                long name;
+                if ( TryAllocateNodeInChunk(chunkId, out name))
+                {
+                    Debug.Assert(((long*)_tx.GetPage(_innerCopy.PageNumber).DataPointer)[chunkId] != -1);
+                    return name;
+                }                    
+
+                chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
+            }
+
+            // We need to allocate a larger table and update the relevant pages.
+            // Allocate page with one more overflow.
+            // Copy the current table into the new page
+            // Initialize with Constant.InvalidPage the rest of the table.             
+            // Update the header with the new page for the table. 
+            // Free the old page. 
+            // Set the modified flag on.    
+            this.IsModified = true;
+
+            throw new NotImplementedException();
+        }
+        
+        private bool TryAllocateNodeInChunk( long parentName, out long name )
+        {      
+            int chunkIdx = (int)(parentName / _innerCopy.NodesPerChunk);
+
+            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
+            var freeSpace = GetFreeSpaceTable(_table);
+            if (freeSpace.Get(chunkIdx)) // We still have free space reported here.
+            {
+                PrefixTreePage chunkPage; 
+                // We will retrieve the chunks mapping table.
+                long chunkPageNumber = ((long*)_table.DataPointer)[chunkIdx];
+                if ( chunkPageNumber == PrefixTree.Constants.InvalidPage )
+                {
+                    // Perform the actual chunk allocation because it is still not allocated. 
+                    chunkPage = AllocateChunk(chunkIdx);
+                    chunkPageNumber = chunkPage.PageNumber;
+
+                    // Update the physical page, therefore we need to get a copy that will be eventually committed. 
+                    _table = _tx.ModifyPage(_innerCopy.PageNumber);
+                    ((long*)_table.DataPointer)[chunkIdx] = chunkPageNumber;
+
+                    Debug.Assert(GetFreeSpaceTable(_table).Get(chunkIdx) == true);
+                }
+                else
+                {
+                    chunkPage = _tx.GetPage(chunkPageNumber).ToPrefixTreePage();
+                }
+
+                // We will try to allocate from the chunk free space.
+                int idx = chunkPage.FreeSpace.FindLeadingOne();
+                if (idx < 0) // Check if we have space available. 
+                {
+                    // We dont have, so we get the top level free space and set it as complete.
+                    _table = _tx.ModifyPage(_innerCopy.PageNumber);
+                    GetFreeSpaceTable(_table).Set(chunkIdx, false);
+
+                    name = PrefixTree.Constants.InvalidNodeName;
+                    return false;
+                }
+                
+                // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
+                chunkPage = _tx.ModifyPage(chunkPageNumber).ToPrefixTreePage();
+                chunkPage.FreeSpace.Set(idx, false); // We mark the node as used.
+
+                name = chunkIdx * _innerCopy.NodesPerChunk + idx; // Convert relative naming to virtual node name.
+                return true;
+            }
+
+            name = PrefixTree.Constants.InvalidNodeName;
+            return false;
+        }
+
+        public long AllocateNodeName( long parentName = PrefixTree.Constants.InvalidNodeName, long rightChildName = PrefixTree.Constants.InvalidNodeName, long leftChildName = PrefixTree.Constants.InvalidNodeName)
+        {
+            if ( _tx.Flags == TransactionFlags.Read )
+                throw new InvalidOperationException("Cannot allocate a node in a read transaction.");
+
+            //long nodeName = PrefixTree.Constants.InvalidNodeName;
+            //if (parentName != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(parentName, out nodeName))
+            //    return nodeName;
+
+            //if (rightChildName != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(rightChildName, out nodeName))
+            //    return nodeName;
+
+            //if (leftChildName != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(leftChildName, out nodeName))
+            //    return nodeName;
+
+            return AllocateNodeInChunkSlow();
+        }
+
+        public PrefixTreeNodeLocationPtr MapVirtualToPhysical(long nodeName)
+        {
+            Debug.Assert(nodeName > PrefixTree.Constants.InvalidNodeName);
+
+            if (nodeName <= PrefixTree.Constants.InvalidNodeName) // This shouldnt happen at all. 
                 throw new InvalidOperationException("Cannot map tombstones and invalid node names into physical locations.");
 
             if (_innerCopy.PageNumber == PrefixTree.Constants.InvalidPage) // This shouldnt happen at all. 
@@ -145,123 +289,25 @@ namespace Voron.Data.Compact
             long chunkIdx = nodeName / _innerCopy.NodesPerChunk;
             long nodeNameInChunk = nodeName % _innerCopy.NodesPerChunk; // This is the relative node inside this chunk.
 
-            Page table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted) 
-            Debug.Assert(table.IsOverflow, "This must be an overflow page.");                                    
+            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
 
-            if ( chunkIdx > _innerCopy.Items)
-            {
-                if (mode == TranslationTableMapMode.Read)
-                    throw new InvalidOperationException("Mapping cannot allocate trees outside of a write transaction");
+            Debug.Assert(_table.IsOverflow, "This must be an overflow page.");
 
-                // We need to allocate a larger table and update the page.
-                // Allocate page with one more overflow.
-                // Copy the current table into the new page
-                // Initialize with Constant.InvalidPage the rest of the table.             
-                // Update the header with the new page for the table. 
-                // Free the old page. 
-                // Set the modified flag on. 
+            // This cannot happen as we are allocating when we allocate the node itself.
+            if (chunkIdx > _innerCopy.Items)
+                return new PrefixTreeNodeLocationPtr { PageNumber = PrefixTree.Constants.InvalidPage, NodeOffset = 0 };
 
-                throw new NotImplementedException();
-            }
-
-            long physicalPage = ((long*)table.DataPointer)[chunkIdx];
+            long physicalPage = ((long*)_table.DataPointer)[chunkIdx];
             if (physicalPage == PrefixTree.Constants.InvalidPage)
             {
-                if (mode == TranslationTableMapMode.Read)
-                    return new PageLocationPtr { PageNumber = PrefixTree.Constants.InvalidPage, Offset = 0 };
+                return new PrefixTreeNodeLocationPtr { PageNumber = PrefixTree.Constants.InvalidPage, NodeOffset = 0 };
+            }
 
-                // We need to allocate a new tree page and store the physical page number it here.
-                var chunk = _tx.AllocateOverflowPage(sizeof(PrefixTreePageHeader), _innerCopy.ChunkSize).ToPrefixTreePage();
-                chunk.Chunk = chunkIdx;
-                chunk.RootNodeName = chunkIdx * _innerCopy.NodesPerChunk;
-
-                if (nodeName == PrefixTree.Constants.RootNodeName)
-                {
-                    chunk.ParentNodeName = (int)PrefixTree.Constants.InvalidNodeName;
-                    chunk.ParentChunk = PrefixTree.Constants.InvalidPage;
-                }
-                else
-                {
-                    long parentOfRootName = GetParentName(chunk.RootNodeName);
-                    chunk.ParentNodeName = (int)(parentOfRootName % _innerCopy.NodesPerChunk);
-                    chunk.ParentChunk = parentOfRootName / _innerCopy.NodesPerChunk;
-                }
-
-                // Update the physical page, therefore we need to get a copy that will be eventually committed. 
-                table = _tx.ModifyPage(_innerCopy.PageNumber);
-                ((long*)table.DataPointer)[chunkIdx] = chunk.PageNumber;
-
-                // Set the modified flag on.    
-                this.IsModified = true;
-
-                physicalPage = chunk.PageNumber;               
-            }            
-
-            return new PageLocationPtr
+            return new PrefixTreeNodeLocationPtr
             {
                 PageNumber = physicalPage,
-                Offset = PrefixTreePage.GetNodeOffset(nodeNameInChunk) // This is the relative location inside this chunk.
+                NodeOffset = nodeNameInChunk // This is the relative location inside this chunk.
             };
-        }
-
-        internal long GetParentName(long nodeName)
-        {
-            if (nodeName == PrefixTree.Constants.RootNodeName)
-                return PrefixTree.Constants.RootNodeName;
-
-            long pageSize = _innerCopy.NodesPerChunk;
-
-            long nodeNameInChunk = nodeName % _innerCopy.NodesPerChunk; // This is the relative node inside this chunk.
-            if (nodeNameInChunk != 0)
-            {
-                var chunkIdx = nodeName / pageSize;
-                var parentNodeNameInChunk = (int)Math.Floor((float)(nodeNameInChunk - 1) / 2);
-                return parentNodeNameInChunk + chunkIdx * pageSize;
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        internal long GetRightChildName(long nodeName)
-        {
-            long pageSize = _innerCopy.NodesPerChunk;
-
-            var chunkIdx = nodeName / pageSize;
-            long nodeNameInChunk = nodeName % _innerCopy.NodesPerChunk; // This is the relative node inside this chunk.
-            if (nodeNameInChunk < _innerCopy.InnerNodesPerChunk)
-            {
-                long rightNodeNameInChunk = 2 * nodeNameInChunk + 2;
-                return rightNodeNameInChunk + chunkIdx * pageSize;
-            }
-            else
-            {
-                long innerNodesPerChunk = _innerCopy.InnerNodesPerChunk;
-
-                var rightNodeNameInChunk = nodeNameInChunk - innerNodesPerChunk;
-                return (innerNodesPerChunk * chunkIdx + (2 * rightNodeNameInChunk + 2)) * pageSize;
-            }
-        }
-
-        internal long GetLeftChildName(long nodeName)
-        {
-            long pageSize = _innerCopy.NodesPerChunk;
-
-            var chunkIdx = nodeName / pageSize;
-            long nodeNameInChunk = nodeName % _innerCopy.NodesPerChunk; // This is the relative node inside this chunk.
-            if (nodeNameInChunk < _innerCopy.InnerNodesPerChunk)
-            {
-                long leftNodeNameInChunk = 2 * nodeNameInChunk + 1;
-                return leftNodeNameInChunk + chunkIdx * pageSize;
-            }
-            else
-            {
-                long innerNodesPerChunk = _innerCopy.InnerNodesPerChunk;
-
-                var leftNodeNameInChunk = nodeNameInChunk - innerNodesPerChunk;
-                return (innerNodesPerChunk * chunkIdx + (2 * leftNodeNameInChunk + 1)) * pageSize;
-            }
         }
     }
 }

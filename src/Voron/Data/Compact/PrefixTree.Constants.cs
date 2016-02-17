@@ -14,7 +14,6 @@ namespace Voron.Data.Compact
             public const long TailNodeName = -3;
             public const long TombstoneNodeName = -2;
             public const long InvalidNodeName = -1;
-            public const long RootNodeName = 0;
 
             public const long InvalidPage = -1;
 
@@ -22,7 +21,7 @@ namespace Voron.Data.Compact
 
             public static int NodesPerPage = 4096 * 1024 / sizeof(PrefixTree.Node);
             public static int NodesPerCache = L1CacheSize / sizeof(PrefixTree.Node);
-            public static int TranslationTableInitialItems = 2048;
+            public static int TranslationTableInitialItems = 1950;
 
         }
     }

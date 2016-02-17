@@ -1,5 +1,9 @@
 using System;
 using System.Text;
+
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Sparrow;
 
 namespace Raven.Server.Json
@@ -7,7 +11,7 @@ namespace Raven.Server.Json
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>
     {
-        public readonly RavenOperationContext Context;
+        public readonly MemoryOperationContext Context;
         public readonly byte* Buffer;
         public int Size;
         public string String;
@@ -18,7 +22,7 @@ namespace Raven.Server.Json
 
         public byte this[int index] => Buffer[index];
 
-        public LazyStringValue(string str, byte* buffer, int size, RavenOperationContext context)
+        public LazyStringValue(string str, byte* buffer, int size, MemoryOperationContext context)
         {
             String = str;
             Size = size;

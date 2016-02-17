@@ -202,7 +202,30 @@ namespace Voron.Data.Compact
 
         public static string ToDebugString(this PrefixTree tree, Node* @this)
         {
-            throw new NotImplementedException();
+            Leaf* leaf;
+            if (@this->IsInternal)
+            {
+                var referenceName = @this->ReferencePtr;
+                leaf = (Leaf*)tree.ReadNodeByName(referenceName);
+                Debug.Assert(leaf->IsLeaf);
+            }
+            else
+            {
+                leaf = (Leaf*) @this;
+            }
+
+            var key = tree.ReadKey(leaf->DataPtr);
+
+            BitVector extent = tree.Extent(@this);
+            int extentLength = tree.GetExtentLength(@this);
+
+            string openBracket = @this->IsLeaf ? "[" : "(";
+            string closeBracket = @this->IsLeaf ? "]" : ")";
+            string extentBinary = extentLength > 16 ? extent.SubVector(0, 8).ToBinaryString() + "..." + extent.SubVector(extent.Count - 8, 8).ToBinaryString() : extent.ToBinaryString();
+            string lenghtInformation = "[" + @this->NameLength + ".." + extentLength + "]";
+            string jumpInfo = @this->IsInternal ? (tree.GetHandleLength(@this) + "->" + (tree.GetJumpLength((Internal*) @this))) : "";
+
+            return string.Format("{0}{2}, {4}, {3}{1}", openBracket, closeBracket, extentBinary, jumpInfo, lenghtInformation);
         }
     }
 }

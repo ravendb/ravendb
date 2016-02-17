@@ -329,7 +329,7 @@ class viewModelBase {
         } else {
             var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
             systemDbConfirm.viewTask
-                .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forResources() }) : canNavTask.reject())
+                .fail(() => !forceRejectWithResolve ? canNavTask.resolve({ redirect: appUrl.forResources() }) : canNavTask.reject())
                 .done(() => {
                     viewModelBase.isConfirmedUsingSystemDatabase = true;
                     canNavTask.resolve({ can: true });
@@ -343,7 +343,7 @@ class viewModelBase {
     private beforeUnloadListener: EventListener = (e: any): any => {
         var isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
-            var message = "You have unsaved data.";
+            const message = "You have unsaved data.";
             e = e || window.event;
 
             // For IE and Firefox
@@ -356,11 +356,11 @@ class viewModelBase {
         }
     }
 
-    public AddNotification(subscription: changeSubscription) {
+    public addNotification(subscription: changeSubscription) {
         this.notifications.push(subscription);
     }
 
-    public RemoveNotification(subscription: changeSubscription) {
+    public removeNotification(subscription: changeSubscription) {
         this.notifications.remove(subscription);
     }
 

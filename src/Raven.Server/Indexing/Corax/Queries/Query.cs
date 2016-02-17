@@ -1,4 +1,7 @@
 ﻿using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Voron.Data.Tables;
 
 namespace Raven.Server.Indexing.Corax.Queries
@@ -6,7 +9,7 @@ namespace Raven.Server.Indexing.Corax.Queries
     public abstract class Query
     {
         protected FullTextIndex Index;
-        protected RavenOperationContext Context;
+        protected TransactionOperationContext Context;
         protected Table IndexEntries;
 
         public float Boost { get; set; }
@@ -16,7 +19,7 @@ namespace Raven.Server.Indexing.Corax.Queries
             Boost = 1.0f;
         }
 
-        public void Initialize(FullTextIndex index, RavenOperationContext context, Table entries)
+        public void Initialize(FullTextIndex index, TransactionOperationContext context, Table entries)
         {
             Index = index;
             Context = context;

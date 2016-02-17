@@ -1,6 +1,7 @@
 ﻿using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Voron.Data.Compact
             /// <summary>
             /// Longest Common Prefix (or LCP) between the Exit(x) and x
             /// </summary>
-            public readonly int LongestPrefix;
+            public readonly short LongestPrefix;
 
             /// <summary>
             /// The parent of the exit node 
@@ -37,23 +38,23 @@ namespace Voron.Data.Compact
             /// </summary>
             public readonly long Exit;
 
-            public CutPoint(int lcp, long parent, long exit, BitVector searchKey)
+            public readonly bool IsRightChild;
+
+            public CutPoint(int lcp, long parent, long exit, long parentRight, BitVector searchKey)
             {
-                this.LongestPrefix = lcp;
+                Debug.Assert(lcp < short.MaxValue);
+
+                this.LongestPrefix = (short)lcp;
                 this.Parent = parent;
                 this.Exit = exit;
                 this.SearchKey = searchKey;
+                this.IsRightChild = parent != Constants.InvalidNodeName && parentRight == exit;
             }
 
             public bool IsCutLow(PrefixTree owner)
             {
                 var exitNode = owner.ReadNodeByName(this.Exit);
                 return owner.IsCutLow(exitNode, this.LongestPrefix);
-            }
-
-            public bool IsRightChild
-            {
-                get { return this.Parent != Constants.InvalidNodeName && this.Parent == this.Exit; }
             }
         }
 

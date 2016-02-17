@@ -54,6 +54,21 @@ namespace Voron.Data.Compact
         }
 
         /// <summary>
+        /// The root node name for the tree. 
+        /// </summary>
+        public long RootNodeName
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _innerCopy->RootNodeName; }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set
+            {
+                _innerCopy->RootNodeName = value;
+                IsModified = true;
+            }
+        }
+
+        /// <summary>
         /// The table header page for the tree.
         /// </summary>
         public long Table

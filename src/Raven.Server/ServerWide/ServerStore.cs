@@ -1,19 +1,16 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Framework.ConfigurationModel;
+
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
-using Raven.Server.Utils;
-using Sparrow.Platform;
+
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 
 namespace Raven.Server.ServerWide
 {
@@ -41,11 +38,11 @@ namespace Raven.Server.ServerWide
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             Configuration = configuration;
-            
+
             DatabasesLandlord = new DatabasesLandlord(this);
         }
 
-        public ContextPool ContextPool;
+        public TransactionContextPool ContextPool;
 
         public void Initialize()
         {
@@ -84,10 +81,10 @@ namespace Raven.Server.ServerWide
             }
 
             _pool = new UnmanagedBuffersPool("ServerStore");// 128MB should be more than big enough for the server store
-            ContextPool = new ContextPool(_pool, _env);
+            ContextPool = new TransactionContextPool(_pool, _env);
         }
 
-        public BlittableJsonReaderObject Read(RavenOperationContext ctx, string id)
+        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
         {
             var dbs = ctx.Transaction.ReadTree("items");
             var result = dbs.Read(id);
@@ -102,13 +99,13 @@ namespace Raven.Server.ServerWide
             public BlittableJsonReaderObject Data;
         }
 
-        public IEnumerable<Item> StartingWith(RavenOperationContext ctx, string prefix, int start, int take)
+        public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
         {
             var dbs = ctx.Transaction.ReadTree("items");
             using (var it = dbs.Iterate())
             {
                 it.RequiredPrefix = prefix;
-                if(it.Seek(it.RequiredPrefix) == false)
+                if (it.Seek(it.RequiredPrefix) == false)
                     yield break;
 
                 do
@@ -126,7 +123,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static Item GetCurrentItem(RavenOperationContext ctx, IIterator it)
+        private static Item GetCurrentItem(MemoryOperationContext ctx, IIterator it)
         {
             var readerForCurrent = it.CreateReaderForCurrent();
             return new Item
@@ -137,7 +134,7 @@ namespace Raven.Server.ServerWide
         }
 
 
-        public void Write(RavenOperationContext ctx, string id, BlittableJsonReaderObject doc)
+        public void Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc)
         {
             var dbs = ctx.Transaction.ReadTree("items");
 
