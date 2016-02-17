@@ -103,6 +103,8 @@ namespace Raven.Database.Config
             WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
             FileSystem.InitializeFrom(this);
 
+            MaxPrecomputedBatchSizeForNewIndex = ravenSettings.MaxPrecomputedBatchSizeForNewIndex.Value;
+
             MaxClauseCount = ravenSettings.MaxClauseCount.Value;
 
             AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
@@ -291,6 +293,7 @@ namespace Raven.Database.Config
             Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
             Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
             Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
+            Storage.SkipConsistencyCheck = ravenSettings.Voron.SkipConsistencyChecks.Value;
 
             // Esent settings
             Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
@@ -357,6 +360,8 @@ namespace Raven.Database.Config
 
             return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
         }
+
+        public int MaxPrecomputedBatchSizeForNewIndex { get; private set; }
 
         public TimeSpan ConcurrentResourceLoadTimeout { get; private set; }
 
@@ -1310,6 +1315,7 @@ namespace Raven.Database.Config
 
             AssembliesDirectory = defaultConfiguration.AssembliesDirectory;
             Storage.Voron.AllowOn32Bits = defaultConfiguration.Storage.Voron.AllowOn32Bits;
+            Storage.SkipConsistencyCheck = defaultConfiguration.Storage.SkipConsistencyCheck;
         }
 
         public IEnumerable<string> GetConfigOptionsDocs()

@@ -1,20 +1,7 @@
 ﻿{
   "frameworks": {
     "net45": {
-      "dependencies": {
-        "Microsoft.AspNet.WebApi.Client": "5.2.2",
-        "Microsoft.AspNet.WebApi.Core": "5.2.2",
-        "Microsoft.AspNet.WebApi.Owin": "5.2.2",
-        "Microsoft.Owin": "3.0.0",
-        "Microsoft.Owin.Host.HttpListener": "3.0.0",
-        "Microsoft.Owin.Hosting": "3.0.0",
-        "Newtonsoft.Json": "6.0.6",
-        "Owin": "1.0.0",
-        "Rx-Core": "2.2.5",
-        "Rx-Interfaces": "2.2.5",
-        "Rx-Linq": "2.2.5",
-        "Rx-Main": "2.2.5",
-        "Rx-PlatformServices": "2.2.5"
+      "dependencies": {        
       }
     }
   },
