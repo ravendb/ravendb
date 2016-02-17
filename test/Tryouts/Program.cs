@@ -31,7 +31,10 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            new Crud().CanSaveAndLoad().Wait();
+            using (var x = new DocumentsCrud())
+            {
+                x.CanDelete("users/1");
+            }
         }
     }
 }

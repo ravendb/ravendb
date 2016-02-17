@@ -22,9 +22,10 @@ namespace FastTests.Server.Documents
         public DocumentsCrud()
         {
             _configuration = new RavenConfiguration();
+            _configuration.Initialize();
+
             _configuration.Core.RunInMemory = true;
             _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
-            _configuration.Initialize();
 
             _documentDatabase = new DocumentDatabase("foo", _configuration);
             _documentDatabase.Initialize();
