@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes
 
         public static string ReplaceInvalidCharactersInFieldName(string field)
         {
+            //TODO: This is probably expensive, we can do better
             return ReplaceInvalidCharacterForFields.Replace(field, "_");
         }
     }
