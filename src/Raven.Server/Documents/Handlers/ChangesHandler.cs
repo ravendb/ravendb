@@ -39,8 +39,9 @@ namespace Raven.Server.Documents.Handlers
                         using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                         {
                             var result = await receiveAsync;
-                            receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
                             parser.SetBuffer(buffer, result.Count);
+                            var length = result.Count;
+                            receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, length, buffer.Length - length), Database.DatabaseShutdown);
 
                             while (true)
                             {
@@ -51,9 +52,13 @@ namespace Raven.Server.Documents.Handlers
                                     while (builder.Read() == false)
                                     {
                                         result = await receiveAsync;
-                                        //TODO: segment the buffer so we don't write into the memory we are currently parsing
-                                        receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
-                                        parser.SetBuffer(buffer, result.Count);
+                                        parser.SetBuffer(new ArraySegment<byte>(buffer, length, result.Count));
+                                        length += result.Count;
+                                        if (length - 4096 < 128) // If we have small space to write, we go back to the start
+                                        {
+                                            length = 0;
+                                        }
+                                        receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, length, buffer.Length - length), Database.DatabaseShutdown);
                                     }
 
                                     builder.FinalizeDocument();

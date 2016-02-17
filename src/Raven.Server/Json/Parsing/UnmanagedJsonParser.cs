@@ -48,6 +48,13 @@ namespace Raven.Server.Json.Parsing
             _pos = 0;
         }
 
+        public void SetBuffer(ArraySegment<byte> segment)
+        {
+            _inputBuffer = segment.Array;
+            _bufSize = segment.Count;
+            _pos = segment.Offset;
+        }
+
         public bool Read()
         {
             switch (_state.Continuation)
