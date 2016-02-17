@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
     public class ChangesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/changes", "GET", "/databases/{databaseName:string}/changes")]
-        public async Task GetChangesEvents()
+        public async Task GetChanges()
         {
             var debugTag = "changes/" + Database.Name;
 
@@ -84,6 +84,10 @@ namespace Raven.Server.Documents.Handlers
                 {
                     /* Client was disconnected, write to log */
                     Log.DebugException("Client was disconnected", ex);
+                }
+                catch (Exception ex)
+                {
+                    Log.WarnException("Got error in changes handler", ex);
                 }
                 finally
                 {
