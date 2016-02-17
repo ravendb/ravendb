@@ -1,12 +1,16 @@
 using System;
 using System.Runtime.CompilerServices;
+
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Voron.Util;
 
 namespace Raven.Server.Json
 {
     public unsafe class LazyCompressedStringValue 
     {
-        private readonly RavenOperationContext _context;
+        private readonly MemoryOperationContext _context;
         public readonly byte* Buffer;
         public readonly int UncompressedSize;
         public readonly int CompressedSize;
@@ -17,7 +21,7 @@ namespace Raven.Server.Json
             return new LazyStringValue(null, DecompressToTempBuffer(), UncompressedSize, _context);
         }
 
-        public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, RavenOperationContext context)
+        public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, MemoryOperationContext context)
         {
             String = str;
             UncompressedSize = uncompressedSize;

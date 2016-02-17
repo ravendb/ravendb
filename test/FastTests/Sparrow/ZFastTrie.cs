@@ -191,8 +191,6 @@ namespace FastTests.Sparrow
             ZFastTrieDebugHelpers.StructuralVerify(tree);
             Assert.Equal(4, tree.Count);
         }
-
-
         [Fact]
         public void Structure_MultipleBranchDeletion()
         {

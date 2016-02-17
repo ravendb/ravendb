@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Json
 {
@@ -10,7 +12,7 @@ namespace Raven.Server.Json
     {
         private readonly Stack<BuildingState> _continuationState = new Stack<BuildingState>();
 
-        private readonly RavenOperationContext _context;
+        private readonly MemoryOperationContext _context;
         private readonly UsageMode _mode;
         private readonly string _debugTag;
         private readonly IJsonParser _reader;
@@ -24,7 +26,7 @@ namespace Raven.Server.Json
         
 
 
-        public BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state)
+        public BlittableJsonDocumentBuilder(MemoryOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state)
         {
             _reader = reader;
             _stream = context.GetStream(debugTag);

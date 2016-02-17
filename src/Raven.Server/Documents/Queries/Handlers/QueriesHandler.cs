@@ -41,14 +41,14 @@ namespace Raven.Server.Documents.Queries.Handlers
                         QueryOperator.And :
                         QueryOperator.Or,
 
-                SortedFields = EnumerableExtension.EmptyIfNull(GetStringValuesQueryString("sort"))
+                SortedFields = GetStringValuesQueryString("sort").EmptyIfNull()
                     .Select(x => new SortedField(x))
                     .ToArray(),
                 //HighlightedFields = GetHighlightedFields().ToArray(),
-                HighlighterPreTags = GetStringValuesQueryString("preTags").ToArray(),
-                HighlighterPostTags = GetStringValuesQueryString("postTags").ToArray(),
-                HighlighterKeyName = GetStringQueryString("highlighterKeyName"),
-                ResultsTransformer = GetStringQueryString("resultsTransformer"),
+                //HighlighterPreTags = GetStringValuesQueryString("preTags").ToArray(),
+                //HighlighterPostTags = GetStringValuesQueryString("postTags").ToArray(),
+                //HighlighterKeyName = GetStringQueryString("highlighterKeyName"),
+                //ResultsTransformer = GetStringQueryString("resultsTransformer"),
                 //TransformerParameters = ExtractTransformerParameters(),
                 //ExplainScores = GetExplainScores(),
                 //SortHints = GetSortHints(),

@@ -11,5 +11,7 @@
         public string Name { get; private set; }
 
         public string[] Collections { get; private set; }
+
+        public abstract IndexField[] MapFields { get; }
     }
 }

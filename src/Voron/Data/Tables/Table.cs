@@ -351,7 +351,7 @@ namespace Voron.Data.Tables
 
         private void InsertIndexValuesFor(long id, TableValueReader value)
         {
-            
+
             var pkval = _schema.Key.GetSlice(value);
             var pkIndex = GetTree(_schema.Key);
             pkIndex.Add(pkval, new Slice((byte*)&id, sizeof(long)));
@@ -379,7 +379,7 @@ namespace Voron.Data.Tables
                 return new FixedSizeTree(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects, indexDef.NameAsSlice, sizeof(long));
             }
             var tableTree = _tx.ReadTree(Name);
-            var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof (long));
+            var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof(long));
             return index;
         }
 
@@ -553,10 +553,13 @@ namespace Voron.Data.Tables
         private TableValueReader GetTableValueReader(FixedSizeTree.IFixedSizeIterator it)
         {
             long id;
-            it.Value.CopyTo((byte*) &id);
+            it.Value.CopyTo((byte*)&id);
             int size;
             var ptr = DirectRead(id, out size);
-            return new TableValueReader(ptr, size);
+            return new TableValueReader(ptr, size)
+            {
+                Id = id
+            };
         }
 
 
@@ -590,14 +593,14 @@ namespace Voron.Data.Tables
             {
                 if (it.Seek(long.MinValue) == false)
                     return;
-                
+
                 do
                 {
                     if (it.CurrentKey >= maxValue)
                         break;
 
                     deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
-                } while (it.MoveNext() && deletedList.Count < 10*1024);
+                } while (it.MoveNext() && deletedList.Count < 10 * 1024);
             }
 
             foreach (var id in deletedList)

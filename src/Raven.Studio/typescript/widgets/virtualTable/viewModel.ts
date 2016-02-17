@@ -720,8 +720,8 @@ class ctor {
         if (!this.items || this.settings.selectedIndices().length === 0) {
             return [];
         }
-        var sliced = max ? <number[]>this.settings.selectedIndices.slice(0, max) : null;
-        var maxSelectedIndices = sliced || <number[]>this.settings.selectedIndices();
+        var sliced = max ? this.settings.selectedIndices.slice(0, max) : null;
+        var maxSelectedIndices = sliced || this.settings.selectedIndices();
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 
@@ -800,18 +800,18 @@ class ctor {
         var startingWidth = 0;
         var columnIndex = 0;
 
-        $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: any) => {
+        $(this.settings.gridSelector).on("mousedown.virtualTableColumnResize", ".ko-grid-column-handle", (e: JQueryMouseEventObject) => {
             columnIndex = parseInt($(e.currentTarget).attr("column"));
             startingWidth = parseInt(this.columns()[columnIndex].width().toString());
             startX = e.pageX;
             resizingColumn = true;
         });
 
-        $(this.settings.gridSelector).on("mouseup.virtualTableColumnResize", "", (e: any) => {
+        $(this.settings.gridSelector).on("mouseup.virtualTableColumnResize", "", () => {
             resizingColumn = false;
         });
 
-        $(this.settings.gridSelector).on("mousemove.virtualTableColumnResize", "", (e: any) => {
+        $(this.settings.gridSelector).on("mousemove.virtualTableColumnResize", "", (e: JQueryMouseEventObject) => {
             if (resizingColumn) {
                 var targetColumnSize = startingWidth + e.pageX - startX;
                 this.columns()[columnIndex].width(targetColumnSize);

@@ -1,17 +1,15 @@
 ﻿using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Documents.Indexes.Auto;
 
 namespace Raven.Server.Documents.Indexes
 {
     public class CollectionOfIndexes : IEnumerable<Index>
     {
-        private static readonly List<AutoIndexDefinition> EmptyAutoIndexDefinitions = new List<AutoIndexDefinition>();
-
-        private readonly Dictionary<int, Index> _indexesById = new Dictionary<int, Index>();
-        private readonly Dictionary<string, Index> _indexesByName = new Dictionary<string, Index>();
-        private readonly Dictionary<string, List<Index>> _indexesByCollection = new Dictionary<string, List<Index>>();
+        private readonly ConcurrentDictionary<int, Index> _indexesById = new ConcurrentDictionary<int, Index>();
+        private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>();
+        private readonly ConcurrentDictionary<string, List<Index>> _indexesByCollection = new ConcurrentDictionary<string, List<Index>>();
 
         public void Add(Index index)
         {
@@ -41,14 +39,19 @@ namespace Raven.Server.Documents.Indexes
             return _indexesByName.TryGetValue(name, out index);
         }
 
-        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
+        public List<Index> GetForCollection(string collection)
         {
             List<Index> indexes;
 
             if (_indexesByCollection.TryGetValue(collection, out indexes) == false)
-                return EmptyAutoIndexDefinitions;
+                return Enumerable.Empty<Index>().ToList();
 
-            return indexes.OfType<AutoIndex>().Select(x => x.Definition).ToList();
+            return indexes;
+        }
+
+        public List<T> GetDefinitionsOfTypeForCollection<T>(string collection) where T : IndexDefinitionBase
+        {
+            return GetForCollection(collection).Where(x => x.Definition is T).Select(x => (T)x.Definition).ToList();
         }
 
         public int GetNextIndexId()

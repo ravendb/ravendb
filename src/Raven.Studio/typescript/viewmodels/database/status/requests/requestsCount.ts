@@ -2,11 +2,12 @@
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDebugMetricsCommand = require("commands/database/debug/getDebugMetricsCommand");
+/* TODO
 import d3 = require("d3");
-import nv = require("nvd3");
+import nv = require("nvd3");*/
 
 class requestsCount extends viewModelBase {
-
+/* TODO
     currentMetrics: KnockoutObservable<statusDebugMetricsDto> = ko.observable(null);
     requestsMetricsUrl = ko.observable("");
     requestCounterChart: any = null; 
@@ -124,7 +125,7 @@ class requestsCount extends viewModelBase {
         }
 
         return null;
-    }
+    }*/
 }
 
 export = requestsCount; 
