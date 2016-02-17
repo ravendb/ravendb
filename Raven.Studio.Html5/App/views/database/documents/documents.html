@@ -49,6 +49,13 @@
                 <button data-bind="visible: isRegularCollection, click: exportCsv" class="btn btn-default" title="Export CSV">
                     <i class="fa fa-file-excel-o"></i>
                 </button>
+                <button type="button" data-bind="visible: isRegularCollection" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" data-bind="click: selectCsvColumns">Choose columns and export CSV...</a></li>
+                </ul>
             </div>
             <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
                 <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc, enable: selectedDocumentIndices().length == 1" title="Edit selected document (F2)">

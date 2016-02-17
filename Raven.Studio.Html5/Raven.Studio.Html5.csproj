@@ -113,6 +113,7 @@
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
+    <TypeScriptCompile Include="App\viewmodels\common\selectCsvColumns.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseStudioConfig.ts" />
@@ -177,6 +178,7 @@
     <Content Include="App\views\common\latestBuildReminder.html" />
     <Content Include="App\views\common\licensingStatus.html" />
     <Content Include="App\views\common\recentErrors.html" />
+    <Content Include="App\views\common\selectCsvColumns.html" />
     <Content Include="App\views\common\selectColumns.html" />
     <Content Include="App\views\common\showDataDialog.html" />
     <Content Include="App\views\common\upgrade.html" />

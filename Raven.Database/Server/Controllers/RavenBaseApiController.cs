@@ -293,10 +293,15 @@ namespace Raven.Database.Server.Controllers
             return true;
         }
 
+        protected static string[] GetQueryStringValues(HttpRequestMessage req, string key)
+        {
+            var items = req.GetQueryNameValuePairs().Where(pair => pair.Key == key);
+            return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null).ToArray();
+        }
+
         protected string[] GetQueryStringValues(string key)
         {
-            var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
-            return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
+            return GetQueryStringValues(InnerRequest, key);
         }
 
         protected Etag GetEtagFromQueryString()

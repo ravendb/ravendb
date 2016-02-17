@@ -24,19 +24,7 @@ class commandBase {
     }
 
     urlEncodeArgs(args: any): string {
-        var propNameAndValues = [];
-        for (var prop in args) {
-            var value = args[prop];
-            if (value instanceof Array) {
-                for (var i = 0; i < value.length; i++) {
-                    propNameAndValues.push(prop + "=" + encodeURIComponent(value[i]));
-                }
-            } else if (value !== undefined) {
-                propNameAndValues.push(prop + "=" + encodeURIComponent(value));
-            }
-        }
-
-        return "?" + propNameAndValues.join("&");
+        return appUrl.urlEncodeArgs(args);
     }
 
     getTimeToAlert(longWait: boolean) {

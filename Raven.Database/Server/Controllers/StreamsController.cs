@@ -385,7 +385,7 @@ namespace Raven.Database.Server.Controllers
         private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
         {
             var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
-            return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
+            return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream, GetQueryStringValues(req, "column")) : new JsonOutputWriter(stream);
         }
 
         private static Boolean IsCsvDownloadRequest(HttpRequestMessage req)
@@ -409,12 +409,14 @@ namespace Raven.Database.Server.Controllers
             private const string CsvContentType = "text/csv";
 
             private readonly Stream stream;
+            private readonly string[] customColumns;
             private StreamWriter writer;
             private bool doIncludeId;
 
-            public ExcelOutputWriter(Stream stream)
+            public ExcelOutputWriter(Stream stream, string[] customColumns = null)
             {
                 this.stream = stream;
+                this.customColumns = customColumns;
             }
 
             public string ContentType
@@ -504,6 +506,15 @@ namespace Raven.Database.Server.Controllers
                     includeNestedProperties: true,
                     includeMetadata: false,
                     excludeParentPropertyNames: true).ToList();
+
+                if (customColumns != null && customColumns.Length > 0)
+                {
+                    // since user defined custom CSV columns filter list generated using GetPropertiesFromJObject
+                    // we interate over customColumns instead of properties to maintain columns order requested by user
+                    properties = customColumns
+                        .SelectMany(c => properties.Where(p => p.StartsWith(c)))
+                        .ToList();
+                }
 
                 RavenJToken token;
                 if (result.TryGetValue("@metadata", out token))
