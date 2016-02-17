@@ -11,6 +11,8 @@ namespace Raven.Server.ServerWide.Context
 
         public new DocumentTransaction Transaction;
 
+        public DocumentDatabase DocumentDatabase => _documentDatabase;
+
         public DocumentsOperationContext(UnmanagedBuffersPool pool, StorageEnvironment storageEnvironment)
             : base(pool, storageEnvironment)
         {

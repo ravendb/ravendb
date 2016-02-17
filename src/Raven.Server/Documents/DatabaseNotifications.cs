@@ -17,8 +17,7 @@ namespace Raven.Server.Documents
                 connection.SendDocumentChanges(notification);
             }
 
-            var onDocumentChange = OnDocumentChange;
-            onDocumentChange?.Invoke(notification);
+            OnDocumentChange?.Invoke(notification);
         }
 
         public void Connect(NotificationsClientConnection connection)
