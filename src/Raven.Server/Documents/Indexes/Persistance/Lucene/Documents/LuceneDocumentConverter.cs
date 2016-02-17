@@ -24,11 +24,11 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
 
+        private readonly HashSet<string> _fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
+
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
         private readonly IndexField[] _fields;
-
-        private bool _fieldsAdded;
 
         public LuceneDocumentConverter(IndexField[] fields)
         {
@@ -38,19 +38,15 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         // returned document needs to be written do index right after conversion because the same cached instance is used here
         public global::Lucene.Net.Documents.Document ConvertToCachedDocument(Document document)
         {
-            foreach (var field in GetFields(document))
+            foreach (var fieldName in _fieldNames)
             {
-                if (_fieldsAdded == false)
-                    _document.Add(field);
-                else
-                {
-                    // one lucene document converter is binded to one index instance which means that 
-                    // fields will be the same and values can be just be overwritten
-                    // for now let us just iterate over fields to update their values // TODO arek
-                }
+                _document.RemoveFields(fieldName);
             }
 
-            _fieldsAdded = true;
+            foreach (var field in GetFields(document))
+            {
+                _document.Add(field);
+            }
 
             return _document;
         }
@@ -161,14 +157,14 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
                 {
                     reader = new LazyStringReader();
 
-                    field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), reader.GetTextReaderFor(lazyValue));
+                    field = new Field(CreateFieldName(name), reader.GetTextReaderFor(lazyValue));
                 }
                 else
                 {
                     if (value == null)
                         reader = new LazyStringReader();
 
-                    field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), value ?? reader.GetStringFor(lazyValue), store, index);
+                    field = new Field(CreateFieldName(name), value ?? reader.GetStringFor(lazyValue), store, index);
                 }
 
                 field.Boost = 1;
@@ -206,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             {
                 _numericFieldsCache[cacheKey] = cached = new CachedFieldItem<NumericField>
                 {
-                    Field = numericField = new NumericField(IndexField.ReplaceInvalidCharactersInFieldName(fieldName), storage, true)
+                    Field = numericField = new NumericField(CreateFieldName(fieldName), storage, true)
                 };
             }
             else
@@ -244,6 +240,15 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             {
                 throw new NotImplementedException($"Could not create numeric field from type: {value.GetType().FullName}");
             }
+        }
+
+        private string CreateFieldName(string name)
+        {
+            var result = IndexField.ReplaceInvalidCharactersInFieldName(name);
+
+            _fieldNames.Add(result);
+
+            return result;
         }
 
         public void Dispose()
