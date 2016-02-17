@@ -17,8 +17,7 @@ namespace FastTests.Voron
 
 	    public static string GenerateDataDir()
 	    {
-	        var tempFileName = Path.GetTempFileName();
-	        File.Delete(tempFileName);
+	        var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 	        Directory.CreateDirectory(tempFileName);
 	        return tempFileName;
 	    }
