@@ -97,9 +97,6 @@ namespace Raven.Client.Changes
             }
         }
 
-        static UTF8Encoding encoder = new UTF8Encoding();
-
-
         private async Task Receive()
         {
             try
@@ -120,19 +117,19 @@ namespace Raven.Client.Changes
                             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                             return;
                         }
-                        if (ms.Capacity - ms.Length < 1024)
-                        {
-                            ms.Capacity += 4096;
-                        }
+                        
                         while (result.EndOfMessage == false)
                         {
-                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, length, receiveChunkSize - length), CancellationToken.None);
-                            length += result.Count;
+                            if (ms.Capacity - ms.Length < 1024)
+                                ms.Capacity += 4096;
+                            ms.TryGetBuffer(out bytes);
+                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int) ms.Position, (int) (ms.Capacity - ms.Position)), CancellationToken.None);
+                            ms.SetLength(ms.Length + result.Count);
                         }
 
                         RavenJObject ravenJObject;
-                        using (var stream = new MemoryStream(buffer, 0, length))
-                        using (var reader = new StreamReader(stream, Encoding.UTF8))
+                        ms.Position = 0;
+                        using (var reader = new StreamReader(ms, Encoding.UTF8))
                         using (var jsonReader = new RavenJsonTextReader(reader))
                         {
                             ravenJObject = RavenJObject.Load(jsonReader);
