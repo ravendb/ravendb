@@ -16,14 +16,23 @@ namespace Raven.Server.Json
             _separators = separators ?? new []{ PropertySeparator, CollectionSeparator };
         }
 
-        public object Read(BlittableJsonReaderObject docReader, StringSegment path)
+        public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result)
         {
             var indexOfFirstSeparator = path.IndexOfAny(_separators, 0);
             object reader;
 
             //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
-            if (docReader.TryGetMember(path.SubSegment(0, indexOfFirstSeparator), out reader) == false || indexOfFirstSeparator == -1)
-                return reader;
+            if (docReader.TryGetMember(path.SubSegment(0, indexOfFirstSeparator), out reader) == false)
+            {
+                result = null;
+                return false;
+            }
+
+            if (indexOfFirstSeparator == -1)
+            {
+                result = reader;
+                return true;
+            }
 
             var pathSegment = path.SubSegment(indexOfFirstSeparator + 1);
 
@@ -32,13 +41,18 @@ namespace Raven.Server.Json
                 case PropertySeparator:
                     var subObject = reader as BlittableJsonReaderObject;
                     if (subObject != null)
-                        return Read(subObject, pathSegment);
+                    {
+                        return TryRead(subObject, pathSegment, out result);
+                    }
                     
                     throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader.GetType().FullName} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}." );
                 case CollectionSeparator:
                     var subArray = reader as BlittableJsonReaderArray;
                     if (subArray != null)
-                        return ReadArray(subArray, pathSegment);
+                    {
+                        result = ReadArray(subArray, pathSegment);
+                        return true;
+                    }
 
                     throw new InvalidOperationException($"Invalid path. After the collection separator ('{CollectionSeparator}') {reader.GetType().FullName} object has been ancountered instead of {nameof(BlittableJsonReaderArray)}.");
                 //case '(':
@@ -63,7 +77,11 @@ namespace Raven.Server.Json
                 var arrayObject = item as BlittableJsonReaderObject;
                 if (arrayObject != null)
                 {
-                    yield return Read(arrayObject, pathSegment);
+                    object result;
+                    if (TryRead(arrayObject, pathSegment, out result))
+                    {
+                        yield return result;
+                    }
                 }
                 else
                 {

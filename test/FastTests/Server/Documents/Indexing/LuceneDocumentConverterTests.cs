@@ -8,7 +8,6 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Xunit;
@@ -31,7 +30,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void Returns_null_value_if_property_is_not_present_in_document()
+        public void Returns_null_value_if_property_is_null()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
@@ -40,6 +39,7 @@ namespace FastTests.Server.Documents.Indexing
 
             var doc = create_doc(new DynamicJsonValue
             {
+                ["Name"] = null
             }, "users/1");
 
             var result = _sut.ConvertToCachedDocument(doc);
@@ -66,6 +66,24 @@ namespace FastTests.Server.Documents.Indexing
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.EmptyString, result.GetField("Name").StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
+        [Fact]
+        public void Does_not_add_field_to_output_document_if_input_document_has_missing_property()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new AutoIndexField("Name"),
+            });
+
+            var doc = create_doc(new DynamicJsonValue
+            {
+            }, "users/1");
+
+            var result = _sut.ConvertToCachedDocument(doc);
+
+            Assert.Equal(1, result.GetFields().Count);
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 

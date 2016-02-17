@@ -62,7 +62,12 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             
             foreach (var indexField in _fields)
             {
-                foreach (var luceneField in GetRegularFields(indexField, _blittableTraverser.Read(document.Data, indexField.Name)))
+                object value;
+
+                if (_blittableTraverser.TryRead(document.Data, indexField.Name, out value) == false)
+                    continue;
+
+                foreach (var luceneField in GetRegularFields(indexField, value))
                     yield return luceneField;
             }
         }
