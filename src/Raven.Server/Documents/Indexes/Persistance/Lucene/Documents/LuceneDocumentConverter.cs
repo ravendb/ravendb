@@ -150,12 +150,21 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
             if (_fieldsCache.TryGetValue(cacheKey, out cached) == false)
             {
-                LazyStringReader reader = new LazyStringReader();
+                LazyStringReader reader = null;
 
                 if (lazyValue != null && store.IsStored() == false && index.IsIndexed())
+                {
+                    reader = new LazyStringReader();
+
                     field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), reader.GetTextReaderFor(lazyValue));
+                }
                 else
+                {
+                    if (value == null)
+                        reader = new LazyStringReader();
+
                     field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), value ?? reader.GetStringFor(lazyValue), store, index);
+                }
 
                 field.Boost = 1;
                 field.OmitNorms = true;
