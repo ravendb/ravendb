@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
             Name = name;
             Configuration = configuration;
 
-            Notifications = new DatabaseNotifications();
+            Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
             TasksStorage = new TasksStorage();
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents
 
         public DocumentsStorage DocumentsStorage { get; }
 
-        public DatabaseNotifications Notifications { get; }
+        public DocumentsNotifications Notifications { get; }
 
         public IndexStore IndexStore { get; }
 

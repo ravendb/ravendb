@@ -3,7 +3,7 @@ using Raven.Server.Json;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class DocumentsOperationContext : TransactionOperationContext<DocumentTransaction>
+    public class DocumentsOperationContext : TransactionOperationContext<DocumentsTransaction>
     {
         private readonly DocumentDatabase _documentDatabase;
 
@@ -13,14 +13,14 @@ namespace Raven.Server.ServerWide.Context
             _documentDatabase = documentDatabase;
         }
 
-        protected override DocumentTransaction CreateReadTransaction()
+        protected override DocumentsTransaction CreateReadTransaction()
         {
-            return new DocumentTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(), _documentDatabase.TasksStorage);
+            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(), _documentDatabase.TasksStorage, _documentDatabase.Notifications);
         }
 
-        protected override DocumentTransaction CreateWriteTransaction()
+        protected override DocumentsTransaction CreateWriteTransaction()
         {
-            return new DocumentTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.TasksStorage);
+            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.TasksStorage, _documentDatabase.Notifications);
         }
     }
 }
