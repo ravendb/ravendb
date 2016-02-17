@@ -19,7 +19,7 @@ namespace Raven.Server.Documents
         private readonly List<DocumentsTask> _tasks;
 
         private readonly DocumentsOperationContext _context;
-        private readonly List<DocumentChangeNotification> _docChangesChangeNotifications;
+        private List<DocumentChangeNotification> _docChangesChangeNotifications;
 
         public readonly Transaction InnerTransaction;
 
