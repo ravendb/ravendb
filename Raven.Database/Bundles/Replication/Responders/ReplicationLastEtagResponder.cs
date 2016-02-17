@@ -76,6 +76,8 @@ namespace Raven.Bundles.Replication.Responders
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
 					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
+					sourceReplicationInformation.LastDocumentEtag = sourceReplicationInformation.LastDocumentEtag != null ? sourceReplicationInformation.LastDocumentEtag : Etag.Empty;
+					sourceReplicationInformation.LastAttachmentEtag = sourceReplicationInformation.LastAttachmentEtag != null ? sourceReplicationInformation.LastAttachmentEtag : Etag.Empty;
 				}
 
 				var currentEtag = context.Request.QueryString["currentEtag"];
