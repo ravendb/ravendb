@@ -15,7 +15,7 @@ namespace Raven.Tests.Issues
 
         public ThorMigrationIssues()
         {
-            _docStore = NewRemoteDocumentStore(fiddler:true);
+            _docStore = NewRemoteDocumentStore(fiddler: true);
             _docStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite;
 
             var dut = new OrgUnit
@@ -73,7 +73,7 @@ namespace Raven.Tests.Issues
             using (var session = _docStore.OpenSession())
             {
                 var query = session.Query<UnitRoomsIndexResult, UnitRoomsIndexStoreAll>()
-                    .Customize(x => x.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(false))					
+                    .Customize(x => x.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(false))
                     .TransformWith<UnitRoomsTransformer, UnitRoomsIndexResult>();
 
                 var results = query.ToList();

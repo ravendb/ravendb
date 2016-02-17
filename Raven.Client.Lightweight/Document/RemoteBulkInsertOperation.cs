@@ -353,14 +353,14 @@ namespace Raven.Client.Document
 
             try
             {
-            queue.Add(null);
+                // adding the "finished" marker to avoid an infinite loop
+                queue.Add(null);
             }
             catch (InvalidOperationException e)
             {
-                //means that the queue is marked as complete
-                //we ignore this only if there was a bulk insert error on the server
-                if (cancellationTokenSource.IsCancellationRequested == false)
-                    throw;
+                // this means that the queue is marked as complete,
+                // probably, there was an error and we'll get the reason for it
+                // when running "operationTask.AssertNotFailed()" later on
             }
 
             if (subscription != null)
