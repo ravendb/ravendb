@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Tasks;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Voron;
@@ -12,7 +13,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentTransaction : IDisposable
+    public class DocumentTransaction : RavenTransaction
     {
         private readonly DateTime createdAt = SystemTime.UtcNow;
 
@@ -21,33 +22,31 @@ namespace Raven.Server.Documents
         private readonly DocumentsOperationContext _context;
         private List<DocumentChangeNotification> _docChangesChangeNotifications;
 
-        public readonly Transaction InnerTransaction;
-
         private readonly TasksStorage _tasksStorage;
 
-        public DocumentTransaction(DocumentsOperationContext context, Transaction transaction, TasksStorage tasksStorage)
+        public DocumentTransaction(DocumentsOperationContext context, Transaction transaction, TasksStorage tasksStorage) 
+            : base(transaction)
         {
             _context = context;
-            InnerTransaction = transaction;
             _tasksStorage = tasksStorage;
 
             if (InnerTransaction.LowLevelTransaction.Flags == TransactionFlags.ReadWrite)
                 _tasks = new List<DocumentsTask>();
         }
 
-        public void Commit()
+        public override void Commit()
         {
             if (InnerTransaction.LowLevelTransaction.Flags == TransactionFlags.ReadWrite)
                 SaveTasks();
 
-            InnerTransaction.Commit();
+            base.Commit();
 
             if (_docChangesChangeNotifications != null)
             {
                 foreach (var docChangesChangeNotification in _docChangesChangeNotifications)
                 {
                     _context.DocumentDatabase.Notifications.RaiseNotifications(docChangesChangeNotification);
-                }
+        }
             }
         }
 
@@ -66,13 +65,13 @@ namespace Raven.Server.Documents
             return t;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             if (_context.Transaction != this)
                 throw new InvalidOperationException("There is a different transaction in context.");
 
             _context.Transaction = null;
-            InnerTransaction?.Dispose();
+            base.Dispose();
         }
 
         private void SaveTasks()
@@ -86,6 +85,6 @@ namespace Raven.Server.Documents
             if(_docChangesChangeNotifications == null)
                 _docChangesChangeNotifications = new List<DocumentChangeNotification>();
             _docChangesChangeNotifications.Add(documentChangeNotification);
-        }
+    }
     }
 }

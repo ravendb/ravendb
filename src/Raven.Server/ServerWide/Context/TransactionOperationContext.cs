@@ -1,16 +1,12 @@
-﻿using Raven.Server.Documents;
-using Raven.Server.Json;
+﻿using Raven.Server.Json;
 
 using Voron;
-using Voron.Impl;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public class TransactionOperationContext : MemoryOperationContext
+    public class TransactionOperationContext : TransactionOperationContext<RavenTransaction>
     {
         private readonly StorageEnvironment _environment;
-
-        public Transaction Transaction;
 
         public TransactionOperationContext(UnmanagedBuffersPool pool, StorageEnvironment environment)
             : base(pool)
@@ -18,14 +14,39 @@ namespace Raven.Server.ServerWide.Context
             _environment = environment;
         }
 
-        public Transaction OpenReadTransaction()
+        protected override RavenTransaction CreateReadTransaction()
         {
-            return Transaction = _environment.ReadTransaction();
+            return new RavenTransaction(_environment.ReadTransaction());
         }
 
-        public Transaction OpenWriteTransaction()
+        protected override RavenTransaction CreateWriteTransaction()
         {
-            return Transaction = _environment.WriteTransaction();
+            return new RavenTransaction(_environment.WriteTransaction());
+        }
+    }
+
+    public abstract class TransactionOperationContext<TTransaction> : MemoryOperationContext
+        where TTransaction : RavenTransaction
+    {
+        public TTransaction Transaction;
+
+        protected TransactionOperationContext(UnmanagedBuffersPool pool)
+            : base(pool)
+        {
+        }
+
+        public RavenTransaction OpenReadTransaction()
+        {
+            return Transaction = CreateReadTransaction();
+        }
+
+        protected abstract TTransaction CreateReadTransaction();
+
+        protected abstract TTransaction CreateWriteTransaction();
+
+        public virtual RavenTransaction OpenWriteTransaction()
+        {
+            return Transaction = CreateWriteTransaction();
         }
 
         public override void Reset()

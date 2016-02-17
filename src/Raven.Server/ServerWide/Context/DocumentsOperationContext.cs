@@ -1,45 +1,26 @@
 ﻿using Raven.Server.Documents;
 using Raven.Server.Json;
 
-using Voron;
-
 namespace Raven.Server.ServerWide.Context
 {
-    public class DocumentsOperationContext : TransactionOperationContext
+    public class DocumentsOperationContext : TransactionOperationContext<DocumentTransaction>
     {
         private readonly DocumentDatabase _documentDatabase;
 
-        public new DocumentTransaction Transaction;
-
-        public DocumentDatabase DocumentDatabase => _documentDatabase;
-
-        public DocumentsOperationContext(UnmanagedBuffersPool pool, StorageEnvironment storageEnvironment)
-            : base(pool, storageEnvironment)
-        {
-        }
-
         public DocumentsOperationContext(UnmanagedBuffersPool pool, DocumentDatabase documentDatabase)
-            : base(pool, documentDatabase.DocumentsStorage.Environment)
+            : base(pool)
         {
             _documentDatabase = documentDatabase;
         }
 
-        public new DocumentTransaction OpenReadTransaction()
+        protected override DocumentTransaction CreateReadTransaction()
         {
-            return Transaction = new DocumentTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(), _documentDatabase.TasksStorage);
+            return new DocumentTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(), _documentDatabase.TasksStorage);
         }
 
-        public new DocumentTransaction OpenWriteTransaction()
+        protected override DocumentTransaction CreateWriteTransaction()
         {
-            return Transaction = new DocumentTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.TasksStorage);
-        }
-
-        public override void Reset()
-        {
-            base.Reset();
-
-            Transaction?.Dispose();
-            Transaction = null;
+            return new DocumentTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.TasksStorage);
         }
     }
 }

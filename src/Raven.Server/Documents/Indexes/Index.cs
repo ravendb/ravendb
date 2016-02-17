@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Documents.Tasks;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Voron;
@@ -230,7 +231,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected string[] Collections => Definition.Collections;
 
-        protected abstract bool IsStale(TransactionOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag);
+        protected abstract bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag);
 
         public long GetLastMappedEtag()
         {
@@ -244,19 +245,19 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected long ReadLastMappedEtag(Transaction tx)
+        protected long ReadLastMappedEtag(RavenTransaction tx)
         {
             return ReadLastEtag(tx, LastMappedEtagSlice);
         }
 
-        protected long ReadLastReducedEtag(Transaction tx)
+        protected long ReadLastReducedEtag(RavenTransaction tx)
         {
             return ReadLastEtag(tx, LastReducedEtagSlice);
         }
 
-        private static long ReadLastEtag(Transaction tx, Slice key)
+        private static long ReadLastEtag(RavenTransaction tx, Slice key)
         {
-            var statsTree = tx.CreateTree("Stats");
+            var statsTree = tx.InnerTransaction.CreateTree("Stats");
             var readResult = statsTree.Read(key);
             long lastEtag = 0;
             if (readResult != null)
@@ -265,19 +266,19 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        private void WriteLastMappedEtag(Transaction tx, long etag)
+        private void WriteLastMappedEtag(RavenTransaction tx, long etag)
         {
             WriteLastEtag(tx, LastMappedEtagSlice, etag);
         }
 
-        private void WriteLastReducedEtag(Transaction tx, long etag)
+        private void WriteLastReducedEtag(RavenTransaction tx, long etag)
         {
             WriteLastEtag(tx, LastReducedEtagSlice, etag);
         }
 
-        private static unsafe void WriteLastEtag(Transaction tx, Slice key, long etag)
+        private static unsafe void WriteLastEtag(RavenTransaction tx, Slice key, long etag)
         {
-            var statsTree = tx.CreateTree("Stats");
+            var statsTree = tx.InnerTransaction.CreateTree("Stats");
             statsTree.Add(key, new Slice((byte*)&etag, sizeof(long)));
         }
 
