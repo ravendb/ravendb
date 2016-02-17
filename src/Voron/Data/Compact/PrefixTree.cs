@@ -51,7 +51,7 @@ namespace Voron.Data.Compact
         {
             var header = (PrefixTreeRootHeader*)parent.DirectAdd(treeName, sizeof(PrefixTreeRootHeader));
             if (header->RootObjectType != RootObjectType.PrefixTree && header->RootObjectType != RootObjectType.None)
-                throw new InvalidOperationException("Tried to create " + treeName + " as a prefix tree, but it is actually a " + header->RootObjectType);
+                throw new InvalidOperationException($"Tried to create {treeName} as a prefix tree, but it is actually a { header->RootObjectType.ToString() }");
 
             // TODO: Put all this initialization outside of the mutable state. 
             var state = new PrefixTreeRootMutableState(tx, header);
@@ -441,7 +441,7 @@ namespace Voron.Data.Compact
             int jumpLength = this.GetJumpLength(node);
 
             long jumpNodeName = node->LeftPtr;
-            Node* jumpNode = this.ReadNodeByName(nodeName);
+            Node* jumpNode = this.ReadNodeByName(jumpNodeName);
             while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
             {
                 jumpNodeName = ((Internal*)jumpNode)->JumpLeftPtr;
@@ -452,7 +452,7 @@ namespace Voron.Data.Compact
             node->JumpLeftPtr = jumpNodeName;
 
             jumpNodeName = node->RightPtr;
-            jumpNode = this.ReadNodeByName(nodeName);
+            jumpNode = this.ReadNodeByName(jumpNodeName);
             while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
             {
                 jumpNodeName = ((Internal*)jumpNode)->JumpRightPtr;
