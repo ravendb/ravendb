@@ -31,9 +31,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var x = new DocumentsCrud())
+            using (var x = new BasicIndexing())
             {
-                x.CanDelete("users/1");
+                x.SimpleIndexing();
             }
         }
     }

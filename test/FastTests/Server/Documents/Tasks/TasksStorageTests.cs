@@ -118,31 +118,31 @@ namespace FastTests.Server.Documents.Tasks
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not currently implemented")]
         public void CanAddAndRemoveMultipleTasks_InSingleTx_OneByOne()
         {
             throw new NotSupportedException("Should we support this?");
         }
 
-        [Fact]
+        [Fact(Skip = "Not currently implemented")]
         public void DontRemoveTasksWhenReachingMaxTaskId()
         {
             throw new NotSupportedException("Should we support this?");
         }
 
-        [Fact]
+        [Fact(Skip = "Not currently implemented")]
         public void CanUpdateMaxTaskId()
         {
             throw new NotSupportedException("Should we support this?");
         }
 
-        [Fact]
+        [Fact(Skip = "Not currently implemented")]
         public void MaxTaskIdIsntUpdatedWhenThereAreNoTasks()
         {
             throw new NotSupportedException("Should we support this?");
         }
 
-        [Fact]
+        [Fact(Skip = "Not currently implemented")]
         public void CorrectlyNotifyAboutWorkAfterReachingMaxTaskId()
         {
             throw new NotSupportedException("Should we support this?");
@@ -174,7 +174,7 @@ namespace FastTests.Server.Documents.Tasks
             Assert.Equal(102, task1.NumberOfKeys);
         }
 
-        [Fact]
+        [Fact(Skip = "Not currently implemented")]
         public void CanGetNumberOfKeysFromTouchReferenceTask()
         {
             throw new NotImplementedException();
