@@ -228,17 +228,14 @@ namespace FastTests.Server.Documents.Indexing
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "Joe"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "John"
-                        }
-                    })
+                        ["Name"] = "Joe"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = "John"
+                    }
                 }
             }, "users/1");
 
@@ -267,15 +264,11 @@ namespace FastTests.Server.Documents.Indexing
             {
                 ["Companies"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
-                    {
-                        new DynamicJsonValue
+                    new DynamicJsonValue
                         {
-                            ["Products"] = new DynamicJsonArray()
+                            ["Products"] = new DynamicJsonArray
                             {
-                                Items = new Queue<object>(new[]
-                                {
-                                    new DynamicJsonValue
+                                new DynamicJsonValue
                                     {
                                         ["Name"] = "Headphones CX7"
                                     },
@@ -283,23 +276,18 @@ namespace FastTests.Server.Documents.Indexing
                                     {
                                         ["Name"] = "Keyboard AD3"
                                     }
-                                })
                             }
                         },
                         new DynamicJsonValue
                         {
-                            ["Products"] = new DynamicJsonArray()
+                            ["Products"] = new DynamicJsonArray
                             {
-                                Items = new Queue<object>(new[]
+                                new DynamicJsonValue
                                 {
-                                    new DynamicJsonValue
-                                    {
-                                        ["Name"] = "Optical Mouse V2"
-                                    }
-                                })
+                                    ["Name"] = "Optical Mouse V2"
+                                }
                             }
                         },
-                    })
                 }
             }, "companies/1");
 

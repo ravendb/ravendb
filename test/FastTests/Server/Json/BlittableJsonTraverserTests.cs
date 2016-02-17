@@ -74,17 +74,14 @@ namespace FastTests.Server.Json
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "Joe"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "John"
-                        }
-                    })
+                        ["Name"] = "Joe"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = "John"
+                    }
                 }
             });
 
@@ -111,23 +108,20 @@ namespace FastTests.Server.Json
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
+                        ["Name"] = new DynamicJsonValue
                         {
-                            ["Name"] = new DynamicJsonValue
-                            {
-                                ["First"] = "Joe"
-                            }
-                        },
-                        new DynamicJsonValue
+                            ["First"] = "Joe"
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = new DynamicJsonValue
                         {
-                            ["Name"] = new DynamicJsonValue
-                            {
-                                ["First"] = "John"
-                            }
-                        },
-                    })
+                            ["First"] = "John"
+                        }
+                    },
                 }
             });
 
