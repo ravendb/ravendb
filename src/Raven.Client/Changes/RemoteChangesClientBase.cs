@@ -60,7 +60,7 @@ namespace Raven.Client.Changes
                 {
                     task.AssertNotFailed();
 
-                    Task.Run((Func<Task>)Receive);
+                    Task.Run(Receive);
 
                     return this as TChangesApi;
                 });
@@ -129,7 +129,7 @@ namespace Raven.Client.Changes
 
                         RavenJObject ravenJObject;
                         ms.Position = 0;
-                        using (var reader = new StreamReader(ms, Encoding.UTF8))
+                        using (var reader = new StreamReader(ms, Encoding.UTF8, true, 1024, true))
                         using (var jsonReader = new RavenJsonTextReader(reader))
                         {
                             ravenJObject = RavenJObject.Load(jsonReader);
