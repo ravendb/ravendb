@@ -3,18 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.WebSockets;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
@@ -34,7 +30,7 @@ namespace Raven.Client.Changes
         private readonly string id;
 
         // This is the StateCounters, it is not related to the counters database
-        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);        
+        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
 
         protected RemoteChangesClientBase(
             string url,
@@ -46,7 +42,7 @@ namespace Raven.Client.Changes
             // Precondition
             var api = this as TChangesApi;
             if (api == null)
-                throw new InvalidCastException(string.Format("The derived class does not implements {0}. Make sure the {0} interface is implemented by this class.", typeof (TChangesApi).Name));
+                throw new InvalidCastException(string.Format("The derived class does not implements {0}. Make sure the {0} interface is implemented by this class.", typeof(TChangesApi).Name));
 
             ConnectionStatusChanged = LogOnConnectionStatusChanged;
 
@@ -64,7 +60,7 @@ namespace Raven.Client.Changes
                 {
                     task.AssertNotFailed();
 
-                    Receive();
+                    Task.Run((Func<Task>)Receive);
 
                     return this as TChangesApi;
                 });
@@ -103,23 +99,31 @@ namespace Raven.Client.Changes
 
         static UTF8Encoding encoder = new UTF8Encoding();
 
-        private const int receiveChunkSize = 4096;
 
         private async Task Receive()
         {
             try
             {
-                byte[] buffer = new byte[receiveChunkSize];
-                while (webSocket.State == WebSocketState.Open)
+                using (var ms = new MemoryStream())
                 {
-                    var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), disposedToken.Token);
-                    var length = result.Count;
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    ms.SetLength(4096);
+                    while (webSocket.State == WebSocketState.Open)
                     {
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
-                    }
-                    else
-                    {
+                        ms.Position = 0;
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+                        var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int)ms.Position, (int)(ms.Capacity - ms.Position)),
+                            disposedToken.Token);
+                        ms.SetLength(ms.Length + result.Count);
+                        if (result.MessageType == WebSocketMessageType.Close)
+                        {
+                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                            return;
+                        }
+                        if (ms.Capacity - ms.Length < 1024)
+                        {
+                            ms.Capacity += 4096;
+                        }
                         while (result.EndOfMessage == false)
                         {
                             result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, length, receiveChunkSize - length), CancellationToken.None);
@@ -151,13 +155,14 @@ namespace Raven.Client.Changes
                             default:
                                 NotifySubscribers(type, value, Counters.Snapshot);
                                 break;
+
                         }
                     }
                 }
             }
             catch (WebSocketException ex)
             {
-                logger.DebugException("Failed to receive a message, client was probably diconnected", ex);
+                logger.DebugException("Failed to receive a message, client was probably disconnected", ex);
             }
         }
 
@@ -172,7 +177,7 @@ namespace Raven.Client.Changes
             };
             var stream = new MemoryStream();
             ravenJObject.WriteTo(stream);
-            await webSocket.SendAsync(new ArraySegment<byte>(stream.ToArray(), 0, (int) stream.Length), WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+            await webSocket.SendAsync(new ArraySegment<byte>(stream.ToArray(), 0, (int)stream.Length), WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
         }
 
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
@@ -272,11 +277,11 @@ namespace Raven.Client.Changes
             });
 
             return counter;
-    }
+        }
 
         private static TConnectionState CreateTConnectionState(params object[] args)
         {
             return (TConnectionState)Activator.CreateInstance(typeof(TConnectionState), args);
-}
+        }
     }
 }
