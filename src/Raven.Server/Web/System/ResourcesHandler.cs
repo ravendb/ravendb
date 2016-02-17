@@ -41,29 +41,30 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                writer.WriteStartArray();
-                var first = true;
-                foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    //TODO: Actually handle this properly
-                    var doc = new DynamicJsonValue
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
                     {
-                        ["Bundles"] = new DynamicJsonArray(),
-                        ["Name"] = db.Key.Substring(prefix.Length),
-                        ["RejectClientsEnabled"] = false,
-                        ["IndexingDisabled"] = false,
-                        ["Disabled"] = false,
-                        ["IsAdminCurrentTenant"] = true
-                    };
-                    context.Write(writer, doc);
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        //TODO: Actually handle this properly
+                        var doc = new DynamicJsonValue
+                        {
+                            ["Bundles"] = new DynamicJsonArray(),
+                            ["Name"] = db.Key.Substring(prefix.Length),
+                            ["RejectClientsEnabled"] = false,
+                            ["IndexingDisabled"] = false,
+                            ["Disabled"] = false,
+                            ["IsAdminCurrentTenant"] = true
+                        };
+                        context.Write(writer, doc);
+                    }
+                    writer.WriteEndArray();
                 }
-                writer.WriteEndArray();
-                writer.Flush();
             }
         }
     }

@@ -25,13 +25,15 @@ namespace Raven.Server.Web.System
             using (var context = new MemoryOperationContext(pool))
             {
                 var stream = new MemoryStream();
-                var writer = new BlittableJsonTextWriter(context, stream);
-                context.Write(writer, new DynamicJsonValue
+                using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
-                    ["BuildVersion"] = ServerVersion.Build,
-                    ["ProductVersion"] = ServerVersion.Version,
-                    ["CommitHash"] = ServerVersion.CommitHash
-                });
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["BuildVersion"] = ServerVersion.Build,
+                        ["ProductVersion"] = ServerVersion.Version,
+                        ["CommitHash"] = ServerVersion.CommitHash
+                    });
+                }
                 var versionBuffer = stream.ToArray();
                 return versionBuffer;
             }
