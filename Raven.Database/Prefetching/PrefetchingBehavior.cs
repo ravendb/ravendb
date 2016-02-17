@@ -449,6 +449,9 @@ namespace Raven.Database.Prefetching
 			while (prefetchingQueue.TryPeek(out result) && lastIndexedEtag.CompareTo(result.Etag) >= 0)
 			{
 				prefetchingQueue.TryDequeue(out result);
+                if (log.IsDebugEnabled)
+                    log.Debug(string.Format("Removed document key: '{0}' from prefetching queue, etag: {1}", 
+                        result.Key, result.Etag));
 			}
 		}
 
