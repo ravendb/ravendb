@@ -378,8 +378,6 @@ namespace Raven.Server.Documents.Indexes
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var start = 0;
-
                     IndexPersistence.Write(addToIndex =>
                     {
                         while (true)
@@ -391,7 +389,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 var sw = Stopwatch.StartNew();
                                 var fetchedTotalSize = 0;
-                                foreach (var document in _documentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, start, pageSize))
+                                foreach (var document in _documentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, 0, pageSize))
                                 {
                                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -445,15 +443,10 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             if (earlyExit)
-                            {
-                                start += count;
                                 continue;
-                            }
 
                             if (count < pageSize)
                                 break;
-
-                            start += count;
                         }
                     });
                 }
