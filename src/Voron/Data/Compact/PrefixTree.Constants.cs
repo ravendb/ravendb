@@ -14,7 +14,6 @@ namespace Voron.Data.Compact
             public const long TailNodeName = -3;
             public const long TombstoneNodeName = -2;
             public const long InvalidNodeName = -1;
-            public const long RootNodeName = 0;
 
             public const long InvalidPage = -1;
 

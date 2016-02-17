@@ -16,8 +16,7 @@ namespace FastTests.Sparrow
     public class ZFastTrieTests
     {
         private readonly Func<string, BitVector> binarize = x => BitVector.Of(true, Encoding.UTF8.GetBytes(x));
-
-
+        
         [Fact]
         public void Construction()
         {
@@ -99,7 +98,9 @@ namespace FastTests.Sparrow
 
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
             Assert.True(tree.Add(lesserKey, "eini"));
+            ZFastTrieDebugHelpers.DumpTree(tree);
             Assert.True(tree.Add(greaterKey, "Eini"));
+            ZFastTrieDebugHelpers.DumpTree(tree);
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
 

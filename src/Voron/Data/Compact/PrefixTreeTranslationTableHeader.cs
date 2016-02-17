@@ -189,8 +189,7 @@ namespace Voron.Data.Compact
                 {
                     Debug.Assert(((long*)_tx.GetPage(_innerCopy.PageNumber).DataPointer)[chunkId] != -1);
                     return name;
-                }
-                    
+                }                    
 
                 chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
             }
@@ -279,9 +278,9 @@ namespace Voron.Data.Compact
 
         public PrefixTreeNodeLocationPtr MapVirtualToPhysical(long nodeName)
         {
-            Debug.Assert(nodeName >= PrefixTree.Constants.RootNodeName);
+            Debug.Assert(nodeName > PrefixTree.Constants.InvalidNodeName);
 
-            if (nodeName < PrefixTree.Constants.RootNodeName) // This shouldnt happen at all. 
+            if (nodeName <= PrefixTree.Constants.InvalidNodeName) // This shouldnt happen at all. 
                 throw new InvalidOperationException("Cannot map tombstones and invalid node names into physical locations.");
 
             if (_innerCopy.PageNumber == PrefixTree.Constants.InvalidPage) // This shouldnt happen at all. 

@@ -576,7 +576,7 @@ namespace Sparrow.Binary
             {
                 position = lastLong * sizeof(ulong);
 
-                int bytesLeft = extraBytes;
+                int bytesLeft = length % sizeof(ulong);
                 ulong lastValue = 0;
                 do
                 {
@@ -587,7 +587,7 @@ namespace Sparrow.Binary
                 }
                 while (bytesLeft > 0);
 
-                newValue[lastLong] = lastValue << ((8 - extraBytes) * BitVector.BitsPerByte);
+                newValue[lastLong] = lastValue << ((8 - length % sizeof(ulong)) * BitVector.BitsPerByte);
             }
 
             return new BitVector((length + prefixAdjustment) * BitVector.BitsPerByte, newValue);

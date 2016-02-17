@@ -54,7 +54,8 @@ namespace Voron.Data.Compact
                 throw new InvalidOperationException("Tried to create " + treeName + " as a prefix tree, but it is actually a " + header->RootObjectType);
 
             // TODO: Put all this initialization outside of the mutable state. 
-            var state = new PrefixTreeRootMutableState(tx, header);            
+            var state = new PrefixTreeRootMutableState(tx, header);
+            state.RootNodeName = Constants.InvalidNodeName;
             state.Head = new Leaf { Type = NodeType.Tombstone, PreviousPtr = Constants.InvalidNodeName, NextPtr = Constants.TailNodeName };
             state.Tail = new Leaf { Type = NodeType.Tombstone, PreviousPtr = Constants.HeadNodeName, NextPtr = Constants.InvalidNodeName };
             state.Items = 0;
@@ -93,13 +94,14 @@ namespace Voron.Data.Compact
             if (Count == 0)
             {
                 Leaf* rootLeaf;
-                var newNodeName = CreateLeaf(Constants.RootNodeName, 0, dataPtr, out rootLeaf);
+                var newNodeName = CreateLeaf(Constants.InvalidNodeName, 0, dataPtr, out rootLeaf);
 
                 // We add the leaf after the head.                  
                 Leaf* head = &(_state.Pointer->Head);
                 AddAfter(Constants.HeadNodeName, head, 0, rootLeaf);
 
-                _state.Items++; // This will cause the state to set IsModified = true; If this call is removed, add it explicitely
+                _state.RootNodeName = newNodeName;
+                _state.Items++; // This will cause the state to set IsModified = true; If this call is removed, add it explicitely                
 
                 return true;
             }
@@ -130,7 +132,7 @@ namespace Voron.Data.Compact
                 bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
                 bool isCutLow = cutPoint.LongestPrefix >= exitNodeHandleLength;  // Is this cut point low or high? 
                 bool isRightChild = cutPoint.IsRightChild; // Saving this because pointers will get invalidated on update.
-                bool isExitNodeRoot = exitNodeName == Constants.RootNodeName; // We need to evaluate this before changing the layout.
+                bool isExitNodeRoot = exitNodeName == _state.RootNodeName; // We need to evaluate this before changing the layout.
 
 #if DETAILED_DEBUG
                 Console.WriteLine(string.Format("Cut {0}; exit to the {1}", isCutLow ? "low" : "high", exitDirection ? "right" : "left"));
@@ -140,15 +142,14 @@ namespace Voron.Data.Compact
                 long newLeafNodeName;
                 Leaf* newLeaf;
 
+                // The new leaf is inserted into the left position.
+                newLeafNodeName = CreateLeaf(cutPoint.Parent, (short)(cutPoint.LongestPrefix + 1), dataPtr, out newLeaf);
+                // Link the new internal node with the new leaf and the old node.   
+                newInternalName = CreateInternal(cutPoint.Parent, exitNode->NameLength, cutPoint.LongestPrefix, out newInternal);
                 // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property)
+
                 if (exitDirection)
                 {
-                    // The new leaf is inserted into the right position.
-                    newLeafNodeName = CreateLeaf(Constants.InvalidNodeName, (short)(cutPoint.LongestPrefix + 1), dataPtr, out newLeaf);
-
-                    // Link the new internal node with the new leaf and the old node.   
-                    newInternalName = CreateInternal(Constants.InvalidNodeName, exitNode->NameLength, cutPoint.LongestPrefix, out newInternal);                    
-
                     newInternal->RightPtr = newLeafNodeName;
                     newInternal->JumpRightPtr = newLeafNodeName;
 
@@ -157,11 +158,6 @@ namespace Voron.Data.Compact
                 }
                 else
                 {
-                    // The new leaf is inserted into the left position.
-                    newLeafNodeName = CreateLeaf(Constants.InvalidNodeName, (short) (cutPoint.LongestPrefix + 1), dataPtr, out newLeaf);
-                    // Link the new internal node with the new leaf and the old node.   
-                    newInternalName = CreateInternal(Constants.InvalidNodeName, exitNode->NameLength, cutPoint.LongestPrefix, out newInternal);
-
                     newInternal->LeftPtr = newLeafNodeName;
                     newInternal->JumpLeftPtr = newLeafNodeName;
 
@@ -174,23 +170,25 @@ namespace Voron.Data.Compact
 
                 ValidateInternalNode(newInternalName, newInternal);
 
-                // TODO: Given that we are using an implicit representation is this necessary?
-                //       Wouldnt be the same naming the current node and save 4 bytes per node?
-
                 // If the exit node is not the root
-                if (!isExitNodeRoot)
+                if (isExitNodeRoot)
                 {
-                    var cutPointParentNode = (Internal*) this.ModifyNodeByName(cutPoint.Parent);
+                    // Then update the root
+                    this._state.RootNodeName = newInternalName;
+                }
+                else
+                {
+                    var cutPointParentNode = (Internal*)this.ModifyNodeByName(cutPoint.Parent);
                     Debug.Assert(cutPointParentNode->IsInternal);
 
                     // Update the parent exit node.
                     if (isRightChild)
                     {
-                        cutPointParentNode->RightPtr = exitNodeName;
+                        cutPointParentNode->RightPtr = newInternalName;
                     }
                     else
                     {
-                        cutPointParentNode->LeftPtr = exitNodeName;
+                        cutPointParentNode->LeftPtr = newInternalName;
                     }
                 }
 
@@ -212,7 +210,7 @@ namespace Voron.Data.Compact
                     Debug.Assert(hash == InternalTable.CalculateHashForBits(this.Handle(exitNode), hashState, exitNodeHandleLength));
 
                     // TODO: As we are using an implicit representation do we even need to use a new node name?
-                    this.NodesTable.Replace(newInternalName, newInternalName, hash); // Check if this is correct.
+                    this.NodesTable.Replace(exitNodeName, newInternalName, hash); // Check if this is correct.
 
                     // TODO: Review the use of short in NameLength and change to ushort. 
                     exitNode->NameLength = (short)(cutPoint.LongestPrefix + 1);
@@ -425,7 +423,7 @@ namespace Voron.Data.Compact
                     }
 
                     // As soon as we cannot find a matching descendant, we can stop updating
-                    if (toFix->JumpLeftPtr != insertedNodeName)
+                    if (toFix->JumpLeftPtr != exitNodeName)
                         return;
 
                     toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
@@ -473,7 +471,7 @@ namespace Voron.Data.Compact
 #endif
             // If there is only a single element, then the exit point is the root.
             if (_state.Items == 1)
-                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Extent(this.Root)), Constants.InvalidNodeName, Constants.RootNodeName, Constants.InvalidNodeName, searchKey);
+                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Extent(this.Root)), Constants.InvalidNodeName, _state.RootNodeName, Constants.InvalidNodeName, searchKey);
 
             int length = searchKey.Count;
 
@@ -512,7 +510,7 @@ namespace Voron.Data.Compact
                 stack.Pop();
 
                 // If the exit node is the root, there is obviously no parent to be found.
-                if (parexOrExitNodeName == Constants.RootNodeName)
+                if (parexOrExitNodeName == _state.RootNodeName)
                     return new CutPoint(lcpLength, Constants.InvalidNodeName, parexOrExitNodeName, Constants.InvalidNodeName, searchKey);
 
                 stackTopNodeName = stack.Peek();
@@ -564,8 +562,8 @@ namespace Voron.Data.Compact
             stack.Pop();
 
             // If the exit node is the root, there is obviously no parent to be found.
-            if (parexOrExitNodeName == Constants.RootNodeName)
-                return new CutPoint(lcpLength, Constants.InvalidNodeName, Constants.RootNodeName, Constants.InvalidNodeName, searchKey);
+            if (parexOrExitNodeName == _state.RootNodeName)
+                return new CutPoint(lcpLength, Constants.InvalidNodeName, _state.RootNodeName, Constants.InvalidNodeName, searchKey);
 
             stackTopNodeName = stack.Peek();
             stackTopNode = (Internal*)ReadNodeByName(stackTopNodeName);
@@ -728,7 +726,7 @@ namespace Voron.Data.Compact
 
         public long Count => _state.Items;
 
-        internal Node* Root => this.ReadNodeByName(Constants.RootNodeName);
+        internal Node* Root => this.ReadNodeByName(_state.RootNodeName);
         internal PrefixTreeRootMutableState State => _state;
         internal PrefixTreeTranslationTableMutableState TranslationTable => _translationTable;
         internal InternalTable NodesTable => this._table;
@@ -801,7 +799,7 @@ namespace Voron.Data.Compact
             BitVector searchKey = key.ToBitVector();
 
             if (Count == 1)
-                return new ExitNode(searchKey.LongestCommonPrefixLength(this.Extent(this.Root)), Constants.RootNodeName, searchKey);
+                return new ExitNode(searchKey.LongestCommonPrefixLength(this.Extent(this.Root)), _state.RootNodeName, searchKey);
 
             // We look for the parent of the exit node for the key.
             var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
@@ -868,7 +866,7 @@ namespace Voron.Data.Compact
 
             if (startBit == -1)
             {
-                top = Constants.RootNodeName;
+                top = _state.RootNodeName;
                 stack.Push(top);
 
                 var topNode = (Internal*)ReadNodeByName(top);
@@ -981,7 +979,7 @@ namespace Voron.Data.Compact
             {
                 Debug.Assert(this.Root->IsInternal);
 
-                top = Constants.RootNodeName;
+                top = _state.RootNodeName;
                 startBit = ((Internal*)ReadNodeByName(top))->ExtentLength;
             }
 
@@ -1052,6 +1050,9 @@ namespace Voron.Data.Compact
 
         internal Node* ReadNodeByName(long nodeName)
         {
+            if (nodeName == Constants.InvalidNodeName)
+                return null;
+
             if (PrefixTree.IsTombstone(nodeName))
             {
                 if (nodeName == Constants.HeadNodeName)
@@ -1065,7 +1066,7 @@ namespace Voron.Data.Compact
                 }
             }
 
-            Debug.Assert(nodeName >= PrefixTree.Constants.RootNodeName);
+            Debug.Assert(nodeName > Constants.InvalidNodeName);
 
             var location = _translationTable.MapVirtualToPhysical(nodeName);
             if (location.PageNumber == Constants.InvalidPage)
@@ -1079,7 +1080,7 @@ namespace Voron.Data.Compact
 
         private Node* ModifyNodeByName(long nodeName)
         {            
-            if (PrefixTree.IsTombstone(nodeName))
+            if (IsTombstone(nodeName))
             {
                 // We will be modifying the data after this call. If it is a tombstone, then we should handle it appropriately anyways.
                 _state.IsModified = true;
@@ -1095,7 +1096,7 @@ namespace Voron.Data.Compact
                 }
             }
 
-            Debug.Assert(nodeName >= PrefixTree.Constants.RootNodeName);
+            Debug.Assert(nodeName > Constants.InvalidNodeName);
 
             var location = _translationTable.MapVirtualToPhysical(nodeName);
             if (location.PageNumber == Constants.InvalidPage)

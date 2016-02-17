@@ -162,6 +162,67 @@ namespace FastTests.Voron.Compact
         }
 
         [Fact]
+        public void Structure_MultipleBranch_InternalExtent()
+        {
+            InitializeStorage();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table(DocsSchema, "docs", tx);
+                var tree = tx.CreatePrefixTree(Name);
+
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8Jp3V6sl", "8Jp3"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "VJ7hXe8d", "V6sl"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "39XCGX37", "GX37"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "f04oKmGx", "f04o"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "feiF1gdt", "KmGx"));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                StructuralVerify(tree);
+
+                Assert.Equal(5, tree.Count);
+            }
+        }
+
+        [Fact]
+        public void Structure_MultipleBranch_InternalExtent2()
+        {
+            InitializeStorage();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table(DocsSchema, "docs", tx);
+                var tree = tx.CreatePrefixTree(Name);
+
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "i", "8Jp3"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "4", "V6sl"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "j", "GX37"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "P", "f04o"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8", "KmGx"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "3", "KmG3"));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                StructuralVerify(tree);
+
+                Assert.Equal(6, tree.Count);
+            }
+        }
+
+        [Fact]
         public void Structure_MultipleBranch_OrderPreservation()
         {
             InitializeStorage();

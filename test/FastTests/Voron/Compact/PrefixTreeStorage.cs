@@ -101,7 +101,7 @@ namespace FastTests.Voron.Compact
             }
             else
             {
-                DumpNodes(tree, PrefixTree.Constants.RootNodeName, PrefixTree.Constants.InvalidNodeName, 0, 0);
+                DumpNodes(tree, tree.State.RootNodeName, PrefixTree.Constants.InvalidNodeName, 0, 0);
             }
         }
 
@@ -144,7 +144,7 @@ namespace FastTests.Voron.Compact
             Assert.Equal(tree.State.Head.PreviousPtr, PrefixTree.Constants.InvalidNodeName);
 
             // Either the root does not exist or the root is internal and have name length == 0
-            Assert.True(tree.ReadNodeByName(PrefixTree.Constants.RootNodeName) == null || tree.Root->NameLength == 0);
+            Assert.True(tree.ReadNodeByName(tree.State.RootNodeName) == null || tree.Root->NameLength == 0);
             Assert.True(tree.State.Items == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.Values.Count() + 1);
 
             if (tree.Count == 0)
@@ -220,7 +220,7 @@ namespace FastTests.Voron.Compact
                 var leaves = new HashSet<long>();
                 var references = new HashSet<long>();
 
-                int numberOfNodes = VisitNodes(tree, PrefixTree.Constants.RootNodeName, PrefixTree.Constants.InvalidNodeName, 0, nodes, leaves, references);
+                int numberOfNodes = VisitNodes(tree, tree.State.RootNodeName, PrefixTree.Constants.InvalidNodeName, 0, nodes, leaves, references);
                 Assert.Equal(2 * tree.Count - 1, numberOfNodes); // The amount of nodes is directly correlated with the tree size.
                 Assert.Equal(tree.Count, leaves.Count); // The size of the tree is equal to the amount of leaves in the tree.
 

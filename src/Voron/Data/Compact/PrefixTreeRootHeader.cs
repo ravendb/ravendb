@@ -14,6 +14,11 @@ namespace Voron.Data.Compact
         public RootObjectType RootObjectType;
 
         /// <summary>
+        /// The root node name for the tree. 
+        /// </summary>
+        public long RootNodeName;
+
+        /// <summary>
         /// The table header page for the tree.
         /// </summary>
         public long Table;
