@@ -51,6 +51,7 @@ namespace Raven.Server.Documents.Handlers
                                     while (builder.Read() == false)
                                     {
                                         result = await receiveAsync;
+                                        //TODO: segment the buffer so we don't write into the memory we are currently parsing
                                         receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
                                         parser.SetBuffer(buffer, result.Count);
                                     }
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.Handlers
 
                                     reader.TryGet("Param", out commandParameter);
 
-                                    HandelCommand(connection, command, commandParameter);
+                                    HandleCommand(connection, command, commandParameter);
                                 }
                             }
                         }
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.Handlers
                 catch (IOException ex)
                 {
                     /* Client was disconnected, write to log */
-                    Log.DebugException("Client was diconnected", ex);
+                    Log.DebugException("Client was disconnected", ex);
                 }
                 finally
                 {
@@ -86,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void HandelCommand(NotificationsClientConnection connection, string command, string commandParameter)
+        private void HandleCommand(NotificationsClientConnection connection, string command, string commandParameter)
         {
             /* if (Match(command, "watch-index"))
              {
