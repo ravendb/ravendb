@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
-using Raven.SlowTests.RavenThreadPool;
-#if !DNXCORE50
 
+#if !DNXCORE50
+using Raven.SlowTests.RavenThreadPool;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Commands;
 using Raven.Tests.Issues;

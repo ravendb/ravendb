@@ -17,7 +17,7 @@ namespace Raven.Client.Authorization
     {
         public static async Task<OperationAllowedResult> IsOperationAllowedOnDocumentAsync(this IAsyncAdvancedSessionOperations session, string userId, string operation, string documentId)
         {
-            return (await IsOperationAllowedOnDocumentAsync(session, userId, operation, new[] { documentId })).First();
+            return (await IsOperationAllowedOnDocumentAsync(session, userId, operation, new[] { documentId }).ConfigureAwait(false)).First();
         }
 
         public static async Task<OperationAllowedResult[]> IsOperationAllowedOnDocumentAsync(this IAsyncAdvancedSessionOperations session, string userId, string operation, params string[] documentIds)
@@ -36,7 +36,7 @@ namespace Raven.Client.Authorization
                 url.Append("&id=").Append(Uri.EscapeUriString(docId));
             }
 
-            var result = await serverClient.ExecuteGetRequest(url.ToString());
+            var result = await serverClient.ExecuteGetRequest(url.ToString()).ConfigureAwait(false);
 
             return
                 session.DocumentStore.Conventions.CreateSerializer().Deserialize<OperationAllowedResult[]>(
@@ -76,7 +76,7 @@ namespace Raven.Client.Authorization
                 where OperationMatches(permission.Operation, operation)
                 select permission;
 
-            await session.LoadAsync<AuthorizationRole>(user.Roles.Where(roleId => session.Advanced.IsLoaded(roleId) == false));
+            await session.LoadAsync<AuthorizationRole>(user.Roles.Where(roleId => session.Advanced.IsLoaded(roleId) == false)).ConfigureAwait(false);
 
             permissions = permissions.Concat(
                 from roleId in user.Roles
