@@ -9,6 +9,7 @@ import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import selectColumns = require("viewmodels/common/selectColumns");
+import selectCsvColumnsDialog = require("viewmodels/common/selectCsvColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 
 import collection = require("models/database/documents/collection");
@@ -217,10 +218,14 @@ class documents extends viewModelBase {
     }
 
     exportCsv() {
+        this.exportCsvInternal();
+    }
+
+    exportCsvInternal(customColumns?: string[]) {
         if (this.isRegularCollection()) {
             var collection: collection = this.selectedCollection();
             var db = this.activeDatabase();
-            var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase);
+            var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase, customColumns);
             this.downloader.download(db, url);
         }
     }
@@ -414,10 +419,19 @@ class documents extends viewModelBase {
         }
     }
 
+    selectCsvColumns() {
+        var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
+        app.showDialog(dialog);
+
+        dialog.onExit().done((cols: string[]) => {
+            this.exportCsvInternal(cols);
+        });
+    }
+
     selectColumns() {
         // Fetch column widths from virtual table
         var virtualTable = this.getDocumentsGrid();
-            var columnsNames = virtualTable.getColumnsNames();
+        var columnsNames = virtualTable.getColumnsNames();
         var vtColumns = virtualTable.columns();
         this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
             for (var i = 0; i < vtColumns.length; i++) {
