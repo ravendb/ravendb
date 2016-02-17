@@ -459,7 +459,7 @@ namespace Raven.Bundles.Replication.Tasks
 						log.Info("This is the first failure for {0}, assuming transient failure and trying again", destination);
 						if (TryReplicationAttachments(destination, attachments, out lastError)) // success on second fail
 						{
-							RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2);
+							RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2, forDocuments: false);
 							return true;
 						}
 					}
@@ -519,14 +519,14 @@ namespace Raven.Bundles.Replication.Tasks
                 using (var scope = recorder.StartRecording("Send"))
                 {
                     string lastError;
-                    if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false) // failed to replicate, start error handling strategy
+                    if (TryReplicationDocuments(destination, documentsToReplicate.Documents, documentsToReplicate.LastEtag, out lastError) == false) // failed to replicate, start error handling strategy
                     {
                         if (IsFirstFailure(destination.ConnectionStringOptions.Url))
                         {
                             log.Info(
                                 "This is the first failure for {0}, assuming transient failure and trying again",
                                 destination);
-                            if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError)) // success on second fail
+                            if (TryReplicationDocuments(destination, documentsToReplicate.Documents, documentsToReplicate.LastEtag, out lastError)) // success on second fail
                             {
                                 RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
                                 return true;
@@ -612,7 +612,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void RecordSuccess(string url,
 			Etag lastReplicatedEtag = null, DateTime? lastReplicatedLastModified = null,
-			DateTime? lastHeartbeatReceived = null, string lastError = null)
+			DateTime? lastHeartbeatReceived = null, string lastError = null, bool forDocuments = true)
 		{
 			var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
 			Interlocked.Exchange(ref stats.FailureCountInternal, 0);
@@ -622,7 +622,10 @@ namespace Raven.Bundles.Replication.Tasks
 			if (lastReplicatedEtag != null)
 			{
 				stats.LastEtagCheckedForReplication = lastReplicatedEtag;
-				stats.LastReplicatedEtag = lastReplicatedEtag;
+				if (forDocuments)
+					stats.LastReplicatedEtag = lastReplicatedEtag;
+				else
+					stats.LastReplicatedAttachmentEtag = lastReplicatedEtag;
 			}
 
 			if (lastReplicatedLastModified.HasValue)
@@ -705,7 +708,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private bool TryReplicationDocuments(ReplicationStrategy destination, RavenJArray jsonDocuments, out string lastError)
+		private bool TryReplicationDocuments(ReplicationStrategy destination, RavenJArray jsonDocuments, Etag lastEtag, out string lastError)
 		{
 			try
 			{
@@ -720,7 +723,8 @@ namespace Raven.Bundles.Replication.Tasks
 				request.Write(jsonDocuments);
 				request.ExecuteRequest(docDb.WorkContext.CancellationToken);
 
-				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
+				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms, last etag: {3}", 
+                    jsonDocuments.Length, destination, sp.ElapsedMilliseconds, lastEtag);
 				lastError = "";
 				return true;
 			}
@@ -758,7 +762,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 		}
 
-		private class JsonDocumentsToReplicate
+	    private class JsonDocumentsToReplicate
 		{
 			public Etag LastEtag { get; set; }
 			public DateTime LastLastModified { get; set; }

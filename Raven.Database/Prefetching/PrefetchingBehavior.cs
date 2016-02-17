@@ -426,6 +426,8 @@ namespace Raven.Database.Prefetching
 		{
 			foreach (var docToRemove in documentsToRemove)
 			{
+				if (docToRemove.Value == null)
+					continue;
 				if (docToRemove.Value.All(etag => lastIndexedEtag.CompareTo(etag) > 0) == false)
 					continue;
 
