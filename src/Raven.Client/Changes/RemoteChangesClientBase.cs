@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -17,7 +19,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
 {
-    public abstract class RemoteChangesClientBase<TChangesApi, TConnectionState, TConventions> : IDisposable, IObserver<string>, IConnectableChanges<TChangesApi>
+    public abstract class RemoteChangesClientBase<TChangesApi, TConnectionState, TConventions> : IDisposable, IConnectableChanges<TChangesApi>
                                 where TConnectionState : class, IChangesConnectionState
                                 where TChangesApi : class, IConnectableChanges
                                 where TConventions : ConventionBase
@@ -61,6 +63,9 @@ namespace Raven.Client.Changes
                 .ContinueWith(task =>
                 {
                     task.AssertNotFailed();
+
+                    Receive();
+
                     return this as TChangesApi;
                 });
         }
@@ -70,7 +75,7 @@ namespace Raven.Client.Changes
             if (disposed)
                 return;
 
-            var uri = new Uri(url + "/changes");
+            var uri = new Uri(url.Replace("http://", "ws://").Replace(".fiddler", "") + "/changes");
             logger.Info("Trying to connect to {0}", uri);
             await webSocket.ConnectAsync(uri, CancellationToken.None);
         }
@@ -98,74 +103,79 @@ namespace Raven.Client.Changes
 
         static UTF8Encoding encoder = new UTF8Encoding();
 
-        private const int receiveChunkSize = 256;
+        private const int receiveChunkSize = 4096;
 
-        private static async Task Receive(ClientWebSocket webSocket)
+        private async Task Receive()
         {
-            byte[] buffer = new byte[receiveChunkSize];
-            while (webSocket.State == WebSocketState.Open)
+            try
             {
-                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                if (result.MessageType == WebSocketMessageType.Close)
+                byte[] buffer = new byte[receiveChunkSize];
+                while (webSocket.State == WebSocketState.Open)
                 {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                    var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), disposedToken.Token);
+                    var length = result.Count;
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                    }
+                    else
+                    {
+                        while (result.EndOfMessage == false)
+                        {
+                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, length, receiveChunkSize - length), CancellationToken.None);
+                            length += result.Count;
+                        }
+
+                        RavenJObject ravenJObject;
+                        using (var stream = new MemoryStream(buffer, 0, length))
+                        using (var reader = new StreamReader(stream, Encoding.UTF8))
+                        using (var jsonReader = new RavenJsonTextReader(reader))
+                        {
+                            ravenJObject = RavenJObject.Load(jsonReader);
+                        }
+
+                        var value = ravenJObject.Value<RavenJObject>("Value");
+                        var type = ravenJObject.Value<string>("Type");
+                        if (logger.IsDebugEnabled)
+                            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, ravenJObject.ToString());
+
+                        switch (type)
+                        {
+                            case "Disconnect":
+                                webSocket.Dispose();
+                                // TODO: RenewConnection();
+                                break;
+                            case "Initialized":
+                            case "Heartbeat":
+                                throw new NotSupportedException(); // Should be deleted
+                            default:
+                                NotifySubscribers(type, value, Counters.Snapshot);
+                                break;
+                        }
+                    }
                 }
-                else
-                {
-                    
-                }
+            }
+            catch (WebSocketException ex)
+            {
+                logger.DebugException("Failed to receive a message, client was probably diconnected", ex);
             }
         }
 
-        private void ClientSideHeartbeat(object _)
+        protected async Task Send(string command, string commandParameter)
         {
-            TimeSpan elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
-            if (elapsedTimeSinceHeartbeat.TotalSeconds < 45)
-                return;
-            OnError(new TimeoutException("Over 45 seconds have passed since we got a server heartbeat, even though we should get one every 10 seconds or so.\r\n" +
-                                         "This connection is now presumed dead, and will attempt reconnection"));
-        }
+            logger.Info("Sending command {0} - {1} to {2} with id {3}", command, commandParameter, url, id);
 
-        protected Task Send(string command, string value)
-        {
-            lock (this)
+            var ravenJObject = new RavenJObject
             {
-                logger.Info("Sending command {0} - {1} to {2} with id {3}", command, value, url, id);
-                var sendTask = lastSendTask;
-                if (sendTask != null)
-                {
-                    return sendTask.ContinueWith(_ =>
-                    {
-                        Send(command, value);
-                    });
-                }
-
-                try
-                {
-                    var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
-                    if (string.IsNullOrEmpty(value) == false)
-                        sendUrl += "&value=" + Uri.EscapeUriString(value);
-
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.Get, credentials, Conventions)
-                    {
-                        AvoidCachingRequest = true
-                    };
-                    var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                    return lastSendTask =
-                        request.ExecuteRequestAsync()
-                            .ObserveException()
-                            .ContinueWith(task =>
-                            {
-                                lastSendTask = null;
-                                request.Dispose();
-                            });
-                }
-                catch (Exception e)
-                {
-                    return new CompletedTask(e).Task.ObserveException();
-                }
-            }
+                ["Command"] = command,
+                ["Param"] = commandParameter
+            };
+            var stream = new MemoryStream();
+            ravenJObject.WriteTo(stream);
+            await webSocket.SendAsync(new ArraySegment<byte>(stream.ToArray(), 0, (int) stream.Length), WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
         }
+
+        private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
 
         public void Dispose()
         {
@@ -183,11 +193,12 @@ namespace Raven.Client.Changes
             if (disposed)
                 return new CompletedTask();
             disposed = true;
+
+            disposedToken.Cancel();
             onDispose();
 
-
-            return Send("disconnect", null).
-                ContinueWith(_ =>
+            return webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by the client", CancellationToken.None)
+                .ContinueWith(_ =>
                 {
                     try
                     {
@@ -206,32 +217,7 @@ namespace Raven.Client.Changes
         {
             logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
 
-            RenewConnection();
-        }
-
-        public void OnNext(string dataFromConnection)
-        {
-            lastHeartbeat = SystemTime.UtcNow;
-
-            var ravenJObject = RavenJObject.Parse(dataFromConnection);
-            var value = ravenJObject.Value<RavenJObject>("Value");
-            var type = ravenJObject.Value<string>("Type");
-            if (logger.IsDebugEnabled)
-            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
-
-            switch (type)
-            {
-                case "Disconnect":
-                    connection?.Dispose();
-                    RenewConnection();
-                    break;
-                case "Initialized":
-                case "Heartbeat":
-                    break;
-                default:
-                    NotifySubscribers(type, value, Counters.Snapshot);
-                    break;
-            }
+            // TODO: RenewConnection();
         }
 
         protected Task AfterConnection(Func<Task> action)

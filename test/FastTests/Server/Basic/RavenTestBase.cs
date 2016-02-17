@@ -114,6 +114,7 @@ namespace Raven.Tests.Core
         {
             if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
                 return url.Replace("localhost", "localhost.fiddler");
+
             return url;
         }
 

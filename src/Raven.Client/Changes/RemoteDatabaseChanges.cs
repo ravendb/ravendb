@@ -16,7 +16,7 @@ namespace Raven.Client.Changes
 {
     public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
     {
-        private readonly static ILog Logger = LogManager.GetLogger(typeof(RemoteDatabaseChanges));
+        private readonly static ILog Logger = LogManager.GetLogger(typeof (RemoteDatabaseChanges));
 
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -29,14 +29,14 @@ namespace Raven.Client.Changes
         private bool watchAllIndexes;
         private bool watchAllTransformers;
         private bool watchAllDataSubscriptions;
-        
+
         private readonly Func<string, long?, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
         public RemoteDatabaseChanges(string url, string apiKey,
-                                       ICredentials credentials,
-                                       DocumentConvention conventions,
-                                       Action onDispose,                                
-                                       Func<string, long?, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
+            ICredentials credentials,
+            DocumentConvention conventions,
+            Action onDispose,
+            Func<string, long?, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
             : base(url, apiKey, credentials, conventions, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
@@ -131,8 +131,8 @@ namespace Raven.Client.Changes
                     if (replicationConflictNotification.ItemType == ReplicationConflictTypes.DocumentReplicationConflict)
                     {
                         tryResolveConflictByUsingRegisteredConflictListenersAsync(replicationConflictNotification.Id,
-                                                                             replicationConflictNotification.Etag,
-                                                                             replicationConflictNotification.Conflicts, null)
+                            replicationConflictNotification.Etag,
+                            replicationConflictNotification.Conflicts, null)
                             .ContinueWith(t =>
                             {
                                 t.AssertNotFailed();
@@ -141,7 +141,7 @@ namespace Raven.Client.Changes
                                 {
                                     if (Logger.IsDebugEnabled)
                                         Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
-                                                 replicationConflictNotification.Id);
+                                            replicationConflictNotification.Id);
                                 }
                             });
                     }
@@ -161,8 +161,8 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
         {
-            var counter = GetOrAddConnectionState("indexes/" + indexName, "watch-index", "unwatch-index", () => watchedIndexes.TryAdd(indexName), 
-                                                    () => watchedIndexes.TryRemove(indexName), indexName);
+            var counter = GetOrAddConnectionState("indexes/" + indexName, "watch-index", "unwatch-index", () => watchedIndexes.TryAdd(indexName),
+                () => watchedIndexes.TryRemove(indexName), indexName);
 
             counter.Inc();
             var taskedObservable = new TaskedObservable<IndexChangeNotification, DatabaseConnectionState>(
@@ -220,8 +220,8 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<TransformerChangeNotification> ForAllTransformers()
         {
-            var counter = GetOrAddConnectionState("all-transformers", "watch-transformers", "unwatch-transformers", () => watchAllTransformers = true, 
-                                                    () => watchAllTransformers = false, null);
+            var counter = GetOrAddConnectionState("all-transformers", "watch-transformers", "unwatch-transformers", () => watchAllTransformers = true,
+                () => watchAllTransformers = false, null);
 
             var taskedObservable = new TaskedObservable<TransformerChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -235,8 +235,8 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
         {
-            var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", () => watchedPrefixes.TryAdd(docIdPrefix), 
-                                                    () => watchedPrefixes.TryRemove(docIdPrefix), docIdPrefix);
+            var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", () => watchedPrefixes.TryAdd(docIdPrefix),
+                () => watchedPrefixes.TryRemove(docIdPrefix), docIdPrefix);
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -252,8 +252,8 @@ namespace Raven.Client.Changes
         {
             if (collectionName == null) throw new ArgumentNullException("collectionName");
 
-            var counter = GetOrAddConnectionState("collections/" + collectionName, "watch-collection", "unwatch-collection", () => watchedCollections.TryAdd(collectionName), 
-                                                    () => watchedCollections.TryRemove(collectionName), collectionName);
+            var counter = GetOrAddConnectionState("collections/" + collectionName, "watch-collection", "unwatch-collection", () => watchedCollections.TryAdd(collectionName),
+                () => watchedCollections.TryRemove(collectionName), collectionName);
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -267,7 +267,7 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>()
         {
-            var collectionName = Conventions.GetTypeTagName(typeof(TEntity));
+            var collectionName = Conventions.GetTypeTagName(typeof (TEntity));
             return ForDocumentsInCollection(collectionName);
         }
 
@@ -276,8 +276,8 @@ namespace Raven.Client.Changes
             if (typeName == null) throw new ArgumentNullException("typeName");
             var encodedTypeName = Uri.EscapeDataString(typeName);
 
-            var counter = GetOrAddConnectionState("types/" + typeName, "watch-type", "unwatch-type", () => watchedTypes.TryAdd(typeName), 
-                                                    () => watchedTypes.TryRemove(typeName), encodedTypeName);
+            var counter = GetOrAddConnectionState("types/" + typeName, "watch-type", "unwatch-type", () => watchedTypes.TryAdd(typeName),
+                () => watchedTypes.TryRemove(typeName), encodedTypeName);
 
             var taskedObservable = new TaskedObservable<DocumentChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -291,7 +291,7 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type)
         {
-            if (type == null) 
+            if (type == null)
                 throw new ArgumentNullException("type");
 
             var typeName = Conventions.FindClrTypeName(type);
@@ -300,7 +300,7 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>()
         {
-            var typeName = Conventions.FindClrTypeName(typeof(TEntity));
+            var typeName = Conventions.FindClrTypeName(typeof (TEntity));
             return ForDocumentsOfType(typeName);
         }
 
@@ -382,8 +382,8 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DataSubscriptionChangeNotification> ForDataSubscription(long subscriptionId)
         {
-            var counter = GetOrAddConnectionState("subscriptions/" + subscriptionId, "watch-data-subscription", "unwatch-data-subscription", () => watchedDataSubscriptions.TryAdd(subscriptionId), 
-                                                    () => watchedDataSubscriptions.TryRemove(subscriptionId), subscriptionId.ToString(CultureInfo.InvariantCulture));
+            var counter = GetOrAddConnectionState("subscriptions/" + subscriptionId, "watch-data-subscription", "unwatch-data-subscription", () => watchedDataSubscriptions.TryAdd(subscriptionId),
+                () => watchedDataSubscriptions.TryRemove(subscriptionId), subscriptionId.ToString(CultureInfo.InvariantCulture));
 
             var taskedObservable = new TaskedObservable<DataSubscriptionChangeNotification, DatabaseConnectionState>(
                 counter,
@@ -394,5 +394,5 @@ namespace Raven.Client.Changes
 
             return taskedObservable;
         }
-        }
-        }
+    }
+}

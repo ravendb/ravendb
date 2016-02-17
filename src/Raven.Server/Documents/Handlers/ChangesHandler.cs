@@ -5,8 +5,10 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
@@ -22,8 +24,6 @@ namespace Raven.Server.Documents.Handlers
 
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                // TODO: catch a disconnected clients and deregister them
-
                 var connection = new NotificationsClientConnection(webSocket, Database);
                 Database.Notifications.Connect(connection);
                 try
@@ -72,6 +72,11 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
                     }
+                }
+                catch (IOException ex)
+                {
+                    /* Client was disconnected, write to log */
+                    Log.DebugException("Client was diconnected", ex);
                 }
                 finally
                 {
