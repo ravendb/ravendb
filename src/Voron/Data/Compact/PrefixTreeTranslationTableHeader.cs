@@ -124,7 +124,7 @@ namespace Voron.Data.Compact
         public PtrBitVector GetFreeSpaceTable( Page page )
         {
             byte* location = page.DataPointer + _innerCopy.Items * sizeof(long);
-            return new PtrBitVector( (ulong*)location, (int) _innerCopy.Items);
+            return new PtrBitVector( location, (int) _innerCopy.Items);
         }
 
         public void Initialize ( int chunkTreeDepth )
@@ -185,11 +185,15 @@ namespace Voron.Data.Compact
             while (chunkId >= 0)
             {               
                 long name;
-                if ( TryAllocateNodeInChunk(chunkId, out name))
+                if ( TryAllocateNodeInChunk(chunkId * _innerCopy.NodesPerChunk, out name))
                 {
                     Debug.Assert(((long*)_tx.GetPage(_innerCopy.PageNumber).DataPointer)[chunkId] != -1);
                     return name;
-                }                    
+                }    
+                else
+                {
+                    GetFreeSpaceTable(_table).Set(chunkId, false);
+                }                
 
                 chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
             }
@@ -258,20 +262,14 @@ namespace Voron.Data.Compact
             return false;
         }
 
-        public long AllocateNodeName( long parentName = PrefixTree.Constants.InvalidNodeName, long rightChildName = PrefixTree.Constants.InvalidNodeName, long leftChildName = PrefixTree.Constants.InvalidNodeName)
+        public long AllocateNodeName( long parentName = PrefixTree.Constants.InvalidNodeName)
         {
             if ( _tx.Flags == TransactionFlags.Read )
                 throw new InvalidOperationException("Cannot allocate a node in a read transaction.");
 
-            //long nodeName = PrefixTree.Constants.InvalidNodeName;
-            //if (parentName != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(parentName, out nodeName))
-            //    return nodeName;
-
-            //if (rightChildName != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(rightChildName, out nodeName))
-            //    return nodeName;
-
-            //if (leftChildName != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(leftChildName, out nodeName))
-            //    return nodeName;
+            long nodeName = PrefixTree.Constants.InvalidNodeName;
+            if (parentName != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(parentName, out nodeName))
+                return nodeName;
 
             return AllocateNodeInChunkSlow();
         }

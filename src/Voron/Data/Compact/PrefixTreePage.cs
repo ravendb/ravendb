@@ -70,7 +70,11 @@ namespace Voron.Data.Compact
         public PtrBitVector FreeSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return new PtrBitVector((ulong*)DataPointer + Header->NodesPerChunk * sizeof(PrefixTree.Node), Header->NodesPerChunk); }
+            get
+            {
+                byte* freeSpace = DataPointer + Header->NodesPerChunk * sizeof(PrefixTree.Node);
+                return new PtrBitVector( freeSpace, Header->NodesPerChunk );
+            }
         }
 
         public override string ToString()
