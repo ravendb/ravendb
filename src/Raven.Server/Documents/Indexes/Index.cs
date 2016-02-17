@@ -16,7 +16,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Voron;
-using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -266,12 +265,12 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        private void WriteLastMappedEtag(RavenTransaction tx, long etag)
+        private static void WriteLastMappedEtag(RavenTransaction tx, long etag)
         {
             WriteLastEtag(tx, LastMappedEtagSlice, etag);
         }
 
-        private void WriteLastReducedEtag(RavenTransaction tx, long etag)
+        private static void WriteLastReducedEtag(RavenTransaction tx, long etag)
         {
             WriteLastEtag(tx, LastReducedEtagSlice, etag);
         }
@@ -367,86 +366,79 @@ namespace Raven.Server.Documents.Indexes
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                long lastEtag;
-                if (IsStale(databaseContext, indexContext, out lastEtag) == false)
+                long lastMappedEtag;
+                if (IsStale(databaseContext, indexContext, out lastMappedEtag) == false)
                     return;
 
-                lastEtag++;
+                var startEtag = lastMappedEtag + 1;
                 var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfItemsToFetchForMap;
 
                 foreach (var collection in Collections)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
+                    var lastEtag = startEtag;
+
                     IndexPersistence.Write(addToIndex =>
                     {
-                        while (true)
+                        var count = 0;
+                        using (databaseContext.OpenReadTransaction())
                         {
-                            var count = 0;
-                            var earlyExit = false;
-
-                            using (databaseContext.OpenReadTransaction())
+                            var sw = Stopwatch.StartNew();
+                            var fetchedTotalSizeInBytes = new Size(0, SizeUnit.Bytes);
+                            foreach (var document in _documentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, 0, pageSize))
                             {
-                                var sw = Stopwatch.StartNew();
-                                var fetchedTotalSize = 0;
-                                foreach (var document in _documentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag, 0, pageSize))
+                                cancellationToken.ThrowIfCancellationRequested();
+
+                                count++;
+                                fetchedTotalSizeInBytes.Add(document.Data.Size, SizeUnit.Bytes);
+                                lastEtag = document.Etag;
+
+                                Debug.Assert(document.Etag >= lastEtag);
+
+                                Lucene.Net.Documents.Document convertedDocument;
+
+                                try
                                 {
-                                    cancellationToken.ThrowIfCancellationRequested();
+                                    convertedDocument = DocumentConverter.ConvertToCachedDocument(document);
+                                }
+                                catch (Exception)
+                                {
+                                    // TODO [ppekrol] log that conversion failed, we need to keep going, add indexing errors
+                                    continue;
+                                }
 
-                                    count++;
-                                    fetchedTotalSize += document.Data.Size;
-                                    lastEtag = document.Etag;
+                                if (convertedDocument == null)
+                                    continue;
 
-                                    Debug.Assert(document.Etag >= lastEtag);
+                                try
+                                {
+                                    addToIndex(convertedDocument);
+                                }
+                                catch (Exception)
+                                {
+                                    // TODO [ppekrol] log?
+                                    continue;
+                                }
 
-                                    Lucene.Net.Documents.Document convertedDocument;
+                                if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan || fetchedTotalSizeInBytes >= _documentDatabase.Configuration.Indexing.MaximumSizeAllowedToFetchFromStorageInMb)
+                                {
+                                    if (count != pageSize && _mre.IsSet == false)
+                                        _mre.Set();
 
-                                    try
-                                    {
-                                        convertedDocument = DocumentConverter.ConvertToCachedDocument(document);
-                                    }
-                                    catch (Exception)
-                                    {
-                                        // TODO [ppekrol] log that conversion failed, we need to keep going, add indexing errors
-                                        continue;
-                                    }
-
-                                    if (convertedDocument == null)
-                                        continue;
-
-                                    try
-                                    {
-                                        addToIndex(convertedDocument);
-                                    }
-                                    catch (Exception)
-                                    {
-                                        // TODO [ppekrol] log?
-                                        continue;
-                                    }
-
-                                    if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan || fetchedTotalSize >= _documentDatabase.Configuration.Indexing.MaximumSizeAllowedToFetchFromStorageInMb.GetValue(SizeUnit.Bytes))
-                                    {
-                                        earlyExit = count != pageSize;
-                                        break;
-                                    }
+                                    break;
                                 }
                             }
+                        }
 
-                            if (count == 0)
-                                break;
+                        if (count == 0)
+                            return;
 
-                            using (var tx = indexContext.OpenWriteTransaction())
-                            {
-                                WriteLastMappedEtag(tx, lastEtag);
+                        using (var tx = indexContext.OpenWriteTransaction())
+                        {
+                            WriteLastMappedEtag(tx, lastEtag);
 
-                                tx.Commit();
-                            }
-
-                            if (earlyExit)
-                                continue;
-
-                            if (count < pageSize)
-                                break;
+                            tx.Commit();
                         }
                     });
                 }
