@@ -31,7 +31,8 @@ namespace FastTests.Server.Json
                 ["Name"] = "John Doe"
             });
 
-            var read = sut.Read(doc, "Name");
+            object read;
+            sut.TryRead(doc, "Name", out read);
 
             Assert.Equal("John Doe", read.ToString());
         }
@@ -54,11 +55,12 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = sut.Read(doc, "Address.City");
+            object read;
+            sut.TryRead(doc, "Address.City", out read);
 
             Assert.Equal("New York City", read.ToString());
 
-            read = sut.Read(doc, "Address.Details.Floor");
+            sut.TryRead(doc, "Address.Details.Floor", out read);
 
             Assert.Equal(2L, read);
         }
@@ -72,21 +74,19 @@ namespace FastTests.Server.Json
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "Joe"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "John"
-                        }
-                    })
+                        ["Name"] = "Joe"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = "John"
+                    }
                 }
             });
 
-            var read = sut.Read(doc, "Friends,Name");
+            object read;
+            sut.TryRead(doc, "Friends,Name", out read);
 
             var enumerable = read as IEnumerable<object>;
 
@@ -108,27 +108,25 @@ namespace FastTests.Server.Json
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
+                        ["Name"] = new DynamicJsonValue
                         {
-                            ["Name"] = new DynamicJsonValue
-                            {
-                                ["First"] = "Joe"
-                            }
-                        },
-                        new DynamicJsonValue
+                            ["First"] = "Joe"
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = new DynamicJsonValue
                         {
-                            ["Name"] = new DynamicJsonValue
-                            {
-                                ["First"] = "John"
-                            }
-                        },
-                    })
+                            ["First"] = "John"
+                        }
+                    },
                 }
             });
 
-            var read = sut.Read(doc, "Friends,Name.First");
+            object read;
+            sut.TryRead(doc, "Friends,Name.First", out read);
 
             var enumerable = read as IEnumerable<object>;
 

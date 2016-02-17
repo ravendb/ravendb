@@ -24,11 +24,13 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
 
+        private readonly HashSet<string> _fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        
+        private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
+
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
         private readonly IndexField[] _fields;
-
-        private bool _fieldsAdded;
 
         public LuceneDocumentConverter(IndexField[] fields)
         {
@@ -38,23 +40,18 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         // returned document needs to be written do index right after conversion because the same cached instance is used here
         public global::Lucene.Net.Documents.Document ConvertToCachedDocument(Document document)
         {
-            foreach (var field in GetFields(document))
+            foreach (var fieldName in _fieldNames)
             {
-                if (_fieldsAdded == false)
-                    _document.Add(field);
-                else
-                {
-                    // one lucene document converter is binded to one index instance which means that 
-                    // fields will be the same and values can be just be overwritten
-                    // for now let us just iterate over fields to update their values // TODO arek
-                }
+                _document.RemoveFields(fieldName);
             }
 
-            _fieldsAdded = true;
+            foreach (var field in GetFields(document))
+            {
+                _document.Add(field);
+            }
 
             return _document;
         }
-
         
         private IEnumerable<AbstractField> GetFields(Document document)
         {
@@ -62,7 +59,12 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             
             foreach (var indexField in _fields)
             {
-                foreach (var luceneField in GetRegularFields(indexField, _blittableTraverser.Read(document.Data, indexField.Name)))
+                object value;
+
+                if (_blittableTraverser.TryRead(document.Data, indexField.Name, out value) == false)
+                    continue;
+
+                foreach (var luceneField in GetRegularFields(indexField, value))
                     yield return luceneField;
             }
         }
@@ -78,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         ///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
         ///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
         /// </summary>
-        private IEnumerable<AbstractField> GetRegularFields(IndexField field, object value)
+        private IEnumerable<AbstractField> GetRegularFields(IndexField field, object value, bool nestedArray = false)
         {
             var path = field.Name;
 
@@ -110,19 +112,20 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             {
                 int count = 1;
 
-                if (true) // TODO arek (nestedArray == false)
+                if (nestedArray == false)
                     yield return GetOrCreateField(path + IsArrayFieldSuffix, TrueString, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
                 foreach (var itemToIndex in itemsToIndex)
                 {
-                    //if (!CanCreateFieldsForNestedArray(itemToIndex, fieldIndexingOptions))
-                    //    continue;
+                    if (CanCreateFieldsForNestedArray(itemToIndex, indexing) == false)
+                        continue;
 
-                    //multipleItemsSameFieldCount.Add(count++);
-                    foreach (var fieldFromCollection in GetRegularFields(field, itemToIndex))
+                    _multipleItemsSameFieldCount.Add(count++);
+
+                    foreach (var fieldFromCollection in GetRegularFields(field, itemToIndex, nestedArray: true))
                         yield return fieldFromCollection;
 
-                    //multipleItemsSameFieldCount.RemoveAt(multipleItemsSameFieldCount.Count - 1);
+                    _multipleItemsSameFieldCount.RemoveAt(_multipleItemsSameFieldCount.Count - 1);
                 }
 
                 yield break;
@@ -143,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
         private Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, Field.Store store, Field.Index index, Field.TermVector termVector = Field.TermVector.NO)
         {
-            var cacheKey = new FieldCacheKey(name, index, store, termVector, new int[0]); // TODO [ppekrol]
+            var cacheKey = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray());
 
             Field field;
             CachedFieldItem<Field> cached;
@@ -156,14 +159,14 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
                 {
                     reader = new LazyStringReader();
 
-                    field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), reader.GetTextReaderFor(lazyValue));
+                    field = new Field(CreateFieldName(name), reader.GetTextReaderFor(lazyValue));
                 }
                 else
                 {
                     if (value == null)
                         reader = new LazyStringReader();
 
-                    field = new Field(IndexField.ReplaceInvalidCharactersInFieldName(name), value ?? reader.GetStringFor(lazyValue), store, index);
+                    field = new Field(CreateFieldName(name), value ?? reader.GetStringFor(lazyValue), store, index);
                 }
 
                 field.Boost = 1;
@@ -192,7 +195,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         {
             var fieldName = field.Name + "_Range";
 
-            var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector, new int[0]);// TODO arek multipleItemsSameFieldCount.ToArray());
+            var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector, _multipleItemsSameFieldCount.ToArray());
 
             NumericField numericField;
             CachedFieldItem<NumericField> cached;
@@ -201,7 +204,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             {
                 _numericFieldsCache[cacheKey] = cached = new CachedFieldItem<NumericField>
                 {
-                    Field = numericField = new NumericField(IndexField.ReplaceInvalidCharactersInFieldName(fieldName), storage, true)
+                    Field = numericField = new NumericField(CreateFieldName(fieldName), storage, true)
                 };
             }
             else
@@ -239,6 +242,26 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             {
                 throw new NotImplementedException($"Could not create numeric field from type: {value.GetType().FullName}");
             }
+        }
+
+        private string CreateFieldName(string name)
+        {
+            var result = IndexField.ReplaceInvalidCharactersInFieldName(name);
+
+            _fieldNames.Add(result);
+
+            return result;
+        }
+
+        private static bool CanCreateFieldsForNestedArray(object value, Field.Index index)
+        {
+            if (index.IsAnalyzed() == false)
+                return true;
+
+            if (value == null)
+                return false;
+
+            return true;
         }
 
         public void Dispose()
