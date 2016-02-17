@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Sparrow.Collections;
 
@@ -23,11 +24,13 @@ namespace Raven.Server.Documents
         public void Connect(NotificationsClientConnection connection)
         {
             _connections.Add(connection);
+            Task.Run(connection.StartSendingNotifications);
         }
 
         public void Disconnect(NotificationsClientConnection connection)
         {
             _connections.TryRemove(connection);
+            connection.Dispose();
         }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
@@ -12,10 +14,12 @@ using Sparrow.Collections;
 
 namespace Raven.Server.Documents
 {
-    public class NotificationsClientConnection
+    public class NotificationsClientConnection : IDisposable
     {
         private readonly WebSocket _webSocket;
         private readonly DocumentDatabase _documentDatabase;
+        private readonly BlockingCollection<DynamicJsonValue> _sendQueue = new BlockingCollection<DynamicJsonValue>();
+        private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
 
         private readonly ConcurrentSet<string> _matchingIndexes =
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -155,23 +159,45 @@ namespace Raven.Server.Documents
                     ["Etag"] = notification.Etag,
                 },
             };
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            SendInternal(value);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
+            _sendQueue.Add(value, _disposeToken.Token);
         }
 
-        private async Task SendInternal(DynamicJsonValue value)
+        public async Task StartSendingNotifications()
         {
             MemoryOperationContext context;
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 var buffer = context.GetManagedBuffer();
-                var stream = new MemoryStream(buffer);
-                var writer = new BlittableJsonTextWriter(context, stream);
-                context.Write(writer, value);
+                using (var ms = new MemoryStream(buffer))
+                {
+                    while (true)
+                    {
+                        if (_disposeToken.IsCancellationRequested)
+                            break;
 
-                await _webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, writer.Position), WebSocketMessageType.Text, true, _documentDatabase.DatabaseShutdown);
+                        ms.Position = 0;
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        {
+                            var value = _sendQueue.Take(_disposeToken.Token);
+                            context.Write(writer, value);
+
+                            while (_sendQueue.TryTake(out value) &&
+                                   ms.Length > 4096 - 512)
+                            {
+                                context.Write(writer, value);
+                            }
+                        }
+
+                        await _webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, (int) ms.Position), WebSocketMessageType.Text, true, _disposeToken.Token);
+                    }
+                }
             }
+        }
+
+        public void Dispose()
+        {
+            _disposeToken.Cancel();
         }
     }
 }
