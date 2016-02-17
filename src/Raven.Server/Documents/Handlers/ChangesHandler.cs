@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+﻿// ------------------------------------------------------------[-----------
 //  <copyright file="ChangesHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -34,14 +34,20 @@ namespace Raven.Server.Documents.Handlers
                     using (ContextPool.AllocateOperationContext(out context))
                     {
                         var buffer = context.GetManagedBuffer();
-                        var receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
+                        var segments = new[]
+                        {
+                            new ArraySegment<byte>(buffer,0, buffer.Length/2),
+                            new ArraySegment<byte>(buffer,buffer.Length/2, buffer.Length/2)
+                        };
+                        int index = 0;
+                        var receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
                         var jsonParserState = new JsonParserState();
                         using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                         {
                             var result = await receiveAsync;
-                            parser.SetBuffer(buffer, result.Count);
-                            var length = result.Count;
-                            receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, length, buffer.Length - length), Database.DatabaseShutdown);
+                            parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
+                            index++;
+                            receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
 
                             while (true)
                             {
@@ -52,13 +58,11 @@ namespace Raven.Server.Documents.Handlers
                                     while (builder.Read() == false)
                                     {
                                         result = await receiveAsync;
-                                        parser.SetBuffer(new ArraySegment<byte>(buffer, length, result.Count));
-                                        length += result.Count;
-                                        if (length - 4096 < 128) // If we have small space to write, we go back to the start
-                                        {
-                                            length = 0;
-                                        }
-                                        receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, length, buffer.Length - length), Database.DatabaseShutdown);
+
+                                        parser.SetBuffer(new ArraySegment<byte>(segments[index].Array, segments[index].Offset, result.Count));
+                                        if (++index >= segments.Length)
+                                            index = 0;
+                                        receiveAsync = webSocket.ReceiveAsync(segments[index], Database.DatabaseShutdown);
                                     }
 
                                     builder.FinalizeDocument();
