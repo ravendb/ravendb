@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents
@@ -161,7 +162,7 @@ namespace Raven.Server.Documents
 
         private async Task SendInternal(DynamicJsonValue value)
         {
-            RavenOperationContext context;
+            MemoryOperationContext context;
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 var buffer = context.GetManagedBuffer();

@@ -12,6 +12,7 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     //TODO: select small context size (maybe pool just for them?)
-                    RavenOperationContext context;
+                    MemoryOperationContext context;
                     using (ContextPool.AllocateOperationContext(out context))
                     {
                         var buffer = context.GetManagedBuffer();
