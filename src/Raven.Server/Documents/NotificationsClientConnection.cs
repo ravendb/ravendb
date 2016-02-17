@@ -147,7 +147,7 @@ namespace Raven.Server.Documents
                 ["Type"] = "DocumentChangeNotification",
                 ["Value"] = new DynamicJsonValue
                 {
-                    ["Type"] = notification.Type,
+                    ["Type"] = (int)notification.Type,
                     ["Key"] = notification.Key,
                     ["CollectionName"] = notification.CollectionName,
                     ["TypeName"] = notification.TypeName,
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents
                 var writer = new BlittableJsonTextWriter(context, stream);
                 context.Write(writer, value);
 
-                await _webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, (int) stream.Length), WebSocketMessageType.Text, true, _documentDatabase.DatabaseShutdown);
+                await _webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, writer.Position), WebSocketMessageType.Text, true, _documentDatabase.DatabaseShutdown);
             }
         }
     }

@@ -43,12 +43,16 @@ namespace Raven.Server.Documents.Handlers
                         {
                             using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
                             {
+                                builder.ReadObject();
+                                
                                 while (builder.Read() == false)
                                 {
                                     result = await receiveAsync;
                                     receiveAsync = webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), Database.DatabaseShutdown);
                                     parser.SetBuffer(buffer, result.Count);
                                 }
+
+                                builder.FinalizeDocument();
 
                                 var reader = builder.CreateReader();
                                 string command, commandParameter;
@@ -60,6 +64,12 @@ namespace Raven.Server.Documents.Handlers
                                 }
 
                                 reader.TryGet("Param", out commandParameter);
+
+                                if (Match(command, "disconnect"))
+                                {
+                                    Database.Notifications.Disconnect(connection);
+                                    break;
+                                }
                                 HandelCommand(connection, command, commandParameter);
                             }
                         }
@@ -70,35 +80,32 @@ namespace Raven.Server.Documents.Handlers
 
         private void HandelCommand(NotificationsClientConnection connection, string command, string commandParameter)
         {
-            if (Match(command, "disconnect"))
-            {
-                Database.Notifications.Disconnect(connection);
-            }
-           /* else if (Match(command, "watch-index"))
-            {
-                connection.WatchIndex(commandParameter);
-            }
-            else if (Match(command, "unwatch-index"))
-            {
-                connection.UnwatchIndex(commandParameter);
-            }
-            else if (Match(command, "watch-indexes"))
-            {
-                connection.WatchAllIndexes();
-            }
-            else if (Match(command, "unwatch-indexes"))
-            {
-                connection.UnwatchAllIndexes();
-            }
-            else if (Match(command, "watch-transformers"))
-            {
-                connection.WatchTransformers();
-            }
-            else if (Match(command, "unwatch-transformers"))
-            {
-                connection.UnwatchTransformers();
-            }*/
-            else if (Match(command, "watch-doc"))
+            /* if (Match(command, "watch-index"))
+             {
+                 connection.WatchIndex(commandParameter);
+             }
+             else if (Match(command, "unwatch-index"))
+             {
+                 connection.UnwatchIndex(commandParameter);
+             }
+             else if (Match(command, "watch-indexes"))
+             {
+                 connection.WatchAllIndexes();
+             }
+             else if (Match(command, "unwatch-indexes"))
+             {
+                 connection.UnwatchAllIndexes();
+             }
+             else if (Match(command, "watch-transformers"))
+             {
+                 connection.WatchTransformers();
+             }
+             else if (Match(command, "unwatch-transformers"))
+             {
+                 connection.UnwatchTransformers();
+             }
+             else*/
+            if (Match(command, "watch-doc"))
             {
                 connection.WatchDocument(commandParameter);
             }

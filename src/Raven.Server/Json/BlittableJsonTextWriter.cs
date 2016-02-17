@@ -31,6 +31,8 @@ namespace Raven.Server.Json
             _buffer = context.GetManagedBuffer();
         }
 
+        public int Position => _pos;
+
         public void WriteToOrdered(BlittableJsonReaderObject obj)
         {
             WriteStartObject();
