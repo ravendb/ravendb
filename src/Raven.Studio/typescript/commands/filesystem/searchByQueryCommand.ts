@@ -1,7 +1,10 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 import pagedResultSet = require("common/pagedResultSet");
 import file = require("models/filesystem/file");
+import searchResults = require("models/filesystem/searchResults");
 
 class searchByQueryCommand  extends commandBase {
 

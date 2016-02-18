@@ -1,4 +1,3 @@
-/// <reference path="../../../models/dto.ts" />
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import simulateSqlReplicationCommand = require("commands/database/studio/simulateSqlReplicationCommand");
 import database = require("models/resources/database");

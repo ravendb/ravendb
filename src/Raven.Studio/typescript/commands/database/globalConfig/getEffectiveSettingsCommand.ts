@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 
-class getEffectiveSettingsCommand extends commandBase {Effective
+class getEffectiveSettingsCommand extends commandBase {
 
     constructor(private db: database) {
         super();

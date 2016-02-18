@@ -1,3 +1,5 @@
+/// <reference path="../../typings/tsd.d.ts" />
+
 import d3 = require('d3');
 
 class svgDownloader {

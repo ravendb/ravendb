@@ -1,3 +1,4 @@
+
 interface collectionInfoDto extends indexResultsDto<documentDto> {
 }
 

@@ -1,4 +1,4 @@
-/// <reference path="../models/dto.ts" />
+/// <reference path="../../typings/tsd.d.ts" />
 
 import alertType = require("common/alertType");
 import messagePublisher = require("common/messagePublisher");

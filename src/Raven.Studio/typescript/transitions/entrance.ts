@@ -1,3 +1,7 @@
+/// <reference path="../../typings/tsd.d.ts" />
+
+declare var define: RequireDefine;
+
 /**
  * Durandal 2.1.0 Copyright (c) 2012 Blue Spire Consulting, Inc. All Rights Reserved.
  * Available via the MIT license.

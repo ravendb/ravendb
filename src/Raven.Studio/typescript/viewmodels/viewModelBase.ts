@@ -1,3 +1,5 @@
+/// <reference path="../../typings/tsd.d.ts"/>
+
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");

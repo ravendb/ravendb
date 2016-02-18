@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 import serverValue = require("models/counter/serverValue");
 
 class counter {

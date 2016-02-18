@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class synchronizationDetail implements documentBase {
 
     fileName = ko.observable<string>();

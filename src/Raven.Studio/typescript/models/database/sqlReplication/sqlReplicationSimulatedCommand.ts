@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class sqlReplicationSimulatedCommand {
     showParamsValues = ko.observable<boolean>(false);
     commandData = ko.observable<commandData>();

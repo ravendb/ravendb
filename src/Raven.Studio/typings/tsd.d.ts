@@ -1,6 +1,11 @@
+/// <reference path="_studio/dto.ts"/>
+/// <reference path="_studio/filesystemDto.ts"/>
+/// <reference path="_studio/counterDto.ts"/>
+/// <reference path="_studio/timeSeriesDto.d.ts"/>
+/// <reference path="_studio/computedAppUrls.d.ts"/>
+/// <reference path="_studio/customTypings.d.ts" />
 /// <reference path="knockout/knockout.d.ts" />
 /// <reference path="jszip/jszip.d.ts" />
-/// <reference path="customTypings.d.ts" />
 /// <reference path="jquery/jquery.d.ts" />
 /// <reference path="bootstrap/bootstrap.d.ts" />
 /// <reference path="bootstrap.v3.datetimepicker/bootstrap.v3.datetimepicker.d.ts" />
