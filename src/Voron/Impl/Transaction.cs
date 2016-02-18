@@ -235,7 +235,7 @@ namespace Voron.Impl
             return null;
         }
 
-        public PrefixTree CreatePrefixTree(string name)
+        public PrefixTree CreatePrefixTree(string name, int subtreeDepth = 4)
         {
             PrefixTree tree = ReadPrefixTree(name);
             if (tree != null)
@@ -246,7 +246,7 @@ namespace Voron.Impl
 
             Slice key = name;
 
-            tree = PrefixTree.Create(LowLevelTransaction, LowLevelTransaction.RootObjects, name);
+            tree = PrefixTree.Create(LowLevelTransaction, LowLevelTransaction.RootObjects, name, subtreeDepth);
             tree.Name = name;
 
             var space = _lowLevelTransaction.RootObjects.DirectAdd(key, sizeof(PrefixTreeRootHeader));

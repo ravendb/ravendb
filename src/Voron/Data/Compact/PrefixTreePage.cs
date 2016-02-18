@@ -70,7 +70,11 @@ namespace Voron.Data.Compact
         public PtrBitVector FreeSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return new PtrBitVector((ulong*)DataPointer + Header->NodesPerChunk * sizeof(PrefixTree.Node), Header->NodesPerChunk); }
+            get
+            {
+                byte* freeSpace = DataPointer + Header->NodesPerChunk * sizeof(PrefixTree.Node);
+                return new PtrBitVector( freeSpace, Header->NodesPerChunk );
+            }
         }
 
         public override string ToString()
@@ -80,20 +84,21 @@ namespace Voron.Data.Compact
 
         public void Initialize()
         {
+            // We need to zero the values for the nodes in order to ensure that we will be getting proper data...
+            // We can relax this, but then we will have to remove some runtime checks (assertions). 
+            // Profile first, remove if necessary.
+            Memory.SetInline(DataPointer, 0x00, Header->NodesPerChunk * sizeof(PrefixTree.Node));
+
             byte* freeSpace = DataPointer + Header->NodesPerChunk * sizeof(PrefixTree.Node);
             Memory.SetInline(freeSpace, 0xFF, Header->NodesPerChunk / BitVector.BitsPerByte + 1);
         }
 
-        /// <summary>
-        /// Will return the offset from the <see cref="DataPointer"/> to the Node.
-        /// </summary>
-        /// <remarks>This method will not do any bound check</remarks>
-        /// <param name="nodeNameInTree">the relative name of the node in the tree.</param>
-        /// <returns>the offset in the page memory for that node</returns>
-        public static long GetNodeOffset(long nodeNameInTree)
-        {            
-            // TODO: Check if the formula is correct. 
-            return nodeNameInTree * sizeof(PrefixTree.Node);
+        public PrefixTree.Node* GetNodePointer(long relativeNodeName)
+        {
+            if (relativeNodeName >= Header->NodesPerChunk)
+                throw new InvalidOperationException("This shouldnt happen.");
+
+            return (PrefixTree.Node*)(this.DataPointer + (relativeNodeName * sizeof(PrefixTree.Node)));
         }
     }
 }
