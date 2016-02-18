@@ -192,8 +192,9 @@ namespace Voron.Data.Compact
                 }    
                 else
                 {
+                    _table = _tx.ModifyPage(_innerCopy.PageNumber);
                     GetFreeSpaceTable(_table).Set(chunkId, false);
-                }                
+                }
 
                 chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
             }

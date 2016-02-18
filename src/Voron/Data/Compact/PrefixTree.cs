@@ -416,7 +416,7 @@ namespace Voron.Data.Compact
                     Debug.Assert(toFix->IsInternal);
 
                     var exitNode = this.ReadNodeByName(exitNodeName);
-                    while (exitNode->IsInternal && toFix->JumpLeftPtr != insertedNodeName)
+                    while (exitNode->IsInternal && toFix->JumpLeftPtr != exitNodeName)
                     {
                         exitNodeName = ((Internal*)exitNode)->JumpLeftPtr;
                         exitNode = this.ReadNodeByName(exitNodeName);
@@ -1075,7 +1075,7 @@ namespace Voron.Data.Compact
             // TODO: Cache last access, it may be the very same page.
 
             var page = _tx.GetPage(location.PageNumber).ToPrefixTreePage();
-            return (Node*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
+            return page.GetNodePointer(location.NodeOffset);
         }
 
         private Node* ModifyNodeByName(long nodeName)
@@ -1105,7 +1105,7 @@ namespace Voron.Data.Compact
             // TODO: Cache last access, it may be the very same page.
 
             var page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();
-            return (Node*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
+            return page.GetNodePointer(location.NodeOffset);
         }
 
         private static bool IsTombstone(long nodeName)
@@ -1120,7 +1120,7 @@ namespace Voron.Data.Compact
             var location = _translationTable.MapVirtualToPhysical(nodeName);
             PrefixTreePage page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();
 
-            ptr = (Internal*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
+            ptr = (Internal*)page.GetNodePointer(location.NodeOffset);
             Debug.Assert(ptr->Type == NodeType.Uninitialized);
             ptr->Initialize(nameLength, extentLength);
 
@@ -1134,7 +1134,7 @@ namespace Voron.Data.Compact
             var location = _translationTable.MapVirtualToPhysical(nodeName);
             PrefixTreePage page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();            
 
-            ptr = (Leaf*)(page.DataPointer + PrefixTreePage.GetNodeOffset(location.NodeOffset));
+            ptr = (Leaf*)page.GetNodePointer(location.NodeOffset);
             Debug.Assert(ptr->Type == 0);
             ptr->Initialize(nameLength);
             ptr->DataPtr = dataPtr;
