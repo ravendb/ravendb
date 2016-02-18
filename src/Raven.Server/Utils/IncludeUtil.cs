@@ -1,109 +1,69 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 
 namespace Raven.Server.Utils
 {
     public static class IncludeUtil
     {
-        private static readonly char[] IncludeSeparators = { '.', ',', '(' };
         private const char PrefixSeparator = '(';
-        private const char ArraySeparator = ',';
+        private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
+        private static readonly BlittableJsonTraverser Traverser = new BlittableJsonTraverser();
 
         public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath, HashSet<string> includedIds)
         {
-            var indexOfFirstSeparator = includePath.IndexOfAny(IncludeSeparators, 0);
-            object reader;
+            var indexOfPrefixStart = includePath.IndexOfAny(PrefixSeparatorChar, 0);
 
-            //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
-            if (docReader.TryGetMember(includePath.SubSegment(0, indexOfFirstSeparator), out reader) == false)
+            StringSegment pathSegment;
+            StringSegment? prefix = null;
+
+            if (indexOfPrefixStart != -1)
+            {
+                prefix = includePath.SubSegment(indexOfPrefixStart + 1);
+                pathSegment = includePath.SubSegment(0, indexOfPrefixStart);
+            }
+            else
+            {
+                pathSegment = includePath;
+            }
+
+            object value;
+            if (Traverser.TryRead(docReader, pathSegment, out value) == false)
                 return;
 
-            var pathSegment = includePath.SubSegment(indexOfFirstSeparator + 1);
-            switch (indexOfFirstSeparator != -1 ? includePath[indexOfFirstSeparator] : ' ')
-            {
-                case '.':
-                    var subObject = reader as BlittableJsonReaderObject;
-                    if(subObject != null)
-                        GetDocIdFromInclude(subObject, pathSegment, includedIds);
-                    return;
-                case ',':
-                    var subArray = reader as BlittableJsonReaderArray;
-                    if (subArray != null)
-                        HandleArrayReader(subArray, pathSegment, includedIds);
-                    break;
-                case '(':
-                    if (includePath[includePath.Length - 1] != ')') //precaution
-                        return;
-                    
-                    var idWithPrefix = HandlePrefix(docReader, includePath, indexOfFirstSeparator);
-                    if(idWithPrefix != null)
-                        includedIds.Add(idWithPrefix);
-                    break;
-                default:
-                    object value;
-                    if (docReader.TryGetMember(includePath, out value))
-                    {
-                        var includedId = BlittableValueToString(value);
-                        if(includedId != null)
-                            includedIds.Add(includedId);
-                    }
-                    return;
-            }			
-        }
+            var collectionOfIds = value as IEnumerable;
 
-        private static void HandleArrayReader(BlittableJsonReaderArray array, StringSegment pathSegment, HashSet<string> includedIds)
-        {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < array.Length; i++)
+            if (collectionOfIds != null)
             {
-                var item = array[i];
-                var arrayObject = item as BlittableJsonReaderObject;
-                if (arrayObject != null)
+                foreach (var item in collectionOfIds)
                 {
-                    GetDocIdFromInclude(arrayObject, pathSegment, includedIds);
+                    var id = prefix == null ? BlittableValueToString(item) : HandlePrefixValue(item, prefix.Value);
+                    if (id != null)
+                        includedIds.Add(id);
                 }
-                else
-                {
-                    var arrayReader = item as BlittableJsonReaderArray;
-                    if (arrayReader != null)
-                    {
-                        var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(IncludeSeparators, 0);
-                        var subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
-                        HandleArrayReader(arrayReader,
-                            subSegment,			                
-                            includedIds);
-                        continue;
-                    }
-
-                    var includedId = BlittableValueToString(item);
-                    if (includedId != null)
-                    {
-                        includedIds.Add(pathSegment.Length > 0 && pathSegment[0] == PrefixSeparator ? 
-                            ValueWithPrefix(pathSegment, 0, item) : includedId);
-                    }
-                }
+            }
+            else
+            {
+                var includedId = prefix == null ? BlittableValueToString(value) : HandlePrefixValue(value, prefix.Value);
+                if (includedId != null)
+                    includedIds.Add(includedId);
             }
         }
 
-        private static string HandlePrefix(BlittableJsonReaderObject reader, StringSegment pathSegment, int indexOfSeparator)
+        private static string HandlePrefixValue(object val, StringSegment prefixSegment)
         {
-            object val;
-            if (!reader.TryGetMember(pathSegment.SubSegment(0, indexOfSeparator), out val))
-                return null;
-        
             var doubleVal = val as LazyDoubleValue;
             if (doubleVal != null)
                 val = doubleVal.Inner;
 
-            return ValueWithPrefix(pathSegment, indexOfSeparator, val);
+            return ValueWithPrefix(prefixSegment, val);
         }
 
-        private static string ValueWithPrefix(StringSegment pathSegment, int indexOfSeparator, object val)
+        private static string ValueWithPrefix(StringSegment prefixSegment, object val)
         {
-            var prefix = pathSegment.SubSegment(indexOfSeparator + 1, pathSegment.Length - indexOfSeparator - 2);
+            var prefix = prefixSegment.SubSegment(0, prefixSegment.Length - 1);
             return (prefix.Length > 0) && (prefix[prefix.Length - 1] != '/') ? null : $"{prefix}{val}";
         }
 

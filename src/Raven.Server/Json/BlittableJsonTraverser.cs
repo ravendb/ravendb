@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Json
 {
-    public class BlittableJsonTraverser // TODO arek - based on IncludeUtilTests - maybe it should be used there to get ids of included docs
+    public class BlittableJsonTraverser
     {
         private const char PropertySeparator = '.';
         private const char CollectionSeparator = ',';
@@ -55,14 +57,6 @@ namespace Raven.Server.Json
                     }
 
                     throw new InvalidOperationException($"Invalid path. After the collection separator ('{CollectionSeparator}') {reader.GetType().FullName} object has been ancountered instead of {nameof(BlittableJsonReaderArray)}.");
-                //case '(':
-                //    if (includePath[includePath.Length - 1] != ')') //precaution
-                //        return;
-
-                //    var idWithPrefix = HandlePrefix(docReader, includePath, indexOfFirstSeparator);
-                //    if (idWithPrefix != null)
-                //        includedIds.Add(idWithPrefix);
-                //    break;
                 default:
                     throw new NotSupportedException($"Unhandled separator character: {path[indexOfFirstSeparator]}");
             }
@@ -80,7 +74,19 @@ namespace Raven.Server.Json
                     object result;
                     if (TryRead(arrayObject, pathSegment, out result))
                     {
-                        yield return result;
+                        var enumerable = result as IEnumerable;
+
+                        if (enumerable != null)
+                        {
+                            foreach (var nestedItem in enumerable)
+                            {
+                                yield return nestedItem;
+                            }
+                        }
+                        else
+                        {
+                            yield return result;
+                        }
                     }
                 }
                 else
@@ -91,12 +97,15 @@ namespace Raven.Server.Json
                         var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(_separators, 0);
                         var subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
 
-                        yield return ReadArray(arrayReader, subSegment); //TODO arek
-                        
-                        continue;
+                        foreach (var nestedItem in ReadArray(arrayReader, subSegment))
+                        {
+                            yield return nestedItem;
+                        }
                     }
-
-                    yield return item;
+                    else
+                    {
+                        yield return item;
+                    }
                 }
             }
         }

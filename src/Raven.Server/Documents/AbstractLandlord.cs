@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents
 {

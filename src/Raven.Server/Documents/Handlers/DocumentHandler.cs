@@ -20,7 +20,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using StringSegment = Raven.Server.Routing.StringSegment;
+using StringSegment = Raven.Server.Utils.StringSegment;
 
 namespace Raven.Server.Documents.Handlers
 {
