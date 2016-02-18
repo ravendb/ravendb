@@ -87,6 +87,7 @@
     <Compile Include="..\Raven.Bundles.Authorization\OperationAllowedResult.cs">
       <Link>Model\OperationAllowedResult.cs</Link>
     </Compile>
+    <Compile Include="AuthorizationClientAsyncExtensions.cs" />
     <Compile Include="AuthorizationClientExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
