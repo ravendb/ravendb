@@ -374,6 +374,12 @@ namespace Raven.Server.Json
         {
             Flush();
         }
-        
+
+        public void WriteNewLine()
+        {
+            EnsureBuffer(2);
+            _buffer[_pos++] = (byte) '\r';
+            _buffer[_pos++] = (byte) '\n';
+        }
     }
 }

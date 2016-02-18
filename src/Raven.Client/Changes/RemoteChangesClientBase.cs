@@ -112,7 +112,7 @@ namespace Raven.Client.Changes
                         ms.Position = 0;
                         ArraySegment<byte> bytes;
                         ms.TryGetBuffer(out bytes);
-                        var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int)ms.Position, (int)(ms.Capacity - ms.Position)),
+                        var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int)ms.Position, (int)(ms.Length - ms.Position)),
                             disposedToken.Token);
                         ms.Position = result.Count;
                         if (result.MessageType == WebSocketMessageType.Close)
@@ -123,26 +123,25 @@ namespace Raven.Client.Changes
 
                         while (result.EndOfMessage == false)
                         {
-                            if (ms.Capacity - ms.Position < 1024)
+                            if (ms.Length - ms.Position < 1024)
                                 ms.SetLength(ms.Length + 4096);
                             ms.TryGetBuffer(out bytes);
-                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int)ms.Position, (int)(ms.Capacity - ms.Position)), CancellationToken.None);
+                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int)ms.Position, (int)(ms.Length - ms.Position)), CancellationToken.None);
                             ms.Position += result.Count;
                         }
 
                         ms.SetLength(ms.Position);
                         ms.Position = 0;
 
-                        using (var reader = new StreamReader(ms, Encoding.UTF8, true, 4096, true))
-                        using (var jsonReader = new RavenJsonTextReader(reader))
+                        using (var reader = new StreamReader(ms, Encoding.UTF8, true, 1024, true))
+                        using (var jsonReader = new RavenJsonTextReader(reader)
                         {
-                            jsonReader.SupportMultipleContent = true;
-
-                            while (jsonReader.Read())
-                            {
-                                var ravenJObject = RavenJObject.Load(jsonReader);
-                                HandleRevicedNotification(ravenJObject);
-                            }
+                            SupportMultipleContent = true
+                        })
+                        while (jsonReader.Read())
+                        {
+                            var ravenJObject = RavenJObject.Load(jsonReader);
+                            HandleRevicedNotification(ravenJObject);
                         }
                     }
                 }

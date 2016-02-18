@@ -168,15 +168,14 @@ namespace Raven.Server.Documents
             MemoryOperationContext context;
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                var buffer = context.GetManagedBuffer();
-                using (var ms = new MemoryStream(buffer))
+                using (var ms = new MemoryStream())
                 {
                     while (true)
                     {
                         if (_disposeToken.IsCancellationRequested)
                             break;
 
-                        ms.Position = 0;
+                        ms.SetLength(0);
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             DynamicJsonValue value;
@@ -189,17 +188,20 @@ namespace Raven.Server.Documents
                                 break;
                             }
                             context.Write(writer, value);
-                            writer.Flush();
-
-                            while (_sendQueue.TryTake(out value) &&
-                                   ms.Position < 4096 - 256)
+                            
+                            while (_sendQueue.TryTake(out value))
                             {
+                                writer.WriteNewLine();
                                 context.Write(writer, value);
-                                writer.Flush();
+                              
+                                if (ms.Length > 16*1024)
+                                    break;
                             }
                         }
 
-                        await _webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, (int) ms.Position), WebSocketMessageType.Text, true, _disposeToken.Token);
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+                        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken.Token);
                     }
                 }
             }
