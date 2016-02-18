@@ -106,53 +106,43 @@ namespace Raven.Client.Changes
                     ms.SetLength(4096);
                     while (webSocket.State == WebSocketState.Open)
                     {
+                        if (ms.Length > 4096*16)
+                            ms.SetLength(4096);
+
                         ms.Position = 0;
                         ArraySegment<byte> bytes;
                         ms.TryGetBuffer(out bytes);
                         var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int)ms.Position, (int)(ms.Capacity - ms.Position)),
                             disposedToken.Token);
-                        ms.SetLength(ms.Length + result.Count);
+                        ms.Position = result.Count;
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
                             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                             return;
                         }
-                        
+
                         while (result.EndOfMessage == false)
                         {
-                            if (ms.Capacity - ms.Length < 1024)
-                                ms.Capacity += 4096;
+                            if (ms.Capacity - ms.Position < 1024)
+                                ms.SetLength(ms.Length + 4096);
                             ms.TryGetBuffer(out bytes);
-                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int) ms.Position, (int) (ms.Capacity - ms.Position)), CancellationToken.None);
-                            ms.SetLength(ms.Length + result.Count);
+                            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(bytes.Array, (int)ms.Position, (int)(ms.Capacity - ms.Position)), CancellationToken.None);
+                            ms.Position += result.Count;
                         }
 
-                        RavenJObject ravenJObject;
+                        ms.SetLength(ms.Position);
                         ms.Position = 0;
-                        using (var reader = new StreamReader(ms, Encoding.UTF8, true, 1024, true))
+
+                        using (var reader = new StreamReader(ms, Encoding.UTF8, true, 4096, true))
                         using (var jsonReader = new RavenJsonTextReader(reader))
                         {
-                            ravenJObject = RavenJObject.Load(jsonReader);
-                        }
+                            jsonReader.SupportMultipleContent = true;
 
-                        var value = ravenJObject.Value<RavenJObject>("Value");
-                        var type = ravenJObject.Value<string>("Type");
-                        if (logger.IsDebugEnabled)
-                            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, ravenJObject.ToString());
-
-                        switch (type)
-                        {
-                            case "Disconnect":
-                                webSocket.Dispose();
-                                // TODO: RenewConnection();
-                                break;
-                            case "Initialized":
-                            case "Heartbeat":
-                                throw new NotSupportedException(); // Should be deleted
-                            default:
-                                NotifySubscribers(type, value, Counters.Snapshot);
-                                break;
-
+                            while (jsonReader.Read())
+                            {
+                                var ravenJObject = RavenJObject.Load(jsonReader);
+                                HandleRevicedNotification(ravenJObject);
+                            }
                         }
                     }
                 }
@@ -160,6 +150,28 @@ namespace Raven.Client.Changes
             catch (WebSocketException ex)
             {
                 logger.DebugException("Failed to receive a message, client was probably disconnected", ex);
+            }
+        }
+
+        private void HandleRevicedNotification(RavenJObject ravenJObject)
+        {
+            var value = ravenJObject.Value<RavenJObject>("Value");
+            var type = ravenJObject.Value<string>("Type");
+            if (logger.IsDebugEnabled)
+                logger.Debug("Got notification from {0} id {1} of type {2}", url, id, ravenJObject.ToString());
+
+            switch (type)
+            {
+                case "Disconnect":
+                    webSocket.Dispose();
+                    // TODO: RenewConnection();
+                    break;
+                case "Initialized":
+                case "Heartbeat":
+                    throw new NotSupportedException(); // Should be deleted
+                default:
+                    NotifySubscribers(type, value, Counters.Snapshot);
+                    break;
             }
         }
 
