@@ -79,8 +79,8 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (database = CreateDocumentDatabase(runInMemory: false))
                 {
-                    Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String) })));
-                    Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.String) })));
+                    Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String, true) })));
+                    Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.Float, false) })));
                 }
 
                 using (database = CreateDocumentDatabase(runInMemory: false))
@@ -93,6 +93,22 @@ namespace FastTests.Server.Documents.Indexing
                         .ToList();
 
                     Assert.Equal(2, indexes.Count);
+
+                    Assert.Equal(1, indexes[0].IndexId);
+                    Assert.Equal(1, indexes[0].Definition.Collections.Length);
+                    Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                    Assert.Equal(1, indexes[0].Definition.MapFields.Length);
+                    Assert.Equal("Name1", indexes[0].Definition.MapFields[0].Name);
+                    Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields[0].SortOption);
+                    Assert.True(indexes[0].Definition.MapFields[0].Highlighted);
+
+                    Assert.Equal(2, indexes[1].IndexId);
+                    Assert.Equal(1, indexes[1].Definition.Collections.Length);
+                    Assert.Equal("Users", indexes[1].Definition.Collections[0]);
+                    Assert.Equal(1, indexes[1].Definition.MapFields.Length);
+                    Assert.Equal("Name2", indexes[1].Definition.MapFields[0].Name);
+                    Assert.Equal(SortOptions.Float, indexes[1].Definition.MapFields[0].SortOption);
+                    Assert.False(indexes[1].Definition.MapFields[0].Highlighted);
                 }
             }
             finally

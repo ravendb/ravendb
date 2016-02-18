@@ -162,12 +162,16 @@ namespace Raven.Server.Documents.Indexes
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
 
-                    using (var tx = _environment.WriteTransaction())
+                    TransactionOperationContext context;
+                    using (_contextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenWriteTransaction())
                     {
                         var typeInt = (int)Type;
 
-                        var statsTree = tx.CreateTree("Stats");
+                        var statsTree = tx.InnerTransaction.CreateTree("Stats");
                         statsTree.Add(TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
+
+                        Definition.Persist(context);
 
                         tx.Commit();
                     }

@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Raven.Abstractions.Indexing;
+using Raven.Server.Json;
+using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
@@ -63,6 +68,99 @@ namespace Raven.Server.Documents.Indexes.Auto
             }
 
             return fields.Count == 0 ? $"Auto/{collection}" : $"Auto/{collection}/By{combinedFields}";
+        }
+
+        public override void Persist(TransactionOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree("Definition");
+            using (var stream = new MemoryStream())
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                writer.WriteStartObject();
+
+                var collection = Collections.First();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(Collections)));
+                writer.WriteString(context.GetLazyString(collection));
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var field in _fields)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.Name)));
+                    writer.WriteString(context.GetLazyString(field.Name));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.Highlighted)));
+                    writer.WriteBool(field.Highlighted);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.SortOption)));
+                    writer.WriteInteger((int)(field.SortOption ?? SortOptions.None));
+
+                    writer.WriteEndObject();
+
+                    first = false;
+                }
+                writer.WriteEndArray();
+
+                writer.WriteEndObject();
+
+                writer.Flush();
+
+                stream.Position = 0;
+                tree.Add(DefinitionSlice, stream.ToArray());
+            }
+        }
+
+        public static AutoIndexDefinition Load(StorageEnvironment environment)
+        {
+            using (var pool = new UnmanagedBuffersPool(nameof(AutoIndexDefinition)))
+            using (var context = new MemoryOperationContext(pool))
+            using (var tx = environment.ReadTransaction())
+            {
+                var tree = tx.CreateTree("Definition");
+                var result = tree.Read(DefinitionSlice);
+                if (result == null)
+                    return null;
+
+                using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
+                {
+                    string collection;
+                    reader.TryGet(nameof(Collections), out collection);
+
+                    BlittableJsonReaderArray jsonArray;
+                    reader.TryGet(nameof(MapFields), out jsonArray);
+
+                    var fields = new AutoIndexField[jsonArray.Length];
+                    for (var i = 0; i < jsonArray.Length; i++)
+                    {
+                        var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
+
+                        string name;
+                        json.TryGet(nameof(AutoIndexField.Name), out name);
+
+                        bool highlighted;
+                        json.TryGet(nameof(AutoIndexField.Highlighted), out highlighted);
+
+                        int sortOptionAsInt;
+                        json.TryGet(nameof(AutoIndexField.SortOption), out sortOptionAsInt);
+
+                        var field = new AutoIndexField(name, (SortOptions)sortOptionAsInt, highlighted);
+
+                        fields[i] = field;
+                    }
+
+                    return new AutoIndexDefinition(collection, fields);
+                }
+            }
         }
     }
 }
