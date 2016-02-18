@@ -179,13 +179,23 @@ namespace Raven.Server.Documents
                         ms.Position = 0;
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
-                            var value = _sendQueue.Take(_disposeToken.Token);
+                            DynamicJsonValue value;
+                            try
+                            {
+                                value = _sendQueue.Take(_disposeToken.Token);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                break;
+                            }
                             context.Write(writer, value);
+                            writer.Flush();
 
                             while (_sendQueue.TryTake(out value) &&
-                                   ms.Length > 4096 - 512)
+                                   ms.Position < 4096 - 256)
                             {
                                 context.Write(writer, value);
+                                writer.Flush();
                             }
                         }
 
