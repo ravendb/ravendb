@@ -129,7 +129,7 @@ namespace FastTests.Voron.Compact
         private long AddAndDumpToPrefixTree(PrefixTree tree, Table table, string key, string value)
         {
             long res = AddToPrefixTree(tree, table, key, value);
-            DumpTree(tree);
+            //DumpTree(tree);
             return res;
         }
 
