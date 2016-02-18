@@ -24,8 +24,6 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckDispose()
         {
-            var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
-
             using (var database = CreateDocumentDatabase())
             {
                 var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
@@ -51,12 +49,9 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact(Skip = "currently failing")]
+        [Fact]
         public void SimpleIndexing()
         {
-            var indexingConfiguration = new IndexingConfiguration(() => true, () => null);
-            indexingConfiguration.Initialize(new ConfigurationBuilder().Build());
-
             using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database))
@@ -114,6 +109,15 @@ namespace FastTests.Server.Documents.Indexing
                         }
 
                         WaitForIndexMap(index, 3);
+
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            database.DocumentsStorage.Delete(context, "key/1", null);
+
+                            tx.Commit();
+                        }
+
+                        WaitForTombstone(index, 4);
                     }
                 }
             }
@@ -125,6 +129,12 @@ namespace FastTests.Server.Documents.Indexing
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == etag, timeout));
         }
 
+        private static void WaitForTombstone(Index index, long etag)
+        {
+            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
+            Assert.True(SpinWait.SpinUntil(() => index.GetLastTombstoneEtag() == etag, timeout));
+        }
+
         private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -132,7 +142,11 @@ namespace FastTests.Server.Documents.Indexing
 
         private static DocumentDatabase CreateDocumentDatabase()
         {
-            var documentDatabase = new DocumentDatabase("Test", new RavenConfiguration { Core = { RunInMemory = true } });
+            var configuration = new RavenConfiguration();
+            configuration.Initialize();
+            configuration.Core.RunInMemory = true;
+
+            var documentDatabase = new DocumentDatabase("Test", configuration);
             documentDatabase.Initialize();
 
             return documentDatabase;

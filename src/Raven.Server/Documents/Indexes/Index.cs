@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes
             IndexId = indexId;
             Type = type;
             Definition = definition;
-            IndexPersistence = new LuceneIndexPersistance();
+            IndexPersistence = new LuceneIndexPersistance(indexId, definition.Name);
 
             DocumentConverter = new LuceneDocumentConverter(definition.MapFields);
         }
@@ -245,6 +245,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public long GetLastTombstoneEtag()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.OpenReadTransaction())
+                {
+                    return ReadLastTombstoneEtag(tx);
+                }
+            }
+        }
+
         protected long ReadLastTombstoneEtag(RavenTransaction tx)
         {
             return ReadLastEtag(tx, LastTombstoneEtagSlice);
@@ -354,17 +366,21 @@ namespace Raven.Server.Documents.Indexes
 
                 var count = 0;
                 var lastEtag = lastTombstoneEtag;
-                foreach (var tombstone in _documentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, int.MaxValue))
+
+                using (var indexActions = IndexPersistence.Open())
                 {
-                    token.ThrowIfCancellationRequested();
+                    foreach (var tombstone in _documentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, int.MaxValue))
+                    {
+                        token.ThrowIfCancellationRequested();
 
-                    count++;
-                    lastEtag = tombstone.Etag;
+                        count++;
+                        lastEtag = tombstone.Etag;
 
-                    if (tombstone.DeletedEtag > lastMappedEtag)
-                        continue; // no-op, we have not yet indexed this document
+                        if (tombstone.DeletedEtag > lastMappedEtag)
+                            continue; // no-op, we have not yet indexed this document
 
-                    // delete
+                        indexActions.Delete(tombstone.Key);
+                    }
                 }
 
                 if (count == 0)
@@ -406,15 +422,15 @@ namespace Raven.Server.Documents.Indexes
                     return;
 
                 var startEtag = lastMappedEtag + 1;
-                var etags = Collections.ToDictionary(x => x, x => startEtag);
+                var etags = Collections.ToDictionary(x => x, x => lastMappedEtag);
                 var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfItemsToFetchForMap;
 
-                foreach (var collection in Collections)
+                using (var indexActions = IndexPersistence.Open())
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    IndexPersistence.Write(addToIndex =>
+                    foreach (var collection in Collections)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         var count = 0;
                         using (databaseContext.OpenReadTransaction())
                         {
@@ -445,7 +461,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 try
                                 {
-                                    addToIndex(convertedDocument);
+                                    indexActions.Write(convertedDocument);
                                 }
                                 catch (Exception)
                                 {
@@ -466,14 +482,14 @@ namespace Raven.Server.Documents.Indexes
                         if (count == 0)
                             return;
 
-                        if (count != pageSize && _mre.IsSet == false)
-                            _mre.Set();
-                    });
+                        if (count == pageSize && _mre.IsSet == false)
+                            _mre.Set(); // might be more
+                    }
                 }
 
                 var lastEtag = etags
                     .Select(x => x.Value)
-                    .Where(x => x != startEtag)
+                    .Where(x => x > lastMappedEtag)
                     .DefaultIfEmpty(0)
                     .Min();
 
