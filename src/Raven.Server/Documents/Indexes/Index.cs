@@ -11,6 +11,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly Slice LastTombstoneEtagSlice = "LastTombstoneEtag";
 
-        protected readonly LuceneIndexPersistance IndexPersistence;
+        protected readonly LuceneIndexPersistance IndexPersistance;
 
         private readonly object _locker = new object();
 
@@ -70,14 +71,10 @@ namespace Raven.Server.Documents.Indexes
             IndexId = indexId;
             Type = type;
             Definition = definition;
-            IndexPersistence = new LuceneIndexPersistance(indexId, definition.Name);
-
-            DocumentConverter = new LuceneDocumentConverter(definition.MapFields);
+            IndexPersistance = new LuceneIndexPersistance(indexId, definition);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
         }
-
-        public LuceneDocumentConverter DocumentConverter { get; }
-
+        
         public static Index Open(int indexId, string path, DocumentDatabase documentDatabase)
         {
             var options = StorageEnvironmentOptions.ForPath(path);
@@ -175,7 +172,7 @@ namespace Raven.Server.Documents.Indexes
                         tx.Commit();
                     }
 
-                    IndexPersistence.Initialize(_documentDatabase.Configuration.Indexing);
+                    IndexPersistance.Initialize(_documentDatabase.Configuration.Indexing);
 
                     _initialized = true;
                 }
@@ -217,9 +214,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexingTask?.Wait();
                 _indexingTask = null;
-
-                DocumentConverter?.Dispose();
-
+                
                 _environment?.Dispose();
                 _environment = null;
 
@@ -370,7 +365,7 @@ namespace Raven.Server.Documents.Indexes
                 var lastEtag = lastTombstoneEtag;
                 var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
-                using (var indexActions = IndexPersistence.Open())
+                using (var indexActions = IndexPersistance.Write())
                 {
                     var sw = Stopwatch.StartNew();
                     foreach (var tombstone in _documentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, pageSize))
@@ -431,7 +426,7 @@ namespace Raven.Server.Documents.Indexes
                 var etags = Collections.ToDictionary(x => x, x => lastMappedEtag);
                 var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
-                using (var indexActions = IndexPersistence.Open())
+                using (var indexActions = IndexPersistance.Write())
                 {
                     foreach (var collection in Collections)
                     {
@@ -449,25 +444,10 @@ namespace Raven.Server.Documents.Indexes
                                 count++;
                                 fetchedTotalSizeInBytes.Add(document.Data.Size, SizeUnit.Bytes);
                                 etags[collection] = document.Etag;
-
-                                Lucene.Net.Documents.Document convertedDocument;
-
+                                
                                 try
                                 {
-                                    convertedDocument = DocumentConverter.ConvertToCachedDocument(document);
-                                }
-                                catch (Exception)
-                                {
-                                    // TODO [ppekrol] log that conversion failed, we need to keep going, add indexing errors
-                                    continue;
-                                }
-
-                                if (convertedDocument == null)
-                                    continue;
-
-                                try
-                                {
-                                    indexActions.Write(convertedDocument);
+                                    indexActions.Write(document);
                                 }
                                 catch (Exception)
                                 {
@@ -516,12 +496,38 @@ namespace Raven.Server.Documents.Indexes
         {
         }
 
-        public QueryResult Query(IndexQuery query)
+        public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext context, CancellationToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
-            throw new NotImplementedException();
+            TransactionOperationContext indexContext;
+            var result = new DocumentQueryResult();
+
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            {
+                long lastEtag;
+                result.IsStale = IsStale(context, indexContext, out lastEtag);
+                result.IndexEtag = lastEtag;
+            }
+
+            List<string> documentIds;
+            using (var indexRead = IndexPersistance.Read())
+            {
+                documentIds = indexRead.Query(query, token).ToList();
+            }
+
+            context.OpenReadTransaction();
+
+            foreach (var id in documentIds)
+            {
+                var document = _documentDatabase.DocumentsStorage.Get(context, id);
+
+                result.Results.Add(document);
+            }
+
+
+            return result;
         }
     }
 }

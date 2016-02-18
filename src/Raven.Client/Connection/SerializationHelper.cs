@@ -132,20 +132,21 @@ namespace Raven.Client.Connection
         {
             var result = new QueryResult
             {
-                IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-                IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-                IndexEtag = long.Parse(json.Value<string>("IndexEtag")),
-                Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
-                TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-                IndexName = json.Value<string>("IndexName"),
-                ResultEtag = long.Parse(json.Value<string>("ResultEtag")),
-                SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
-                Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
-                    .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),
-                ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())
-                .JsonDeserialization<Dictionary<string, string>>(),
-                TimingsInMilliseconds = (json.Value<RavenJObject>("TimingsInMilliseconds") ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>(),
-                LastQueryTime = json.Value<DateTime>("LastQueryTime")
+                //TODO arek
+                //IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
+                //IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
+                //IndexEtag = long.Parse(json.Value<string>("IndexEtag")),
+                //Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
+                //TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
+                //IndexName = json.Value<string>("IndexName"),
+                //ResultEtag = long.Parse(json.Value<string>("ResultEtag")),
+                //SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+                //Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
+                //    .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),
+                //ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())
+                //.JsonDeserialization<Dictionary<string, string>>(),
+                //TimingsInMilliseconds = (json.Value<RavenJObject>("TimingsInMilliseconds") ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>(),
+                //LastQueryTime = json.Value<DateTime>("LastQueryTime")
             };
 
             result.ResultSize = numberOfCharactersRead;
@@ -158,14 +159,14 @@ namespace Raven.Client.Connection
                     result.Results.Add((RavenJObject)r);
             }
 
-            if (json.ContainsKey("DurationMilliseconds"))
-                result.DurationMilliseconds = json.Value<long>("DurationMilliseconds");
+            //if (json.ContainsKey("DurationMilliseconds"))
+            //    result.DurationMilliseconds = json.Value<long>("DurationMilliseconds");
 
-            long totalTime;
-            if (TryParseTempRequestTime(tempRequestTime, out totalTime))
-            {
-                result.DurationMilliseconds = totalTime;
-            }
+            //long totalTime;
+            //if (TryParseTempRequestTime(tempRequestTime, out totalTime))
+            //{
+            //    result.DurationMilliseconds = totalTime;
+            //}
             
             return result;
         }

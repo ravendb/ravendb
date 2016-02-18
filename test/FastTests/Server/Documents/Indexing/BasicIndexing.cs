@@ -31,7 +31,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
-                Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery()));
+                Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
                 index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
                 index.Execute(CancellationToken.None);

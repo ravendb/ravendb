@@ -13,7 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Xunit;
 using Document = Raven.Server.Documents.Document;
 
-namespace FastTests.Server.Documents.Indexing
+namespace FastTests.Server.Documents.Indexing.Lucene
 {
     public class LuceneDocumentConverterTests : IDisposable
     {

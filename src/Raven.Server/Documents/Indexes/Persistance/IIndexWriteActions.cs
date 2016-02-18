@@ -2,9 +2,9 @@
 
 namespace Raven.Server.Documents.Indexes.Persistance
 {
-    public interface IIndexActions : IDisposable
+    public interface IIndexWriteActions : IDisposable
     {
-        void Write(global::Lucene.Net.Documents.Document document);
+        void Write(Document document);
 
         void Delete(string key);
     }

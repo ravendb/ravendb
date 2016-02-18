@@ -2,9 +2,10 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-
+using Microsoft.AspNet.Server.Kestrel.Networking;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -13,13 +14,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private const string DynamicIndexPrefix = "dynamic/";
 
         private readonly IndexStore _indexStore;
+        private readonly DocumentsOperationContext _context;
 
-        public DynamicQueryRunner(IndexStore indexStore)
+        public DynamicQueryRunner(IndexStore indexStore, DocumentsOperationContext context)
         {
             _indexStore = indexStore;
+            _context = context;
         }
 
-        public QueryResult Execute(string dynamicIndexName, IndexQuery query)
+        public DocumentQueryResult Execute(string dynamicIndexName, IndexQuery query)
         {
             var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
@@ -34,6 +37,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var id = _indexStore.CreateIndex(autoIndexDef);
                 index = _indexStore.GetIndex(id);
+
+                index.Execute(CancellationToken.None); // TODO arek
 
                 newAutoIndex = true;
             }
@@ -60,14 +65,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        private static QueryResult ExecuteActualQuery(Index index, IndexQuery query, bool newAutoIndex)
+        private DocumentQueryResult ExecuteActualQuery(Index index, IndexQuery query, bool newAutoIndex)
         {
             // Perform the query until we have some results at least
             var sp = Stopwatch.StartNew();
 
             while (true)
             {
-                var result = index.Query(query);
+                var result = index.Query(query, _context, CancellationToken.None); // TODO arek
 
                 if (newAutoIndex == false ||
                     result.IsStale == false ||
