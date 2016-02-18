@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class serverValue {
     serverId = ko.observable<string>();
     value  = ko.observable<number>(0);

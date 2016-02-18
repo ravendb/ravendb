@@ -1,5 +1,3 @@
-/// <reference path="../../../../../typings/tsd.d.ts" />
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDebugMetricsCommand = require("commands/database/debug/getDebugMetricsCommand");
 /* TODO

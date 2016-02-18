@@ -1,5 +1,3 @@
-/// <reference path="../../../models/dto.ts" />
-
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 

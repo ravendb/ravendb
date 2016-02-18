@@ -1,5 +1,3 @@
-/// <reference path="../../../typings/tsd.d.ts" />
-
 import viewModelBase = require("viewmodels/viewModelBase");
 /* TODO
 import d3 = require("d3");

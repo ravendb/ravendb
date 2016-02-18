@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 import transformerParam = require("models/database/index/transformerParam");
 
 class transformerQuery {

@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 import documentMetadata = require("models/database/documents/documentMetadata");
 
 class versioningEntry implements copyFromParentDto<versioningEntry> {

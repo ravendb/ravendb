@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class conflictVersion {
     id: string;
     sourceId: string;

@@ -1,5 +1,3 @@
-/// <reference path="../../../../typings/tsd.d.ts" />
-
 import InMethodFilter = require("viewmodels/filesystem/search/inMethodFilter");
 import fieldStringFilter = require("viewmodels/filesystem/search/fieldStringFilter");
 import fieldRangeFilter = require("viewmodels/filesystem/search/fieldRangeFilter");

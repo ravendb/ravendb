@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 import conflictVersion = require("models/database/replication/conflictVersion");
 
 class conflict {

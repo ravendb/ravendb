@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class configurationDocument<T extends copyFromParentDto<any>> {
 
     localExists = ko.observable<boolean>();

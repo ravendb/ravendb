@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class adminLogsConfigEntry {
     includeStackTrace = ko.observable<boolean>();
     category = ko.observable<string>();

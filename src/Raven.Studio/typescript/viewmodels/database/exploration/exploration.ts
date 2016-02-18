@@ -1,4 +1,3 @@
-/// <reference path="../../../../typings/tsd.d.ts" />
 import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");

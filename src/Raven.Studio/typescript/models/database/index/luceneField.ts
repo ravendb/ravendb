@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class luceneField {
     name = ko.observable<string>();
     stores = ko.observable<string>();

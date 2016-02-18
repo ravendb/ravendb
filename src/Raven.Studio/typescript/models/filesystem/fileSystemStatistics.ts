@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class fileSystemStatistics {
     fileCountText = ko.observable<string>();
     requestsCountText = ko.observable<string>();

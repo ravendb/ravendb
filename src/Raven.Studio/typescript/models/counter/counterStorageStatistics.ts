@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class counterStorageStatistics {
     countersCount = ko.observable<number>();
     counterCountText = ko.observable<string>("");

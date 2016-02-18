@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class counterSummary implements documentBase {
     Total: number; 
 
