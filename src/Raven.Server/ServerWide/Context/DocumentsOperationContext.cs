@@ -15,12 +15,12 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsTransaction CreateReadTransaction()
         {
-            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(), _documentDatabase.TasksStorage, _documentDatabase.Notifications);
+            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(), _documentDatabase.Notifications);
         }
 
         protected override DocumentsTransaction CreateWriteTransaction()
         {
-            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.TasksStorage, _documentDatabase.Notifications);
+            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.Notifications);
         }
     }
 }

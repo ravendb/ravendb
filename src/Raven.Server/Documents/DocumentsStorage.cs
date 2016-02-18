@@ -2,20 +2,21 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+
 using Raven.Abstractions.Data;
+using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
-using Raven.Server.Documents.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -24,6 +25,8 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly TableSchema _docsSchema = new TableSchema();
+        private readonly TableSchema _tombstonesSchema = new TableSchema();
+
         private readonly ILog _log;
         private readonly string _name;
         private static readonly Slice LastEtagSlice = "LastEtag";
@@ -60,6 +63,19 @@ namespace Raven.Server.Documents
                 IsGlobal = false
             });
             _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 1,
+                IsGlobal = true
+            });
+
+            _tombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 1,
+                IsGlobal = true,
+                Name = "Tombstones"
+            });
+            _tombstonesSchema.DefineFixedSizeIndex("AllTombstonesEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = true
@@ -112,6 +128,7 @@ namespace Raven.Server.Documents
                 {
                     tx.CreateTree("Docs");
                     tx.CreateTree("Identities");
+                    tx.CreateTree("Tombstones");
 
                     _docsSchema.Create(tx, SystemDocumentsCollection);
 
@@ -271,6 +288,25 @@ namespace Raven.Server.Documents
             return TableValueToDocument(context, tvr);
         }
 
+        public IEnumerable<DocumentTombstone> GetTombstonesAfter(DocumentsOperationContext context, long etag, int start, int take)
+        {
+            var table = new Table(_tombstonesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(_tombstonesSchema.FixedSizeIndexes["AllTombstonesEtags"], etag))
+            {
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToTombstone(context, result);
+            }
+        }
+
         private Slice GetSliceFromKey(DocumentsOperationContext context, string key)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
@@ -356,6 +392,63 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void GetLowerKeySliceAndStorageKeyAndCollection(MemoryOperationContext context, string str, string col, out byte* lowerKey, out int lowerSize,
+            out byte* key, out int keySize, out byte* collection, out int collectionSize)
+        {
+            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
+            if (byteCount > 255)
+                throw new ArgumentException(
+                    $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
+                    nameof(str));
+
+            var colByteCount = Encoding.UTF8.GetMaxByteCount(col.Length);
+
+            var jsonParserState = new JsonParserState();
+            jsonParserState.FindEscapePositionsIn(str);
+            var keyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
+            var colLenSize = JsonParserState.VariableSizeIntSize(colByteCount);
+            var escapePositionsSize = jsonParserState.GetEscapePositionsSize();
+            var buffer = context.GetNativeTempBuffer(
+                sizeof(char) * str.Length // for the lower calls
+                + byteCount // lower key
+                + keyLenSize // the size of var int for the len of the key
+                + byteCount // actual key
+                + escapePositionsSize
+                + sizeof(char) * col.Length
+                + colLenSize // the size of var int for the len of the collection
+                + colByteCount // collection
+                + escapePositionsSize
+                , out lowerSize);
+
+            fixed (char* pChars = str)
+            fixed (char* cChars = col)
+            {
+                var destChars = (char*)buffer;
+                for (var i = 0; i < str.Length; i++)
+                {
+                    destChars[i] = char.ToLowerInvariant(pChars[i]);
+                }
+
+                lowerKey = buffer + str.Length * sizeof(char);
+
+                lowerSize = Encoding.UTF8.GetBytes(destChars, str.Length, lowerKey, byteCount);
+
+                key = buffer + str.Length * sizeof(char) + byteCount;
+                var writePos = key;
+                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + keyLenSize, byteCount);
+                JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
+                jsonParserState.WriteEscapePositionsTo(writePos + keySize);
+                keySize += escapePositionsSize + keyLenSize;
+
+                collection = writePos + keySize + escapePositionsSize;
+                writePos = collection;
+                collectionSize = Encoding.UTF8.GetBytes(cChars, col.Length, writePos + colLenSize, colByteCount);
+                JsonParserState.WriteVariableSizeInt(ref writePos, collectionSize);
+                jsonParserState.WriteEscapePositionsTo(writePos + collectionSize);
+                collectionSize += escapePositionsSize + colLenSize;
+            }
+        }
+
         private static Document TableValueToDocument(MemoryOperationContext context, TableValueReader tvr)
         {
             var result = new Document
@@ -371,6 +464,31 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(1, out size);
             result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
+            return result;
+        }
+
+        private static DocumentTombstone TableValueToTombstone(MemoryOperationContext context, TableValueReader tvr)
+        {
+            var result = new DocumentTombstone
+            {
+                StorageId = tvr.Id
+            };
+            int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKeyAndCollection method
+            var ptr = tvr.Read(3, out size);
+            byte offset;
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+
+            ptr = tvr.Read(4, out size);
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Collection = new LazyStringValue(null, ptr + offset, size, context);
+
+            ptr = tvr.Read(1, out size);
+            result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+            ptr = tvr.Read(2, out size);
+            result.DeletedEtag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+
             return result;
         }
 
@@ -402,7 +520,7 @@ namespace Raven.Server.Documents
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
             table.Delete(doc.StorageId);
 
-            DeleteDocumentFromIndexesForCollection(context, key, originalCollectionName);
+            CreateTombstone(context, doc.Key, doc.Etag, originalCollectionName);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
@@ -413,6 +531,35 @@ namespace Raven.Server.Documents
             });
 
             return true;
+        }
+
+        private void CreateTombstone(DocumentsOperationContext context, string key, long etag, string collectionName)
+        {
+            byte* lowerKey;
+            int lowerSize;
+            byte* keyPtr;
+            int keySize;
+            byte* collectionPtr;
+            int collectionSize;
+            GetLowerKeySliceAndStorageKeyAndCollection(context, key, collectionName, out lowerKey, out lowerSize, out keyPtr, out keySize, out collectionPtr, out collectionSize);
+
+            var newEtag = ++_lastEtag;
+            var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
+
+            var documentEtagBigEndian = IPAddress.HostToNetworkOrder(etag);
+
+            var tbv = new TableValueBuilder
+            {
+                {lowerKey, lowerSize},
+                {(byte*) &newEtagBigEndian , sizeof (long)},
+                {(byte*) &documentEtagBigEndian , sizeof (long)},
+                {keyPtr, keySize},
+                {collectionPtr, collectionSize}
+            };
+
+            var table = new Table(_tombstonesSchema, "@" + collectionName, context.Transaction.InnerTransaction);
+
+            table.Insert(tbv);
         }
 
         public void DeleteCollection(DocumentsOperationContext context, string name, List<long> deletedList, long untilEtag)
@@ -594,18 +741,6 @@ namespace Raven.Server.Documents
                         Count = collectionTable.NumberOfEntries
                     };
                 } while (it.MoveNext());
-            }
-        }
-
-        private void DeleteDocumentFromIndexesForCollection(DocumentsOperationContext context, string key, string collection)
-        {
-            foreach (var index in _documentDatabase.IndexStore.GetIndexesForCollection(collection))
-            {
-                var task = context.Transaction.GetOrAddTask(
-                    x => x.IndexId == index.IndexId,
-                    () => new RemoveFromIndexTask(index.IndexId));
-
-                task.AddKey(key);
             }
         }
     }

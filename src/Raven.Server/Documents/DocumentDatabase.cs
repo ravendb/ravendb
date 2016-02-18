@@ -2,7 +2,6 @@
 
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Tasks;
 using Raven.Server.ServerWide;
 
 using Voron;
@@ -21,7 +20,6 @@ namespace Raven.Server.Documents
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
-            TasksStorage = new TasksStorage();
         }
 
         public string Name { get; }
@@ -37,8 +35,6 @@ namespace Raven.Server.Documents
         public DocumentsNotifications Notifications { get; }
 
         public IndexStore IndexStore { get; }
-
-        public TasksStorage TasksStorage { get; }
 
         public void Initialize()
         {
