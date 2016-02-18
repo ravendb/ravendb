@@ -11,12 +11,12 @@ namespace Raven.Server.Json
         private const char PropertySeparator = '.';
         private const char CollectionSeparator = ',';
 
-        private readonly char[] _separators;
-
-        public BlittableJsonTraverser(char[] separators = null)
+        private readonly char[] _separators =
         {
-            _separators = separators ?? new []{ PropertySeparator, CollectionSeparator };
-        }
+            PropertySeparator,
+            CollectionSeparator
+
+        };
 
         public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result)
         {
@@ -47,7 +47,7 @@ namespace Raven.Server.Json
                         return TryRead(subObject, pathSegment, out result);
                     }
                     
-                    throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader.GetType().FullName} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}." );
+                    throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader?.GetType()?.FullName ?? "null"} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}." );
                 case CollectionSeparator:
                     var subArray = reader as BlittableJsonReaderArray;
                     if (subArray != null)
@@ -56,7 +56,7 @@ namespace Raven.Server.Json
                         return true;
                     }
 
-                    throw new InvalidOperationException($"Invalid path. After the collection separator ('{CollectionSeparator}') {reader.GetType().FullName} object has been ancountered instead of {nameof(BlittableJsonReaderArray)}.");
+                    throw new InvalidOperationException($"Invalid path. After the collection separator ('{CollectionSeparator}') {reader?.GetType()?.FullName ?? "null"}  object has been ancountered instead of {nameof(BlittableJsonReaderArray)}.");
                 default:
                     throw new NotSupportedException($"Unhandled separator character: {path[indexOfFirstSeparator]}");
             }
