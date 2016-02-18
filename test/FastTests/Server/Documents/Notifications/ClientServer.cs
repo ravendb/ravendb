@@ -9,23 +9,10 @@ using Raven.Client.Document;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Notifications;
-using System.Runtime.InteropServices;
 using Xunit;
 
 namespace FastTests.Server.Documents.Notifications
 {
-    public class NonLinuxFactAttribute
-            : FactAttribute
-    {
-        public NonLinuxFactAttribute()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == true)
-            {
-                Skip = "Test cannot be run on Linux machine";
-            }
-        }
-    }
-
     public class ClientServer : RavenTestBase
     {
     
@@ -61,7 +48,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = await GetDocumentStore())
