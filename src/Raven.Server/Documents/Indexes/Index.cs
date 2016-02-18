@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -72,6 +73,7 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistence = new LuceneIndexPersistance(indexId, definition.Name);
 
             DocumentConverter = new LuceneDocumentConverter(definition.MapFields);
+            Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
         public LuceneDocumentConverter DocumentConverter { get; }
@@ -229,7 +231,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected string[] Collections => Definition.Collections;
+        protected HashSet<string> Collections;
 
         protected abstract bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag);
 
@@ -360,7 +362,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 databaseContext.OpenReadTransaction();
                 indexContext.OpenReadTransaction();
-
+                //TODO: This need to be done on a per collection basis
                 var lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction);
                 var lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction);
 
@@ -385,9 +387,6 @@ namespace Raven.Server.Documents.Indexes
 
                         if (sw.Elapsed > _documentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
                         {
-                            if (count != pageSize && _mre.IsSet == false)
-                                _mre.Set();
-
                             break;
                         }
                     }
@@ -396,8 +395,7 @@ namespace Raven.Server.Documents.Indexes
                 if (count == 0)
                     return;
 
-                if (count == pageSize && _mre.IsSet == false)
-                    _mre.Set(); // might be more
+                _mre.Set(); // might be more
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
@@ -410,13 +408,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleDocumentChange(DocumentChangeNotification notification)
         {
-            if (_mre.IsSet)
-                return;
-
-            if (notification.Type != DocumentChangeTypes.Put && notification.Type != DocumentChangeTypes.Delete)
-                return;
-
-            if (Collections.Any(x => string.Equals(x, notification.CollectionName, StringComparison.OrdinalIgnoreCase)) == false)
+            if (Collections.Contains(notification.CollectionName) == false)
                 return;
 
             _mre.Set();
@@ -435,6 +427,7 @@ namespace Raven.Server.Documents.Indexes
                     return;
 
                 var startEtag = lastMappedEtag + 1;
+                // TODO: need to avoid the lambda usage here, and have separate etag per collection
                 var etags = Collections.ToDictionary(x => x, x => lastMappedEtag);
                 var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
@@ -482,11 +475,10 @@ namespace Raven.Server.Documents.Indexes
                                     continue;
                                 }
 
-                                if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan || fetchedTotalSizeInBytes >= _documentDatabase.Configuration.Indexing.MaximumSizeAllowedToFetchFromStorageInMb)
+                                if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan || 
+                                    //TODO: I don't think that this is needed now, we read from mmap, after all
+                                    fetchedTotalSizeInBytes >= _documentDatabase.Configuration.Indexing.MaximumSizeAllowedToFetchFromStorageInMb)
                                 {
-                                    if (count != pageSize && _mre.IsSet == false)
-                                        _mre.Set();
-
                                     break;
                                 }
                             }
@@ -495,11 +487,11 @@ namespace Raven.Server.Documents.Indexes
                         if (count == 0)
                             return;
 
-                        if (count == pageSize && _mre.IsSet == false)
-                            _mre.Set(); // might be more
+                        _mre.Set(); // might be more
                     }
                 }
-
+                // TODO: let us avoid using Linq here, it does a lot of allocations
+                // TODO: that we can avoid
                 var lastEtag = etags
                     .Select(x => x.Value)
                     .Where(x => x > lastMappedEtag)
@@ -509,6 +501,8 @@ namespace Raven.Server.Documents.Indexes
                 if (lastEtag == 0)
                     return;
 
+                //TODO: This is wrong, we shouldn't be using a single etag value
+                //TODO: we need to use an etag value per collection, and work on that
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
                     WriteLastMappedEtag(tx, lastEtag);
