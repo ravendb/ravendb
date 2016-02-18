@@ -47,6 +47,7 @@ using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Abstractions.Threading;
 using Raven.Database.Common;
+using Raven.Database.Raft;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 
@@ -641,6 +642,7 @@ namespace Raven.Database
 
         public WorkContext WorkContext => workContext;
         public RequestManager RequestManager { get; set; }
+        public Reference<ClusterManager> ClusterManager { get; set; }
 
         public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
         {
