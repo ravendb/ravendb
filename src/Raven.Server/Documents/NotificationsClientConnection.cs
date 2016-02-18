@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
@@ -18,7 +16,7 @@ namespace Raven.Server.Documents
     {
         private readonly WebSocket _webSocket;
         private readonly DocumentDatabase _documentDatabase;
-        private readonly BlockingCollection<DynamicJsonValue> _sendQueue = new BlockingCollection<DynamicJsonValue>();
+        private readonly AsyncQueue<DynamicJsonValue> _sendQueue = new AsyncQueue<DynamicJsonValue>();
         private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
 
         private readonly ConcurrentSet<string> _matchingIndexes =
@@ -160,7 +158,8 @@ namespace Raven.Server.Documents
                 },
             };
 
-            _sendQueue.Add(value, _disposeToken.Token);
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(value);
         }
 
         public async Task StartSendingNotifications()
@@ -178,22 +177,15 @@ namespace Raven.Server.Documents
                         ms.SetLength(0);
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
-                            DynamicJsonValue value;
-                            try
+                            while (true)
                             {
-                                value = _sendQueue.Take(_disposeToken.Token);
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                break;
-                            }
-                            context.Write(writer, value);
-                            
-                            while (_sendQueue.TryTake(out value))
-                            {
-                                writer.WriteNewLine();
+                                var value = await _sendQueue.TryDequeueAsync();
+                                if (_disposeToken.IsCancellationRequested)
+                                    break;
+
                                 context.Write(writer, value);
-                              
+                                writer.WriteNewLine();
+
                                 if (ms.Length > 16*1024)
                                     break;
                             }
@@ -210,6 +202,7 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _disposeToken.Cancel();
+            _sendQueue.Dispose();
         }
     }
 }
