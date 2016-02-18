@@ -37,7 +37,7 @@ namespace FastTests.Server.Documents.Notifications
                 }
 
                 DocumentChangeNotification documentChangeNotification;
-                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(3)));
+                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(1)));
 
                 Assert.Equal("users/1", documentChangeNotification.Key);
                 Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
