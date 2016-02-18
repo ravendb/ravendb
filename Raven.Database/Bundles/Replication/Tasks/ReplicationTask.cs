@@ -753,10 +753,11 @@ namespace Raven.Bundles.Replication.Tasks
             IDisposable removeBatch = null;
             lastReplicatedEtag = Etag.InvalidEtag;
 
-            var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
+            var url = destination.ConnectionStringOptions.Url;
+            var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(url,
                 x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, $"Replication for URL: {destination.ConnectionStringOptions.DefaultDatabase}"));
 
-            prefetchingBehavior.AdditionalInfo = $"For destination: {destination.ConnectionStringOptions.Url}. Last replicated etag: {destinationsReplicationInformationForSource.LastDocumentEtag}";
+            prefetchingBehavior.AdditionalInfo = $"For destination: {url}. Last replicated etag: {destinationsReplicationInformationForSource.LastDocumentEtag}";
 
             try
             {
@@ -782,7 +783,7 @@ namespace Raven.Bundles.Replication.Tasks
                                 }
                             }
                         }
-                        RecordLastEtagChecked(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag);
+                        RecordLastEtagChecked(url, documentsToReplicate.LastEtag);
                         return null;
                     }
                 }
@@ -797,14 +798,15 @@ namespace Raven.Bundles.Replication.Tasks
                     string lastError;
                     if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError) == false) // failed to replicate, start error handling strategy
                     {
-                        if (IsFirstFailure(destination.ConnectionStringOptions.Url))
+                        if (IsFirstFailure(url))
                         {
                             log.Info(
                                 "This is the first failure for {0}, assuming transient failure and trying again",
                                 destination);
                             if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError)) // success on second fail
                             {
-                                RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+                                RecordSuccess(url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+                                prefetchingBehavior.CleanupDocuments(documentsToReplicate.LastEtag);
                                 lastReplicatedEtag = documentsToReplicate.LastEtag;
                                 return true;
                             }
@@ -814,7 +816,7 @@ namespace Raven.Bundles.Replication.Tasks
                         // and we'll be much more conservative with increasing the sizes
                         prefetchingBehavior.OutOfMemoryExceptionHappened();
                         scope.RecordError(lastError);
-                        RecordFailure(destination.ConnectionStringOptions.Url, lastError);
+                        RecordFailure(url, lastError);
                         return false;
                     }
                 }
@@ -830,7 +832,8 @@ namespace Raven.Bundles.Replication.Tasks
                 removeBatch?.Dispose();
             }
 
-            RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+            RecordSuccess(url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+            prefetchingBehavior.CleanupDocuments(documentsToReplicate.LastEtag);
             lastReplicatedEtag = documentsToReplicate.LastEtag;
             return true;
         }
