@@ -471,7 +471,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 
 			RecordSuccess(destination.ConnectionStringOptions.Url,
-				lastReplicatedEtag: tuple.Item2);
+				lastReplicatedEtag: tuple.Item2, forDocuments: false);
 
 			return true;
 		}
