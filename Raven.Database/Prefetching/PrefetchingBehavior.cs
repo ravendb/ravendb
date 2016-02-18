@@ -348,7 +348,7 @@ namespace Raven.Database.Prefetching
                 docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
 
                 // we don't need to add a future batch to a prefetcher that
-                // gets the documents after commit -> the default o,
+                // gets the documents after commit -> the default one,
                 // except when we disabled collecting documents after commit
                 if (ShouldHandleUnusedDocumentsAddedAfterCommit == false || 
                     DisableCollectingDocumentsAfterCommit)
@@ -1284,7 +1284,9 @@ namespace Raven.Database.Prefetching
 
         public void CleanupDocuments(Etag lastIndexedEtag)
         {
-            if (lastIndexedEtag == null) return;
+            if (lastIndexedEtag == null)
+                return;
+
             foreach (var docToRemove in documentsToRemove)
             {
                 if (docToRemove.Value == null)
@@ -1294,12 +1296,6 @@ namespace Raven.Database.Prefetching
 
                 HashSet<Etag> _;
                 documentsToRemove.TryRemove(docToRemove.Key, out _);
-            }
-
-            JsonDocument result;
-            while (prefetchingQueue.TryPeek(out result) && lastIndexedEtag.CompareTo(result.Etag) >= 0)
-            {
-                prefetchingQueue.TryDequeue(out result);
             }
 
             HandleCleanupOfUnusedDocumentsInQueue();
