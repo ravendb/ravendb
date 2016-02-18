@@ -1284,7 +1284,9 @@ namespace Raven.Database.Prefetching
 
         public void CleanupDocuments(Etag lastIndexedEtag)
         {
-            if (lastIndexedEtag == null) return;
+            if (lastIndexedEtag == null)
+                return;
+
             foreach (var docToRemove in documentsToRemove)
             {
                 if (docToRemove.Value == null)
@@ -1294,12 +1296,6 @@ namespace Raven.Database.Prefetching
 
                 HashSet<Etag> _;
                 documentsToRemove.TryRemove(docToRemove.Key, out _);
-            }
-
-            JsonDocument result;
-            while (prefetchingQueue.TryPeek(out result) && lastIndexedEtag.CompareTo(result.Etag) >= 0)
-            {
-                prefetchingQueue.TryDequeue(out result);
             }
 
             HandleCleanupOfUnusedDocumentsInQueue();
