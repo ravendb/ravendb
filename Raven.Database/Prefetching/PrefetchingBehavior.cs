@@ -1296,12 +1296,6 @@ namespace Raven.Database.Prefetching
                 documentsToRemove.TryRemove(docToRemove.Key, out _);
             }
 
-            JsonDocument result;
-            while (prefetchingQueue.TryPeek(out result) && lastIndexedEtag.CompareTo(result.Etag) >= 0)
-            {
-                prefetchingQueue.TryDequeue(out result);
-            }
-
             HandleCleanupOfUnusedDocumentsInQueue();
         }
 
