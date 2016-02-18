@@ -267,8 +267,9 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                Database.Indexes.PutIndex(index, data);
-                return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
+                long opId;
+                Database.Indexes.PutIndex(index, data, out opId);
+                return GetMessageWithObject(new { Index = index, OperationId = opId }, HttpStatusCode.Created);
             }
             catch (Exception ex)
             {
