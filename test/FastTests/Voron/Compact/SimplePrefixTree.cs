@@ -123,13 +123,41 @@ namespace FastTests.Voron.Compact
                 Assert.Equal(Slice.BeforeAllKeys, tree.Predecessor("aq"));
                 Assert.Equal(key, tree.Predecessor("pq"));
             }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                Assert.True(tree.Delete(key));
+
+                Assert.Equal(0, tree.Count);
+                Assert.Equal(Slice.BeforeAllKeys, tree.FirstKey());
+                Assert.Equal(Slice.AfterAllKeys, tree.LastKey());
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+
+                Assert.Equal(0, tree.Count);
+                Assert.False(tree.Contains(key));
+
+                Assert.Equal(Slice.BeforeAllKeys, tree.FirstKey());
+                Assert.Equal(Slice.AfterAllKeys, tree.LastKey());
+
+                StructuralVerify(tree);
+            }
         }
 
-        
+
+
         private long AddAndDumpToPrefixTree(PrefixTree tree, Table table, string key, string value)
         {
             long res = AddToPrefixTree(tree, table, key, value);
-            //DumpTree(tree);
+            DumpTree(tree);
             return res;
         }
 
@@ -213,11 +241,11 @@ namespace FastTests.Voron.Compact
                 var docs = new Table(DocsSchema, "docs", tx);
                 var tree = tx.CreatePrefixTree(Name);
 
-                Assert.NotEqual(-1, AddAndDumpToPrefixTree(tree, docs, "0Ji", string.Empty));
-                Assert.NotEqual(-1, AddAndDumpToPrefixTree(tree, docs, "gBx", string.Empty));
-                Assert.NotEqual(-1, AddAndDumpToPrefixTree(tree, docs, "UIc", string.Empty));
-                Assert.NotEqual(-1, AddAndDumpToPrefixTree(tree, docs, "Zey", string.Empty));
-                Assert.NotEqual(-1, AddAndDumpToPrefixTree(tree, docs, "DV2", string.Empty));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "0Ji", string.Empty));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "gBx", string.Empty));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "UIc", string.Empty));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "Zey", string.Empty));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "DV2", string.Empty));
 
                 StructuralVerify(tree);
 

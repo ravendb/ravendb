@@ -584,20 +584,36 @@ namespace Voron.Data.Compact
         /// </summary>
         public bool Delete(Slice key, ushort? version = null)
         {
-            if (Count == 0)
-            {
+            if (this.Count == 0)
                 return false;
-            }                
-            else if ( Count == 1)
+
+            Debug.Assert(this.State.RootNodeName != Constants.InvalidNodeName);
+
+            // We prepare the signature to compute incrementally.
+            var searchKey = key.ToBitVector();
+
+            if (this.Count == 1)
             {
+                long rootNodeName = _state.RootNodeName;
+
                 // Is the root key (which has to be a Leaf) equal to the one we are looking for?
-                throw new NotImplementedException();
+                var leaf = (Leaf*)this.ReadNodeByName(rootNodeName);
+                Debug.Assert(leaf->IsLeaf);
+                if (this.Name(leaf).CompareTo(searchKey) != 0)
+                    return false;
+
+                RemoveLeaf(rootNodeName);
+                _translationTable.DeallocateNodeName(rootNodeName);
+
 
                 // We remove the root.    
-                // return true;
+                State.RootNodeName = Constants.InvalidNodeName;
+                State.Items--;
+
+                return true;
             }
 
-            var searchKey = key.ToBitVector();
+            
             var hashState = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
 
             // We look for the parent of the exit node for the key.
@@ -1168,11 +1184,19 @@ namespace Voron.Data.Compact
             predecessor->NextPtr = newNodeName;
         }
 
-        private void RemoveLeaf(Leaf* node)
+        private void RemoveLeaf(long nodeName)
         {
-            throw new NotImplementedException();
-        }
+            var node = (Leaf*)this.ModifyNodeByName(nodeName);
+            Debug.Assert(node->IsLeaf);
 
+            var previousNode = (Leaf*)this.ModifyNodeByName(node->PreviousPtr);
+            var nextNode = (Leaf*)this.ModifyNodeByName(node->NextPtr);
+            Debug.Assert(previousNode->IsLeaf || previousNode->IsTombstone);
+            Debug.Assert(nextNode->IsLeaf || previousNode->IsTombstone);
+
+            nextNode->PreviousPtr = node->PreviousPtr;
+            previousNode->NextPtr = node->NextPtr;            
+        }
 
 
         internal Slice ReadKey(long dataPtr)

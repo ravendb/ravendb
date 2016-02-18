@@ -212,14 +212,15 @@ namespace Voron.Data.Compact
         }
         
         private bool TryAllocateNodeInChunk( long parentName, out long name )
-        {      
+        {
             int chunkIdx = (int)(parentName / _innerCopy.NodesPerChunk);
 
             var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
             var freeSpace = GetFreeSpaceTable(_table);
             if (freeSpace.Get(chunkIdx)) // We still have free space reported here.
             {
-                PrefixTreePage chunkPage; 
+                PrefixTreePage chunkPage;
+
                 // We will retrieve the chunks mapping table.
                 long chunkPageNumber = ((long*)_table.DataPointer)[chunkIdx];
                 if ( chunkPageNumber == PrefixTree.Constants.InvalidPage )
@@ -275,6 +276,34 @@ namespace Voron.Data.Compact
             return AllocateNodeInChunkSlow();
         }
 
+        public void DeallocateNodeName(long nodeName)
+        {
+            int chunkIdx = (int)(nodeName / _innerCopy.NodesPerChunk);
+            int nodeIdx = (int)(nodeName % _innerCopy.NodesPerChunk);
+
+            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
+
+            Debug.Assert(GetFreeSpaceTable(_table).Get(chunkIdx) == false);
+
+            // We will retrieve the chunks mapping table.
+            long chunkPageNumber = ((long*)_table.DataPointer)[chunkIdx];
+            Debug.Assert(chunkPageNumber != PrefixTree.Constants.InvalidPage);
+
+            // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
+            var chunkPage = _tx.ModifyPage(chunkPageNumber).ToPrefixTreePage();
+
+            // We mark the node as unused.
+            chunkPage.FreeSpace.Set(nodeIdx, true); 
+
+            if (!GetFreeSpaceTable(_table).Get(chunkIdx)) // It was full.
+            {
+                // Now we are going to be modifying the table.
+                _table = _tx.ModifyPage(_innerCopy.PageNumber);
+                // We mark the chunk as having free space 
+                GetFreeSpaceTable(_table).Set(chunkIdx, true); 
+            }            
+        }
+
         public PrefixTreeNodeLocationPtr MapVirtualToPhysical(long nodeName)
         {
             Debug.Assert(nodeName > PrefixTree.Constants.InvalidNodeName);
@@ -308,5 +337,7 @@ namespace Voron.Data.Compact
                 NodeOffset = nodeNameInChunk // This is the relative location inside this chunk.
             };
         }
+
+
     }
 }
