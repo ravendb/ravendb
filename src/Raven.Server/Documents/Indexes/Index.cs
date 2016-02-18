@@ -366,10 +366,12 @@ namespace Raven.Server.Documents.Indexes
 
                 var count = 0;
                 var lastEtag = lastTombstoneEtag;
+                var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
                 using (var indexActions = IndexPersistence.Open())
                 {
-                    foreach (var tombstone in _documentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, int.MaxValue))
+                    var sw = Stopwatch.StartNew();
+                    foreach (var tombstone in _documentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, pageSize))
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -380,11 +382,22 @@ namespace Raven.Server.Documents.Indexes
                             continue; // no-op, we have not yet indexed this document
 
                         indexActions.Delete(tombstone.Key);
+
+                        if (sw.Elapsed > _documentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
+                        {
+                            if (count != pageSize && _mre.IsSet == false)
+                                _mre.Set();
+
+                            break;
+                        }
                     }
                 }
 
                 if (count == 0)
                     return;
+
+                if (count == pageSize && _mre.IsSet == false)
+                    _mre.Set(); // might be more
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
@@ -423,7 +436,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var startEtag = lastMappedEtag + 1;
                 var etags = Collections.ToDictionary(x => x, x => lastMappedEtag);
-                var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfItemsToFetchForMap;
+                var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
                 using (var indexActions = IndexPersistence.Open())
                 {

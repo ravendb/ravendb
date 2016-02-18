@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
-using Raven.Abstractions.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
@@ -42,21 +41,27 @@ namespace Raven.Server.Config.Categories
             }
         }
 
-        [Description("Maximum number of items to map by index during single indexing run")]
+        [Description("Maximum number of documents to map by index during single indexing run")]
         [DefaultValue(128 * 1024)]
         [MinValue(128)]
-        [ConfigurationEntry("Raven/Indexing/MaxNumberOfItemsToFetchForMap")]
+        [ConfigurationEntry("Raven/Indexing/MaxNumberOfDocumentsToFetchForMap")]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetch")]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
-        public int MaxNumberOfItemsToFetchForMap { get; set; }
+        public int MaxNumberOfDocumentsToFetchForMap { get; set; }
 
-        [Description("Maximum number of items to reduce by index during single indexing run")]
+        [Description("Maximum number of documents to reduce by index during single indexing run")]
         [DefaultValue(64 * 1024)]
         [MinValue(128)]
-        [ConfigurationEntry("Raven/Indexing/MaxNumberOfItemsToFetchForReduce")]
+        [ConfigurationEntry("Raven/Indexing/MaxNumberOfDocumentsToFetchForReduce")]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetch")]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
-        public int MaxNumberOfItemsToFetchForReduce { get; set; }
+        public int MaxNumberOfDocumentsToFetchForReduce { get; set; }
+
+        [Description("Maximum number of tombstones to process by index during single indexing run")]
+        [DefaultValue(16 * 1024)]
+        [MinValue(128)]
+        [ConfigurationEntry("Raven/Indexing/MaxNumberOfTombstonesToFetch")]
+        public int MaxNumberOfTombstonesToFetch { get; set; }
 
         [Description("Number of seconds after which index will stop reading documents from disk and writing documents to index")]
         [DefaultValue(10)]
@@ -64,6 +69,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/Indexing/DocumentProcessingTimeout")]
         [ConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
         public TimeSetting DocumentProcessingTimeout { get; set; }
+
+        [Description("Number of seconds after which index will stop reading tombstones from disk and writing deletes to index")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Indexing/TombstoneProcessingTimeout")]
+        public TimeSetting TombstoneProcessingTimeout { get; set; }
 
         [Description("Maximum number of megabytes after which index will stop reading documents from disk")]
         [DefaultValue(256)]
