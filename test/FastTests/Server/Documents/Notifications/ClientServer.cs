@@ -7,18 +7,32 @@ using Raven.Client.Document;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Notifications;
+using System.Runtime.InteropServices;
 using Xunit;
 
 namespace FastTests.Server.Documents.Notifications
 {
+	public class NonLinuxFactAttribute
+			: FactAttribute
+	{
+		public NonLinuxFactAttribute()
+		{
+		    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == true)
+		    {
+		        Skip = "Test cannot be run on Linux machine";
+		    }
+	 	}
+	}
+
     public class ClientServer : RavenTestBase
     {
+	
         protected override void ModifyStore(DocumentStore store)
         {
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task CanGetNotificationAboutDocumentPut()
         {
             using (var store = await GetDocumentStore())
