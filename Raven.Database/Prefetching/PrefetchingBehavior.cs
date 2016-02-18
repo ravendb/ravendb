@@ -348,7 +348,7 @@ namespace Raven.Database.Prefetching
                 docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
 
                 // we don't need to add a future batch to a prefetcher that
-                // gets the documents after commit -> the default o,
+                // gets the documents after commit -> the default one,
                 // except when we disabled collecting documents after commit
                 if (ShouldHandleUnusedDocumentsAddedAfterCommit == false ||
                     DisableCollectingDocumentsAfterCommit)
