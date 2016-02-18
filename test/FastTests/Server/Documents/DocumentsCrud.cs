@@ -547,7 +547,7 @@ namespace FastTests.Server.Documents
                 }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var putResult = _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
-                    Assert.Equal(5, putResult.ETag);
+                    Assert.True(putResult.ETag >= 5);
                     Assert.Equal("users/5", putResult.Key);
                 }
                 ctx.Transaction.Commit();
