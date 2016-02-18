@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 
 using Lucene.Net.Analysis;
@@ -48,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             _converter = new LuceneDocumentConverter(_definition.MapFields);
         }
 
-        public void Initialize(IndexingConfiguration indexingConfiguration)
+        public void Initialize(IndexingConfiguration configuration)
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -58,13 +56,13 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 if (_initialized)
                     throw new InvalidOperationException();
 
-                if (indexingConfiguration.RunInMemory)
+                if (configuration.RunInMemory)
                 {
                     _directory = new RAMDirectory();
                 }
                 else
                 {
-                    throw new NotImplementedException();
+                    _directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(configuration.IndexStoragePath, _indexId.ToString(), "Data")));
                 }
 
                 _initialized = true;

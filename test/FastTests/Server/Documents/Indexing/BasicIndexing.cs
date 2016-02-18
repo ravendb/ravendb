@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
-using Microsoft.Extensions.Configuration;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core;
 
 using Xunit;
@@ -46,6 +49,56 @@ namespace FastTests.Server.Documents.Indexing
 
                     index.Dispose();
                 }
+            }
+        }
+
+        [Fact]
+        public void CanDispose()
+        {
+            DocumentDatabase database = null;
+            try
+            {
+                using (database = CreateDocumentDatabase(runInMemory: false))
+                {
+                    Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String) })));
+                    Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.String) })));
+                }
+            }
+            finally
+            {
+                if (database != null)
+                    IOExtensions.DeleteDirectory(database.Configuration.Core.DataDirectory);
+            }
+        }
+
+        [Fact]
+        public void CanPersist()
+        {
+            DocumentDatabase database = null;
+            try
+            {
+                using (database = CreateDocumentDatabase(runInMemory: false))
+                {
+                    Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String) })));
+                    Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.String) })));
+                }
+
+                using (database = CreateDocumentDatabase(runInMemory: false))
+                {
+                    Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(2) != null, TimeSpan.FromSeconds(5000)));
+
+                    var indexes = database
+                        .IndexStore
+                        .GetIndexesForCollection("Users")
+                        .ToList();
+
+                    Assert.Equal(2, indexes.Count);
+                }
+            }
+            finally
+            {
+                if (database != null)
+                    IOExtensions.DeleteDirectory(database.Configuration.Core.DataDirectory);
             }
         }
 
@@ -140,13 +193,16 @@ namespace FastTests.Server.Documents.Indexing
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        private static DocumentDatabase CreateDocumentDatabase()
+        private static DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true)
         {
+            var name = caller ?? Guid.NewGuid().ToString("N");
+
             var configuration = new RavenConfiguration();
             configuration.Initialize();
-            configuration.Core.RunInMemory = true;
+            configuration.Core.RunInMemory = runInMemory;
+            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, name);
 
-            var documentDatabase = new DocumentDatabase("Test", configuration);
+            var documentDatabase = new DocumentDatabase(name, configuration);
             documentDatabase.Initialize();
 
             return documentDatabase;

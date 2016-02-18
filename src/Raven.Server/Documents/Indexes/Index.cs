@@ -74,10 +74,10 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistance = new LuceneIndexPersistance(indexId, definition);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
         }
-        
-        public static Index Open(int indexId, string path, DocumentDatabase documentDatabase)
+
+        public static Index Open(int indexId, DocumentDatabase documentDatabase)
         {
-            var options = StorageEnvironmentOptions.ForPath(path);
+            var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()));
             try
             {
                 options.SchemaVersion = 1;
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexingTask?.Wait();
                 _indexingTask = null;
-                
+
                 _environment?.Dispose();
                 _environment = null;
 
@@ -390,7 +390,7 @@ namespace Raven.Server.Documents.Indexes
                 if (count == 0)
                     return;
 
-                _mre.Set(); // might be more
+                    _mre.Set(); // might be more
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents.Indexes
                                 count++;
                                 fetchedTotalSizeInBytes.Add(document.Data.Size, SizeUnit.Bytes);
                                 etags[collection] = document.Etag;
-                                
+
                                 try
                                 {
                                     indexActions.Write(document);
@@ -467,7 +467,7 @@ namespace Raven.Server.Documents.Indexes
                         if (count == 0)
                             return;
 
-                        _mre.Set(); // might be more
+                            _mre.Set(); // might be more
                     }
                 }
                 // TODO: let us avoid using Linq here, it does a lot of allocations
@@ -509,13 +509,13 @@ namespace Raven.Server.Documents.Indexes
                 long lastEtag;
                 result.IsStale = IsStale(context, indexContext, out lastEtag);
                 result.IndexEtag = lastEtag;
-            }
+        }
 
             List<string> documentIds;
             using (var indexRead = IndexPersistance.Read())
             {
                 documentIds = indexRead.Query(query, token).ToList();
-            }
+    }
 
             context.OpenReadTransaction();
 
