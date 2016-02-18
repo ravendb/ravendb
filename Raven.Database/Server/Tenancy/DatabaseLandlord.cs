@@ -187,6 +187,7 @@ namespace Raven.Database.Server.Tenancy
                     // if we have a very long init process, make sure that we reset the last idle time for this db.
                     LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
                     documentDatabase.RequestManager = SystemDatabase.RequestManager;
+                    documentDatabase.ClusterManager = SystemDatabase.ClusterManager;
                     return documentDatabase;
                 }).ContinueWith(task =>
                 {

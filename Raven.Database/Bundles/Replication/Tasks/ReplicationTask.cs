@@ -961,7 +961,7 @@ namespace Raven.Bundles.Replication.Tasks
                 using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
                 {
                     var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
-
+                    request.WebRequest.Headers["Topology-Id"] = docDb.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString();
                     request.WriteBson(jsonAttachments);
                     request.ExecuteRequest(_cts.Token);
                     log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
@@ -1030,6 +1030,7 @@ namespace Raven.Bundles.Replication.Tasks
                 using (HttpRavenRequestFactory.Expect100Continue(destination.ConnectionStringOptions.Url))
                 {
                     var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
+                    request.WebRequest.Headers["Topology-Id"] = docDb.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString();
                     request.Write(jsonDocuments);
                     request.ExecuteRequest(_cts.Token);
 

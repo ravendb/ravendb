@@ -250,7 +250,11 @@ namespace Raven.Database.Bundles.Replication.Controllers
         public async Task<HttpResponseMessage> DocReplicatePost()
         {
             const int BatchSize = 512;
-
+            var topologyId = Request.Headers.GetFirstValue("Topology-Id");
+            if (topologyId != null && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
+            {
+                return GetMessageWithString("Refusing to accept data outside of my topology",HttpStatusCode.Forbidden);
+            }
             var src = GetQueryStringValue("from");
             var collections = GetQueryStringValue("collections");
             if (string.IsNullOrEmpty(src))
@@ -363,6 +367,11 @@ namespace Raven.Database.Bundles.Replication.Controllers
         [Obsolete("Use RavenFS instead.")]
         public async Task<HttpResponseMessage> AttachmentReplicatePost()
         {
+            var topologyId = Request.Headers.GetFirstValue("Topology-Id");
+            if (topologyId != null && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
+            {
+                return GetMessageWithString("Refusing to accept data outside of my topology", HttpStatusCode.Forbidden);
+            }
             var src = GetQueryStringValue("from");
             if (string.IsNullOrEmpty(src))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
