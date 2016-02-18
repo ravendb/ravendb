@@ -27,7 +27,7 @@ namespace Raven.Server.Indexing.Corax
 
         public unsafe string[] Query(QueryDefinition qd)
         {
-            var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction);
+            var entries = new Table(_parent.EntriesSchema, "IndexEntries", _context.Transaction.InnerTransaction);
             //TODO: implement using heap
             //var heap = new Heap<QueryMatch>(qd.Take, QueryMatchScoreSorter.Instance);
             qd.Query.Initialize(_parent, _context, entries);

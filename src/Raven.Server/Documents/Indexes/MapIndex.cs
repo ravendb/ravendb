@@ -18,12 +18,12 @@ namespace Raven.Server.Documents.Indexes
         {
         }
 
-        protected override bool IsStale(TransactionOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag)
+        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag)
         {
             long lastDocumentEtag;
             using (var tx = databaseContext.OpenReadTransaction())
             {
-                lastDocumentEtag = DocumentsStorage.ReadLastEtag(tx);
+                lastDocumentEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
             }
 
             long lastMappedEtag;

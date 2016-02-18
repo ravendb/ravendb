@@ -37,15 +37,6 @@ namespace Raven.Server.ServerWide.Context
             return disposable;
         }
 
-        public IDisposable AllocateOperationContext(out TransactionOperationContext context)
-        {
-            DocumentsOperationContext ctx;
-            var disposable = AllocateOperationContext(out ctx);
-            context = ctx;
-
-            return disposable;
-        }
-
         public IDisposable AllocateOperationContext(out DocumentsOperationContext context)
         {
             Debug.Assert(_documentDatabase != null);

@@ -1,3 +1,110 @@
+///
+/// JSZip
+///
+
+declare var JSZipUtils: {
+    getBinaryContent: any;
+}
+
+declare module "jszip-utils" {
+    export = JSZipUtils;
+}
+
+///
+/// Forge
+///
+
+declare var forge: any;
+
+declare module "forge" {
+    export = forge;
+}
+
+///
+/// jQuery: 
+///   - selectpicker 
+///   - multiselect
+///   - highlight
+///   - fullscreen
+///
+
+interface JQuery {
+
+    selectpicker(): void;
+
+    multiselect(action?: string): void;
+
+    highlight(): void;
+
+    toggleFullScreen(): void;
+    fullScreen(arg: boolean): void;
+    fullScreen(): boolean;
+}
+
+
+///
+/// jwerty
+///
+
+
+interface JwertyStatic {
+    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any);
+    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any, context: any, selector: string);
+}
+
+declare var jwerty: JwertyStatic;
+
+///
+/// D3
+///
+
+declare module "d3/models/timelinesChart" {
+} 
+
+
+declare module "d3/models/timelines" {
+} 
+
+declare var nv: any;
+
+declare module "nvd3" {
+    export = nv;
+}
+
+
+///
+/// Ace
+///
+
+declare module "ace/ace" {
+    export = forge;
+}
+
+
+///
+/// ES6 - shim
+///
+interface String {
+    codePointAt();
+    repeat();
+    startsWith(str: string): boolean;
+    endsWith(str: string): boolean;
+    contains(str: string): boolean;
+}
+
+interface Array<T> {
+    find(predicate: (element: T, index: number, array: Array<T>) => boolean, thisArg?: any): T;
+    findIndex(predicate: (element: T, index: number, array: Array<T>) => boolean, thisArg?: any): T;
+    keys(): ArrayIterator;
+    entries(): ArrayIterator;
+    values(): ArrayIterator;
+}
+
+interface ArrayIterator {
+
+}
+
+
 // Want Intellisense comments for your extensions? Use JSDoc format:
 /**
  * Summary goes here.
@@ -47,9 +154,11 @@ interface Spinner {
 }
 
 declare var Spinner: {
-     new (spinnerOptions: { lines: number; length: number; width: number; radius: number; scale: number; corners: number;
+    new (spinnerOptions: {
+        lines: number; length: number; width: number; radius: number; scale: number; corners: number;
         color: any; opacity: number; rotate: number; direction: number; speed: number; trail: number; fps: number; zIndex: number;
-        className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string }): Spinner;
+        className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string
+    }): Spinner;
 }
 
 declare class EventSource {
@@ -81,7 +190,7 @@ interface String {
     count: (input) => number;
     fixedCharCodeAt: (input, position) => number;
     getSizeInBytesAsUTF8: () => number;
-    multiply: (amount:number)=>string;
+    multiply: (amount: number) => string;
     paddingLeft: (paddingChar: string, paddingLength: number) => string;
     paddingRight: (paddingChar: string, paddingLength: number) => string;
 
@@ -95,7 +204,7 @@ interface String {
 interface Storage {
     getObject: (string) => any;
     setObject: (key: string, value: any) => void;
-} 
+}
 
 interface DurandalRouteConfiguration {
     tooltip?: string;
@@ -105,7 +214,7 @@ interface DurandalRouteConfiguration {
 declare module AceAjax {
     interface IEditSession {
         foldAll();
-    }    
+    }
 }
 
 declare module Dagre {
@@ -113,3 +222,4 @@ declare module Dagre {
         setEdge(sourceId: string, targetId: string, label: any): Graph;
     }
 }
+

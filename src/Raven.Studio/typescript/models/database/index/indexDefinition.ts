@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 import luceneField = require("models/database/index/luceneField");
 import spatialIndexField = require("models/database/index/spatialIndexField");
 

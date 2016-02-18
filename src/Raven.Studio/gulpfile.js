@@ -4,7 +4,12 @@ var gulp = require('gulp'),
     plugins = gulpLoadPlugins(),
     fileExists = require('file-exists'),
     del = require('del'),
+    glob = require('glob'),
+    fs = require('fs'),
+    path = require('path'),
     runSequence = require('run-sequence');
+
+var gutil = require('gulp-util');
 
 var paths = {
     tsdConfig: './tsd.json',
@@ -16,6 +21,7 @@ var paths = {
         './wwwroot/Content/bootstrap.less',
         './wwwroot/Content/dynatree.custom.less'],
     lessTarget: './wwwroot/Content/',
+    lessTargetSelector: './wwwroot/Content/**/*.css',
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
     cssToMerge: [
@@ -62,14 +68,35 @@ var tsCompilerConfig = plugins.typescript.createProject('tsconfig.json');
 
 gulp.task('clean', function () {
     del.sync(paths.releaseTarget);
-    del.sync(['./typings/*', '!./typings/customTypings.d.ts', '!./typings/tsd.d.ts']);
+    del.sync(['./typings/*', '!./typings/_studio/**', '!./typings/tsd.d.ts']);
     del.sync([paths.bowerSource]);
     del.sync(['./wwwroot/App/**/*.js']);
     del.sync(['./wwwroot/App/**/*.js.map']);
 });
 
+var newestFileFinder = function (targetGlob) {
+    return function (projectDir, srcFile, absSrcFile) {
+        // find newest file based on *targetToScan* and return this and file to compare against
+        var files = glob.sync(targetGlob);
+        var newestFile = null;
+        var newestFileTimestamp = null;
+
+        files.forEach(function (file) {
+            var stats = fs.statSync(file);
+            var mtime = stats.mtime.getTime();
+
+            if (newestFileTimestamp == null || mtime > newestFileTimestamp) {
+                newestFileTimestamp = mtime;
+                newestFile = file;
+            }
+        });
+        return newestFile;
+    }
+}
+
 gulp.task('less', function() {
     return gulp.src(paths.lessSource)
+        .pipe(plugins.newy(newestFileFinder(paths.lessTargetSelector)))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.less({
             sourceMap: true
@@ -79,7 +106,8 @@ gulp.task('less', function() {
 });
 
 gulp.task('ts-compile', function () {
-    return gulp.src([paths.tsSource, paths.typings])
+    return gulp.src([paths.tsSource])
+        .pipe(plugins.changed(paths.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.typescript(tsCompilerConfig))
         .js
@@ -102,8 +130,9 @@ gulp.task('compile', ['less', 'ts-compile'], function() {
     // await dependent tasks
 });
 
-gulp.task('watch', ['compile'], function () {
-    gulp.watch([paths.tsSource, lessSource], ['compile']);
+gulp.task('watch', ['ts-compile'], function () {
+    gulp.watch(paths.tsSource, ['ts-compile']);
+    gulp.watch(paths.lessSource, ['less']);
 });
 
 gulp.task('release-copy-favicon', function() {

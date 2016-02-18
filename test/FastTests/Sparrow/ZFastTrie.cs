@@ -551,6 +551,10 @@ namespace FastTests.Sparrow
 
         private static int DumpNodes<T, W>(ZFastTrieSortedSet<T, W> tree, ZFastTrieSortedSet<T, W>.Node node, ZFastTrieSortedSet<T, W>.Node parent, int nameLength, int depth) where T : IEquatable<T>
         {
+
+            if (Debugger.IsAttached == false)
+                return 0;
+
             if (node == null)
                 return 0;
 

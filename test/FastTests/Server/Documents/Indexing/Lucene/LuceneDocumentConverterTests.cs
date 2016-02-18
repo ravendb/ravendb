@@ -8,13 +8,12 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Xunit;
 using Document = Raven.Server.Documents.Document;
 
-namespace FastTests.Server.Documents.Indexing
+namespace FastTests.Server.Documents.Indexing.Lucene
 {
     public class LuceneDocumentConverterTests : IDisposable
     {
@@ -31,7 +30,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void Returns_null_value_if_property_is_not_present_in_document()
+        public void Returns_null_value_if_property_is_null()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
@@ -40,6 +39,7 @@ namespace FastTests.Server.Documents.Indexing
 
             var doc = create_doc(new DynamicJsonValue
             {
+                ["Name"] = null
             }, "users/1");
 
             var result = _sut.ConvertToCachedDocument(doc);
@@ -66,6 +66,49 @@ namespace FastTests.Server.Documents.Indexing
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.EmptyString, result.GetField("Name").StringValue);
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
+        [Fact]
+        public void Does_not_add_field_to_output_document_if_input_document_has_missing_property_in_first_conversion_run()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new AutoIndexField("Name"),
+            });
+
+            var doc = create_doc(new DynamicJsonValue
+            {
+            }, "users/1");
+
+            var result = _sut.ConvertToCachedDocument(doc);
+
+            Assert.Equal(1, result.GetFields().Count);
+            Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
+        [Fact]
+        public void Does_not_add_field_to_output_document_if_input_document_has_missing_property_in_next_conversion_run()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new AutoIndexField("Name"),
+            });
+
+            var docWithName = create_doc(new DynamicJsonValue
+            {
+                ["Name"] = "James"
+            }, "users/1");
+
+            _sut.ConvertToCachedDocument(docWithName);
+
+            var docWithoutName = create_doc(new DynamicJsonValue
+            {
+            }, "users/1");
+
+            var result = _sut.ConvertToCachedDocument(docWithoutName);
+
+            Assert.Equal(1, result.GetFields().Count);
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 
@@ -173,7 +216,7 @@ namespace FastTests.Server.Documents.Indexing
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 
-        [Fact(Skip = "Currently failing")]
+        [Fact]
         public void Conversion_of_string_value_nested_inside_collection()
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
@@ -185,17 +228,14 @@ namespace FastTests.Server.Documents.Indexing
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "Joe"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "John"
-                        }
-                    })
+                        ["Name"] = "Joe"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = "John"
+                    }
                 }
             }, "users/1");
 
@@ -203,16 +243,66 @@ namespace FastTests.Server.Documents.Indexing
             
             Assert.Equal(4, result.GetFields().Count);
             Assert.Equal(2, result.GetFields("Friends_Name").Length);
-            // TODO: Fix this test - because we are using a single LazyStringReader per 
-            // field name, if we have two fields with the same name, they have the same reader instance
-            // so they actually get the same name. In 3.x we handle that by also adding an internal 
-            // index for the field name cache key
+            
             Assert.Equal("Joe", result.GetFields("Friends_Name")[0].ReaderValue.ReadToEnd());
             Assert.Equal("John", result.GetFields("Friends_Name")[1].ReaderValue.ReadToEnd());
 
             Assert.Equal("true", result.GetField("Friends_Name_IsArray").StringValue);
 
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
+        }
+
+        [Fact]
+        public void Conversion_of_string_value_nested_inside_double_nested_collections()
+        {
+            _sut = new LuceneDocumentConverter(new IndexField[]
+            {
+                new AutoIndexField("Companies,Products,Name"),
+            });
+
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Companies"] = new DynamicJsonArray
+                {
+                    new DynamicJsonValue
+                        {
+                            ["Products"] = new DynamicJsonArray
+                            {
+                                new DynamicJsonValue
+                                    {
+                                        ["Name"] = "Headphones CX7"
+                                    },
+                                    new DynamicJsonValue
+                                    {
+                                        ["Name"] = "Keyboard AD3"
+                                    }
+                            }
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Products"] = new DynamicJsonArray
+                            {
+                                new DynamicJsonValue
+                                {
+                                    ["Name"] = "Optical Mouse V2"
+                                }
+                            }
+                        },
+                }
+            }, "companies/1");
+
+            var result = _sut.ConvertToCachedDocument(doc);
+
+            Assert.Equal(5, result.GetFields().Count);
+            Assert.Equal(3, result.GetFields("Companies_Products_Name").Length);
+
+            Assert.Equal("Headphones CX7", result.GetFields("Companies_Products_Name")[0].ReaderValue.ReadToEnd());
+            Assert.Equal("Keyboard AD3", result.GetFields("Companies_Products_Name")[1].ReaderValue.ReadToEnd());
+            Assert.Equal("Optical Mouse V2", result.GetFields("Companies_Products_Name")[2].ReaderValue.ReadToEnd());
+
+            Assert.Equal("true", result.GetField("Companies_Products_Name_IsArray").StringValue);
+
+            Assert.Equal("companies/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
 
         public Document create_doc(DynamicJsonValue document, string id)

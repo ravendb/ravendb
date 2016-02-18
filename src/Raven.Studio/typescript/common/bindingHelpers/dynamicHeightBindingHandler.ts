@@ -1,3 +1,4 @@
+/// <reference path="../../../typings/tsd.d.ts" />
 import composition = require("durandal/composition");
 
 /*

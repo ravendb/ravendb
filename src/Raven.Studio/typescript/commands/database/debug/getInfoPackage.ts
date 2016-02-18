@@ -1,5 +1,3 @@
-/// <reference path="../../../../typings/tsd.d.ts" />
-
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import zipUtils = require('jszip-utils');

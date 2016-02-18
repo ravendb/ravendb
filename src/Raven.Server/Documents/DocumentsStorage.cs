@@ -2,20 +2,21 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+
 using Raven.Abstractions.Data;
+using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
-using Raven.Server.Documents.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -24,6 +25,8 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly TableSchema _docsSchema = new TableSchema();
+        private readonly TableSchema _tombstonesSchema = new TableSchema();
+
         private readonly ILog _log;
         private readonly string _name;
         private static readonly Slice LastEtagSlice = "LastEtag";
@@ -37,6 +40,7 @@ namespace Raven.Server.Documents
         private UnmanagedBuffersPool _unmanagedBuffersPool;
         private const string NoCollectionSpecified = "Raven/Empty";
         private const string SystemDocumentsCollection = "Raven/SystemDocs";
+        private const string Documenttombstones = "DocumentTombstones";
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -60,6 +64,19 @@ namespace Raven.Server.Documents
                 IsGlobal = false
             });
             _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 1,
+                IsGlobal = true
+            });
+
+            _tombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 1,
+                IsGlobal = true,
+                Name = "Tombstones"
+            });
+            _tombstonesSchema.DefineFixedSizeIndex("AllTombstonesEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
                 IsGlobal = true
@@ -112,9 +129,10 @@ namespace Raven.Server.Documents
                 {
                     tx.CreateTree("Docs");
                     tx.CreateTree("Identities");
+                    tx.CreateTree("Tombstones");
 
                     _docsSchema.Create(tx, SystemDocumentsCollection);
-
+                    _tombstonesSchema.Create(tx, Documenttombstones);
                     _lastEtag = ReadLastEtag(tx);
 
                     tx.Commit();
@@ -271,6 +289,25 @@ namespace Raven.Server.Documents
             return TableValueToDocument(context, tvr);
         }
 
+        public IEnumerable<DocumentTombstone> GetTombstonesAfter(DocumentsOperationContext context, long etag, int start, int take)
+        {
+            var table = new Table(_tombstonesSchema, Documenttombstones, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(_tombstonesSchema.FixedSizeIndexes["AllTombstonesEtags"], etag))
+            {
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToTombstone(context, result);
+            }
+        }
+
         private Slice GetSliceFromKey(DocumentsOperationContext context, string key)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
@@ -374,6 +411,27 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        private static DocumentTombstone TableValueToTombstone(MemoryOperationContext context, TableValueReader tvr)
+        {
+            var result = new DocumentTombstone
+            {
+                StorageId = tvr.Id
+            };
+            int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKeyAndCollection method
+            var ptr = tvr.Read(3, out size);
+            byte offset;
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+
+            ptr = tvr.Read(1, out size);
+            result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+            ptr = tvr.Read(2, out size);
+            result.DeletedEtag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+
+            return result;
+        }
+
         public bool Delete(DocumentsOperationContext context, string key, long? expectedEtag)
         {
             var doc = Get(context, key);
@@ -400,11 +458,12 @@ namespace Raven.Server.Documents
             string originalCollectionName;
             var collectionName = GetCollectionName(key, doc.Data, out originalCollectionName);
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+
+            CreateTombstone(context, table, doc);
+
             table.Delete(doc.StorageId);
 
-            DeleteDocumentFromIndexesForCollection(context, key, originalCollectionName);
-
-            context.Transaction.RegisterNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
@@ -413,6 +472,35 @@ namespace Raven.Server.Documents
             });
 
             return true;
+        }
+
+        private void CreateTombstone(DocumentsOperationContext context, Table collectionDocsTable, Document doc)
+        {
+            int size;
+            var ptr = collectionDocsTable.DirectRead(doc.StorageId, out size);
+            var tvr = new TableValueReader(ptr, size);
+
+            int lowerSize;
+            var lowerKey = tvr.Read(0, out lowerSize);
+
+            int keySize;
+            var keyPtr = tvr.Read(2, out keySize);
+
+            var newEtag = ++_lastEtag;
+            var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
+            var documentEtagBigEndian = IPAddress.HostToNetworkOrder(doc.Etag);
+
+            var tbv = new TableValueBuilder
+            {
+                {lowerKey, lowerSize},
+                {(byte*) &newEtagBigEndian , sizeof (long)},
+                {(byte*) &documentEtagBigEndian , sizeof (long)},
+                {keyPtr, keySize},
+            };
+
+            var table = new Table(_tombstonesSchema, Documenttombstones, context.Transaction.InnerTransaction);
+
+            table.Insert(tbv);
         }
 
         public void DeleteCollection(DocumentsOperationContext context, string name, List<long> deletedList, long untilEtag)
@@ -480,7 +568,7 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
-            context.Transaction.RegisterNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
                 Etag = newEtag,
                 CollectionName = originalCollectionName,
@@ -594,18 +682,6 @@ namespace Raven.Server.Documents
                         Count = collectionTable.NumberOfEntries
                     };
                 } while (it.MoveNext());
-            }
-        }
-
-        private void DeleteDocumentFromIndexesForCollection(DocumentsOperationContext context, string key, string collection)
-        {
-            foreach (var index in _documentDatabase.IndexStore.GetIndexesForCollection(collection))
-            {
-                var task = context.Transaction.GetOrAddTask(
-                    x => x.IndexId == index.IndexId,
-                    () => new RemoveFromIndexTask(index.IndexId));
-
-                task.AddKey(key);
             }
         }
     }

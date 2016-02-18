@@ -13,17 +13,17 @@ namespace Raven.Abstractions.Data
     /// <summary>
     /// The result of a query
     /// </summary>
-    public class QueryResult
+    public class QueryResult<T>
     {
         /// <summary>
         /// Gets or sets the document resulting from this query.
         /// </summary>
-        public List<RavenJObject> Results { get; set; }
+        public List<T> Results { get; set; }
 
         /// <summary>
         /// Gets or sets the document included in the result.
         /// </summary>
-        public List<RavenJObject> Includes { get; set; }
+        public List<T> Includes { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the index is stale.
@@ -103,10 +103,13 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public QueryResult()
         {
-            Results = new List<RavenJObject>();
-            Includes = new List<RavenJObject>();
+            Results = new List<T>();
+            Includes = new List<T>();
         }
+    }
 
+    public class QueryResult : QueryResult<RavenJObject>
+    {
         /// <summary>
         /// Ensures that the query results can be used in snapshots
         /// </summary>
@@ -137,11 +140,11 @@ namespace Raven.Abstractions.Data
                 IsStale = this.IsStale,
                 SkippedResults = this.SkippedResults,
                 TotalResults = this.TotalResults,
-                Highlightings = this.Highlightings == null ? null :  this.Highlightings.ToDictionary(
+                Highlightings = this.Highlightings == null ? null : this.Highlightings.ToDictionary(
                     pair => pair.Key,
                     x => new Dictionary<string, string[]>(x.Value)),
                 ScoreExplanations = this.ScoreExplanations == null ? null : this.ScoreExplanations.ToDictionary(x => x.Key, x => x.Value),
-                TimingsInMilliseconds = this.TimingsInMilliseconds  == null ?  null :  this.TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
+                TimingsInMilliseconds = this.TimingsInMilliseconds == null ? null : this.TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
                 LastQueryTime = this.LastQueryTime,
                 DurationMilliseconds = this.DurationMilliseconds,
                 ResultEtag = this.ResultEtag

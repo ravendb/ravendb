@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class alert {
     alertLevel: string;
     createdAt: string;

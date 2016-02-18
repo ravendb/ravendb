@@ -1,29 +1,40 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Json
 {
-    public class BlittableJsonTraverser // TODO arek - based on IncludeUtilTests - maybe it should be used there to get ids of included docs
+    public class BlittableJsonTraverser
     {
         private const char PropertySeparator = '.';
         private const char CollectionSeparator = ',';
 
-        private readonly char[] _separators;
-
-        public BlittableJsonTraverser(char[] separators = null)
+        private readonly char[] _separators =
         {
-            _separators = separators ?? new []{ PropertySeparator, CollectionSeparator };
-        }
+            PropertySeparator,
+            CollectionSeparator
 
-        public object Read(BlittableJsonReaderObject docReader, StringSegment path)
+        };
+
+        public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result)
         {
             var indexOfFirstSeparator = path.IndexOfAny(_separators, 0);
             object reader;
 
             //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
-            if (docReader.TryGetMember(path.SubSegment(0, indexOfFirstSeparator), out reader) == false || indexOfFirstSeparator == -1)
-                return reader;
+            if (docReader.TryGetMember(path.SubSegment(0, indexOfFirstSeparator), out reader) == false)
+            {
+                result = null;
+                return false;
+            }
+
+            if (indexOfFirstSeparator == -1)
+            {
+                result = reader;
+                return true;
+            }
 
             var pathSegment = path.SubSegment(indexOfFirstSeparator + 1);
 
@@ -32,23 +43,20 @@ namespace Raven.Server.Json
                 case PropertySeparator:
                     var subObject = reader as BlittableJsonReaderObject;
                     if (subObject != null)
-                        return Read(subObject, pathSegment);
+                    {
+                        return TryRead(subObject, pathSegment, out result);
+                    }
                     
-                    throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader.GetType().FullName} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}." );
+                    throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader?.GetType()?.FullName ?? "null"} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}." );
                 case CollectionSeparator:
                     var subArray = reader as BlittableJsonReaderArray;
                     if (subArray != null)
-                        return ReadArray(subArray, pathSegment);
+                    {
+                        result = ReadArray(subArray, pathSegment);
+                        return true;
+                    }
 
-                    throw new InvalidOperationException($"Invalid path. After the collection separator ('{CollectionSeparator}') {reader.GetType().FullName} object has been ancountered instead of {nameof(BlittableJsonReaderArray)}.");
-                //case '(':
-                //    if (includePath[includePath.Length - 1] != ')') //precaution
-                //        return;
-
-                //    var idWithPrefix = HandlePrefix(docReader, includePath, indexOfFirstSeparator);
-                //    if (idWithPrefix != null)
-                //        includedIds.Add(idWithPrefix);
-                //    break;
+                    throw new InvalidOperationException($"Invalid path. After the collection separator ('{CollectionSeparator}') {reader?.GetType()?.FullName ?? "null"}  object has been ancountered instead of {nameof(BlittableJsonReaderArray)}.");
                 default:
                     throw new NotSupportedException($"Unhandled separator character: {path[indexOfFirstSeparator]}");
             }
@@ -63,7 +71,23 @@ namespace Raven.Server.Json
                 var arrayObject = item as BlittableJsonReaderObject;
                 if (arrayObject != null)
                 {
-                    yield return Read(arrayObject, pathSegment);
+                    object result;
+                    if (TryRead(arrayObject, pathSegment, out result))
+                    {
+                        var enumerable = result as IEnumerable;
+
+                        if (enumerable != null)
+                        {
+                            foreach (var nestedItem in enumerable)
+                            {
+                                yield return nestedItem;
+                            }
+                        }
+                        else
+                        {
+                            yield return result;
+                        }
+                    }
                 }
                 else
                 {
@@ -73,12 +97,15 @@ namespace Raven.Server.Json
                         var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(_separators, 0);
                         var subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
 
-                        yield return ReadArray(arrayReader, subSegment); //TODO arek
-                        
-                        continue;
+                        foreach (var nestedItem in ReadArray(arrayReader, subSegment))
+                        {
+                            yield return nestedItem;
+                        }
                     }
-
-                    yield return item;
+                    else
+                    {
+                        yield return item;
+                    }
                 }
             }
         }

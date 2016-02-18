@@ -1,3 +1,7 @@
+/// <reference path="../../typings/tsd.d.ts" />
+
+declare var define: RequireDefine;
+
 define(['durandal/system', 'transitions/transitionHelper'], function (system, helper) {
     var settings = {
         inAnimation: 'fadeInDownBig',

@@ -1,10 +1,7 @@
-/// <reference path="../../../models/dto.ts" />
-
 import commandBase = require("commands/commandBase");
 import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
 import database = require("models/resources/database");
 import transformer = require("models/database/index/transformer");
-
 
 class saveTransformerCommand extends commandBase {
     constructor(private trans: transformer, private db: database) {

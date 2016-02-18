@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class resource {
     isAdminCurrentTenant = ko.observable<boolean>(false);
     isSystem = false;

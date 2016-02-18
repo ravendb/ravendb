@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Server.Documents;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Routing
 {

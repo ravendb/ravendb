@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Raven.Server.Routing
+namespace Raven.Server.Utils
 {
     public struct StringSegment : IEquatable<StringSegment>
     {
@@ -29,7 +29,7 @@ namespace Raven.Server.Routing
         public StringSegment SubSegment(int start, int length = -1)
         {
             if (length == -1)
-                length = _string.Length - Start - start;			
+                length = Length - start;
             else if (start + length > _string.Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
 

@@ -1,6 +1,3 @@
-/// <reference path="../../../typings/tsd.d.ts" />
-
-
 import app = require("durandal/app");
 /* TODO:
 import d3 = require("d3");

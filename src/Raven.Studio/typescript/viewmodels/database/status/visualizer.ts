@@ -1,5 +1,3 @@
-/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import app = require("durandal/app");
 
 import appUrl = require("common/appUrl");

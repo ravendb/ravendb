@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Raven.Server.Routing;
+using Raven.Server.Utils;
+
 namespace Raven.Server.Json.Parsing
 {
     public unsafe class JsonParserState

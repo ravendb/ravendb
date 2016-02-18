@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -9,14 +10,30 @@ namespace Sparrow.Binary
 {
     public unsafe struct PtrBitVector
     {
-        public readonly ulong* Bits;
+        public const uint BitsPerByte = 8;
+        public const uint Log2BitsPerByte = 3; // Math.Log( BitsPerByte, 2 )
+
+        public readonly byte* Bits;
         public readonly int Count;
 
-        public PtrBitVector(ulong* bits, int numberOfBits)
+        public PtrBitVector(void* bits, int numberOfBits)
         {
-            this.Bits = bits;
+            this.Bits = (byte*)bits;
             this.Count = numberOfBits;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ByteForBit(int idx)
+        {
+            return (uint)(idx >> (int)Log2BitsPerByte);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte BitInByte(int idx)
+        {
+            return (byte)(0x80 >> (idx % (int)BitsPerByte));
+        }
+
 
         public bool this[int idx]
         {
@@ -31,8 +48,8 @@ namespace Sparrow.Binary
         {
             Contract.Requires(idx >= 0 && idx < this.Count);
 
-            uint word = BitVector.WordForBit(idx);
-            ulong mask = BitVector.BitInWord(idx);
+            uint word = ByteForBit(idx);
+            byte mask = BitInByte(idx);
 
             Bits[word] |= mask;
         }
@@ -42,8 +59,8 @@ namespace Sparrow.Binary
         {
             Contract.Requires(idx >= 0 && idx < this.Count);
 
-            uint word = BitVector.WordForBit(idx);
-            ulong mask = BitVector.BitInWord(idx);
+            uint word = ByteForBit(idx);
+            byte mask = BitInByte(idx);
 
             bool currentValue = (Bits[word] & mask) != 0;
             if (currentValue != value)
@@ -55,39 +72,61 @@ namespace Sparrow.Binary
         {
             Contract.Requires(idx >= 0 && idx < this.Count);
 
-            uint word = BitVector.WordForBit(idx);
-            ulong mask = BitVector.BitInWord(idx);
+            uint word = ByteForBit(idx);
+            byte mask = BitInByte(idx);
             return (Bits[word] & mask) != 0;
         }
 
         public int FindLeadingOne()
         {
+            Debug.Assert(BitConverter.IsLittleEndian);
+
+            ulong* ptr = (ulong*)Bits;
+            int count = this.Count;
+            int words = count / BitVector.BitsPerWord;
+
+            ulong value;
+            int i;
             int idx;
-            if (this.Count <= BitVector.BitsPerWord)
-            {
-                if (Bits[0] == 0)
-                    return -1;
 
-                idx = BitVector.BitsPerWord - Binary.Bits.MostSignificantBit(Bits[0]) - 1;
-                return idx < this.Count ?  idx : -1;
-            }                
-            else
+            int accumulator = BitVector.BitsPerWord;            
+            for (i = 0; i < words; i++)
             {
-                int accumulator = BitVector.BitsPerWord;
-                for (int i = 0; i <= this.Count / BitVector.BitsPerWord; i++ )
+                value = ptr[i];
+                if (value == 0)
                 {
-                    if (Bits[i] == 0)
-                    {
-                        accumulator += BitVector.BitsPerWord;
-                        continue;
-                    }
-
-                    idx = accumulator - Binary.Bits.MostSignificantBit(Bits[i]) - 1;
-                    return idx < this.Count ? idx : -1;
+                    accumulator += BitVector.BitsPerWord;
+                    continue;
                 }
+
+                if (BitConverter.IsLittleEndian)
+                    value = Binary.Bits.SwapBytes(value);
+
+                idx = accumulator - Binary.Bits.MostSignificantBit(value) - 1;
+                return idx < count ? idx : -1;
             }
 
-            return -1;
+            value = 0;
+            byte* bytePtr = Bits + words * BitVector.BytesPerWord;
+
+            int rotations = (count / BitVector.BitsPerByte);
+            if (count % BitVector.BitsPerByte != 0)
+                rotations++;
+
+            // TODO: Can we just write it in Little Endian Format (aka in reverse order)?
+
+            // We write the value and shift
+            for (i = 0; i < rotations; i++)
+            {
+                value <<= BitVector.BitsPerByte; // We shift first, because shifting 0 is still 0
+                value |= bytePtr[i];
+            }
+
+            // We move the value as many places as we need to fill with zeroes.
+            value <<= (BitVector.BitsPerByte * (BitVector.BytesPerWord - rotations));
+
+            idx = accumulator - Binary.Bits.MostSignificantBit(value) - 1;
+            return idx < count ? idx : -1;
         }
     }
 }

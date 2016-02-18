@@ -1,10 +1,10 @@
-var tmp;
-tmp = (function () {
-    var $;
-    var App;
-    $ = require("jquery");
-    var system;
-    system = require("durandal/system");
+/// <reference path="../../typings/tsd.d.ts" />
+
+declare var define: RequireDefine;
+declare var App: any;
+
+define(['durandal/system', 'jquery'], function (system, $) {
+
     var animationTypes = [
         'bounce',
         'bounceIn',
@@ -91,12 +91,12 @@ tmp = (function () {
 
     function doTrans(settings) {
         var parent = settings.parent,
-            activeView = settings.activeView,
-            newChild = settings.child,
-            outAn = animValue(settings.outAnimation),
-            inAn = animValue(settings.inAnimation),
-            $previousView,
-            $newView = $(newChild).removeClass(outAn); // just need to remove outAn here, keeping the animated class so we don't get a "flash"
+          activeView = settings.activeView,
+          newChild = settings.child,
+          outAn = animValue(settings.outAnimation),
+          inAn = animValue(settings.inAnimation),
+          $previousView,
+          $newView = $(newChild).removeClass(outAn); // just need to remove outAn here, keeping the animated class so we don't get a "flash"
 
         return system.defer(function (dfd) {
             function outTransition(callback) {
@@ -150,5 +150,4 @@ tmp = (function () {
             return doTrans(settings);
         }
     };
-})();
-export = tmp;
+});

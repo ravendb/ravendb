@@ -154,7 +154,7 @@ namespace Voron.Data.Tables
 
         }
 
-        private byte* DirectRead(long id, out int size)
+        public byte* DirectRead(long id, out int size)
         {
             var posInPage = id % _pageSize;
             if (posInPage == 0) // large

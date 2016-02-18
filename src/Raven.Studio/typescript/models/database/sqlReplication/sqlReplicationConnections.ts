@@ -1,4 +1,4 @@
-/// <reference path="../../../models/dto.ts" />
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 import document = require("models/database/documents/document");
 import predefinedConnection = require("models/database/sqlReplication/predefinedSqlConnection");

@@ -14,6 +14,7 @@ namespace FastTests.Server.Json
         private readonly UnmanagedBuffersPool _pool;
         private readonly MemoryOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
+        private readonly BlittableJsonTraverser _sut = new BlittableJsonTraverser();
 
         public BlittableJsonTraverserTests()
         {
@@ -24,14 +25,13 @@ namespace FastTests.Server.Json
         [Fact]
         public void Reads_simple_value()
         {
-            var sut = new BlittableJsonTraverser();
-
             var doc = create_doc(new DynamicJsonValue
             {
                 ["Name"] = "John Doe"
             });
 
-            var read = sut.Read(doc, "Name");
+            object read;
+            _sut.TryRead(doc, "Name", out read);
 
             Assert.Equal("John Doe", read.ToString());
         }
@@ -39,8 +39,6 @@ namespace FastTests.Server.Json
         [Fact]
         public void Reads_nested_values()
         {
-            var sut = new BlittableJsonTraverser();
-
             var doc = create_doc(new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
@@ -54,11 +52,12 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = sut.Read(doc, "Address.City");
+            object read;
+            _sut.TryRead(doc, "Address.City", out read);
 
             Assert.Equal("New York City", read.ToString());
 
-            read = sut.Read(doc, "Address.Details.Floor");
+            _sut.TryRead(doc, "Address.Details.Floor", out read);
 
             Assert.Equal(2L, read);
         }
@@ -66,27 +65,23 @@ namespace FastTests.Server.Json
         [Fact]
         public void Reads_values_nested_in_array()
         {
-            var sut = new BlittableJsonTraverser();
-
             var doc = create_doc(new DynamicJsonValue
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "Joe"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Name"] = "John"
-                        }
-                    })
+                        ["Name"] = "Joe"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = "John"
+                    }
                 }
             });
 
-            var read = sut.Read(doc, "Friends,Name");
+            object read;
+            _sut.TryRead(doc, "Friends,Name", out read);
 
             var enumerable = read as IEnumerable<object>;
 
@@ -102,33 +97,29 @@ namespace FastTests.Server.Json
         [Fact]
         public void Reads_values_nested_in_array_as_objects()
         {
-            var sut = new BlittableJsonTraverser();
-
             var doc = create_doc(new DynamicJsonValue
             {
                 ["Friends"] = new DynamicJsonArray
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
+                        ["Name"] = new DynamicJsonValue
                         {
-                            ["Name"] = new DynamicJsonValue
-                            {
-                                ["First"] = "Joe"
-                            }
-                        },
-                        new DynamicJsonValue
+                            ["First"] = "Joe"
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Name"] = new DynamicJsonValue
                         {
-                            ["Name"] = new DynamicJsonValue
-                            {
-                                ["First"] = "John"
-                            }
-                        },
-                    })
+                            ["First"] = "John"
+                        }
+                    },
                 }
             });
 
-            var read = sut.Read(doc, "Friends,Name.First");
+            object read;
+            _sut.TryRead(doc, "Friends,Name.First", out read);
 
             var enumerable = read as IEnumerable<object>;
 
@@ -139,6 +130,115 @@ namespace FastTests.Server.Json
             Assert.Equal(2, items.Count);
             Assert.Equal("Joe", items[0].ToString());
             Assert.Equal("John", items[1].ToString());
+        }
+
+        [Fact]
+        public void Reads_value_nested_in_object_of_array_of_arrays()
+        {
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["Items"] = new DynamicJsonArray
+                {
+                    new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["Bar"] = new DynamicJsonValue
+                            {
+                                ["Foo"] = "foo/1"
+                            }
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Bar"] = new DynamicJsonValue
+                            {
+                                ["Foo"] = "foo/2"
+                            }
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["Bar"] = new DynamicJsonValue
+                            {
+                                ["Foo"] = "foo/3"
+                            }
+                        }
+                    }
+                }
+            });
+
+            object read;
+            _sut.TryRead(doc, "Items,,Bar.Foo", out read);
+
+            var enumerable = read as IEnumerable<object>;
+
+            Assert.NotNull(enumerable);
+
+            var items = enumerable.ToList();
+
+            Assert.Equal(3, items.Count);
+            Assert.Equal("foo/1", items[0].ToString());
+            Assert.Equal("foo/2", items[1].ToString());
+            Assert.Equal("foo/3", items[2].ToString());
+        }
+
+        [Fact]
+        public void Reads_value_nested_in_nested_object_of_array_of_arrays()
+        {
+            var doc = create_doc(new DynamicJsonValue
+            {
+                ["Name"] = "John Doe",
+                ["Items"] = new DynamicJsonArray
+                {
+                    new DynamicJsonValue
+                    {
+                        ["Bar"] = new DynamicJsonArray
+                        {
+                            new DynamicJsonValue
+                            {
+                                ["Foo"] = new DynamicJsonValue
+                                {
+                                    ["Baz"] = "baz/1"
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["Foo"] = new DynamicJsonValue
+                                {
+                                    ["Baz"] = "baz/2"
+                                }
+                            }
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Bar"] = new DynamicJsonArray
+                        {
+                            new DynamicJsonValue
+                            {
+                                ["Foo"] = new DynamicJsonValue
+                                {
+                                    ["Baz"] = "baz/3"
+                                }
+                            }
+                        }
+                    },
+                }
+            });
+
+            object read;
+            _sut.TryRead(doc, "Items,Bar,Foo.Baz", out read);
+
+            var enumerable = read as IEnumerable<object>;
+
+            Assert.NotNull(enumerable);
+
+            var items = enumerable.ToList();
+
+            Assert.Equal(3, items.Count);
+            Assert.Equal("baz/1", items[0].ToString());
+            Assert.Equal("baz/2", items[1].ToString());
+            Assert.Equal("baz/3", items[2].ToString());
         }
 
         public BlittableJsonReaderObject create_doc(DynamicJsonValue document)

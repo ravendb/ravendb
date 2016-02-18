@@ -2,7 +2,9 @@
 using System.Threading.Tasks;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Handlers
 {
@@ -14,11 +16,36 @@ namespace Raven.Server.Documents.Queries.Handlers
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
             var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
 
-            var runner = new QueryRunner(IndexStore);
+            //TODO arek - cancellation token
 
-            var result = runner.ExecuteQuery(indexName, query);
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var runner = new QueryRunner(IndexStore, context);
 
-            return Task.CompletedTask;
+                var result = runner.ExecuteQuery(indexName, query);
+
+                HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                HttpContext.Response.Headers["ETag"] = "1"; // TODO arek
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
+
+                    WriteDocuments(context, writer, result.Results);
+
+                    //writer.WriteComma();
+                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
+
+                    //WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
+
+                    writer.WriteEndObject();
+                    writer.Flush();
+                }
+
+                return Task.CompletedTask;
+            }
         }
 
         protected virtual IndexQuery GetIndexQuery(int maxPageSize)
@@ -33,17 +60,17 @@ namespace Raven.Server.Documents.Queries.Handlers
                 //WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),
                 //CutoffEtag = GetCutOffEtag(),
                 PageSize = GetPageSize(maxPageSize),
-                FieldsToFetch = GetStringValuesQueryString("fetch").ToArray(),
-                DefaultField = GetStringQueryString("defaultField"),
+               // FieldsToFetch = GetStringValuesQueryString("fetch").ToArray(),
+                //DefaultField = GetStringQueryString("defaultField"),
 
-                DefaultOperator =
-                    string.Equals(GetStringQueryString("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
-                        QueryOperator.And :
-                        QueryOperator.Or,
+                //DefaultOperator =
+                //    string.Equals(GetStringQueryString("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
+                //        QueryOperator.And :
+                //        QueryOperator.Or,
 
-                SortedFields = GetStringValuesQueryString("sort").EmptyIfNull()
-                    .Select(x => new SortedField(x))
-                    .ToArray(),
+                //SortedFields = GetStringValuesQueryString("sort").EmptyIfNull()
+                //    .Select(x => new SortedField(x))
+                //    .ToArray(),
                 //HighlightedFields = GetHighlightedFields().ToArray(),
                 //HighlighterPreTags = GetStringValuesQueryString("preTags").ToArray(),
                 //HighlighterPostTags = GetStringValuesQueryString("postTags").ToArray(),
