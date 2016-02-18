@@ -58,41 +58,42 @@ namespace Raven.Tests.MailingList
         public void Import_documents_by_csv_should_preserve_documentId_if_id_header_is_present()
         {
             var databaseName = "TestCsvDatabase";
-            var entityName = typeof(SvcEntity).Name;
+            var entityName = typeof(CsvEntity).Name;
+            var documentId = "MyCustomId123abc";
 
             using (var store = NewRemoteDocumentStore(false, null, databaseName))
             {
                 var url = string.Format(@"http://localhost:8079/databases/{0}/studio-tasks/loadCsvFile", databaseName);
-                var tempFile = Path.GetTempFileName() + ".csv";
+                var tempFile = Path.GetTempFileName();
 
                 File.AppendAllLines(tempFile, new[]
                 {
                     "id,Property_A,Value,@Ignored_Property," + Constants.RavenEntityName,
-                    "MyCustomId123abc,a,123,doNotCare," + entityName
+                    documentId +",a,123,doNotCare," + entityName
                 });
 
-                var wc = new WebClient();
-                wc.UploadFile(url, tempFile);
+                using (var wc = new WebClient())
+                    wc.UploadFile(url, tempFile);
 
                 using (var session = store.OpenSession(databaseName))
                 {
-                    var entity = session.Load<SvcEntity>("MyCustomId123abc");
+                    var entity = session.Load<CsvEntity>(documentId);
                     Assert.NotNull(entity);
 
                     var metadata = session.Advanced.GetMetadataFor(entity);
                     var ravenEntityName = metadata.Value<string>(Constants.RavenEntityName);
-                    Assert.Equal("SvcEntity", ravenEntityName);
+                    Assert.Equal(entityName, ravenEntityName);
                 }
 
             }
         }
 
-        public class SvcEntity
+        public class CsvEntity
         {
             public string Id { get; set; }
             public double Value { get; set; }
 
-            public SvcEntity()
+            public CsvEntity()
             {
                 Value = double.NaN;
             }
