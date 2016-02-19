@@ -15,6 +15,7 @@ using FastTests.Server.Documents;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.Notifications;
 using FastTests.Voron.Bugs;
+using FastTests.Voron.Trees;
 using Newtonsoft.Json;
 using Raven.Client.Document;
 using Raven.Server.Indexing.Corax;
@@ -39,10 +40,10 @@ namespace Tryouts
 
             for (int i = 0; i < 1000; i++)
             {
-                using (var x = new ClientServer())
+                using (var x = new FreeSpaceTest())
                 {
                     Console.WriteLine(i);
-                    x.CanGetNotificationAboutDocumentPut().Wait();
+                    x.CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace();
                 }
             }
 

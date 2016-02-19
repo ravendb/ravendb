@@ -2,7 +2,7 @@ using System;
 
 namespace Voron.Impl.FreeSpace
 {
-    public struct FreeSpaceHandlingDisabler : IDisposable
+    public class FreeSpaceHandlingDisabler : IDisposable
     {
         public int DisableCount;
 
