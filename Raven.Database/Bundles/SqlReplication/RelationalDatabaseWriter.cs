@@ -333,7 +333,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
                         if (elapsedMiliseconds > LongStatementWarnThresholdInMiliseconds)
                         {
-                            log.Warn("Slow SQL detected. Execution took: {0}ms, statement: {1}", elapsedMicroseconds, stmt);
+                            HandleSlowSql(elapsedMiliseconds, stmt);
                         }
                     }
                 }
@@ -425,11 +425,25 @@ namespace Raven.Database.Bundles.SqlReplication
 
                         if (elapsedMiliseconds > LongStatementWarnThresholdInMiliseconds)
                         {
-                            log.Warn("Slow SQL detected. Execution took: {0}ms, statement: {1}", elapsedMicroseconds, stmt);
+                            HandleSlowSql(elapsedMiliseconds, stmt);
                         }
                     }
                 }
             }
+        }
+
+        private void HandleSlowSql(long elapsedMiliseconds, string stmt)
+        {
+            var message = string.Format("Slow SQL detected. Execution took: {0}ms, statement: {1}", elapsedMiliseconds, stmt);
+            log.Warn(message);
+            database.AddAlert(new Alert
+            {
+                AlertLevel = AlertLevel.Warning,
+                CreatedAt = SystemTime.UtcNow,
+                Message = message,
+                Title = "Slow SQL statement",
+                UniqueKey = "Slow SQL statement"
+            });
         }
 
         private string GetTableNameString(string tableName)
