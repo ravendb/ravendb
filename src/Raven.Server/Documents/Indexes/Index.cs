@@ -378,10 +378,10 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     var lastEtag = lastTombstoneEtag;
+                    var count = 0;
 
                     using (var indexActions = IndexPersistance.Write())
                     {
-                        var count = 0;
                         using (databaseContext.OpenReadTransaction())
                         {
                             var sw = Stopwatch.StartNew();
@@ -403,23 +403,22 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
                         }
-
-
-                        if (count == 0)
-                            return;
-
-                        if (lastEtag <= lastTombstoneEtag)
-                            return;
-
-                        using (var tx = indexContext.OpenWriteTransaction())
-                        {
-                            WriteLastTombstoneEtag(tx, collection, lastEtag);
-
-                            tx.Commit();
-                        }
-
-                        _mre.Set(); // might be more
                     }
+
+                    if (count == 0)
+                        return;
+
+                    if (lastEtag <= lastTombstoneEtag)
+                        return;
+
+                    using (var tx = indexContext.OpenWriteTransaction())
+                    {
+                        WriteLastTombstoneEtag(tx, collection, lastEtag);
+
+                        tx.Commit();
+                    }
+
+                    _mre.Set(); // might be more
                 }
             }
         }
@@ -455,12 +454,12 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     var lastEtag = lastMappedEtag;
+                    var count = 0;
 
                     using (var indexActions = IndexPersistance.Write())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        var count = 0;
                         using (databaseContext.OpenReadTransaction())
                         {
                             var sw = Stopwatch.StartNew();
@@ -487,22 +486,22 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
                         }
-
-                        if (count == 0)
-                            return;
-
-                        if (lastEtag <= lastMappedEtag)
-                            return;
-
-                        using (var tx = indexContext.OpenWriteTransaction())
-                        {
-                            WriteLastMappedEtag(tx, collection, lastEtag);
-
-                            tx.Commit();
-                        }
-
-                        _mre.Set(); // might be more
                     }
+
+                    if (count == 0)
+                        return;
+
+                    if (lastEtag <= lastMappedEtag)
+                        return;
+
+                    using (var tx = indexContext.OpenWriteTransaction())
+                    {
+                        WriteLastMappedEtag(tx, collection, lastEtag);
+
+                        tx.Commit();
+                    }
+
+                    _mre.Set(); // might be more
                 }
             }
         }
