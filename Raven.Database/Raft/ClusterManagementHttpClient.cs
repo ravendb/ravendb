@@ -158,6 +158,8 @@ namespace Raven.Database.Raft
 
                 switch (response.StatusCode)
                 {
+                    case HttpStatusCode.Conflict:
+                        return CanJoinResult.IsNonEmpty;
                     case HttpStatusCode.NotModified:
                         return CanJoinResult.AlreadyJoined;
                     case HttpStatusCode.NotAcceptable:
@@ -280,6 +282,8 @@ namespace Raven.Database.Raft
 
                 switch (response.StatusCode)
                 {
+                    case HttpStatusCode.Conflict:
+                        return CanJoinResult.IsNonEmpty;
                     case HttpStatusCode.NotModified:
                         return CanJoinResult.AlreadyJoined;
                     case HttpStatusCode.NotAcceptable:
@@ -509,6 +513,11 @@ namespace Raven.Database.Raft
 
         AlreadyJoined,
 
-        InAnotherCluster
+        InAnotherCluster,
+
+        /// <summary>
+        /// Used when target server contains any resource
+        /// </summary>
+        IsNonEmpty
     }
 }
