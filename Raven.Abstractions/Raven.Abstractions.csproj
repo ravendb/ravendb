@@ -261,6 +261,7 @@
     <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
+    <Compile Include="Exceptions\TotalDataSizeExceededException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
