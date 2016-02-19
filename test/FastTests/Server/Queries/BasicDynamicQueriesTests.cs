@@ -8,6 +8,7 @@ namespace FastTests.Server.Queries
 {
     public class BasicDynamicQueriesTests : RavenTestBase
     {
+        // TODO arek: move to slow tests
         [Fact]
         public async Task Dynamic_query_with_simple_where_clause()
         {
@@ -20,7 +21,7 @@ namespace FastTests.Server.Queries
 
                     await session.SaveChangesAsync();
                 }
-                // TODO arek: it occassionally fails with: Lucene.Net.Store.LockObtainFailedException: Lock obtain timed out: Lucene.Net.Store.SingleInstanceLock: write.lock
+                
                 using (var session = store.OpenSession())
                 {
                     var users = session.Query<User>().Where(x => x.Name == "Arek").ToList();

@@ -37,14 +37,29 @@ namespace Raven.Server.Documents.Queries.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
 
+                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
                     WriteDocuments(context, writer, result.Results);
 
-                    //writer.WriteComma();
-                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
+                    writer.WriteComma();
 
+                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
                     //WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
+
+                    //writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("IsStale"));
+                    writer.WriteBool(result.IsStale);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("TotalResults"));
+                    writer.WriteInteger(result.TotalResults);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("IndexName"));
+                    writer.WriteString(context.GetLazyString(result.IndexName));
 
                     writer.WriteEndObject();
                     writer.Flush();

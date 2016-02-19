@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Queries;
@@ -179,7 +180,7 @@ namespace Raven.Server.Documents.Indexes
 
                     _initialized = true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     Dispose();
                     throw;
@@ -512,7 +513,10 @@ namespace Raven.Server.Documents.Indexes
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
             TransactionOperationContext indexContext;
-            var result = new DocumentQueryResult();
+            var result = new DocumentQueryResult()
+            {
+                IndexName = Name
+            };
 
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
@@ -521,11 +525,14 @@ namespace Raven.Server.Documents.Indexes
                 result.IndexEtag = lastEtag;
             }
 
+            Reference<int> totalResults = new Reference<int>();
             List<string> documentIds;
             using (var indexRead = IndexPersistance.Read())
             {
-                documentIds = indexRead.Query(query, token).ToList();
+                documentIds = indexRead.Query(query, token, totalResults).ToList();
             }
+
+            result.TotalResults = totalResults.Value;
 
             context.OpenReadTransaction();
 
@@ -535,7 +542,6 @@ namespace Raven.Server.Documents.Indexes
 
                 result.Results.Add(document);
             }
-
 
             return result;
         }
