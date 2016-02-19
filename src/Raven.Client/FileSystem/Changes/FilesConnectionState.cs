@@ -9,8 +9,8 @@ namespace Raven.Client.FileSystem.Changes
     {
         private readonly Func<FilesConnectionState, Task> ensureConnection;
 
-        public FilesConnectionState(Action onZero, Func<FilesConnectionState, Task> ensureConnection, Task task)
-            : base(onZero, task)
+        public FilesConnectionState(Func<Task> disconnectAction, Func<FilesConnectionState, Task> ensureConnection, Task task)
+            : base(disconnectAction, task)
         {
             this.ensureConnection = ensureConnection;
         }

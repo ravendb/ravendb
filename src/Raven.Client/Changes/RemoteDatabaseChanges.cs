@@ -16,7 +16,7 @@ namespace Raven.Client.Changes
 {
     public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
     {
-        private readonly static ILog Logger = LogManager.GetLogger(typeof (RemoteDatabaseChanges));
+        private readonly static ILog Logger = LogManager.GetLogger(typeof(RemoteDatabaseChanges));
 
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -267,7 +267,7 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>()
         {
-            var collectionName = Conventions.GetTypeTagName(typeof (TEntity));
+            var collectionName = Conventions.GetTypeTagName(typeof(TEntity));
             return ForDocumentsInCollection(collectionName);
         }
 
@@ -300,7 +300,7 @@ namespace Raven.Client.Changes
 
         public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>()
         {
-            var typeName = Conventions.FindClrTypeName(typeof (TEntity));
+            var typeName = Conventions.FindClrTypeName(typeof(TEntity));
             return ForDocumentsOfType(typeName);
         }
 
@@ -336,8 +336,8 @@ namespace Raven.Client.Changes
                     () =>
                     {
                         watchedBulkInserts.TryRemove(id);
-                        Send("unwatch-bulk-operation", id);
                         Counters.Remove("bulk-operations/" + operationId);
+                        return Send("unwatch-bulk-operation", id);
                     },
                     existingConnectionState =>
                     {

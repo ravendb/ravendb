@@ -212,9 +212,9 @@ namespace FastTests.Server.Queries.Dynamic
 
             var dynamicQueryWithStringSorting = DynamicQueryMapping.Create("Users", new IndexQuery
             {
-                Query = "Age:31",
-                SortedFields = new[] { new SortedField("Age") },
-                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Age", SortOptions.String } }
+                Query = "Age_Range:{Ix9 TO NULL}",
+                SortedFields = new[] { new SortedField("Age_Range") },
+                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Age_Range", SortOptions.String } }
             });
 
             var result = _sut.Match(dynamicQueryWithStringSorting);
@@ -224,9 +224,9 @@ namespace FastTests.Server.Queries.Dynamic
 
             var dynamicQueryWithNoneSorting = DynamicQueryMapping.Create("Users", new IndexQuery
             {
-                Query = "Age:31",
-                SortedFields = new[] { new SortedField("Age") },
-                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Age", SortOptions.None } }
+                Query = "Age_Range:31",
+                SortedFields = new[] { new SortedField("Age_Range") },
+                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Age_Range", SortOptions.None } }
             });
 
             result = _sut.Match(dynamicQueryWithNoneSorting);

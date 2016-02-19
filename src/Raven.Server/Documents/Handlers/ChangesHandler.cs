@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
     public class ChangesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/changes", "GET", "/databases/{databaseName:string}/changes")]
-        public async Task GetChangesEvents()
+        public async Task GetChanges()
         {
             var debugTag = "changes/" + Database.Name;
 
@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var connection = new NotificationsClientConnection(webSocket, Database);
                 Database.Notifications.Connect(connection);
+                var sendTask = connection.StartSendingNotifications();
                 try
                 {
                     //TODO: select small context size (maybe pool just for them?)
@@ -71,14 +72,19 @@ namespace Raven.Server.Documents.Handlers
                                     string command, commandParameter;
                                     if (reader.TryGet("Command", out command) == false)
                                     {
-                                        // Write error
                                         throw new NotImplementedException();
-                                        // TBD: what should be done here
+                                        // TODO: Send error back to the client and close connection
                                     }
 
                                     reader.TryGet("Param", out commandParameter);
-
+                                    
                                     HandleCommand(connection, command, commandParameter);
+
+                                    int commandId;
+                                    if (reader.TryGet("CommandId", out commandId))
+                                    {
+                                        connection.Confirm(commandId);
+                                    }
                                 }
                             }
                         }
@@ -89,10 +95,15 @@ namespace Raven.Server.Documents.Handlers
                     /* Client was disconnected, write to log */
                     Log.DebugException("Client was disconnected", ex);
                 }
+                catch (Exception ex)
+                {
+                    Log.WarnException("Got error in changes handler", ex);
+                }
                 finally
                 {
                     Database.Notifications.Disconnect(connection);
                 }
+                await sendTask;
             }
         }
 

@@ -16,6 +16,7 @@ using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
+using Sparrow;
 
 namespace Raven.Client.TimeSeries.Operations
 {

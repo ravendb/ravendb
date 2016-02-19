@@ -202,8 +202,8 @@ namespace Raven.Client.Counters.Changes
                     () =>
                     {
                         watchedBulkOperations.TryRemove(id);
-                        Send("unwatch-bulk-operation", id);
                         Counters.Remove(key);
+                        return Send("unwatch-bulk-operation", id);
                     },
                     existingConnectionState =>
                     {

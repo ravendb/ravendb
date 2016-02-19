@@ -9,8 +9,8 @@ namespace Raven.Client.Counters.Changes
     {
         private readonly Func<CountersConnectionState, Task> ensureConnection;
 
-        public CountersConnectionState(Action onZero, Func<CountersConnectionState, Task> ensureConnection, Task task)
-            : base(onZero, task)
+        public CountersConnectionState(Func<Task> disconnectAction, Func<CountersConnectionState, Task> ensureConnection, Task task)
+            : base(disconnectAction, task)
         {
             this.ensureConnection = ensureConnection;
         }

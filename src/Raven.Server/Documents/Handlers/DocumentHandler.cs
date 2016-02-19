@@ -110,19 +110,20 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
-            var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-            writer.WriteStartObject();
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
 
-            WriteDocuments(context, writer, documents, 0, ids.Count);
+                WriteDocuments(context, writer, documents, 0, ids.Count);
 
-            writer.WriteComma();
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
+                writer.WriteComma();
+                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
 
-            WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
+                WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
 
-            writer.WriteEndObject();
-            writer.Flush();
+                writer.WriteEndObject();
+            }
 
             return Task.CompletedTask;
         }
@@ -241,9 +242,10 @@ namespace Raven.Server.Documents.Handlers
                     ["Etag"] = putResult.ETag
                 };
 
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                context.Write(writer, reply);
-                writer.Flush();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, reply);
+                }
             }
         }
 

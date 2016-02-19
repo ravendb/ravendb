@@ -1,10 +1,16 @@
 ﻿using System;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Server.Web;
 
 namespace Raven.Server.Documents.Queries.Handlers
 {
@@ -14,7 +20,7 @@ namespace Raven.Server.Documents.Queries.Handlers
         public Task Get()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
+            var query = IndexQueryBuilder.Build(this);
 
             //TODO arek - cancellation token
 
@@ -31,14 +37,29 @@ namespace Raven.Server.Documents.Queries.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
 
+                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
                     WriteDocuments(context, writer, result.Results);
 
-                    //writer.WriteComma();
-                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
+                    writer.WriteComma();
 
+                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
                     //WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
+
+                    //writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("IsStale"));
+                    writer.WriteBool(result.IsStale);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("TotalResults"));
+                    writer.WriteInteger(result.TotalResults);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("IndexName"));
+                    writer.WriteString(context.GetLazyString(result.IndexName));
 
                     writer.WriteEndObject();
                     writer.Flush();
@@ -48,82 +69,57 @@ namespace Raven.Server.Documents.Queries.Handlers
             }
         }
 
-        protected virtual IndexQuery GetIndexQuery(int maxPageSize)
+        private Dictionary<string, SortOptions> GetSortHints(string sortHintPrefix)
         {
-            //TODO: Need to reduce allocations here
-            //TODO: We also need to make sure that we aren't using headers
-            var query = new IndexQuery
+            var result = new Dictionary<string, SortOptions>();
+            
+            foreach (var pair in HttpContext.Request.Query.Where(pair => pair.Key.StartsWith(sortHintPrefix, StringComparison.OrdinalIgnoreCase)))
             {
-                Query = GetStringQueryString("query") ?? /* TODO arek queryFromPostRequest ?? */"",
-                Start = GetStart(),
-                //Cutoff = GetCutOff(),
-                //WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),
-                //CutoffEtag = GetCutOffEtag(),
-                PageSize = GetPageSize(maxPageSize),
-               // FieldsToFetch = GetStringValuesQueryString("fetch").ToArray(),
-                //DefaultField = GetStringQueryString("defaultField"),
+                var key = pair.Key;
+                var value = Uri.UnescapeDataString(pair.Value);
 
-                //DefaultOperator =
-                //    string.Equals(GetStringQueryString("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
-                //        QueryOperator.And :
-                //        QueryOperator.Or,
+                SortOptions sort;
+                Enum.TryParse(value, true, out sort);
+                result[Uri.UnescapeDataString(key)] = sort;
+            }
 
-                //SortedFields = GetStringValuesQueryString("sort").EmptyIfNull()
-                //    .Select(x => new SortedField(x))
-                //    .ToArray(),
-                //HighlightedFields = GetHighlightedFields().ToArray(),
-                //HighlighterPreTags = GetStringValuesQueryString("preTags").ToArray(),
-                //HighlighterPostTags = GetStringValuesQueryString("postTags").ToArray(),
-                //HighlighterKeyName = GetStringQueryString("highlighterKeyName"),
-                //ResultsTransformer = GetStringQueryString("resultsTransformer"),
-                //TransformerParameters = ExtractTransformerParameters(),
-                //ExplainScores = GetExplainScores(),
-                //SortHints = GetSortHints(),
-                //IsDistinct = IsDistinct()
-            };
-
-            //var allowMultipleIndexEntriesForSameDocumentToResultTransformer = GetQueryStringValue("allowMultipleIndexEntriesForSameDocumentToResultTransformer");
-            //bool allowMultiple;
-            //if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
-            //    query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
-
-            //if (query.WaitForNonStaleResultsAsOfNow)
-            //    query.Cutoff = SystemTime.UtcNow;
-
-            //var showTimingsAsString = GetQueryStringValue("showTimings");
-            //bool showTimings;
-            //if (string.IsNullOrEmpty(showTimingsAsString) == false && bool.TryParse(showTimingsAsString, out showTimings) && showTimings)
-            //    query.ShowTimings = true;
-
-            //var skipDuplicateCheckingAsstring = GetQueryStringValue("skipDuplicateChecking");
-            //bool skipDuplicateChecking;
-            //if (string.IsNullOrEmpty(skipDuplicateCheckingAsstring) == false &&
-            //    bool.TryParse(skipDuplicateCheckingAsstring, out skipDuplicateChecking) && skipDuplicateChecking)
-            //    query.ShowTimings = true;
-
-            //var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
-            //var queryShape = GetQueryStringValue("queryShape");
-            //SpatialUnits units;
-            //var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
-            //double distanceErrorPct;
-            //if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
-            //    distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
-            //SpatialRelation spatialRelation;
-
-            //if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation) && !string.IsNullOrWhiteSpace(queryShape))
-            //{
-            //    return new SpatialIndexQuery(query)
-            //    {
-            //        SpatialFieldName = spatialFieldName,
-            //        QueryShape = queryShape,
-            //        RadiusUnitOverride = unitsSpecified ? units : (SpatialUnits?)null,
-            //        SpatialRelation = spatialRelation,
-            //        DistanceErrorPercentage = distanceErrorPct,
-            //    };
-            //}
-
-            return query;
+            return result;
         }
 
+        private static readonly QueryStringMapping<IndexQuery, QueriesHandler> IndexQueryBuilder = new QueryStringMapping<IndexQuery, QueriesHandler>
+        {
+            { "query", (x, param, handler) => x.Query = handler.GetStringQueryString(param) ?? /* TODO arek queryFromPostRequest ?? */ string.Empty },
+            { StartParameter, (x, _, handler) => x.Start = handler.GetStart() },
+            { PageSizeParameter, (x, _, handler) => x.PageSize = handler.GetPageSize(handler.Database.Configuration.Core.MaxPageSize) },
+            { "cutOff", (x, param, handler) => x.Cutoff = handler.GetDateTimeQueryString(param) },
+            { "cutOffEtag", (x, param, handler) => x.CutoffEtag = handler.HttpContext.Request.Query.ContainsKey(param) ? handler.GetLongQueryString(param) : (long?) null },
+            { "waitForNonStaleResultsAsOfNow", (x, param, handler) =>
+                                                {
+                                                    x.WaitForNonStaleResultsAsOfNow = handler.GetBoolValueQueryString(param, DefaultValue<bool>.Default);
+                                                    if (x.WaitForNonStaleResultsAsOfNow)
+                                                        x.Cutoff = SystemTime.UtcNow;
+                                                }
+            },
+            { "fetch", (x, param, handler) => x.FieldsToFetch = handler.GetStringValuesQueryString(param, DefaultValue<StringValues>.Default) },
+            { "defaultField", (x, param, handler) => x.DefaultField = handler.GetStringQueryString(param, DefaultValue<string>.Default) },
+            { "operator", (x, param, handler) => x.DefaultOperator =
+                                                    "And".Equals(handler.GetStringQueryString(param, DefaultValue<string>.Default), StringComparison.OrdinalIgnoreCase) ?
+                                                        QueryOperator.And : QueryOperator.Or
+            },
+            { "sort", (x, param, handler) =>
+                        {
+                            var sortedFields = handler.GetStringValuesQueryString(param, DefaultValue<StringValues>.Default);
+                            
+                            if (sortedFields.Count > 0)
+                                x.SortedFields = sortedFields.Select(y => new SortedField(y)).ToArray();
+                            else
+                                x.SortedFields = Enumerable.Empty<SortedField>().ToArray();
+                        }
+            },
+            { "SortHint-", (x, param, handler) => x.SortHints = handler.GetSortHints(param) }
+            // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
+            // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
+            // TODO: We also need to make sure that we aren't using headers
+        };
     }
 }

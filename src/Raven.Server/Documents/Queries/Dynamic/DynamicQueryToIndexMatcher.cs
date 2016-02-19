@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 //_indexStore.Contains(Constants.DocumentsByEntityNameIndex)) // and Raven/DocumentsByEntityName exists
             {
                 // TODO arek
-                throw new NotImplementedException("We don't support empty dynamic qeries for now");
+                throw new NotImplementedException("We don't support empty dynamic queries for now");
                 //if (string.IsNullOrEmpty(query.ForCollection) == false)
                 //    indexQuery.Query = "Tag:" + entityName;
                 //return new DynamicQueryMatchResult(Constants.DocumentsByEntityNameIndex, DynamicQueryMatchType.Complete);

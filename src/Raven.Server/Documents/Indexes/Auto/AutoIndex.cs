@@ -21,10 +21,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public static AutoIndex Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
-            var instance = new AutoIndex(indexId, null);
+            var definition = AutoIndexDefinition.Load(environment);
+            var instance = new AutoIndex(indexId, definition);
             instance.Initialize(environment, documentDatabase);
-
-            throw new NotImplementedException();
 
             return instance;
         }

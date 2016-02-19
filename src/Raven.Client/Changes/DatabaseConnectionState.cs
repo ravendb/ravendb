@@ -8,8 +8,8 @@ namespace Raven.Client.Changes
     {
         private readonly Func<DatabaseConnectionState, Task> ensureConnection;
 
-        public DatabaseConnectionState(Action onZero, Func<DatabaseConnectionState, Task> ensureConnection, Task task)
-            : base(onZero, task)
+        public DatabaseConnectionState(Func<Task> disconnectAction, Func<DatabaseConnectionState, Task> ensureConnection, Task task)
+            : base(disconnectAction, task)
         {
             this.ensureConnection = ensureConnection;
         }
@@ -33,48 +33,34 @@ namespace Raven.Client.Changes
 
         public void Send(DocumentChangeNotification documentChangeNotification)
         {
-            var onOnDocumentChangeNotification = OnDocumentChangeNotification;
-            if (onOnDocumentChangeNotification != null)
-                onOnDocumentChangeNotification(documentChangeNotification);
+            OnDocumentChangeNotification?.Invoke(documentChangeNotification);
         }
 
         public void Send(IndexChangeNotification indexChangeNotification)
         {
-            var onOnIndexChangeNotification = OnIndexChangeNotification;
-            if (onOnIndexChangeNotification != null)
-                onOnIndexChangeNotification(indexChangeNotification);
+            OnIndexChangeNotification?.Invoke(indexChangeNotification);
         }
 
         public void Send(TransformerChangeNotification transformerChangeNotification)
         {
-            var onOnTransformerChangeNotification = OnTransformerChangeNotification;
-            if (onOnTransformerChangeNotification != null)
-            {
-                onOnTransformerChangeNotification(transformerChangeNotification);
-            }
+            OnTransformerChangeNotification?.Invoke(transformerChangeNotification);
         }
 
         public void Send(ReplicationConflictNotification replicationConflictNotification)
         {
-            var onOnReplicationConflictNotification = OnReplicationConflictNotification;
-            if (onOnReplicationConflictNotification != null)
-                onOnReplicationConflictNotification(replicationConflictNotification);
+            OnReplicationConflictNotification?.Invoke(replicationConflictNotification);
         }
 
         public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
         {
-            var onOnBulkInsertChangeNotification = OnBulkInsertChangeNotification;
-            if (onOnBulkInsertChangeNotification != null)
-                onOnBulkInsertChangeNotification(bulkInsertChangeNotification);
+            OnBulkInsertChangeNotification?.Invoke(bulkInsertChangeNotification);
 
             Send((DocumentChangeNotification)bulkInsertChangeNotification);
         }
 
         public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
         {
-            var onOnDataSubscriptionChangeNotification = OnDataSubscriptionNotification;
-            if (onOnDataSubscriptionChangeNotification != null)
-                onOnDataSubscriptionChangeNotification(dataSubscriptionChangeNotification);
+            OnDataSubscriptionNotification?.Invoke(dataSubscriptionChangeNotification);
         }
     }
 }

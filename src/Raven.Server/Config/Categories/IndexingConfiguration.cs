@@ -75,12 +75,5 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Indexing/TombstoneProcessingTimeout")]
         public TimeSetting TombstoneProcessingTimeout { get; set; }
-
-        [Description("Maximum number of megabytes after which index will stop reading documents from disk")]
-        [DefaultValue(256)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Raven/Indexing/MaximumSizeAllowedToFetchFromStorageInMB")]
-        [ConfigurationEntry("Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage")]
-        public Size MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
     }
 }

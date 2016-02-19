@@ -28,5 +28,10 @@ namespace Voron.Impl.FreeSpace
         {
             yield break;
         }
+
+        public FreeSpaceHandlingDisabler Disable()
+        {
+            return new FreeSpaceHandlingDisabler();
+        }
     }
 }
