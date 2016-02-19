@@ -553,7 +553,7 @@ namespace Raven.Server.Documents
                 {keyPtr, keySize}
             };
 
-            var col = "#" + collectionName;
+            var col = "#" + collectionName; // TODO: We need a way to turn a string to a prefixed value that doesn't involve allocations
             _tombstonesSchema.Create(context.Transaction.InnerTransaction, col);
             var table = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
 
