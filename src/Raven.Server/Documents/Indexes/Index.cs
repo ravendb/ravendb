@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     indexActions.Write(document);
                                 }
-                                catch (Exception)
+                                catch (Exception e)
                                 {
                                     // TODO [ppekrol] log?
                                     continue;

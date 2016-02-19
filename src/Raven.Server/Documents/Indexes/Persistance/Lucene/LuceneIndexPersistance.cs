@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             {
                 try
                 {
-                    if (_persistance._indexWriter != null && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
+                    if (_persistance._indexWriter != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
                         _persistance.Flush(); // just make sure changes are flushed to disk
 
                     _persistance.RecreateSearcher();
