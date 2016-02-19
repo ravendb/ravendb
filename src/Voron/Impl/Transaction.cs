@@ -249,10 +249,6 @@ namespace Voron.Impl
             tree = PrefixTree.Create(LowLevelTransaction, LowLevelTransaction.RootObjects, name, subtreeDepth);
             tree.Name = name;
 
-            var space = _lowLevelTransaction.RootObjects.DirectAdd(key, sizeof(PrefixTreeRootHeader));
-            tree.State.CopyTo((PrefixTreeRootHeader*)space);
-            tree.State.IsModified = true;
-
             AddPrefixTree(name, tree);
 
             return tree;

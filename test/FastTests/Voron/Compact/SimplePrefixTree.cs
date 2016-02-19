@@ -808,7 +808,7 @@ namespace FastTests.Voron.Compact
 
         public void Structure_GenerateTestCases_MultipleTx()
         {
-            int entries = 500;
+            int entries = 100;
             int iterations = 100;
             int size = 5;
             int txSize = 1;
@@ -843,7 +843,7 @@ namespace FastTests.Voron.Compact
                     try
                     {
                         int counter = 0;
-                        for ( int transactions = 0; transactions < entries / txSize + 1; transactions++)
+                        for ( int transactions = 0; transactions < entries / txSize; transactions++)
                         {
                             Env.FlushLogToDataFile();
                             using (var tx = Env.WriteTransaction())
@@ -870,7 +870,7 @@ namespace FastTests.Voron.Compact
                                     StructuralVerify(tree);                                    
                                 }
 
-                                transactionEnd[transactions * (txSize + 1)] = true;
+                                // transactionEnd[transactions * (txSize + 1) - 1] = true;
                                 tx.Commit();
                             }
                         }                        

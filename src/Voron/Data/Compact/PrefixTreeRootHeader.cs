@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.Compact
 {
@@ -42,5 +43,10 @@ namespace Voron.Data.Compact
         /// The tail node pointer for the tree. 
         /// </summary>
         public PrefixTree.Leaf Tail;
+
+        public void Initialize()
+        {
+            this.RootObjectType = RootObjectType.PrefixTree;
+        }
     }
 }

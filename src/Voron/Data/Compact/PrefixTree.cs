@@ -49,24 +49,28 @@ namespace Voron.Data.Compact
 
         public static PrefixTree Create(LowLevelTransaction tx, Tree parent, Slice treeName, int subtreeDepth = -1)
         {
-            var header = (PrefixTreeRootHeader*)parent.DirectAdd(treeName, sizeof(PrefixTreeRootHeader));
-            if (header->RootObjectType != RootObjectType.PrefixTree && header->RootObjectType != RootObjectType.None)
-                throw new InvalidOperationException($"Tried to create {treeName} as a prefix tree, but it is actually a { header->RootObjectType.ToString() }");
+            var header = (PrefixTreeRootHeader*)parent.DirectRead(treeName);
+            if (header != null)
+               throw new InvalidOperationException($"Tried to create {treeName} as a prefix tree, but it is actually a { header->RootObjectType.ToString() }");
 
-            // TODO: Put all this initialization outside of the mutable state. 
-            var state = new PrefixTreeRootMutableState(tx, header);
-            state.RootNodeName = Constants.InvalidNodeName;
-            state.Head = new Leaf { Type = NodeType.Tombstone, PreviousPtr = Constants.InvalidNodeName, NextPtr = Constants.TailNodeName };
-            state.Tail = new Leaf { Type = NodeType.Tombstone, PreviousPtr = Constants.HeadNodeName, NextPtr = Constants.InvalidNodeName };
-            state.Items = 0;
+            // We know for sure that not data exists.
+            header = (PrefixTreeRootHeader*)parent.DirectAdd(treeName, sizeof(PrefixTreeRootHeader));
+            header->Initialize();
+            header->RootNodeName = Constants.InvalidNodeName;
+            header->Head = new Leaf { Type = NodeType.Tombstone, PreviousPtr = Constants.InvalidNodeName, NextPtr = Constants.TailNodeName };
+            header->Tail = new Leaf { Type = NodeType.Tombstone, PreviousPtr = Constants.HeadNodeName, NextPtr = Constants.InvalidNodeName };
+            header->Items = 0;
 
             if (subtreeDepth == -1)
                 subtreeDepth = Constants.DepthPerCacheLine;
 
+            var state = new PrefixTreeRootMutableState(tx, header);
             state.TranslationTable.Initialize(subtreeDepth);
 
             var tablePage = InternalTable.Allocate(tx, state);
-            state.Table = tablePage.PageNumber;            
+            state.Table = tablePage.PageNumber;
+
+            state.IsModified = true;
 
             return new PrefixTree(tx, parent, state, treeName);    
         }
