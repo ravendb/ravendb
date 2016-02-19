@@ -128,6 +128,7 @@ namespace FastTests.Voron.Compact
             {
                 var tree = tx.ReadPrefixTree(Name);
                 Assert.True(tree.Delete(key));
+                Assert.False(tree.Delete(key));
 
                 Assert.Equal(0, tree.Count);
                 Assert.Equal(Slice.BeforeAllKeys, tree.FirstKey());
@@ -203,6 +204,53 @@ namespace FastTests.Voron.Compact
         }
 
         [Fact]
+        public void Structure_MultipleBranchDeletion()
+        {
+            InitializeStorage();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table(DocsSchema, "docs", tx);
+                var tree = tx.CreatePrefixTree(Name);
+
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "8Jp3", "8Jp3"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "GX37", "GX37"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "f04o", "f04o"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "KmGx", "KmGx"));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+
+                Assert.True(tree.Delete(new Slice(Encoding.UTF8.GetBytes("8Jp3"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("8Jp3"))));
+                Assert.True(tree.Delete(new Slice(Encoding.UTF8.GetBytes("GX37"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("GX37"))));
+                Assert.True(tree.Delete(new Slice(Encoding.UTF8.GetBytes("f04o"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("f04o"))));
+                Assert.True(tree.Delete(new Slice(Encoding.UTF8.GetBytes("KmGx"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("KmGx"))));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                Assert.Equal(0, tree.Count);
+
+                StructuralVerify(tree);
+            }
+        }
+
+        [Fact]
         public void Structure_MultipleBranchInsertion2()
         {
             InitializeStorage();
@@ -228,6 +276,54 @@ namespace FastTests.Voron.Compact
                 StructuralVerify(tree);
 
                 Assert.Equal(4, tree.Count);
+            }
+        }
+
+        [Fact]
+        public void Structure_MultipleBranchDeletion2()
+        {
+            InitializeStorage();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table(DocsSchema, "docs", tx);
+                var tree = tx.CreatePrefixTree(Name);
+
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "X2o", "X2o"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "DWp", "DWp"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "C70", "C70"));
+                Assert.NotEqual(-1, AddToPrefixTree(tree, docs, "1b5", "1b5"));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+
+                Assert.True (tree.Delete(new Slice(Encoding.UTF8.GetBytes("1b5"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("1b5"))));
+                Assert.True (tree.Delete(new Slice(Encoding.UTF8.GetBytes("DWp"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("DWp"))));
+                Assert.True (tree.Delete(new Slice(Encoding.UTF8.GetBytes("X2o"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("X2o"))));
+                Assert.True (tree.Delete(new Slice(Encoding.UTF8.GetBytes("C70"))));
+                Assert.False(tree.Delete(new Slice(Encoding.UTF8.GetBytes("C70"))));
+
+                StructuralVerify(tree);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadPrefixTree(Name);
+                Assert.Equal(0, tree.Count);
+
+                StructuralVerify(tree);
             }
         }
 
@@ -618,20 +714,20 @@ namespace FastTests.Voron.Compact
         [Fact]
         public void Structure_RandomTester()
         {
+            InitializeStorage();
+
             int count = 100;
             int size = 5;
             for (int i = 0; i < 1; i++)
             {
                 var keys = new Slice[count];
 
-                InitializeStorage();
-
-                var insertedKeys = new HashSet<Slice>();
+                var insertedKeys = new HashSet<string>();
 
                 using (var tx = Env.WriteTransaction())
                 {
                     var docs = new Table(DocsSchema, "docs", tx);
-                    var tree = tx.CreatePrefixTree(Name);
+                    var tree = tx.CreatePrefixTree(Name + i);
 
                     var generator = new Random(i + size);
                     for (int j = 0; j < count; j++)
@@ -639,48 +735,73 @@ namespace FastTests.Voron.Compact
                         string key = GenerateRandomString(generator, size);
                         var keySlice = new Slice(Encoding.UTF8.GetBytes(key));
 
-                        if (!insertedKeys.Contains(keySlice))
+                        if (!insertedKeys.Contains(key))
                         {
                             Assert.False(tree.Contains(keySlice));
                             Assert.NotEqual(-1, AddToPrefixTree(tree, docs, keySlice, key));
                         }
 
                         keys[j] = keySlice;
-                        insertedKeys.Add(keySlice);
+                        insertedKeys.Add(key);
 
                         StructuralVerify(tree);
                     }
-
-                    //  // The chance that we hit an already existing key is very low with a different seed so checking the inserted key is probably going to return false.
-                    //  generator = new Random(i + size + 1);
-                    //  for (int j = 0; j < count; j++)
-                    //  {
-                    //      string key = GenerateRandomString(generator, size);
-
-                    //      if (!insertedKeys.Contains(key))
-                    //          Assert.False(tree.Delete(key));
-                    //  }
-
-                    //  // We reply the insertion order to delete. 
-                    //  generator = new Random(i + size);
-                    //  for (int j = 0; j < count; j++)
-                    //  {
-                    //      string key = GenerateRandomString(generator, size);
-
-                    //      bool removed = tree.Delete(key);
-                    //      Assert.True(removed);
-                    //  }
 
                     tx.Commit();
                 }
 
                 using (var tx = Env.ReadTransaction())
                 {
-                    var tree = tx.ReadPrefixTree(Name);
+                    var tree = tx.ReadPrefixTree(Name + i);
                     StructuralVerify(tree);
 
                     Assert.Equal(insertedKeys.Count, tree.Count);
                 }
+
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.ReadPrefixTree(Name + i);
+
+                    // The chance that we hit an already existing key is very low with a different seed so checking the inserted key is probably going to return false.
+                    var generator = new Random(i + size + 1);
+                    for (int j = 0; j < count; j++)
+                    {
+                        string key = GenerateRandomString(generator, size);
+                        var keySlice = new Slice(Encoding.UTF8.GetBytes(key));
+
+                        if (!insertedKeys.Contains(key))
+                            Assert.False(tree.Delete(keySlice));
+                    }
+
+                    StructuralVerify(tree);
+
+                    // We reply the insertion order to delete. 
+                    generator = new Random(i + size);
+                    for (int j = 0; j < count; j++)
+                    {
+                        string key = GenerateRandomString(generator, size);
+                        var keySlice = new Slice(Encoding.UTF8.GetBytes(key));
+
+                        bool removed = tree.Delete(keySlice);
+                        Assert.True(removed);
+
+                        if (j % 10 == 0)
+                            StructuralVerify(tree);
+                    }
+
+                    StructuralVerify(tree);
+
+                    tx.Commit();
+                }
+
+                using (var tx = Env.ReadTransaction())
+                {
+                    var tree = tx.ReadPrefixTree(Name + i);
+                    StructuralVerify(tree);
+
+                    Assert.Equal(0, tree.Count);
+                }
+
             }
         }
 

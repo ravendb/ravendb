@@ -235,7 +235,7 @@ namespace Voron.Impl
             return null;
         }
 
-        public PrefixTree CreatePrefixTree(string name, int subtreeDepth = 4)
+        public PrefixTree CreatePrefixTree(string name, int subtreeDepth = -1)
         {
             PrefixTree tree = ReadPrefixTree(name);
             if (tree != null)

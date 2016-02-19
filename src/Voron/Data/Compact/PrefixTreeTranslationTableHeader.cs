@@ -281,9 +281,7 @@ namespace Voron.Data.Compact
             int chunkIdx = (int)(nodeName / _innerCopy.NodesPerChunk);
             int nodeIdx = (int)(nodeName % _innerCopy.NodesPerChunk);
 
-            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
-
-            Debug.Assert(GetFreeSpaceTable(_table).Get(chunkIdx) == false);
+            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)            
 
             // We will retrieve the chunks mapping table.
             long chunkPageNumber = ((long*)_table.DataPointer)[chunkIdx];
