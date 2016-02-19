@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
