@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var connection = new NotificationsClientConnection(webSocket, Database);
                 Database.Notifications.Connect(connection);
+                var sendTask = connection.StartSendingNotifications();
                 try
                 {
                     //TODO: select small context size (maybe pool just for them?)
@@ -71,14 +72,19 @@ namespace Raven.Server.Documents.Handlers
                                     string command, commandParameter;
                                     if (reader.TryGet("Command", out command) == false)
                                     {
-                                        // Write error
                                         throw new NotImplementedException();
-                                        // TBD: what should be done here
+                                        // TODO: Send error back to the client and close connection
                                     }
 
                                     reader.TryGet("Param", out commandParameter);
-
+                                    
                                     HandleCommand(connection, command, commandParameter);
+
+                                    int commandId;
+                                    if (reader.TryGet("CommandId", out commandId))
+                                    {
+                                        connection.Confirm(commandId);
+                                    }
                                 }
                             }
                         }
@@ -97,6 +103,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Database.Notifications.Disconnect(connection);
                 }
+                await sendTask;
             }
         }
 

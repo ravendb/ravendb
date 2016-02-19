@@ -36,6 +36,7 @@ namespace Raven.Server.Documents
         public void Disconnect(NotificationsClientConnection connection)
         {
             _connections.TryRemove(connection);
+            connection.Dispose();
         }
     }
 }

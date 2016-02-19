@@ -177,9 +177,9 @@ namespace Raven.Server.Documents
                         ms.SetLength(0);
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
-                            while (true)
+                            do
                             {
-                                var value = await _sendQueue.TryDequeueAsync();
+                                var value = await _sendQueue.DequeueAsync();
                                 if (_disposeToken.IsCancellationRequested)
                                     break;
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents
 
                                 if (ms.Length > 16*1024)
                                     break;
-                            }
+                            } while (_sendQueue.Count > 0);
                         }
 
                         ArraySegment<byte> bytes;
@@ -203,6 +203,15 @@ namespace Raven.Server.Documents
         {
             _disposeToken.Cancel();
             _sendQueue.Dispose();
+        }
+
+        public void Confirm(int commandId)
+        {
+            _sendQueue.Enqueue(new DynamicJsonValue
+            {
+                ["CommandId"] = commandId,
+                ["Type"] = "Confirm"
+            });
         }
     }
 }

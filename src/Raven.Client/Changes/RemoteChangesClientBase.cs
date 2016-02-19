@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -28,6 +29,8 @@ namespace Raven.Client.Changes
 
         private static int connectionCounter;
         private readonly string id;
+        private int _counter;
+        private ConcurrentDictionary<int, TaskCompletionSource<object>> _sendConfirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>(); 
 
         // This is the StateCounters, it is not related to the counters database
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
@@ -163,11 +166,16 @@ namespace Raven.Client.Changes
             {
                 case "Disconnect":
                     webSocket.Dispose();
-                    // TODO: RenewConnection();
+                    break;
+                case "Confirm":
+                    TaskCompletionSource<object> source;
+                    if (_sendConfirmations.TryRemove(ravenJObject.Value<int>("CommandId"), out source))
+                        source.TrySetResult(null);
                     break;
                 case "Initialized":
                 case "Heartbeat":
                     throw new NotSupportedException(); // Should be deleted
+                
                 default:
                     NotifySubscribers(type, value, Counters.Snapshot);
                     break;
@@ -178,16 +186,22 @@ namespace Raven.Client.Changes
         {
             logger.Info("Sending command {0} - {1} to {2} with id {3}", command, commandParameter, url, id);
 
+            var commandId = Interlocked.Increment(ref _counter);
             var ravenJObject = new RavenJObject
             {
                 ["Command"] = command,
-                ["Param"] = commandParameter
+                ["Param"] = commandParameter,
+                ["CommandId"] = commandId
             };
+            var tcs = new TaskCompletionSource<object>();
+            _sendConfirmations[commandId] = tcs;
             var stream = new MemoryStream();
             ravenJObject.WriteTo(stream);
             ArraySegment<byte> bytes;
             stream.TryGetBuffer(out bytes);
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+
+            await tcs.Task;
         }
 
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();

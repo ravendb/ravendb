@@ -10,6 +10,7 @@ namespace Sparrow.Collections
         private readonly ConcurrentQueue<T> _inner = new ConcurrentQueue<T>();
         private readonly AsyncManualResetEvent _event = new AsyncManualResetEvent();
         private bool _disposed;
+        public int Count => _inner.Count;
 
         public void Enqueue(T item)
         {
@@ -19,27 +20,15 @@ namespace Sparrow.Collections
             _event.Set();
         }
 
-        public async Task<T> TryDequeueAsync()
+        public async Task<T> DequeueAsync()
         {
             EnsureNotDisposed();
 
             T result;
             while (_inner.TryDequeue(out result) == false)
             {
+                EnsureNotDisposed();
                 await _event.WaitAsync();
-                _event.Reset();
-            }
-            return result;
-        }
-
-        public async Task<T> TryDequeueAsync(int timeout) 
-        {
-            EnsureNotDisposed();
-
-            T result;
-            while (_inner.TryDequeue(out result) == false)
-            {
-                await _event.WaitAsync(timeout);
                 _event.Reset();
             }
             return result;
