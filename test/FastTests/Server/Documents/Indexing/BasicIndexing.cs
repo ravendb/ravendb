@@ -85,7 +85,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (database = CreateDocumentDatabase(runInMemory: false))
                 {
-                    Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(2) != null, TimeSpan.FromSeconds(5000)));
+                    Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(2) != null, TimeSpan.FromSeconds(15)));
 
                     var indexes = database
                         .IndexStore

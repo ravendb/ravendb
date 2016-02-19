@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Tombstones
                     {
                         var tombstones = database
                             .DocumentsStorage
-                            .GetTombstonesAfter(context, 0, 0, int.MaxValue)
+                            .GetTombstonesAfter(context, "Users", 0, 0, int.MaxValue)
                             .ToList();
 
                         Assert.Equal(1, tombstones.Count);
@@ -61,7 +61,6 @@ namespace FastTests.Server.Documents.Tombstones
                         Assert.Equal(result.ETag, tombstone.DeletedEtag);
                         Assert.Equal(result.ETag + 1, tombstone.Etag);
                         Assert.Equal(result.Key, tombstone.Key);
-                        Assert.Equal("Users", tombstone.Collection);
                     }
                 }
             }

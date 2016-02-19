@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Queries;
@@ -32,13 +31,11 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : IDisposable
     {
+        private static readonly string EtagsMap = "Etags.Map";
+
+        private static readonly string EtagsTombstone = "Etags.Tombstone";
+
         private static readonly Slice TypeSlice = "Type";
-
-        private static readonly Slice LastMappedEtagSlice = "LastMappedEtag";
-
-        private static readonly Slice LastReducedEtagSlice = "LastReducedEtag";
-
-        private static readonly Slice LastTombstoneEtagSlice = "LastTombstoneEtag";
 
         protected readonly LuceneIndexPersistance IndexPersistance;
 
@@ -46,7 +43,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
-        private DocumentDatabase _documentDatabase;
+        protected DocumentDatabase DocumentDatabase;
 
         private Task _indexingTask;
 
@@ -156,7 +153,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Debug.Assert(Definition != null);
 
-                    _documentDatabase = documentDatabase;
+                    DocumentDatabase = documentDatabase;
                     _environment = environment;
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
@@ -170,12 +167,15 @@ namespace Raven.Server.Documents.Indexes
                         var statsTree = tx.InnerTransaction.CreateTree("Stats");
                         statsTree.Add(TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
 
+                        tx.InnerTransaction.CreateTree(EtagsMap);
+                        tx.InnerTransaction.CreateTree(EtagsTombstone);
+
                         Definition.Persist(context);
 
                         tx.Commit();
                     }
 
-                    IndexPersistance.Initialize(_documentDatabase.Configuration.Indexing);
+                    IndexPersistance.Initialize(DocumentDatabase.Configuration.Indexing);
 
                     _initialized = true;
                 }
@@ -235,47 +235,58 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetLastMappedEtag()
         {
+            // TODO [ppekrol] this is not longer valid
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
-                    return ReadLastMappedEtag(tx);
+                    var etags = new long[Collections.Count];
+                    var count = 0;
+                    foreach (var collection in Collections)
+                    {
+                        etags[count++] = ReadLastMappedEtag(tx, collection);
+                    }
+
+                    return etags.Min();
                 }
             }
         }
 
         public long GetLastTombstoneEtag()
         {
+            // TODO [ppekrol] this is not longer valid
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
-                    return ReadLastTombstoneEtag(tx);
+                    var etags = new long[Collections.Count];
+                    var count = 0;
+                    foreach (var collection in Collections)
+                    {
+                        etags[count++] = ReadLastTombstoneEtag(tx, collection);
+                    }
+
+                    return etags.Min();
                 }
             }
         }
 
-        protected long ReadLastTombstoneEtag(RavenTransaction tx)
+        protected long ReadLastTombstoneEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, LastTombstoneEtagSlice);
+            return ReadLastEtag(tx, EtagsTombstone, collection);
         }
 
-        protected long ReadLastMappedEtag(RavenTransaction tx)
+        protected long ReadLastMappedEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, LastMappedEtagSlice);
+            return ReadLastEtag(tx, EtagsMap, collection);
         }
 
-        protected long ReadLastReducedEtag(RavenTransaction tx)
+        private static long ReadLastEtag(RavenTransaction tx, string tree, string collection)
         {
-            return ReadLastEtag(tx, LastReducedEtagSlice);
-        }
-
-        private static long ReadLastEtag(RavenTransaction tx, Slice key)
-        {
-            var statsTree = tx.InnerTransaction.CreateTree("Stats");
-            var readResult = statsTree.Read(key);
+            var statsTree = tx.InnerTransaction.CreateTree(tree);
+            var readResult = statsTree.Read(collection);
             long lastEtag = 0;
             if (readResult != null)
                 lastEtag = readResult.Reader.ReadLittleEndianInt64();
@@ -283,25 +294,20 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        private static void WriteLastTombstoneEtag(RavenTransaction tx, long etag)
+        private static void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, LastTombstoneEtagSlice, etag);
+            WriteLastEtag(tx, EtagsTombstone, collection, etag);
         }
 
-        private static void WriteLastMappedEtag(RavenTransaction tx, long etag)
+        private static void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, LastMappedEtagSlice, etag);
+            WriteLastEtag(tx, EtagsMap, collection, etag);
         }
 
-        private static void WriteLastReducedEtag(RavenTransaction tx, long etag)
+        private static unsafe void WriteLastEtag(RavenTransaction tx, string tree, string collection, long etag)
         {
-            WriteLastEtag(tx, LastReducedEtagSlice, etag);
-        }
-
-        private static unsafe void WriteLastEtag(RavenTransaction tx, Slice key, long etag)
-        {
-            var statsTree = tx.InnerTransaction.CreateTree("Stats");
-            statsTree.Add(key, new Slice((byte*)&etag, sizeof(long)));
+            var statsTree = tx.InnerTransaction.CreateTree(tree);
+            statsTree.Add(collection, new Slice((byte*)&etag, sizeof(long)));
         }
 
         private void ExecuteIndexing(CancellationToken cancellationToken)
@@ -310,7 +316,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
-                    _documentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
+                    DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
 
                     while (ShouldRun)
                     {
@@ -345,7 +351,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
-                    _documentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
+                    DocumentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
                 }
             }
         }
@@ -355,54 +361,64 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
 
-            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                databaseContext.OpenReadTransaction();
-                indexContext.OpenReadTransaction();
-                //TODO: This need to be done on a per collection basis
-                var lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction);
-                var lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction);
+                var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
-                var count = 0;
-                var lastEtag = lastTombstoneEtag;
-                var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
-
-                using (var indexActions = IndexPersistance.Write())
+                foreach (var collection in Collections)
                 {
-                    var sw = Stopwatch.StartNew();
-                    foreach (var tombstone in _documentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, lastEtag, 0, pageSize))
+                    long lastMappedEtag;
+                    long lastTombstoneEtag;
+                    using (indexContext.OpenReadTransaction())
                     {
-                        token.ThrowIfCancellationRequested();
-
-                        count++;
-                        lastEtag = tombstone.Etag;
-
-                        if (tombstone.DeletedEtag > lastMappedEtag)
-                            continue; // no-op, we have not yet indexed this document
-
-                        if (Collections.Contains(tombstone.Collection) == false)
-                            continue;
-
-                        indexActions.Delete(tombstone.Key);
-
-                        if (sw.Elapsed > _documentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
-                        {
-                            break;
-                        }
+                        lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+                        lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
                     }
-                }
 
-                if (count == 0)
-                    return;
+                    var lastEtag = lastTombstoneEtag;
 
-                _mre.Set(); // might be more
+                    using (var indexActions = IndexPersistance.Write())
+                    {
+                        var count = 0;
+                        using (databaseContext.OpenReadTransaction())
+                        {
+                            var sw = Stopwatch.StartNew();
+                            foreach (var tombstone in DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
+                            {
+                                token.ThrowIfCancellationRequested();
 
-                using (var tx = indexContext.OpenWriteTransaction())
-                {
-                    WriteLastTombstoneEtag(tx, lastEtag);
+                                count++;
+                                lastEtag = tombstone.Etag;
 
-                    tx.Commit();
+                                if (tombstone.DeletedEtag > lastMappedEtag)
+                                    continue; // no-op, we have not yet indexed this document
+
+                                indexActions.Delete(tombstone.Key);
+
+                                if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+
+
+                        if (count == 0)
+                            return;
+
+                        if (lastEtag <= lastTombstoneEtag)
+                            return;
+
+                        using (var tx = indexContext.OpenWriteTransaction())
+                        {
+                            WriteLastTombstoneEtag(tx, collection, lastEtag);
+
+                            tx.Commit();
+                        }
+
+                        _mre.Set(); // might be more
+                    }
                 }
             }
         }
@@ -420,21 +436,26 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
 
-            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                long lastMappedEtag;
-                if (IsStale(databaseContext, indexContext, out lastMappedEtag) == false)
+                long _;
+                if (IsStale(databaseContext, indexContext, out _) == false)
                     return;
 
-                var startEtag = lastMappedEtag + 1;
-                // TODO: need to avoid the lambda usage here, and have separate etag per collection
-                var etags = Collections.ToDictionary(x => x, x => lastMappedEtag);
-                var pageSize = _documentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
+                var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
-                using (var indexActions = IndexPersistance.Write())
+                foreach (var collection in Collections)
                 {
-                    foreach (var collection in Collections)
+                    long lastMappedEtag;
+                    using (indexContext.OpenReadTransaction())
+                    {
+                        lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+                    }
+
+                    var lastEtag = lastMappedEtag;
+
+                    using (var indexActions = IndexPersistance.Write())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
@@ -442,14 +463,12 @@ namespace Raven.Server.Documents.Indexes
                         using (databaseContext.OpenReadTransaction())
                         {
                             var sw = Stopwatch.StartNew();
-                            var fetchedTotalSizeInBytes = new Size(0, SizeUnit.Bytes);
-                            foreach (var document in _documentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, startEtag, 0, pageSize))
+                            foreach (var document in DocumentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
 
                                 count++;
-                                fetchedTotalSizeInBytes.Add(document.Data.Size, SizeUnit.Bytes);
-                                etags[collection] = document.Etag;
+                                lastEtag = document.Etag;
 
                                 try
                                 {
@@ -461,9 +480,7 @@ namespace Raven.Server.Documents.Indexes
                                     continue;
                                 }
 
-                                if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan ||
-                                    //TODO: I don't think that this is needed now, we read from mmap, after all
-                                    fetchedTotalSizeInBytes >= _documentDatabase.Configuration.Indexing.MaximumSizeAllowedToFetchFromStorageInMb)
+                                if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
                                 {
                                     break;
                                 }
@@ -473,33 +490,20 @@ namespace Raven.Server.Documents.Indexes
                         if (count == 0)
                             return;
 
+                        if (lastEtag <= lastMappedEtag)
+                            return;
+
+                        using (var tx = indexContext.OpenWriteTransaction())
+                        {
+                            WriteLastMappedEtag(tx, collection, lastEtag);
+
+                            tx.Commit();
+                        }
+
                         _mre.Set(); // might be more
                     }
                 }
-                // TODO: let us avoid using Linq here, it does a lot of allocations
-                // TODO: that we can avoid
-                var lastEtag = etags
-                    .Select(x => x.Value)
-                    .Where(x => x > lastMappedEtag)
-                    .DefaultIfEmpty(0)
-                    .Min();
-
-                if (lastEtag == 0)
-                    return;
-
-                //TODO: This is wrong, we shouldn't be using a single etag value
-                //TODO: we need to use an etag value per collection, and work on that
-                using (var tx = indexContext.OpenWriteTransaction())
-                {
-                    WriteLastMappedEtag(tx, lastEtag);
-
-                    tx.Commit();
-                }
             }
-        }
-
-        private void ExecuteReduce()
-        {
         }
 
         public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext context, CancellationToken token)
@@ -527,7 +531,7 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var id in documentIds)
             {
-                var document = _documentDatabase.DocumentsStorage.Get(context, id);
+                var document = DocumentDatabase.DocumentsStorage.Get(context, id);
 
                 result.Results.Add(document);
             }

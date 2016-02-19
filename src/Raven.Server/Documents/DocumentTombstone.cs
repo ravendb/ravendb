@@ -8,8 +8,6 @@ namespace Raven.Server.Documents
 
         public long DeletedEtag;
 
-        public LazyStringValue Collection;
-
         public long Etag;
 
         public long StorageId;
