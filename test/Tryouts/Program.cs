@@ -13,6 +13,7 @@ using FastTests.Blittable.Benchmark;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
 using FastTests.Server.Documents.Indexing;
+using FastTests.Server.Documents.Notifications;
 using FastTests.Voron.Bugs;
 using Newtonsoft.Json;
 using Raven.Client.Document;
@@ -35,8 +36,16 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-        //var reader = new StringReader(data);
-        //    var jsonTextReader = new RJT
+
+            for (int i = 0; i < 1000; i++)
+            {
+                using (var x = new ClientServer())
+                {
+                    Console.WriteLine(i);
+                    x.CanGetNotificationAboutDocumentPut().Wait();
+                }
+            }
+
         }
     }
 }

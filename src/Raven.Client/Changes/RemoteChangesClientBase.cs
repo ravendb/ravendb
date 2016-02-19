@@ -185,7 +185,9 @@ namespace Raven.Client.Changes
             };
             var stream = new MemoryStream();
             ravenJObject.WriteTo(stream);
-            await webSocket.SendAsync(new ArraySegment<byte>(stream.ToArray(), 0, (int)stream.Length), WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+            ArraySegment<byte> bytes;
+            stream.TryGetBuffer(out bytes);
+            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
         }
 
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
@@ -253,11 +255,12 @@ namespace Raven.Client.Changes
         {
             var counter = Counters.GetOrAdd(name, s =>
             {
-                Action onZero = () =>
+                Func<Task> onZero = () =>
                 {
                     beforeDisconnect();
-                    Send(unwatchCommand, value);
+                    
                     Counters.Remove(name);
+                    return Send(unwatchCommand, value);
                 };
 
                 Func<TConnectionState, Task> ensureConnection = existingConnectionState =>
