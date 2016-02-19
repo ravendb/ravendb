@@ -65,17 +65,25 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 if (configuration.RunInMemory)
                 {
                     _directory = new RAMDirectory();
-                    new IndexWriter(_directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose(); // creating index structure
+                    CreateIndexStructure();
                 }
                 else
                 {
                     _directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(configuration.IndexStoragePath, _indexId.ToString(), "Data")));
+
+                    if (IndexReader.IndexExists(_directory) == false)
+                        CreateIndexStructure();
                 }
 
                 RecreateSearcher();
 
                 _initialized = true;
             }
+        }
+
+        private void CreateIndexStructure()
+        {
+            new IndexWriter(_directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
         }
 
         public void Dispose()
