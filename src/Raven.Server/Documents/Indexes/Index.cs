@@ -10,7 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -382,6 +381,9 @@ namespace Raven.Server.Documents.Indexes
                         if (tombstone.DeletedEtag > lastMappedEtag)
                             continue; // no-op, we have not yet indexed this document
 
+                        if (Collections.Contains(tombstone.Collection) == false)
+                            continue;
+
                         indexActions.Delete(tombstone.Key);
 
                         if (sw.Elapsed > _documentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
@@ -394,7 +396,7 @@ namespace Raven.Server.Documents.Indexes
                 if (count == 0)
                     return;
 
-                    _mre.Set(); // might be more
+                _mre.Set(); // might be more
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 {
@@ -459,7 +461,7 @@ namespace Raven.Server.Documents.Indexes
                                     continue;
                                 }
 
-                                if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan || 
+                                if (sw.Elapsed > _documentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan ||
                                     //TODO: I don't think that this is needed now, we read from mmap, after all
                                     fetchedTotalSizeInBytes >= _documentDatabase.Configuration.Indexing.MaximumSizeAllowedToFetchFromStorageInMb)
                                 {
@@ -471,7 +473,7 @@ namespace Raven.Server.Documents.Indexes
                         if (count == 0)
                             return;
 
-                            _mre.Set(); // might be more
+                        _mre.Set(); // might be more
                     }
                 }
                 // TODO: let us avoid using Linq here, it does a lot of allocations
@@ -513,13 +515,13 @@ namespace Raven.Server.Documents.Indexes
                 long lastEtag;
                 result.IsStale = IsStale(context, indexContext, out lastEtag);
                 result.IndexEtag = lastEtag;
-        }
+            }
 
             List<string> documentIds;
             using (var indexRead = IndexPersistance.Read())
             {
                 documentIds = indexRead.Query(query, token).ToList();
-    }
+            }
 
             context.OpenReadTransaction();
 

@@ -61,6 +61,7 @@ namespace FastTests.Server.Documents.Tombstones
                         Assert.Equal(result.ETag, tombstone.DeletedEtag);
                         Assert.Equal(result.ETag + 1, tombstone.Etag);
                         Assert.Equal(result.Key, tombstone.Key);
+                        Assert.Equal("Users", tombstone.Collection);
                     }
                 }
             }

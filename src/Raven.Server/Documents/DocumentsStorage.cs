@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         private UnmanagedBuffersPool _unmanagedBuffersPool;
         private const string NoCollectionSpecified = "Raven/Empty";
         private const string SystemDocumentsCollection = "Raven/SystemDocs";
-        private const string Documenttombstones = "DocumentTombstones";
+        private const string DocumentTombstones = "Raven/Document/Tombstones";
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree("Tombstones");
 
                     _docsSchema.Create(tx, SystemDocumentsCollection);
-                    _tombstonesSchema.Create(tx, Documenttombstones);
+                    _tombstonesSchema.Create(tx, DocumentTombstones);
                     _lastEtag = ReadLastEtag(tx);
 
                     tx.Commit();
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<DocumentTombstone> GetTombstonesAfter(DocumentsOperationContext context, long etag, int start, int take)
         {
-            var table = new Table(_tombstonesSchema, Documenttombstones, context.Transaction.InnerTransaction);
+            var table = new Table(_tombstonesSchema, DocumentTombstones, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_tombstonesSchema.FixedSizeIndexes["AllTombstonesEtags"], etag))
@@ -424,6 +424,10 @@ namespace Raven.Server.Documents
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
 
+            ptr = tvr.Read(4, out size);
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Collection = new LazyStringValue(null, ptr + offset, size, context);
+
             ptr = tvr.Read(1, out size);
             result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
             ptr = tvr.Read(2, out size);
@@ -459,7 +463,7 @@ namespace Raven.Server.Documents
             var collectionName = GetCollectionName(key, doc.Data, out originalCollectionName);
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
-            CreateTombstone(context, table, doc);
+            CreateTombstone(context, table, doc, originalCollectionName);
 
             table.Delete(doc.StorageId);
 
@@ -474,7 +478,7 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Table collectionDocsTable, Document doc)
+        private void CreateTombstone(DocumentsOperationContext context, Table collectionDocsTable, Document doc, string collectionName)
         {
             int size;
             var ptr = collectionDocsTable.DirectRead(doc.StorageId, out size);
@@ -490,15 +494,35 @@ namespace Raven.Server.Documents
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
             var documentEtagBigEndian = IPAddress.HostToNetworkOrder(doc.Etag);
 
+            var jsonParserState = new JsonParserState();
+            jsonParserState.FindEscapePositionsIn(collectionName);
+            var collectionByteCount = Encoding.UTF8.GetMaxByteCount(collectionName.Length);
+            var collectionLenSize = JsonParserState.VariableSizeIntSize(collectionByteCount);
+            var escapePositionsSize = jsonParserState.GetEscapePositionsSize();
+
+            var buffer = context.GetNativeTempBuffer(collectionLenSize + collectionByteCount + escapePositionsSize, out size);
+            byte* collectionPtr;
+            int collectionSize;
+            fixed (char* cChars = collectionName)
+            {
+                collectionPtr = buffer;
+                var writePos = buffer;
+                collectionSize = Encoding.UTF8.GetBytes(cChars, collectionName.Length, writePos + collectionLenSize, collectionByteCount);
+                JsonParserState.WriteVariableSizeInt(ref writePos, collectionSize);
+                jsonParserState.WriteEscapePositionsTo(writePos + collectionSize);
+                collectionSize += escapePositionsSize + collectionLenSize;
+            }
+
             var tbv = new TableValueBuilder
             {
                 {lowerKey, lowerSize},
                 {(byte*) &newEtagBigEndian , sizeof (long)},
                 {(byte*) &documentEtagBigEndian , sizeof (long)},
                 {keyPtr, keySize},
+                {collectionPtr, collectionSize}
             };
 
-            var table = new Table(_tombstonesSchema, Documenttombstones, context.Transaction.InnerTransaction);
+            var table = new Table(_tombstonesSchema, DocumentTombstones, context.Transaction.InnerTransaction);
 
             table.Insert(tbv);
         }
