@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
@@ -125,6 +126,36 @@ namespace FastTests.Server.Queries
             Assert.Equal("Users", definition.Collections[0]);
             Assert.True(definition.ContainsField("User.Name"));
             Assert.Equal("Auto/Users/ByUser_Name", definition.Name);
+        }
+
+        [Fact]
+        public void CreateDefinitionForQueryWithSortedFields()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "Name:A*",
+                SortedFields = new[]
+                {
+                    new SortedField("Age_Range"), 
+                },
+                SortHints = new Dictionary<string, SortOptions>()
+                {
+                    { "SortHint-Name", SortOptions.String },
+                    { "SortHint-Age", SortOptions.Int }
+                }
+            });
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("Name"));
+            Assert.True(definition.ContainsField("Age"));
+            Assert.Equal("Auto/Users/ByAgeAndNameSortByAgeName", definition.Name);
+            var nameField = definition.GetField("Name");
+            Assert.Equal(SortOptions.String, nameField.SortOption);
+            var ageField = definition.GetField("Age");
+            Assert.Equal(SortOptions.Int, ageField.SortOption);
         }
 
         private void create_dynamic_mapping_for_users_collection(string query)

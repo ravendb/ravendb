@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,9 +11,11 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<int, Index> _indexesById = new ConcurrentDictionary<int, Index>();
         private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>();
         private readonly ConcurrentDictionary<string, List<Index>> _indexesByCollection = new ConcurrentDictionary<string, List<Index>>();
+        private int _nextIndexId = 1;
 
         public void Add(Index index)
         {
+            _nextIndexId = Math.Max(index.IndexId, _nextIndexId) + 1;
             _indexesById[index.IndexId] = index;
             _indexesByName[index.Name] = index;
 
@@ -56,7 +59,7 @@ namespace Raven.Server.Documents.Indexes
 
         public int GetNextIndexId()
         {
-            return 1; //TODO arek
+            return _nextIndexId;
         }
 
         public IEnumerator<Index> GetEnumerator()

@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             {
                 field = cached.Field;
 
-                if (store.IsStored() == false && index.IsIndexed())
+                if (lazyValue != null && store.IsStored() == false && index.IsIndexed())
                     field.SetValue(cached.LazyStringReader.GetTextReaderFor(lazyValue));
                 else
                     field.SetValue(value ?? cached.LazyStringReader.GetStringFor(lazyValue));

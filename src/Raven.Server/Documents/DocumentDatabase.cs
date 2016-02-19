@@ -51,7 +51,9 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _databaseShutdown.Cancel();
-            DocumentsStorage.Dispose();
+
+            DocumentsStorage?.Dispose();
+            IndexStore?.Dispose();
         }
     }
 }

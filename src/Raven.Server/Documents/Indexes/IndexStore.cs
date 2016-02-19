@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes
                 if (int.TryParse(indexDirectory.Name, out indexId) == false)
                     continue;
 
-                var index = Index.Open(indexId, indexDirectory.FullName, _documentDatabase);
+                var index = Index.Open(indexId, _documentDatabase);
                 _indexes.Add(index);
             }
         }

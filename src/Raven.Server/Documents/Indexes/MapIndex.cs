@@ -1,4 +1,6 @@
-﻿using Raven.Server.ServerWide.Context;
+﻿using System.Linq;
+
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -10,7 +12,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public abstract class MapIndex<TIndexDefinition> : Index<TIndexDefinition> 
+    public abstract class MapIndex<TIndexDefinition> : Index<TIndexDefinition>
         where TIndexDefinition : IndexDefinitionBase
     {
         protected MapIndex(int indexId, IndexType type, TIndexDefinition definition)
@@ -20,20 +22,39 @@ namespace Raven.Server.Documents.Indexes
 
         protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag)
         {
-            long lastDocumentEtag;
-            using (var tx = databaseContext.OpenReadTransaction())
+            using (databaseContext.OpenReadTransaction())
+            using (indexContext.OpenReadTransaction())
             {
-                lastDocumentEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-            }
+                var collectionEtags = new long[Collections.Count];
+                var index = 0;
+                var stale = false;
+                foreach (var collection in Collections)
+                {
+                    var lastCollectionEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                    var lastProcessedCollectionEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
 
-            long lastMappedEtag;
-            using (var tx = indexContext.OpenReadTransaction())
-            {
-                lastMappedEtag = ReadLastMappedEtag(tx);
-            }
+                    collectionEtags[index++] = lastProcessedCollectionEtag;
 
-            lastEtag = lastMappedEtag;
-            return lastDocumentEtag > lastMappedEtag;
+                    if (lastCollectionEtag > lastProcessedCollectionEtag)
+                    {
+                        stale = true;
+                        continue;
+                    }
+
+                    if (stale)
+                        continue;
+
+                    var lastCollectionTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
+                    var lastProcessedCollectionTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
+
+                    if (lastCollectionTombstoneEtag > lastProcessedCollectionTombstoneEtag)
+                        stale = true;
+                }
+
+                // TODO [ppekrol] this is not longer valid
+                lastEtag = collectionEtags.Min();
+                return stale;
+            }
         }
     }
 }

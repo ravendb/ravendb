@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 
 using Lucene.Net.Analysis;
@@ -10,6 +9,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 {
     public class LuceneIndexPersistance : IDisposable
     {
+        private readonly Analyzer _dummyAnalyzer = new SimpleAnalyzer();
+
         private readonly int _indexId;
 
         private readonly IndexDefinitionBase _definition;
@@ -37,6 +39,8 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         private Directory _directory;
 
+        private readonly IndexSearcherHolder _indexSearcherHolder = new IndexSearcherHolder();
+
         private bool _disposed;
 
         private bool _initialized;
@@ -48,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             _converter = new LuceneDocumentConverter(_definition.MapFields);
         }
 
-        public void Initialize(IndexingConfiguration indexingConfiguration)
+        public void Initialize(IndexingConfiguration configuration)
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -58,17 +62,28 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 if (_initialized)
                     throw new InvalidOperationException();
 
-                if (indexingConfiguration.RunInMemory)
+                if (configuration.RunInMemory)
                 {
                     _directory = new RAMDirectory();
+                    CreateIndexStructure();
                 }
                 else
                 {
-                    throw new NotImplementedException();
+                    _directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(configuration.IndexStoragePath, _indexId.ToString(), "Data")));
+
+                    if (IndexReader.IndexExists(_directory) == false)
+                        CreateIndexStructure();
                 }
+
+                RecreateSearcher();
 
                 _initialized = true;
             }
+        }
+
+        private void CreateIndexStructure()
+        {
+            new IndexWriter(_directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
         }
 
         public void Dispose()
@@ -132,6 +147,24 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }
         }
 
+        public IDisposable GetSearcher(out IndexSearcher searcher)
+        {
+            return _indexSearcherHolder.GetSearcher(out searcher);
+        }
+
+        private void RecreateSearcher()
+        {
+            if (_indexWriter == null)
+            {
+                _indexSearcherHolder.SetIndexSearcher(new IndexSearcher(_directory, true), wait: false);
+            }
+            else
+            {
+                var indexReader = _indexWriter.GetReader();
+                _indexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), wait: false);
+            }
+        }
+
         private void CreateIndexWriter()
         {
             try
@@ -188,8 +221,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             {
                 try
                 {
-                    if (_persistance._indexWriter != null && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
+                    if (_persistance._indexWriter != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
                         _persistance.Flush(); // just make sure changes are flushed to disk
+
+                    _persistance.RecreateSearcher();
                 }
                 finally
                 {
@@ -226,22 +261,19 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         {
             private static readonly ILog Log = LogManager.GetLogger(typeof(LuceneIndexReadAction).FullName);
 
-            private readonly LuceneIndexPersistance _persistance;
+            private readonly string _indexName;
             private readonly IndexSearcher _searcher;
-            private readonly IndexReader _reader;
             private readonly LowerCaseKeywordAnalyzer _analyzer;
+            private IDisposable _releaseSearcher;
 
             public LuceneIndexReadAction(LuceneIndexPersistance persistance)
             {
-                _persistance = persistance;
-                persistance.EnsureIndexWriter();
-
-                _reader = persistance._indexWriter.GetReader();
-                _searcher = new IndexSearcher(_reader); // TODO arek - for now let us create a new instance every time
                 _analyzer = new LowerCaseKeywordAnalyzer();
-        }
+                _indexName = persistance._definition.Name;
+                _releaseSearcher = persistance.GetSearcher(out _searcher);
+            }
 
-            public IEnumerable<string> Query(IndexQuery query, CancellationToken token)
+            public IEnumerable<string> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults)
             {
                 var docsToGet = query.PageSize;
                 var position = query.Start;
@@ -256,7 +288,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
                     var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, query);
 
-                    query.TotalSize.Value = search.TotalHits;
+                    totalResults.Value = search.TotalHits;
 
                     //RecordAlreadyPagedItemsInPreviousPage(start, search, indexSearcher);
 
@@ -342,14 +374,14 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 if (string.IsNullOrEmpty(query.Query))
                 {
                     if (Log.IsDebugEnabled)
-                        Log.Debug($"Issuing query on index {_persistance._definition.Name} for all documents");
+                        Log.Debug($"Issuing query on index {_indexName} for all documents");
 
                     documentQuery = new MatchAllDocsQuery();
                 }
                 else
                 {
                     if (Log.IsDebugEnabled)
-                        Log.Debug($"Issuing query on index {_persistance._definition.Name} for: {query.Query}");
+                        Log.Debug($"Issuing query on index {_indexName} for: {query.Query}");
 
                     var toDispose = new List<Action>();
                    // RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
@@ -383,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             public void Dispose()
             {
                 _analyzer?.Dispose();
-                _searcher?.Dispose();
+                _releaseSearcher?.Dispose();
             }
         }
     }
