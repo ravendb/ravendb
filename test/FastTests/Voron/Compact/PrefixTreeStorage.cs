@@ -21,6 +21,8 @@ namespace FastTests.Voron.Compact
         {
             base.Configure(options);
 
+            options.ManualFlushing = true;
+
             DocsSchema = new TableSchema()
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {

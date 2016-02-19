@@ -11,7 +11,7 @@ namespace FastTests.Voron.Compact
 {
     public class SimplePrefixTree : PrefixTreeStorageTests
     {
-        private string Name = "MyTree";
+        private string Name = "TestTree";
 
         private void InitializeStorage()
         {            
@@ -805,6 +805,107 @@ namespace FastTests.Voron.Compact
             }
         }
 
+
+        public void Structure_GenerateTestCases_MultipleTx()
+        {
+            int entries = 500;
+            int iterations = 100;
+            int size = 5;
+            int txSize = 1;
+
+            string[] smallestRepro = null;
+            int smallest = int.MaxValue;
+
+            try
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    DocsSchema.Create(tx, "docs");
+
+                    tx.Commit();
+                }
+
+                for (int i = 0; i < iterations; i++)
+                {
+                    var keys = new string[entries];
+                    var transactionEnd = new bool[entries];
+
+                    using (var tx = Env.WriteTransaction())
+                    {
+                        var tree = tx.CreatePrefixTree(Name + i, 8);
+
+                        tx.Commit();
+                    }
+
+                    var insertedKeys = new HashSet<string>();
+                    var generator = new Random(i + size);
+
+                    try
+                    {
+                        int counter = 0;
+                        for ( int transactions = 0; transactions < entries / txSize + 1; transactions++)
+                        {
+                            Env.FlushLogToDataFile();
+                            using (var tx = Env.WriteTransaction())
+                            {
+                                var docs = new Table(DocsSchema, "docs", tx);
+                                var tree = tx.ReadPrefixTree(Name + i);
+
+                                for (int j = 0; j < txSize; j++)
+                                {
+                                    string key = GenerateRandomString(generator, size);
+                                    var keySlice = new Slice(Encoding.UTF8.GetBytes(key));
+
+                                    if (!insertedKeys.Contains(key))
+                                    {
+                                        keys[counter] = key;
+                                        insertedKeys.Add(key);
+
+                                        Assert.False(tree.Contains(keySlice));
+                                        Assert.NotEqual(-1, AddToPrefixTree(tree, docs, keySlice, "8Jp3"));
+
+                                        counter++;
+                                    }
+
+                                    StructuralVerify(tree);                                    
+                                }
+
+                                transactionEnd[transactions * (txSize + 1)] = true;
+                                tx.Commit();
+                            }
+                        }                        
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Found one of size {insertedKeys.Count}.");
+                        if (smallest > insertedKeys.Count)
+                        {
+                            smallest = insertedKeys.Count;
+                            smallestRepro = keys;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Something else happens.");
+                Console.WriteLine(e);
+                Console.WriteLine("Best found before failing:");
+            }
+
+            if (smallest != int.MaxValue)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"Found best error of size: {smallest}");
+                for (int i = 0; i < smallest; i++)
+                    Console.WriteLine(smallestRepro[i]);
+            }
+            else Console.WriteLine("No structural fail found.");
+
+            Console.WriteLine("Done!");
+            Console.ReadLine();
+        }
+
         public void Structure_GenerateTestCases()
         {
             int entries = 500;
@@ -886,7 +987,6 @@ namespace FastTests.Voron.Compact
 
             Console.WriteLine("Done!");
             Console.ReadLine();
-
         }
     }
 }
