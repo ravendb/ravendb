@@ -107,5 +107,22 @@ namespace FastTests.Server.Documents.Notifications
                 ((RemoteDatabaseChanges)taskObservable).DisposeAsync().Wait();
             }
         }
+
+        [Fact]
+        public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                var taskObservable = store.Changes("does-not-exists");
+
+                var exception = await Assert.ThrowsAsync<AggregateException>(async () =>
+                {
+                    await taskObservable.ConnectionTask;
+                });
+
+                // ensure the db still works
+                store.DatabaseCommands.GetStatistics();
+            }
+        }
     }
 }
