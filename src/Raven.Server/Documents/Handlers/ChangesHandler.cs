@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
@@ -83,11 +84,10 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task HandleConnection(WebSocket webSocket, MemoryOperationContext context)
         {
-            var debugTag = "changes/" + Database.Name;
-
             var connection = new NotificationsClientConnection(webSocket, Database);
             Database.Notifications.Connect(connection);
             var sendTask = connection.StartSendingNotifications();
+            var debugTag = "changes/" + connection.Id;
             try
             {
                 var buffer = context.GetManagedBuffer();
@@ -153,6 +153,24 @@ namespace Raven.Server.Documents.Handlers
                 Database.Notifications.Disconnect(connection);
             }
             await sendTask;
+        }
+
+        [RavenAction("/databases/*/changes", "DELETE", "/databases/{databaseName:string}/changes?id={connectionId:int|multiple}")]
+        public async Task DeleteConnections()
+        {
+            var ids = HttpContext.Request.Query["id"];
+            if (ids.Count == 0)
+                throw new ArgumentException($"Query string 'id' is mandatory, but wasn't specified");
+
+            foreach (var idStr in ids)
+            {
+                int id;
+                if (int.TryParse(idStr, out id) == false)
+                    throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int32, value was: {1}", "id", idStr));
+
+                var removedConnection = Database.Notifications.Connections.RemoveItem(connection => connection.Id == id);
+                removedConnection.Dispose();
+            }
         }
     }
 }
