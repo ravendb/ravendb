@@ -35,22 +35,49 @@ namespace Raven.Server.Documents.Handlers
                     {
                         Log.ErrorException("Error encountered in changes handler", ex);
 
-                        using (var ms = new MemoryStream())
+                        try
                         {
-                            using (var writer = new BlittableJsonTextWriter(context, ms))
+                            using (var ms = new MemoryStream())
                             {
-                                context.Write(writer, new DynamicJsonValue
+                                using (var writer = new BlittableJsonTextWriter(context, ms))
                                 {
-                                    ["Exception"] = ex,
-                                });
-                            }
+                                    context.Write(writer, new DynamicJsonValue
+                                    {
+                                        ["Exception"] = ex,
+                                    });
+                                }
 
-                            ArraySegment<byte> bytes;
-                            ms.TryGetBuffer(out bytes);
-                            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                                ArraySegment<byte> bytes;
+                                ms.TryGetBuffer(out bytes);
+                                await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            Log.ErrorException("Failed to send the error in changes handler to the client", ex);
                         }
                     }
                 }
+            }
+        }
+
+        [RavenAction("/databases/*/changes/debug", "GET", "/databases/{databaseName:string}/changes/debug")]
+        public async Task GetConnectionsDebugInfo()
+        {
+            MemoryOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var connection in Database.Notifications.Connections)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+                    context.Write(writer, connection.GetDebugInfo());
+                }
+                writer.WriteEndArray();
             }
         }
 

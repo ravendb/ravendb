@@ -9,7 +9,7 @@ namespace Raven.Server.Documents
 {
     public class DocumentsNotifications
     {
-        private readonly ConcurrentSet<NotificationsClientConnection> _connections = new ConcurrentSet<NotificationsClientConnection>(new NotificationsClientConnectionComparer());
+        public readonly ConcurrentSet<NotificationsClientConnection> Connections = new ConcurrentSet<NotificationsClientConnection>(new NotificationsClientConnectionComparer());
 
         public event Action<DocumentChangeNotification> OnDocumentChange;
 
@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
             var documentChangeNotification = notification as DocumentChangeNotification;
             if (documentChangeNotification != null)
             {
-                foreach (var connection in _connections)
+                foreach (var connection in Connections)
                     connection.SendDocumentChanges(documentChangeNotification);
 
                 OnDocumentChange?.Invoke(documentChangeNotification);
@@ -30,12 +30,12 @@ namespace Raven.Server.Documents
 
         public void Connect(NotificationsClientConnection connection)
         {
-            _connections.Add(connection);
+            Connections.Add(connection);
         }
 
         public void Disconnect(NotificationsClientConnection connection)
         {
-            _connections.TryRemove(connection);
+            Connections.TryRemove(connection);
             connection.Dispose();
         }
     }
