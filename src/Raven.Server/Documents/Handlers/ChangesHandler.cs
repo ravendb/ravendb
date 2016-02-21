@@ -68,22 +68,25 @@ namespace Raven.Server.Documents.Handlers
 
                                     builder.FinalizeDocument();
 
-                                    var reader = builder.CreateReader();
-                                    string command, commandParameter;
-                                    if (reader.TryGet("Command", out command) == false)
+                                    using (var reader = builder.CreateReader())
                                     {
-                                        throw new NotImplementedException();
-                                        // TODO: Send error back to the client and close connection
-                                    }
+                                        string command, commandParameter;
+                                        if (reader.TryGet("Command", out command) == false)
+                                        {
+                                            connection.HandleError("Command parameter is mandatory");
+                                            break;
+                                        }
 
-                                    reader.TryGet("Param", out commandParameter);
-                                    
-                                    HandleCommand(connection, command, commandParameter);
+                                        reader.TryGet("Param", out commandParameter);
+                                        connection.HandleCommand(command, commandParameter);
+                                        if (connection.IsFaulted)
+                                            break;
 
-                                    int commandId;
-                                    if (reader.TryGet("CommandId", out commandId))
-                                    {
-                                        connection.Confirm(commandId);
+                                        int commandId;
+                                        if (reader.TryGet("CommandId", out commandId))
+                                        {
+                                            connection.Confirm(commandId);
+                                        }
                                     }
                                 }
                             }
@@ -105,120 +108,6 @@ namespace Raven.Server.Documents.Handlers
                 }
                 await sendTask;
             }
-        }
-
-        private void HandleCommand(NotificationsClientConnection connection, string command, string commandParameter)
-        {
-            /* if (Match(command, "watch-index"))
-             {
-                 connection.WatchIndex(commandParameter);
-             }
-             else if (Match(command, "unwatch-index"))
-             {
-                 connection.UnwatchIndex(commandParameter);
-             }
-             else if (Match(command, "watch-indexes"))
-             {
-                 connection.WatchAllIndexes();
-             }
-             else if (Match(command, "unwatch-indexes"))
-             {
-                 connection.UnwatchAllIndexes();
-             }
-             else if (Match(command, "watch-transformers"))
-             {
-                 connection.WatchTransformers();
-             }
-             else if (Match(command, "unwatch-transformers"))
-             {
-                 connection.UnwatchTransformers();
-             }
-             else*/
-            if (Match(command, "watch-doc"))
-            {
-                connection.WatchDocument(commandParameter);
-            }
-            else if (Match(command, "unwatch-doc"))
-            {
-                connection.UnwatchDocument(commandParameter);
-            }
-            else if (Match(command, "watch-docs"))
-            {
-                connection.WatchAllDocuments();
-            }
-            else if (Match(command, "unwatch-docs"))
-            {
-                connection.UnwatchAllDocuments();
-            }
-            else if (Match(command, "watch-prefix"))
-            {
-                connection.WatchDocumentPrefix(commandParameter);
-            }
-            else if (Equals(command, "unwatch-prefix"))
-            {
-                connection.UnwatchDocumentPrefix(commandParameter);
-            }
-            else if (Match(command, "watch-collection"))
-            {
-                connection.WatchDocumentInCollection(commandParameter);
-            }
-            else if (Equals(command, "unwatch-collection"))
-            {
-                connection.UnwatchDocumentInCollection(commandParameter);
-            }
-            else if (Match(command, "watch-type"))
-            {
-                connection.WatchDocumentOfType(commandParameter);
-            }
-            else if (Equals(command, "unwatch-type"))
-            {
-                connection.UnwatchDocumentOfType(commandParameter);
-            }
-            /*else if (Match(command, "watch-replication-conflicts"))
-            {
-                connection.WatchAllReplicationConflicts();
-            }
-            else if (Match(command, "unwatch-replication-conflicts"))
-            {
-                connection.UnwatchAllReplicationConflicts();
-            }
-            else if (Match(command, "watch-bulk-operation"))
-            {
-                connection.WatchBulkInsert(commandParameter);
-            }
-            else if (Match(command, "unwatch-bulk-operation"))
-            {
-                connection.UnwatchBulkInsert(commandParameter);
-            }
-            else if (Match(command, "watch-data-subscriptions"))
-            {
-                connection.WatchAllDataSubscriptions();
-            }
-            else if (Match(command, "unwatch-data-subscriptions"))
-            {
-                connection.UnwatchAllDataSubscriptions();
-            }
-            else if (Match(command, "watch-data-subscription"))
-            {
-                connection.WatchDataSubscription(long.Parse(commandParameter));
-            }
-            else if (Match(command, "unwatch-data-subscription"))
-            {
-                connection.UnwatchDataSubscription(long.Parse(commandParameter));
-            }*/
-            else
-            {
-                throw new NotImplementedException();
-                /*return GetMessageWithObject(new
-                {
-                    Error = "command argument is mandatory"
-                }, HttpStatusCode.BadRequest);*/
-            }
-        }
-
-        protected static bool Match(string x, string y)
-        {
-            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
