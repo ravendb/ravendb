@@ -688,6 +688,8 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
                 var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, false, token).ConfigureAwait(false);
+                if (multiLoadResult.Results.Count == 0)
+                    return null;
                 return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
             }, token);
         }
