@@ -69,9 +69,9 @@ namespace Raven.Tests.Notifications
             } 
         }
 
-        public static FilteredObserver<T> Where<T>(this IObservable<T> self, Func<T, bool> action)
+        public static FilteredObserver<T> Where<T>(this IObservable<T> self, Func<T, bool> predicate)
         {
-            var filteredObserver = new FilteredObserver<T>(action);
+            var filteredObserver = new FilteredObserver<T>(predicate);
             self.Subscribe(filteredObserver);
             return filteredObserver;
             

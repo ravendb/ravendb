@@ -49,6 +49,8 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
         }
 
+        public bool IsFaulted { get; private set; }
+
         public void WatchDocument(string docId)
         {
             _matchingDocuments.TryAdd(docId);
@@ -212,6 +214,125 @@ namespace Raven.Server.Documents
                 ["CommandId"] = commandId,
                 ["Type"] = "Confirm"
             });
+        }
+
+        public void HandleError(string error)
+        {
+            IsFaulted = true;
+            _sendQueue.Enqueue(new DynamicJsonValue
+            {
+                ["Error"] = error,
+            });
+        }
+
+        public void HandleCommand(string command, string commandParameter)
+        {
+            /* if (Match(command, "watch-index"))
+             {
+                 WatchIndex(commandParameter);
+             }
+             else if (Match(command, "unwatch-index"))
+             {
+                 UnwatchIndex(commandParameter);
+             }
+             else if (Match(command, "watch-indexes"))
+             {
+                 WatchAllIndexes();
+             }
+             else if (Match(command, "unwatch-indexes"))
+             {
+                 UnwatchAllIndexes();
+             }
+             else if (Match(command, "watch-transformers"))
+             {
+                 WatchTransformers();
+             }
+             else if (Match(command, "unwatch-transformers"))
+             {
+                 UnwatchTransformers();
+             }
+             else*/
+            if (Match(command, "watch-doc"))
+            {
+                WatchDocument(commandParameter);
+            }
+            else if (Match(command, "unwatch-doc"))
+            {
+                UnwatchDocument(commandParameter);
+            }
+            else if (Match(command, "watch-docs"))
+            {
+                WatchAllDocuments();
+            }
+            else if (Match(command, "unwatch-docs"))
+            {
+                UnwatchAllDocuments();
+            }
+            else if (Match(command, "watch-prefix"))
+            {
+                WatchDocumentPrefix(commandParameter);
+            }
+            else if (Equals(command, "unwatch-prefix"))
+            {
+                UnwatchDocumentPrefix(commandParameter);
+            }
+            else if (Match(command, "watch-collection"))
+            {
+                WatchDocumentInCollection(commandParameter);
+            }
+            else if (Equals(command, "unwatch-collection"))
+            {
+                UnwatchDocumentInCollection(commandParameter);
+            }
+            else if (Match(command, "watch-type"))
+            {
+                WatchDocumentOfType(commandParameter);
+            }
+            else if (Equals(command, "unwatch-type"))
+            {
+                UnwatchDocumentOfType(commandParameter);
+            }
+            /*else if (Match(command, "watch-replication-conflicts"))
+            {
+                WatchAllReplicationConflicts();
+            }
+            else if (Match(command, "unwatch-replication-conflicts"))
+            {
+                UnwatchAllReplicationConflicts();
+            }
+            else if (Match(command, "watch-bulk-operation"))
+            {
+                WatchBulkInsert(commandParameter);
+            }
+            else if (Match(command, "unwatch-bulk-operation"))
+            {
+                UnwatchBulkInsert(commandParameter);
+            }
+            else if (Match(command, "watch-data-subscriptions"))
+            {
+                WatchAllDataSubscriptions();
+            }
+            else if (Match(command, "unwatch-data-subscriptions"))
+            {
+                UnwatchAllDataSubscriptions();
+            }
+            else if (Match(command, "watch-data-subscription"))
+            {
+                WatchDataSubscription(long.Parse(commandParameter));
+            }
+            else if (Match(command, "unwatch-data-subscription"))
+            {
+                UnwatchDataSubscription(long.Parse(commandParameter));
+            }*/
+            else
+            {
+                HandleError("Command argument is mandatory");
+            }
+        }
+
+        protected static bool Match(string x, string y)
+        {
+            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
