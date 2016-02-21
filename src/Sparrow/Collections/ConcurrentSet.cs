@@ -75,13 +75,29 @@ namespace Sparrow.Collections
             return GetEnumerator();
         }
 
-        public void RemoveWhere(Func<T, bool> predicate)
+        public IEnumerable<T> RemoveWhere(Func<T, bool> predicate)
         {
             foreach (var item in inner.Where(item => predicate(item.Key)))
             {
                 object value;
-                inner.TryRemove(item.Key, out value);
+                if (inner.TryRemove(item.Key, out value))
+                {
+                    yield return item.Key;
+                }
             }
+        }
+
+        public T RemoveItem(Func<T, bool> predicate)
+        {
+            foreach (var item in inner.Where(item => predicate(item.Key)))
+            {
+                object value;
+                if (inner.TryRemove(item.Key, out value))
+                {
+                    return item.Key;
+                }
+            }
+            return default(T);
         }
 
         public void Clear()

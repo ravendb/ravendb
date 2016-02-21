@@ -15,6 +15,8 @@ namespace Raven.Server.Documents
 {
     public class NotificationsClientConnection : IDisposable
     {
+        private static int _counter = 0;
+
         private readonly WebSocket _webSocket;
         private readonly DocumentDatabase _documentDatabase;
         private readonly AsyncQueue<DynamicJsonValue> _sendQueue = new AsyncQueue<DynamicJsonValue>();
@@ -51,6 +53,8 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
             _startedAt = SystemTime.UtcNow;
         }
+
+        public int Id => Interlocked.Increment(ref _counter);
 
         public TimeSpan Age => SystemTime.UtcNow - _startedAt;
 
@@ -333,6 +337,7 @@ namespace Raven.Server.Documents
         {
             return new DynamicJsonValue
             {
+                ["Id"] = Id,
                 ["State"] = _webSocket.State.ToString(),
                 ["CloseStatus"] = _webSocket.CloseStatus,
                 ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
