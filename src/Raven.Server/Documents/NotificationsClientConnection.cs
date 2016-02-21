@@ -15,7 +15,7 @@ namespace Raven.Server.Documents
 {
     public class NotificationsClientConnection : IDisposable
     {
-        private static int _counter = 0;
+        private static long _counter = 0;
 
         private readonly WebSocket _webSocket;
         private readonly DocumentDatabase _documentDatabase;
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents
             _startedAt = SystemTime.UtcNow;
         }
 
-        public int Id => Interlocked.Increment(ref _counter);
+        public long Id = Interlocked.Increment(ref _counter);
 
         public TimeSpan Age => SystemTime.UtcNow - _startedAt;
 

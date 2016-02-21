@@ -5,8 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/changes/debug", "GET", "/databases/{databaseName:string}/changes/debug")]
-        public async Task GetConnectionsDebugInfo()
+        public Task GetConnectionsDebugInfo()
         {
             MemoryOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -76,10 +76,11 @@ namespace Raven.Server.Documents.Handlers
                     if (first == false)
                         writer.WriteComma();
                     first = false;
-                    context.Write(writer, connection.GetDebugInfo());
+                    context.Write(writer, connection.Value.GetDebugInfo());
                 }
                 writer.WriteEndArray();
             }
+            return Task.CompletedTask;
         }
 
         private async Task HandleConnection(WebSocket webSocket, MemoryOperationContext context)
@@ -150,13 +151,13 @@ namespace Raven.Server.Documents.Handlers
             }
             finally
             {
-                Database.Notifications.Disconnect(connection);
+                Database.Notifications.Disconnect(connection.Id);
             }
             await sendTask;
         }
 
-        [RavenAction("/databases/*/changes", "DELETE", "/databases/{databaseName:string}/changes?id={connectionId:int|multiple}")]
-        public async Task DeleteConnections()
+        [RavenAction("/databases/*/changes", "DELETE", "/databases/{databaseName:string}/changes?id={connectionId:long|multiple}")]
+        public Task DeleteConnections()
         {
             var ids = HttpContext.Request.Query["id"];
             if (ids.Count == 0)
@@ -164,13 +165,14 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var idStr in ids)
             {
-                int id;
-                if (int.TryParse(idStr, out id) == false)
-                    throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int32, value was: {1}", "id", idStr));
+                long id;
+                if (long.TryParse(idStr, NumberStyles.Any,CultureInfo.InvariantCulture, out id) == false)
+                    throw new ArgumentException($"Could not parse query string 'id' header as int64, value was: {idStr}");
 
-                var removedConnection = Database.Notifications.Connections.RemoveItem(connection => connection.Id == id);
-                removedConnection.Dispose();
+                Database.Notifications.Disconnect(id);
             }
+
+            return Task.CompletedTask;
         }
     }
 }
