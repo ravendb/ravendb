@@ -1,10 +1,10 @@
 using System;
-
 using System.Collections.Concurrent;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Changes;
 using Raven.Client.Document;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
@@ -13,9 +13,8 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Notifications
 {
-    public class ClientServer : RavenTestBase
+    public class ChangesTests : RavenTestBase
     {
-    
         protected override void ModifyStore(DocumentStore store)
         {
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
@@ -74,6 +73,38 @@ namespace FastTests.Server.Documents.Notifications
                 DocumentChangeNotification documentChangeNotification;
                 Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(10)));
                 Assert.Equal(docsCount - 1, list.Count);
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task CanGetNotificationAboutDocumentDelete()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                var list = new BlockingCollection<DocumentChangeNotification>();
+                var taskObservable = store.Changes();
+                await taskObservable.ConnectionTask;
+                var observableWithTask = taskObservable.ForDocument("users/1");
+                await observableWithTask.Task;
+                observableWithTask
+                    .Where(x => x.Type == DocumentChangeTypes.Delete)
+                    .Subscribe(list.Add);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                store.DatabaseCommands.Delete("users/1", null);
+
+                DocumentChangeNotification documentChangeNotification;
+                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+
+                Assert.Equal("users/1", documentChangeNotification.Key);
+                Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
+
+                ((RemoteDatabaseChanges)taskObservable).DisposeAsync().Wait();
             }
         }
     }
