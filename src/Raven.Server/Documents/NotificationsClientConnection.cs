@@ -49,8 +49,6 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
         }
 
-        public bool IsFaulted { get; private set; }
-
         public void WatchDocument(string docId)
         {
             _matchingDocuments.TryAdd(docId);
@@ -216,15 +214,6 @@ namespace Raven.Server.Documents
             });
         }
 
-        public void HandleError(string error)
-        {
-            IsFaulted = true;
-            _sendQueue.Enqueue(new DynamicJsonValue
-            {
-                ["Error"] = error,
-            });
-        }
-
         public void HandleCommand(string command, string commandParameter)
         {
             /* if (Match(command, "watch-index"))
@@ -326,7 +315,7 @@ namespace Raven.Server.Documents
             }*/
             else
             {
-                HandleError("Command argument is mandatory");
+                throw new ArgumentOutOfRangeException(nameof(command), "Command argument is not valid");
             }
         }
 
