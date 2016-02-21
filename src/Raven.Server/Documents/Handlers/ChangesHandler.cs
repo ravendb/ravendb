@@ -35,19 +35,26 @@ namespace Raven.Server.Documents.Handlers
                     {
                         Log.ErrorException("Error encountered in changes handler", ex);
 
-                        using (var ms = new MemoryStream())
+                        try
                         {
-                            using (var writer = new BlittableJsonTextWriter(context, ms))
+                            using (var ms = new MemoryStream())
                             {
-                                context.Write(writer, new DynamicJsonValue
+                                using (var writer = new BlittableJsonTextWriter(context, ms))
                                 {
-                                    ["Exception"] = ex,
-                                });
-                            }
+                                    context.Write(writer, new DynamicJsonValue
+                                    {
+                                        ["Exception"] = ex,
+                                    });
+                                }
 
-                            ArraySegment<byte> bytes;
-                            ms.TryGetBuffer(out bytes);
-                            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                                ArraySegment<byte> bytes;
+                                ms.TryGetBuffer(out bytes);
+                                await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            Log.ErrorException("Failed to send the error in changes handler to the client", ex);
                         }
                     }
                 }
