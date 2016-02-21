@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -18,6 +19,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly AsyncQueue<DynamicJsonValue> _sendQueue = new AsyncQueue<DynamicJsonValue>();
         private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
+        private readonly DateTime _startedAt;
 
         private readonly ConcurrentSet<string> _matchingIndexes =
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -47,7 +49,10 @@ namespace Raven.Server.Documents
         {
             _webSocket = webSocket;
             _documentDatabase = documentDatabase;
+            _startedAt = SystemTime.UtcNow;
         }
+
+        public TimeSpan Age => SystemTime.UtcNow - _startedAt;
 
         public void WatchDocument(string docId)
         {
@@ -322,6 +327,28 @@ namespace Raven.Server.Documents
         protected static bool Match(string x, string y)
         {
             return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public DynamicJsonValue GetDebugInfo()
+        {
+            return new DynamicJsonValue
+            {
+                ["State"] = _webSocket.State.ToString(),
+                ["CloseStatus"] = _webSocket.CloseStatus,
+                ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
+                ["SubProtocol"] = _webSocket.SubProtocol,
+                ["Age"] = Age,
+                ["WatchAllDocuments"] = watchAllDocuments > 0,
+                ["WatchAllIndexes"] = watchAllIndexes > 0,
+                ["WatchAllTransformers"] = watchAllTransformers > 0,
+                /*["WatchConfig"] = _watchConfig > 0,
+                ["WatchConflicts"] = _watchConflicts > 0,
+                ["WatchSync"] = _watchSync > 0,*/
+                ["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray(),
+                ["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray(),
+                ["WatchIndexes"] = _matchingIndexes.ToArray(),
+                ["WatchDocuments"] = _matchingDocuments.ToArray(),
+            };
         }
     }
 }

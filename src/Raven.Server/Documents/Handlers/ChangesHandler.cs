@@ -54,6 +54,26 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/changes/debug", "GET", "/databases/{databaseName:string}/changes/debug")]
+        public async Task GetConnectionsDebugInfo()
+        {
+            MemoryOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var connection in Database.Notifications.Connections)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+                    context.Write(writer, connection.GetDebugInfo());
+                }
+                writer.WriteEndArray();
+            }
+        }
+
         private async Task HandleConnection(WebSocket webSocket, MemoryOperationContext context)
         {
             var debugTag = "changes/" + Database.Name;
