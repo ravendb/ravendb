@@ -252,21 +252,56 @@ namespace Raven.Database.Indexing
             var key = Constants.IndexReplacePrefix + indexReplaceInformation.ReplaceIndex;
             var originalReplaceDocument = Database.Documents.Get(key, null);
             var etag = originalReplaceDocument != null ? originalReplaceDocument.Etag : null;
-            var wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
+            bool wasReplaced = false;
+            try
+            {
+                wasReplaced = Database.IndexStorage.TryReplaceIndex(indexReplaceInformation.ReplaceIndex, indexReplaceInformation.IndexToReplace);
+            }
+            //this is thrown when a locked inedx (with LockError mode) is been replaced by a side by side index
+            //we need to stop the timer and delete the document so it will not continue throwing errors
+            catch (InvalidOperationException ie)
+            {
+                HandleSideBySideFailureBecauseLockError(indexReplaceInformation, key, etag);
+                throw;
+            }
             if (wasReplaced)
             {
-                try
-                {
-                    Database.Documents.Delete(key, etag, null);
-                }
-                catch (ConcurrencyException e)
-                {
-                    // side by side document changed, probably means that we created a new side by side index and updated the index
-                    log.Debug("Failed to delete the side by side document after index replace.");
-                }
+                DeleteIndexReplaceDocument(key, etag);
             }
             else
                 HandleIndexReplaceError(indexReplaceInformation);
+        }
+
+        private void HandleSideBySideFailureBecauseLockError(IndexReplaceInformation indexReplaceInformation, string key, Etag etag)
+        {
+            if (indexReplaceInformation.ReplaceTimer != null)
+                Database.TimerManager.ReleaseTimer(indexReplaceInformation.ReplaceTimer);
+            Database.IndexStorage.DeleteIndex(indexReplaceInformation.ReplaceIndex);
+            DeleteIndexReplaceDocument(key, etag);
+            var message = string.Format("Index {0} is locked with LockError mode but was attempted to be replaced by a side by side index {1}",
+                indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex);
+            Database.AddAlert(new Alert
+            {
+                AlertLevel = AlertLevel.Error,
+                CreatedAt = SystemTime.UtcNow,
+                Message = message,
+                Title = "Index replace failed",
+                UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", indexReplaceInformation.ReplaceIndex, Database.TransactionalStorage.Id),
+            });
+            log.Error(message);
+        }
+
+        private void DeleteIndexReplaceDocument(string key, Etag etag)
+        {
+            try
+            {
+                Database.Documents.Delete(key, etag, null);
+            }
+            catch (ConcurrencyException e)
+            {
+                // side by side document changed, probably means that we created a new side by side index and updated the index
+                log.Debug("Failed to delete the side by side document after index replace.");
+            }
         }
 
         private void HandleIndexReplaceError(IndexReplaceInformation indexReplaceInformation)

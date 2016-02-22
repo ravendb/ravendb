@@ -244,6 +244,14 @@ namespace Raven.Client.Indexes
             var serverDef = databaseCommands.GetIndex(IndexName);
             if (serverDef != null)
             {
+                switch (serverDef.LockMode)
+                {
+                    //Nothing to do we just ignore this index
+                    case IndexLockMode.LockedIgnore:
+                        return;
+                    case IndexLockMode.LockedError:
+                        throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to:LockedError", serverDef.IndexId));
+                }
                 if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
                     return;
 
