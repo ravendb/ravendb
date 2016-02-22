@@ -222,7 +222,11 @@ class topology extends viewModelBase {
 
         var graph = this.svg.selectAll('.graph').data([null]);
 
-        graph.attr('transform', 'translate(' + ((self.width - topologyGraph.graph().width) / 2) + ',10)');
+        var graphWidth = topologyGraph.graph().width;
+        if (graphWidth === -Infinity) {
+            graphWidth = 0;
+        }
+        graph.attr('transform', 'translate(' + ((self.width - graphWidth) / 2) + ',10)');
 
         var enteringGraph = graph.enter().append('g').attr('class', 'graph');
         var enteringGraphZoom = enteringGraph.append("g").attr("class", "graphZoom");
@@ -230,7 +234,7 @@ class topology extends viewModelBase {
         enteringGraphZoom.append('g').attr('class', 'nodes');
         enteringGraphZoom.append('g').attr('class', 'edges');
 
-        enteringGraph.attr('transform', 'translate(' + ((self.width - topologyGraph.graph().width) / 2) + ',10)');
+        enteringGraph.attr('transform', 'translate(' + ((self.width - graphWidth) / 2) + ',10)');
 
         var mappedNodes = topologyGraph.nodes().map(n => topologyGraph.node(n));
 
@@ -296,7 +300,7 @@ class topology extends viewModelBase {
                 var currentSelection = d3.select(".selected").node();
                 d3.selectAll(".selected").classed("selected", false);
                 d3.select(this).classed('selected', currentSelection !== this);
-                self.currentLink(currentSelection !== this ? d : null)
+                self.currentLink(currentSelection !== this ? d : null);
             });
 
         edgesDom
