@@ -153,7 +153,7 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var operationUrl = operationMetadata.Url + "/indexes/?start=" + start + "&pageSize=" + pageSize;
+                var operationUrl = operationMetadata.Url + "/indexes?start=" + start + "&pageSize=" + pageSize;
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
@@ -438,6 +438,22 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication(HttpMethod.Delete, async operationMetadata =>
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Indexes(name), HttpMethod.Delete, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(operationsHeaders)))
+                {
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                }
+            }, token);
+        }
+
+        public Task DeleteCollectionAsync(string collectionName, CancellationToken token = default(CancellationToken))
+        {
+            EnsureIsNotNullOrEmpty(collectionName, nameof(collectionName));
+            return ExecuteWithReplication(HttpMethod.Delete, async operationMetadata =>
+            {
+                string path = operationMetadata.Url.CollectionsDocs(collectionName);
+
+                token.ThrowCancellationIfNotDefault(); //maybe the operation is canceled and we can spare the request..
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethod.Delete, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
                     await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
@@ -899,7 +915,7 @@ namespace Raven.Client.Connection.Async
 
         public async Task<RavenJArray> GetDocumentsInternalAsync(int? start, long? fromEtag, int pageSize, OperationMetadata operationMetadata, bool metadataOnly = false, CancellationToken token = default(CancellationToken))
         {
-            var requestUri = Url + "/docs/?";
+            var requestUri = Url + "/docs?";
             if (start.HasValue && start.Value > 0)
             {
                 requestUri += "start=" + start;

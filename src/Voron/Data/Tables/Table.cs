@@ -586,27 +586,32 @@ namespace Voron.Data.Tables
             return Insert(builder);
         }
 
-        public void DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)
+        public bool DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
                 if (it.Seek(long.MinValue) == false)
-                    return;
+                    return true;
 
                 do
                 {
-                    if (it.CurrentKey >= maxValue)
+                    if (it.CurrentKey > maxValue)
                         break;
 
+                    if (deletedList.Count > 10*1024)
+                        return false;
+
                     deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
-                } while (it.MoveNext() && deletedList.Count < 10 * 1024);
+                } while (it.MoveNext());
             }
 
             foreach (var id in deletedList)
             {
                 Delete(id);
             }
+
+            return true;
         }
     }
 }

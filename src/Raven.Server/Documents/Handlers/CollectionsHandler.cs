@@ -62,20 +62,22 @@ namespace Raven.Server.Documents.Handlers
                 long maxEtag = -1;
                 while (true)
                 {
+                    bool isAllDeleted;
                     using (context.OpenWriteTransaction())
                     {
                         if (maxEtag == -1)
                             maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
 
-                        Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
+                        isAllDeleted = Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
                         context.Transaction.Commit();
                     }
 
-                    if (deletedList.Count == 0)
-                        break;
-
                     HttpContext.Response.WriteAsync($"Deleted a batch of {deletedList.Count} documents in {collection}\n");
                     totalDocsDeletes += deletedList.Count;
+
+                    if (isAllDeleted)
+                        break;
+
                     deletedList.Clear();
                 }
             }
