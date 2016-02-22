@@ -45,6 +45,7 @@ class globalConfigReplications extends viewModelBase {
     }
 
     attached() {
+        super.attached();
         this.bindPopover();
     }
 
