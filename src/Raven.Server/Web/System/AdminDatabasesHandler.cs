@@ -56,7 +56,6 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/$", "PUT", "/admin/databases/{databaseName:string}")]
-
         public async Task Put()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
@@ -116,7 +115,6 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/$", "DELETE", "/admin/databases/{databaseName:string}?hard-delete={isHardDelete:bool|optional(false)}")]
-
         public Task Delete()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
@@ -147,7 +145,6 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
-
         public Task DeleteBatch()
         {
             var names = HttpContext.Request.Query["name"];
