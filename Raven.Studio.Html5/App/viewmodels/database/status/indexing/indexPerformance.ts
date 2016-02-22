@@ -377,6 +377,11 @@ class metrics extends viewModelBase {
 
         incomingData.forEach(d => {
 
+            // we have to filter out future batches that are not completed
+            if (!d.Duration) {
+                return;
+            }
+
             this.computePrefetchCache(d);
             if (dateLookup.has(d.Timestamp)) {
                 var index = dateLookup.get(d.Timestamp);
