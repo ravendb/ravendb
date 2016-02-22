@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Indexes
 
                     _initialized = true;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     Dispose();
                     throw;
@@ -232,44 +232,46 @@ namespace Raven.Server.Documents.Indexes
 
         protected HashSet<string> Collections;
 
-        protected abstract bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, out long lastEtag);
+        protected abstract bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext);
 
-        public long GetLastMappedEtag()
+        /// <summary>
+        /// This should only be used for testing purposes.
+        /// </summary>
+        internal Dictionary<string, long> GetLastMappedEtags()
         {
-            // TODO [ppekrol] this is not longer valid
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var etags = new long[Collections.Count];
-                    var count = 0;
+                    var etags = new Dictionary<string, long>();
                     foreach (var collection in Collections)
                     {
-                        etags[count++] = ReadLastMappedEtag(tx, collection);
+                        etags[collection] = ReadLastMappedEtag(tx, collection);
                     }
 
-                    return etags.Min();
+                    return etags;
                 }
             }
         }
 
-        public long GetLastTombstoneEtag()
+        /// <summary>
+        /// This should only be used for testing purposes.
+        /// </summary>
+        internal Dictionary<string, long> GetLastTombstoneEtags()
         {
-            // TODO [ppekrol] this is not longer valid
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var etags = new long[Collections.Count];
-                    var count = 0;
+                    var etags = new Dictionary<string, long>();
                     foreach (var collection in Collections)
                     {
-                        etags[count++] = ReadLastTombstoneEtag(tx, collection);
+                        etags[collection] = ReadLastTombstoneEtag(tx, collection);
                     }
 
-                    return etags.Min();
+                    return etags;
                 }
             }
         }
@@ -439,8 +441,7 @@ namespace Raven.Server.Documents.Indexes
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                long _;
-                if (IsStale(databaseContext, indexContext, out _) == false)
+                if (IsStale(databaseContext, indexContext) == false)
                     return;
 
                 var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
@@ -519,9 +520,7 @@ namespace Raven.Server.Documents.Indexes
 
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                long lastEtag;
-                result.IsStale = IsStale(context, indexContext, out lastEtag);
-                result.IndexEtag = lastEtag;
+                result.IsStale = IsStale(context, indexContext);
             }
 
             Reference<int> totalResults = new Reference<int>();

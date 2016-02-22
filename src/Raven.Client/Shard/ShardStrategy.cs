@@ -56,11 +56,6 @@ namespace Raven.Client.Shard
         /// </summary>
         public QueryResult DefaultMergeQueryResults(IndexQuery query, IList<QueryResult> queryResults)
         {
-            var buffer = queryResults.SelectMany(x => BitConverter.GetBytes(x.IndexEtag.Value)).ToArray();
-            long? indexEtag;
-
-            indexEtag = (long)Hashing.XXHash64.Calculate(buffer, buffer.Length);
-
             var results = queryResults.SelectMany(x => x.Results);
 
             // apply sorting
@@ -86,7 +81,6 @@ namespace Raven.Client.Shard
                         IndexTimestamp = queryResults.Select(x => x.IndexTimestamp).OrderBy(x => x).FirstOrDefault(),
                         IsStale = queryResults.Any(x => x.IsStale),
                         TotalResults = queryResults.Sum(x => x.TotalResults),
-                        IndexEtag = indexEtag,
                         SkippedResults = queryResults.Select(x => x.SkippedResults).OrderBy(x => x).FirstOrDefault(),
                     };
         }

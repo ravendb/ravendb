@@ -195,13 +195,13 @@ namespace FastTests.Server.Documents.Indexing
         private static void WaitForIndexMap(Index index, long etag)
         {
             var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
-            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtag() == etag, timeout));
+            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtags().Values.Min() == etag, timeout));
         }
 
         private static void WaitForTombstone(Index index, long etag)
         {
             var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
-            Assert.True(SpinWait.SpinUntil(() => index.GetLastTombstoneEtag() == etag, timeout));
+            Assert.True(SpinWait.SpinUntil(() => index.GetLastTombstoneEtags().Values.Min() == etag, timeout));
         }
 
         private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
