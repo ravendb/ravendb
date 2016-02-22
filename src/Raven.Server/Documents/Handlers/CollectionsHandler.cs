@@ -12,8 +12,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class CollectionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/collections/stats", "GET")]
-        public async Task GetCollectionStats()
+        [RavenAction("/databases/*/collections/stats", "GET", "/databases/{databaseName:string}/collections/stats")]
+        public Task GetCollectionStats()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -33,10 +33,11 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     context.Write(writer, result);
             }
+            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/docs", "GET")]
-        public async Task GetCollectionDocuments()
+        [RavenAction("/databases/*/collections/docs", "GET", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}&start={pageStart:int|optional}&pageSize={pageSize:int|optional(25)}")]
+        public Task GetCollectionDocuments()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -46,9 +47,10 @@ namespace Raven.Server.Documents.Handlers
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
                 WriteDocuments(context, documents);
             }
+            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/docs", "DELETE")]
+        [RavenAction("/databases/*/collections/docs", "DELETE", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}")]
         public Task DeleteCollectionDocuments()
         {
             var deletedList = new List<long>();
