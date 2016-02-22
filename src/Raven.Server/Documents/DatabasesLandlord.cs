@@ -124,18 +124,18 @@ namespace Raven.Server.Documents
             }
         }
 
-        public RavenConfiguration CreateDatabaseConfiguration(StringSegment tenantId, bool ignoreDisabledDatabase = false)
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
-            if (tenantId.IsNullOrWhiteSpace())
-                throw new ArgumentNullException(nameof(tenantId), "Tenant ID cannot be empty");
-            if (tenantId.Equals("<system>"))
-                throw new ArgumentNullException(nameof(tenantId), "Tenant ID cannot be <system>");
+            if (databaseName.IsNullOrWhiteSpace())
+                throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
+            if (databaseName.Equals("<system>"))
+                throw new ArgumentNullException(nameof(databaseName), "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
 
-            var document = GetDatabaseDocument(tenantId, ignoreDisabledDatabase);
+            var document = GetDatabaseDocument(databaseName, ignoreDisabledDatabase);
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.Core.DataDirectory));
+            return CreateConfiguration(databaseName, document, RavenConfiguration.GetKey(x => x.Core.DataDirectory));
         }
 
         protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseDocument document, string folderPropName)
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DatabaseDocument GetDatabaseDocument(StringSegment tenantId, bool ignoreDisabledDatabase = false)
+        private DatabaseDocument GetDatabaseDocument(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
             // We allocate the context here because it should be relatively rare operation
             TransactionOperationContext context;
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents
             {
                 context.OpenReadTransaction();
 
-                var id = Constants.Database.Prefix + tenantId;
+                var id = Constants.Database.Prefix + databaseName;
                 var jsonReaderObject = ServerStore.Read(context, id);
                 if (jsonReaderObject == null)
                     return null;
