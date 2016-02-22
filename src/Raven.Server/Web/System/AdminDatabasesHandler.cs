@@ -11,12 +11,13 @@ using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-        [RavenAction("/admin/databases/$", "GET")]
+        [RavenAction("/admin/databases/$", "GET", "/admin/databases/{databaseName:string}")]
         public Task Get()
         {
             TransactionOperationContext context;
@@ -24,15 +25,15 @@ namespace Raven.Server.Web.System
             {
                 context.OpenReadTransaction();
 
-                var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-                if (string.IsNullOrWhiteSpace(id))
-                    throw new InvalidOperationException("Database id was not provided");
-                var dbId = Constants.Database.Prefix + id;
+                var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+                if (string.IsNullOrWhiteSpace(name))
+                    throw new InvalidOperationException("Database name was not provided");
+                var dbId = Constants.Database.Prefix + name;
                 var dbDoc = ServerStore.Read(context, dbId);
                 if (dbDoc == null)
                 {
                     HttpContext.Response.StatusCode = 404;
-                    return HttpContext.Response.WriteAsync("Database " + id + " wasn't found");
+                    return HttpContext.Response.WriteAsync("Database " + name + " wasn't found");
                 }
 
                 UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
@@ -54,14 +55,14 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases/$", "PUT")]
+        [RavenAction("/admin/databases/$", "PUT", "/admin/databases/{databaseName:string}")]
 
         public async Task Put()
         {
-            var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
             string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(id, ServerStore.Configuration.Core.DataDirectory, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory, out errorMessage) == false)
             {
                 HttpContext.Response.StatusCode = 400;
                 await HttpContext.Response.WriteAsync(errorMessage);
@@ -72,10 +73,11 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenWriteTransaction();
-                var dbId = Constants.Database.Prefix + id;
+                var dbId = Constants.Database.Prefix + name;
 
                 var etag = HttpContext.Request.Headers["ETag"];
-                if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage) == false)
+                var existingDatabase = ServerStore.Read(context, dbId);
+                if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etag, out errorMessage) == false)
                 {
                     HttpContext.Response.StatusCode = 400;
                     await HttpContext.Response.WriteAsync(errorMessage);
@@ -113,24 +115,79 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private bool CheckExistingDatabaseName(TransactionOperationContext context, string id, string dbId, string etag, out string errorMessage)
+        [RavenAction("/admin/databases/$", "DELETE", "/admin/databases/{databaseName:string}?hard-delete={isHardDelete:bool|optional(false)}")]
+
+        public Task Delete()
         {
-            var database = ServerStore.Read(context, dbId);
-            var isExistingDatabase = database != null;
+            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+            var isHardDelete = GetBoolValueQueryString("isHardDelete", DefaultValue<bool>.Default);
 
-            if (isExistingDatabase && etag == null)
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                errorMessage = $"Database with the name '{id}' already exists";
-                return false;
-            }
-            if (!isExistingDatabase && etag != null)
-            {
-                errorMessage = $"Database with the name '{id}' doesn't exist";
-                return false;
+                context.OpenWriteTransaction();
+
+                var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
+                if (configuration == null)
+                {
+                    HttpContext.Response.StatusCode = 404;
+                    return HttpContext.Response.WriteAsync("Database wasn't found");
+                }
+
+                var dbId = Constants.Database.Prefix + name;
+                ServerStore.Delete(context, dbId);
+
+                if (isHardDelete)
+                    DatabaseHelper.DeleteDatabaseFiles(configuration);
+
+                HttpContext.Response.StatusCode = 204; // No Content
             }
 
-            errorMessage = null;
-            return true;
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
+
+        public Task DeleteBatch()
+        {
+            var names = HttpContext.Request.Query["name"];
+            if (names.Count == 0)
+                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
+            var isHardDelete = GetBoolValueQueryString("isHardDelete", DefaultValue<bool>.Default);
+
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.OpenWriteTransaction();
+
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var name in names)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
+                    if (configuration == null)
+                    {
+                        writer.WriteString(context.GetLazyString($"Database {name} wasn't found"));
+                        continue;
+                    }
+
+                    var dbId = Constants.Database.Prefix + name;
+                    ServerStore.Delete(context, dbId);
+
+                    if (isHardDelete)
+                        DatabaseHelper.DeleteDatabaseFiles(configuration);
+
+                    writer.WriteString(context.GetLazyString($"Database {name} was deleted successfully"));
+                }
+                writer.WriteEndArray();
+            }
+
+            return Task.CompletedTask;
         }
     }
 }
