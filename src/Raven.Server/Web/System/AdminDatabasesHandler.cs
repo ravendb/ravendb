@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="AdminDatabases.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="AdminDatabasesHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -10,12 +10,11 @@ using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminDatabases : RequestHandler
+    public class AdminDatabasesHandler : RequestHandler
     {
         [RavenAction("/admin/databases/$", "GET")]
         public Task Get()
