@@ -91,7 +91,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
-                var addedTime64 = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
 
                 try
                 {
@@ -112,7 +111,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         MergeSimilarTasks(task);
                         break;
                     case MaxTaskIdStatus.MergeDisabled:
-                        foundWork.Value = true;
                         break;
                     default:
                         // returning only one task without merging
@@ -135,12 +133,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 var id = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
 
                 yield return new TaskMetadata
-                             {
-                                 Id = id,
-                                 AddedTime = DateTime.FromBinary(addedTime64),
-                                 IndexId = index ?? -1,
-                                 Type = type
-                             };
+                {
+                    Id = id,
+                    AddedTime = DateTime.FromBinary(addedTime64),
+                    IndexId = index ?? -1,
+                    Type = type
+                };
             }
         }
 
@@ -180,12 +178,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     continue;
 
                 int currentId = -1;
+                DatabaseTask existingTask;
                 try
                 {
                     var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
-
                     var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
-                    DatabaseTask existingTask;
                     try
                     {
                         existingTask = DatabaseTask.ToTask(taskType, taskAsBytes);
@@ -200,9 +197,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     }
 
                     currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
-
                     totalKeysToProcess += existingTask.NumberOfKeys;
-                    task.Merge(existingTask);
                     Api.JetDelete(session, Tasks);
                 }
                 catch (EsentErrorException e)
@@ -210,9 +205,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     logger.WarnException(string.Format("Failed to merge task id: {0}", currentId), e);
 
                     if (e.Error == JET_err.WriteConflict)
-                        continue;
+                        return;
                     throw;
                 }
+                task.Merge(existingTask);
+
             } while (Api.TryMoveNext(session, Tasks));
         }
     }

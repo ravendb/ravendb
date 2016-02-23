@@ -115,24 +115,25 @@ namespace Raven.Database.Indexing
         {
             // we want to drain all of the pending tasks before the next run
             // but we don't want to halt indexing completely
-            var runs = 32;
             var sp = Stopwatch.StartNew();
             var count = 0;
             var indexIds = new HashSet<int>();
             var totalProcessedKeys = 0;
             
-            while (context.RunIndexing && runs > 0)
+            while (context.RunIndexing && sp.Elapsed.TotalMinutes < 1)
             {
                 var foundWorkLocal = new Reference<bool>();
-
+                var hasTasksToRun = false;
                 transactionalStorage.Batch(actions =>
                 {
-                    while (context.RunIndexing && runs-- > 0)
+                    var needToBreak = false;
+                    while (context.RunIndexing && sp.Elapsed.TotalMinutes < 1 && needToBreak == false)
                     {
+                        needToBreak = executeOneTaskException != null;
                         var processedKeys = ExecuteTask(indexIds, foundWorkLocal);
                         if (processedKeys == 0)
                             break;
-
+                        hasTasksToRun = true;
                         totalProcessedKeys += processedKeys;
                         actions.General.MaybePulseTransaction(
                             addToPulseCount: processedKeys,
@@ -151,23 +152,17 @@ namespace Raven.Database.Indexing
                     // need to flush all the changes
                     context.IndexStorage.FlushIndexes(indexIds);
                 });
-
-                if (foundWorkLocal.Value == false)
+                if (hasTasksToRun == false)
                     break;
             }
-
-            if (count == 0)
-            {
-                return false;
-            }
-                
+          
             if (Log.IsWarnEnabled)
             {
                 Log.Warn("Executed {0} tasks, processed documents: {1}, took {2}ms",
                     count, totalProcessedKeys, sp.ElapsedMilliseconds);
             }
 
-            return true;
+            return count != 0;
         }
 
         private int ExecuteTask(HashSet<int> indexIds, Reference<bool> foundWorkLocal)
