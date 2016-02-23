@@ -7,6 +7,7 @@ using Raven.Abstractions.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Collections;
 
 namespace Raven.Server.Documents
 {
@@ -18,6 +19,7 @@ namespace Raven.Server.Documents
         protected readonly ServerStore ServerStore;
         protected readonly SemaphoreSlim ResourceSemaphore;
         protected readonly TimeSpan ConcurrentResourceLoadTimeout;
+        protected static string DisposingLock = Guid.NewGuid().ToString();
 
         public readonly ConcurrentDictionary<StringSegment, Task<TResource>> ResourcesStoresCache =
             new ConcurrentDictionary<StringSegment, Task<TResource>>();
@@ -27,6 +29,9 @@ namespace Raven.Server.Documents
 
         protected readonly ConcurrentDictionary<string, AsyncManualResetEvent> Modification = 
             new ConcurrentDictionary<string, AsyncManualResetEvent>(StringComparer.OrdinalIgnoreCase);
+
+        protected readonly ConcurrentSet<string> Locks = 
+            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public AbstractLandlord(ServerStore serverStore)
         {
@@ -41,6 +46,8 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            Locks.TryAdd(DisposingLock);
+
             var tasks = ResourcesStoresCache.Select(resourceTask => resourceTask.Value.ContinueWith(task =>
             {
                 try
@@ -104,6 +111,22 @@ namespace Raven.Server.Documents
             AsyncManualResetEvent modifyLock;
             if (Modification.TryRemove(resourceName, out modifyLock))
                 modifyLock.Set();
+        }
+
+        public async Task UnloadAndLock(string resourceName, Action actionToTake)
+        {
+            if (Locks.TryAdd(resourceName) == false)
+                throw new InvalidOperationException(resourceName + "' is currently locked and cannot be accessed");
+
+            try
+            {
+                await ModifyResource(resourceName);
+                actionToTake();
+            }
+            finally
+            {
+                Locks.TryRemove(resourceName);
+            }
         }
     }
 }

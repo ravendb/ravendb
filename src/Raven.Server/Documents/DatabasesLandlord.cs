@@ -34,12 +34,11 @@ namespace Raven.Server.Documents
 
         public override async Task<Task<DocumentDatabase>> TryGetOrCreateResourceStore(StringSegment databaseName)
         {
-            //TODO: Restore those
-            // if (Locks.Contains(DisposingLock))
-            //     throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
-            // 
-            // if (Locks.Contains(tenantId))
-            //     throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
+            if (Locks.Contains(DisposingLock))
+                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
+            
+            if (Locks.Contains(databaseName))
+                throw new InvalidOperationException($"Database '{databaseName}' is currently locked and cannot be accessed.");
             
             AsyncManualResetEvent deleteLock;
             if (Modification.TryGetValue(databaseName, out deleteLock))
