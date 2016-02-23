@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
@@ -49,7 +50,7 @@ namespace Raven.Client.Document
             }
         }
 
-        public void Store(object entity)
+        public async Task StoreAsync(object entity)
         {
             var shardId = shardResolutionStrategy.GenerateShardIdFor(entity, this);
             var shard = shards[shardId];
@@ -68,7 +69,7 @@ namespace Raven.Client.Document
                 id = generateEntityIdOnTheClient.GetOrGenerateDocumentKey(entity);
             }
             var modifyDocumentId = shardStrategy.ModifyDocumentId(shardedDocumentStore.Conventions, shardId, id);
-            bulkInsertOperation.Store(entity, modifyDocumentId);
+            await bulkInsertOperation.StoreAsync(entity, modifyDocumentId).ConfigureAwait(false);
         }
 
         void IDisposable.Dispose()
