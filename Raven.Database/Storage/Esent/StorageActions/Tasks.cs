@@ -84,7 +84,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 if (idsToSkip.Contains(task.Index))
+                {
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("Skipping task for index id: {0}", task.Index);
                     continue;
+                }
 
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 var addedTime64 = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;

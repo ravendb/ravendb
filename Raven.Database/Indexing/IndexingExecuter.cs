@@ -115,7 +115,7 @@ namespace Raven.Database.Indexing
         {
             // we want to drain all of the pending tasks before the next run
             // but we don't want to halt indexing completely
-            var runs = 32;
+            var runs = 256;
             var sp = Stopwatch.StartNew();
             var count = 0;
             var indexIds = new HashSet<int>();
@@ -175,6 +175,9 @@ namespace Raven.Database.Indexing
                 var task = GetApplicableTask(actions, foundWorkLocal);
                 if (task == null)
                 {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("No tasks to execute were found!");
+
                     // no tasks were found or we reached the max task id after a failure,
                     // the next execution will try to merge tasks
                     executeTasksOneByOne = false;
@@ -233,9 +236,15 @@ namespace Raven.Database.Indexing
 
         private MaxTaskIdStatus MaxIdStatus(IComparable currentTaskId)
         {
+            if (Log.IsDebugEnabled)
+                Log.Debug("Current task id: {0}, max task id: {1}", currentTaskId, maxTaskId);
+
             var canUpdateMaxId = CanUpdateMaxId(currentTaskId);
             if (executeTasksOneByOne && canUpdateMaxId)
             {
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Merge tasks is disabled and we've reached the maximum task id");
+
                 // merge is disabled and we've reached the maximum task id
                 // that was set after the failure to execute a batch of tasks.
                 return MaxTaskIdStatus.ReachedMaxTaskId;
@@ -243,6 +252,9 @@ namespace Raven.Database.Indexing
 
             if (executeTasksOneByOne)
             {
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Merge tasks is disabled, executing tasks one by one");
+
                 // no need to merge tasks
                 return MaxTaskIdStatus.MergeDisabled;
             }
