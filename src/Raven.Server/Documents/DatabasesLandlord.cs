@@ -39,20 +39,6 @@ namespace Raven.Server.Documents
             
             if (Locks.Contains(databaseName))
                 throw new InvalidOperationException($"Database '{databaseName}' is currently locked and cannot be accessed.");
-            
-            AsyncManualResetEvent deleteLock;
-            if (Modification.TryGetValue(databaseName, out deleteLock))
-            {
-                var configuration = CreateDatabaseConfiguration(databaseName);
-                if (configuration == null)
-                    return null;
-                var waitForDatabaseToBeModified = deleteLock.WaitAsync();
-                await Task.WhenAny(waitForDatabaseToBeModified, Task.Delay(configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan));
-                if (waitForDatabaseToBeModified.IsCompleted == false)
-                {
-                    throw new InvalidOperationException($"Database '{databaseName}' is currently being restarted and cannot be accessed. We already waited {configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan.TotalSeconds} seconds.");
-                }
-            }
 
             Task<DocumentDatabase> database;
             if (ResourcesStoresCache.TryGetValue(databaseName, out database))

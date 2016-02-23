@@ -27,9 +27,6 @@ namespace Raven.Server.Documents
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>();
 
-        protected readonly ConcurrentDictionary<string, AsyncManualResetEvent> Modification = 
-            new ConcurrentDictionary<string, AsyncManualResetEvent>(StringComparer.OrdinalIgnoreCase);
-
         protected readonly ConcurrentSet<string> Locks = 
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -51,7 +48,13 @@ namespace Raven.Server.Documents
             var exceptionAggregator = new ExceptionAggregator(Log, "Failure to dispose landlord");
 
             // shut down all databases in parallel, avoid having to wait for each one
-            Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
+            Parallel.ForEach(ResourcesStoresCache.Values, new ParallelOptions
+            {
+                // we limit the number of resources we dispose concurrently to avoid
+                // putting too much pressure on the I/O system if a disposing db need
+                // to flush data to disk
+                MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2),
+            }, dbTask =>
             {
                 if (dbTask.IsCompleted == false)
                 {
@@ -88,14 +91,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task ModifyResource(string resourceName)
+        private void UnloadResource(string resourceName)
         {
-            if (Modification.TryAdd(resourceName, new AsyncManualResetEvent()) == false)
-                return;
-
             DateTime time;
             Task<TResource> resourceTask;
-            if (ResourcesStoresCache.TryRemove(resourceName, out resourceTask) == false)
+            if (ResourcesStoresCache.TryGetValue(resourceName, out resourceTask) == false)
             {
                 LastRecentlyUsed.TryRemove(resourceName, out time);
                 return;
@@ -108,10 +108,11 @@ namespace Raven.Server.Documents
             }
             if (resourceTask.Status != TaskStatus.RanToCompletion)
             {
-                throw new InvalidOperationException("Couldn't modify the database while it is loading");
+                throw new InvalidOperationException($"Couldn't modify '{resourceName}' while it is loading");
             }
 
-            var database = await resourceTask;
+            // will never wait, we checked that we already run to completion here
+            var database = resourceTask.Result;
             try
             {
                 database.Dispose();
@@ -123,20 +124,16 @@ namespace Raven.Server.Documents
 
             LastRecentlyUsed.TryRemove(resourceName, out time);
             ResourcesStoresCache.TryRemove(resourceName, out resourceTask);
-
-            AsyncManualResetEvent modifyLock;
-            if (Modification.TryRemove(resourceName, out modifyLock))
-                modifyLock.Set();
         }
 
-        public async Task UnloadAndLock(string resourceName, Action actionToTake)
+        public void UnloadAndLock(string resourceName, Action actionToTake)
         {
             if (Locks.TryAdd(resourceName) == false)
                 throw new InvalidOperationException(resourceName + "' is currently locked and cannot be accessed");
 
             try
             {
-                await ModifyResource(resourceName);
+                UnloadResource(resourceName);
                 actionToTake();
             }
             finally
