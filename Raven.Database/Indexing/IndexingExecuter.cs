@@ -32,7 +32,7 @@ namespace Raven.Database.Indexing
         private readonly Prefetcher prefetcher;
         private readonly PrefetchingBehavior defaultPrefetchingBehavior;
         private IComparable maxTaskId = null;
-        private Exception executeTasksOneByOneException = null;
+        private Exception executeOneTaskException = null;
 
         public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
             : base(context, indexReplacer)
@@ -97,7 +97,7 @@ namespace Raven.Database.Indexing
 
         protected override bool ExecuteTasks()
         {
-            if (executeTasksOneByOneException == null)
+            if (executeOneTaskException == null)
                 maxTaskId = null;
 
             try
@@ -106,7 +106,7 @@ namespace Raven.Database.Indexing
             }
             catch (Exception e)
             {
-                executeTasksOneByOneException = e;
+                executeOneTaskException = e;
                 throw;
             }
         }
@@ -115,46 +115,50 @@ namespace Raven.Database.Indexing
         {
             // we want to drain all of the pending tasks before the next run
             // but we don't want to halt indexing completely
-            var runs = 256;
+            var runs = 32;
             var sp = Stopwatch.StartNew();
             var count = 0;
             var indexIds = new HashSet<int>();
             var totalProcessedKeys = 0;
-            var foundWorkLocal = new Reference<bool>();
-
-            transactionalStorage.Batch(actions =>
+            
+            while (context.RunIndexing && runs > 0)
             {
-                while (context.RunIndexing && runs-- > 0)
+                var foundWorkLocal = new Reference<bool>();
+
+                transactionalStorage.Batch(actions =>
                 {
-                    var processedKeys = ExecuteTask(indexIds, foundWorkLocal);
-                    if (processedKeys == 0)
-                        break;
+                    while (context.RunIndexing && runs-- > 0)
+                    {
+                        var processedKeys = ExecuteTask(indexIds, foundWorkLocal);
+                        if (processedKeys == 0)
+                            break;
 
-                    totalProcessedKeys += processedKeys;
-                    actions.General.MaybePulseTransaction(
-                        addToPulseCount: processedKeys,
-                        beforePulseTransaction: () =>
-                        {
-                            // if we need to PulseTransaction, we are going to delete
-                            // all the completed tasks, so we need to flush 
-                            // all the changes made to the indexes to disk before that
-                            context.IndexStorage.FlushIndexes(indexIds);
-                            indexIds.Clear();
-                        });
+                        totalProcessedKeys += processedKeys;
+                        actions.General.MaybePulseTransaction(
+                            addToPulseCount: processedKeys,
+                            beforePulseTransaction: () =>
+                            {
+                                // if we need to PulseTransaction, we are going to delete
+                                // all the completed tasks, so we need to flush 
+                                // all the changes made to the indexes to disk before that
+                                context.IndexStorage.FlushIndexes(indexIds);
+                                indexIds.Clear();
+                            });
 
-                    count++;
+                        count++;
+                    }
 
-                    if (executeTasksOneByOneException != null)
-                        break;
-                }
+                    // need to flush all the changes
+                    context.IndexStorage.FlushIndexes(indexIds);
+                });
 
-                // need to flush all the changes
-                context.IndexStorage.FlushIndexes(indexIds);
-            });
+                if (foundWorkLocal.Value == false)
+                    break;
+            }
 
             if (count == 0)
             {
-                return foundWorkLocal.Value;
+                return false;
             }
                 
             if (Log.IsWarnEnabled)
@@ -180,7 +184,7 @@ namespace Raven.Database.Indexing
 
                     // no tasks were found or we reached the max task id after a failure,
                     // the next execution will try to merge tasks
-                    executeTasksOneByOneException = null;
+                    executeOneTaskException = null;
                     return;
                 }
                 
@@ -237,50 +241,27 @@ namespace Raven.Database.Indexing
         private MaxTaskIdStatus MaxIdStatus(IComparable currentTaskId)
         {
             if (Log.IsWarnEnabled)
-                Log.Warn("Current task id: {0}, max task id: {1}", currentTaskId, maxTaskId);
+                Log.Warn("Current task id: {0}", currentTaskId);
 
-            var canUpdateMaxId = CanUpdateMaxId(currentTaskId);
-            if (executeTasksOneByOneException != null && canUpdateMaxId)
+            if (executeOneTaskException != null)
             {
                 if (Log.IsWarnEnabled)
-                    Log.WarnException("Merge tasks is disabled and we've reached the maximum task id", executeTasksOneByOneException);
+                    Log.WarnException("Merge tasks is disabled, executing one task", executeOneTaskException);
 
-                // merge is disabled and we've reached the maximum task id
-                // that was set after the failure to execute a batch of tasks.
-                return MaxTaskIdStatus.ReachedMaxTaskId;
-            }
-
-            if (executeTasksOneByOneException != null)
-            {
-                if (Log.IsWarnEnabled)
-                    Log.WarnException("Merge tasks is disabled, executing tasks one by one", executeTasksOneByOneException);
+                executeOneTaskException = null;
 
                 // no need to merge tasks
+                // next time we will continue to merge them
                 return MaxTaskIdStatus.MergeDisabled;
-            }
-
-            if (Log.IsWarnEnabled)
-                Log.Warn("Possible update max task id from: {0}, to: {1}", maxTaskId, currentTaskId);
-
-            if (canUpdateMaxId)
-            {
-                
-
-                maxTaskId = currentTaskId;
             }
 
             return MaxTaskIdStatus.Updated;
         }
 
-        private bool CanUpdateMaxId(IComparable currentTaskId)
-        {
-            return maxTaskId == null || currentTaskId.CompareTo(maxTaskId) > 0;
-        }
-
         private void UpdateMaxTaskId(IComparable currentTaskId)
         {
-            if (CanUpdateMaxId(currentTaskId))
-                maxTaskId = currentTaskId;
+            /*if (CanUpdateMaxId(currentTaskId))
+                maxTaskId = currentTaskId;*/
         }
 
         private string GetIndexName(int indexId)
