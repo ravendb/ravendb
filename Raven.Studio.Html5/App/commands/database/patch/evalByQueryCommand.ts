@@ -34,7 +34,7 @@ class evalByQueryCommand extends commandBase {
 
             if (result.Completed) {
                 if (result.Faulted) {
-                    this.reportError("Patch failed", result.State.Error);
+                    this.reportError("Patch failed", result.State);
                 } else {
                     this.reportSuccess("Patching completed");
 }

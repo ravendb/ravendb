@@ -3,6 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -11,6 +14,8 @@ namespace Raven.Abstractions.Data
     {
         bool Completed { get; }
         bool Faulted { get; }
-        RavenJToken State { get; }
+        bool Canceled { get; }
+        string State { get; }
+        Exception Exception { get; }
     }
 }

@@ -65,11 +65,13 @@ namespace Raven.Database.FileSystem.Controllers
             var status = new DeleteByQueryOperationStatus();
             var cts = new CancellationTokenSource();
 
+            int totalResults = 0;
+
             var task = Task.Factory.StartNew(() =>
             {
                 try
                 {
-                    int totalResults;
+                    
                     long durationInMs;
                     status.LastProgress = "Searching for files matching the query...";
                     var keys = Search.Query(query, null, 0, int.MaxValue, out totalResults, out durationInMs);
@@ -82,11 +84,7 @@ namespace Raven.Database.FileSystem.Controllers
                 }
                 catch (Exception e)
                 {
-                    status.Faulted = true;
-                    status.State = RavenJObject.FromObject(new
-                    {
-                        Error = e.ToString()
-                    });
+                    status.MarkFaulted(e.ToString());
                     if (e is InvalidDataException)
                     {
                         status.ExceptionDetails = e.Message;
@@ -100,7 +98,7 @@ namespace Raven.Database.FileSystem.Controllers
                 }
                 finally
                 {
-                    status.Completed = true;
+                    status.MarkCompleted(string.Format("Deleted {0} files", totalResults));
                 }
             }, cts.Token);
 
@@ -155,13 +153,10 @@ namespace Raven.Database.FileSystem.Controllers
             });
         }
 
-        private class DeleteByQueryOperationStatus : IOperationState
+        private class DeleteByQueryOperationStatus : OperationStateBase
         {
-            public bool Completed { get; set; }
             public string LastProgress { get; set; }
             public string ExceptionDetails { get; set; }
-            public bool Faulted { get; set; }
-            public RavenJToken State { get; set; }
         }
     }
 }

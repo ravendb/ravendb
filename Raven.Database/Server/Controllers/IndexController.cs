@@ -441,11 +441,11 @@ namespace Raven.Database.Server.Controllers
                     }
                 });
 
-                Database.Tasks.AddTask(task, null, new TaskActions.PendingTaskDescription
+                Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
                 {
                     StartTime = SystemTime.UtcNow,
                     TaskType = TaskActions.PendingTaskType.RecoverCorruptedIndexOperation,
-                    Payload = index.PublicName
+                    Description = index.PublicName
                 }, out taskId);
             }
 

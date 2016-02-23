@@ -367,7 +367,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.CompactFilesystem,
-                Payload = "Compact filesystem " + fs,
+                Description = "Compact filesystem " + fs,
             }, out id);
 
             return GetMessageWithObject(new
@@ -603,7 +603,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.RestoreFilesystem,
-                Payload = "Restoring filesystem " + filesystemName + " from " + restoreRequest.BackupLocation
+                Description = "Restoring filesystem " + filesystemName + " from " + restoreRequest.BackupLocation
             }, out id);
 
             return GetMessageWithObject(new

@@ -208,9 +208,9 @@ namespace Raven.Database.Server.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                status.State = batchOperation(index, indexQuery, option, x =>
+                status.Result = batchOperation(index, indexQuery, option, x =>
                 {
-                    status.OperationProgress = x;
+                    status.MarkProgress(x);
                 });
             }).ContinueWith(t =>
             {
@@ -219,33 +219,41 @@ namespace Raven.Database.Server.Controllers
 
                 if (t.IsFaulted == false)
                 {
-                    status.Completed = true;
+                    status.MarkCompleted($"Processed {status.OperationProgress.ProcessedEntries} items");
                     return;
                 }
 
                 var exception = t.Exception.ExtractSingleInnerException();
 
-                status.State = RavenJObject.FromObject(new { Error = exception.Message });
-                status.Faulted = true;
-                status.Completed = true;
+                status.MarkFaulted(exception.Message);
             });
 
             Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
                                                  {
                                                      StartTime = SystemTime.UtcNow,
                                                      TaskType = TaskActions.PendingTaskType.IndexBulkOperation,
-                                                     Payload = index
+                                                     Description = index
                                                  }, out id, timeout.CancellationTokenSource);
 
             return GetMessageWithObject(new { OperationId = id }, HttpStatusCode.Accepted);
         }
 
-        public class BulkOperationStatus : IOperationState
+        public class BulkOperationStatus : OperationStateBase
         {
-            public RavenJToken State { get; set; }
-            public bool Completed { get; set; }
-            public bool Faulted { get; set; }
-            public BulkOperationProgress OperationProgress { get; set; }
+            public RavenJArray Result { get; set; }
+            public BulkOperationProgress OperationProgress { get; private set; }
+
+            public BulkOperationStatus()
+            {
+                OperationProgress = new BulkOperationProgress();
+            }
+
+            public void MarkProgress(BulkOperationProgress progress)
+            {
+                OperationProgress.ProcessedEntries = progress.ProcessedEntries;
+                OperationProgress.TotalEntries = progress.TotalEntries;
+                State = $"Processed {progress.ProcessedEntries}/{progress.TotalEntries} items";
+            }
         }
     }
 }

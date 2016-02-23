@@ -84,7 +84,7 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     var dataDumper = new FilesystemDataDumper(FileSystem);
-                    dataDumper.Progress += s => status.LastProgress = s;
+                    dataDumper.Progress += s => status.State = s;
                     var smugglerOptions = dataDumper.Options;
                     smugglerOptions.BatchSize = batchSize;
                     smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
@@ -95,14 +95,9 @@ namespace Raven.Database.FileSystem.Controllers
                 }
                 catch (Exception e)
                 {
-                    status.Faulted = true;
-                    status.State = RavenJObject.FromObject(new
-                    {
-                        Error = e.ToString()
-                    });
                     if (cts.Token.IsCancellationRequested)
                     {
-                        status.State = RavenJObject.FromObject(new { Error = "Task was cancelled" });
+                        status.MarkCanceled("Task was cancelled");
                         cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
                     }
 
@@ -119,11 +114,12 @@ namespace Raven.Database.FileSystem.Controllers
                     {
                         status.ExceptionDetails = e.ToString();
                     }
+                    status.MarkFaulted(status.ExceptionDetails);
                     throw;
                 }
                 finally
                 {
-                    status.Completed = true;
+                    status.MarkCompleted();
                     File.Delete(uploadedFilePath);
                 }
             }, cts.Token);
@@ -188,13 +184,9 @@ namespace Raven.Database.FileSystem.Controllers
             return new CompletedTask<HttpResponseMessage>(result);
         }
 
-        private class ImportOperationStatus : IOperationState
+        private class ImportOperationStatus : OperationStateBase
         {
-            public bool Completed { get; set; }
-            public string LastProgress { get; set; }
             public string ExceptionDetails { get; set; }
-            public bool Faulted { get; set; }
-            public RavenJToken State { get; set; }
         }
     }
 }
