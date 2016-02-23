@@ -1,3 +1,4 @@
+/// <reference path="../../typescript/common/constants.ts"/>
 
 interface collectionInfoDto extends indexResultsDto<documentDto> {
 }
@@ -232,17 +233,6 @@ interface serverBuildVersionDto {
     ProductVersion: string;
     BuildVersion: number;
     BuildType: buildType;
-}
-
-const enum buildType {
-    Stable = 0,
-    Unstable = 1,
-}
-
-const enum viewType {
-    Documents = 0,
-    Counters = 1,
-    TimeSeries = 2,
 }
 
 interface latestServerBuildVersionDto {
@@ -1070,13 +1060,6 @@ interface collectionStats {
     TopDocs: any[];
 }
 
-enum TenantType {
-    Database = 0,
-    FileSystem = 1,
-    CounterStorage = 2,
-    TimeSeries = 3
-}
-
 interface filterSettingDto {
     Path: string;
     Values: string[];
@@ -1091,13 +1074,6 @@ interface resourceStyleMap {
 interface timeSeriesDto {
     Name: string;
     Path?: string;
-}
-
-const enum ImportItemType {
-    Documents = 0x1,
-    Indexes = 0x2,
-    Transformers = 0x8,
-    RemoveAnalyzers = 0x8000
 }
 
 interface changesApiEventDto {
@@ -1380,13 +1356,7 @@ interface destinationInformationDto {
     LastDocumentEtag: string;
 }
 
-const enum ResponseCodes {
-    Forbidden = 403,
-    NotFound = 404,
-    PreconditionFailed = 412,
-    InternalServerError = 500,
-    ServiceUnavailable = 503
-}
+
 
 interface synchronizationConfigDto {
     FileConflictResolution: string;
@@ -1488,11 +1458,6 @@ interface consoleJsSampleDto {
     Code: string;
 }
 
-enum checkbox {
-    UnChecked = 0,
-    SomeChecked = 1,
-    Checked = 2
-}
 
 
 interface diskIoPerformanceRunDto {
