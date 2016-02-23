@@ -84,7 +84,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 if (idsToSkip.Contains(task.Index))
+                {
+                    if (logger.IsWarnEnabled)
+                        logger.Warn("Skipping task for index id: {0}", task.Index);
                     continue;
+                }
 
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 var addedTime64 = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
@@ -95,22 +99,21 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
                 catch (EsentErrorException e)
                 {
-                    if (e.Error != JET_err.WriteConflict)
-                        throw;
+                    logger.WarnException(string.Format("Failed to delete task id: {0}", currentId), e);
+
+                    if (e.Error == JET_err.WriteConflict)
+                        continue;
+                    throw;
                 }
 
                 switch (maxIdStatus(currentId))
                 {
-                    case MaxTaskIdStatus.ReachedMaxTaskId:
-                        // we found work and next run the merge option will be enabled
-                        foundWork.Value = true;
-                        // we already removed the task, we need to add it back
-                        AddTask(task, DateTime.FromBinary(addedTime64));
-                        return null;
                     case MaxTaskIdStatus.Updated:
-                        MergeSimilarTasks(task, updateMaxTaskId);
+                        MergeSimilarTasks(task);
                         break;
                     case MaxTaskIdStatus.MergeDisabled:
+                        foundWork.Value = true;
+                        break;
                     default:
                         // returning only one task without merging
                         break;
@@ -141,7 +144,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        private void MergeSimilarTasks(DatabaseTask task, Action<IComparable> updateMaxTaskId)
+        private void MergeSimilarTasks(DatabaseTask task)
         {
             var expectedTaskType = task.GetType().FullName;
 
@@ -176,6 +179,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != expectedTaskType)
                     continue;
 
+                int currentId = -1;
                 try
                 {
                     var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
@@ -195,8 +199,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         continue;
                     }
 
-                    var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
-                    updateMaxTaskId(currentId);
+                    currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
 
                     totalKeysToProcess += existingTask.NumberOfKeys;
                     task.Merge(existingTask);
@@ -204,6 +207,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
                 catch (EsentErrorException e)
                 {
+                    logger.WarnException(string.Format("Failed to merge task id: {0}", currentId), e);
+
                     if (e.Error == JET_err.WriteConflict)
                         continue;
                     throw;
