@@ -85,8 +85,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 if (idsToSkip.Contains(task.Index))
                 {
-                    if (logger.IsDebugEnabled)
-                        logger.Debug("Skipping task for index id: {0}", task.Index);
+                    if (logger.IsWarnEnabled)
+                        logger.Warn("Skipping task for index id: {0}", task.Index);
                     continue;
                 }
 
@@ -99,6 +99,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
                 catch (EsentErrorException e)
                 {
+                    logger.WarnException(string.Format("Failed to delete task id: {0}", currentId), e);
+
                     if (e.Error != JET_err.WriteConflict)
                         throw;
                 }
@@ -208,6 +210,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
                 catch (EsentErrorException e)
                 {
+                    logger.WarnException("Failed to merge task", e);
+
                     if (e.Error == JET_err.WriteConflict)
                         continue;
                     throw;
