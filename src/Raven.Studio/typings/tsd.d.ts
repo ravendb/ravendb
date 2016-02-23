@@ -1,6 +1,6 @@
-/// <reference path="_studio/dto.ts"/>
-/// <reference path="_studio/filesystemDto.ts"/>
-/// <reference path="_studio/counterDto.ts"/>
+/// <reference path="_studio/dto.d.ts"/>
+/// <reference path="_studio/filesystemDto.d.ts"/>
+/// <reference path="_studio/counterDto.d.ts"/>
 /// <reference path="_studio/timeSeriesDto.d.ts"/>
 /// <reference path="_studio/computedAppUrls.d.ts"/>
 /// <reference path="_studio/customTypings.d.ts" />
