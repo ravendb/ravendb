@@ -565,7 +565,7 @@ namespace Raven.Database.Actions
                                 new TaskActions.PendingTaskDescription
                                 {
                                     StartTime = DateTime.UtcNow,
-                                    Payload = index.PublicName,
+                                    Description = index.PublicName,
                                     TaskType = TaskActions.PendingTaskType.NewIndexPrecomputedBatch
                                 },
                                 out id,
@@ -757,11 +757,11 @@ namespace Raven.Database.Actions
             });
 
             long taskId;
-            Database.Tasks.AddTask(deleteIndexTask, null, new TaskActions.PendingTaskDescription
+            Database.Tasks.AddTask(deleteIndexTask, new TaskBasedOperationState(deleteIndexTask), new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.IndexDeleteOperation,
-                Payload = indexName
+                Description = indexName
             }, out taskId);
 
             deleteIndexTask.ContinueWith(t =>

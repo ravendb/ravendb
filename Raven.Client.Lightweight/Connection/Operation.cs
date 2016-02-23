@@ -68,8 +68,9 @@ namespace Raven.Client.Connection
                     var faulted = status.Value<bool>("Faulted");
                     if (faulted)
                     {
-                        var error = status.Value<RavenJObject>("State");
-                        var errorMessage = error.Value<string>("Error");
+                        var error = status.Value<RavenJToken>("State");
+                        // since RavenDB-4332 we don't encapsulate Error field in State object
+                        var errorMessage = error is RavenJObject ? error.Value<string>("Error") : error.ToString();
                         throw new InvalidOperationException("Operation failed: " + errorMessage);
                     }
 

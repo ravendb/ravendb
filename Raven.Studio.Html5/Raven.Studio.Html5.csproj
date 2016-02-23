@@ -90,6 +90,7 @@
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
+    <TypeScriptCompile Include="App\models\database\debug\runningTask.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
     <TypeScriptCompile Include="App\models\database\subscription\subscription.ts" />
@@ -959,11 +960,6 @@
     <TypeScriptCompile Include="App\models\database\debug\alert.ts" />
     <TypeScriptCompile Include="App\models\database\debug\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\database\debug\performanceTestResultWrapped.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\performanceTestRequest.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\performanceTestResultWrapped.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
     <TypeScriptCompile Include="App\models\database\documents\collection.ts" />
     <TypeScriptCompile Include="App\models\database\documents\collectionInfo.ts" />
     <TypeScriptCompile Include="App\models\database\documents\customColumnParams.ts" />

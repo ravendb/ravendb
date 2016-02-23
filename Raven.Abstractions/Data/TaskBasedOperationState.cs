@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Threading.Tasks;
 
 using Raven.Json.Linq;
@@ -15,43 +16,37 @@ namespace Raven.Abstractions.Data
     {
         private readonly Task task;
 
-        private readonly RavenJToken stateOverride;
+        private readonly Func<string> stateProvider;
 
-        public TaskBasedOperationState(Task task, RavenJToken stateOverride = null)
+        public TaskBasedOperationState(Task task, Func<string> stateProvider = null)
         {
             this.task = task;
-            this.stateOverride = stateOverride;
+            this.stateProvider = stateProvider;
         }
 
-        public bool Completed
+        public Exception Exception
         {
             get
             {
-                return task.IsCompleted;
-            }
-        }
+                var ex = (task.IsFaulted || task.IsCanceled) ? task.Exception.ExtractSingleInnerException() : null;
 
-        public bool Faulted
-        {
-            get
-            {
-                return task.IsFaulted;
-            }
-        }
-
-        public RavenJToken State
-        {
-            get
-            {
-                if (!Faulted)
+                if (ex == null && Faulted && State != null)
                 {
-                    return stateOverride;
+                    ex = new Exception(State);
                 }
-                return RavenJObject.FromObject(new
-                                               {
-                                                   Error = task.Exception.ExtractSingleInnerException().Message
-                                               });
+                return ex;
             }
+        }
+
+        public bool Canceled => task.IsCanceled;
+
+        public bool Completed => task.IsCompleted;
+
+        public bool Faulted => task.IsFaulted;
+
+        public string State
+        {
+            get { return !Canceled && !Faulted ? stateProvider?.Invoke() : null; }
         }
     }
 }

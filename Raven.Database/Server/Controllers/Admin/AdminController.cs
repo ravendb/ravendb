@@ -132,17 +132,13 @@ namespace Raven.Database.Server.Controllers.Admin
                     }
 
                     status.Messages.Add("Server smuggling completed successfully. Selected databases have been smuggled.");
+                    status.MarkCompleted();
                 }
                 catch (Exception e)
                 {
                     status.Messages.Add("Error: " + e.Message);
-                    status.State = RavenJObject.FromObject(new { Error = e.Message });
-                    status.Faulted = true;
+                    status.MarkFaulted(e.Message);
                     throw;
-                }
-                finally
-                {
-                    status.Completed = true;
                 }
             }, cts.Token);
 
@@ -151,7 +147,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.ServerSmuggling,
-                Payload = "Server smuggling"
+                Description = "Server smuggling"
 
             }, out id, cts);
 
@@ -161,17 +157,14 @@ namespace Raven.Database.Server.Controllers.Admin
             }, HttpStatusCode.Accepted);
         }
 
-        private class ServerSmugglingOperationState : IOperationState
+        private class ServerSmugglingOperationState : OperationStateBase
         {
             public ServerSmugglingOperationState()
             {
                 Messages = new List<string>();
             }
 
-            public bool Completed { get; set; }
-            public bool Faulted { get; set; }
             public List<string> Messages { get; private set; }
-            public RavenJToken State { get; set; }
         }
 
         private static DocumentStore CreateStore(ServerConnectionInfo connection)
@@ -415,7 +408,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.RestoreDatabase,
-                Payload = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
+                Description = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
             }, out id);
 
 
@@ -640,7 +633,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.CompactDatabase,
-                Payload = "Compact database " + db,
+                Description = "Compact database " + db,
             }, out id);
 
             return GetMessageWithObject(new
@@ -1195,7 +1188,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var killTaskCts = new CancellationTokenSource();
 
-            var operationStatus = new RavenJObject();
+            string operationStatus = null;
 
             var task = Task.Factory.StartNew(() =>
             {
@@ -1205,10 +1198,13 @@ namespace Raven.Database.Server.Controllers.Admin
                 using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, msg =>
                 {
                     debugInfo.Add(msg);
-                    operationStatus["currentStatus"] = msg;
+                    operationStatus = msg;
                 }, killTaskCts.Token))
                 {
                     diskIo.TestDiskIO();
+
+                    // reset operation status after test
+                    operationStatus = null;
 
                     RavenJObject diskPerformanceRequestResponseDoc;
 
@@ -1249,11 +1245,11 @@ namespace Raven.Database.Server.Controllers.Admin
             }, killTaskCts.Token);
 
             long id;
-            Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task, () => operationStatus), new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.IoTest,
-                Payload = "Disk performance test"
+                Description = "Disk performance test"
             }, out id, killTaskCts);
 
             return GetMessageWithObject(new

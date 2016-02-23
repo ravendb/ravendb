@@ -98,10 +98,10 @@ class importDatabase extends viewModelBase {
 
     private importStatusRetrieved(fs: filesystem, operationId: number, result: importOperationStatusDto) {
         if (result.Completed) {
-            if (result.ExceptionDetails == null && result.LastProgress != null) {
+            if (result.ExceptionDetails == null && result.State != null) {
                 this.hasFileSelected(false);
                 $(this.filePickerTag).val('');
-                fs.importStatus("Last import was from '" + this.importedFileName() + "', " + result.LastProgress.toLocaleLowerCase());
+                fs.importStatus("Last import was from '" + this.importedFileName() + "', " + result.State.toLocaleLowerCase());
                 messagePublisher.reportSuccess("Successfully imported data to " + fs.name);
             } else {
                 fs.importStatus("");
@@ -110,8 +110,8 @@ class importDatabase extends viewModelBase {
             fs.isImporting(false);
         }
         else {
-            if (!!result.LastProgress) {
-                fs.importStatus("Processing uploaded file, " + result.LastProgress.toLocaleLowerCase());
+            if (!!result.State) {
+                fs.importStatus("Processing uploaded file, " + result.State.toLocaleLowerCase());
             }
             setTimeout(() => this.waitForOperationToComplete(fs, operationId), 1000);
         }
