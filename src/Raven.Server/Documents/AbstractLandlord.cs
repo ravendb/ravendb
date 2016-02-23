@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow;
 
 namespace Raven.Server.Documents
 {
@@ -24,6 +25,9 @@ namespace Raven.Server.Documents
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>();
 
+        protected readonly ConcurrentDictionary<string, AsyncManualResetEvent> Modification = 
+            new ConcurrentDictionary<string, AsyncManualResetEvent>(StringComparer.OrdinalIgnoreCase);
+
         public AbstractLandlord(ServerStore serverStore)
         {
             ServerStore = serverStore;
@@ -33,7 +37,7 @@ namespace Raven.Server.Documents
 
         public abstract Task<TResource> GetResourceInternal(StringSegment resourceName);
 
-        public abstract bool TryGetOrCreateResourceStore(StringSegment resourceName, out Task<TResource> resourceTask);
+        public abstract Task<Task<TResource>> TryGetOrCreateResourceStore(StringSegment resourceName);
 
         public void Dispose()
         {
@@ -59,6 +63,47 @@ namespace Raven.Server.Documents
             {
                 Log.WarnException("Failed to dispose resource semaphore", e);
             }
+        }
+
+        public async Task ModifyResource(string resourceName)
+        {
+            if (Modification.TryAdd(resourceName, new AsyncManualResetEvent()) == false)
+                return;
+
+            DateTime time;
+            Task<TResource> resourceTask;
+            if (ResourcesStoresCache.TryRemove(resourceName, out resourceTask) == false)
+            {
+                LastRecentlyUsed.TryRemove(resourceName, out time);
+                return;
+            }
+            if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
+            {
+                LastRecentlyUsed.TryRemove(resourceName, out time);
+                ResourcesStoresCache.TryRemove(resourceName, out resourceTask);
+                return;
+            }
+            if (resourceTask.Status != TaskStatus.RanToCompletion)
+            {
+                throw new InvalidOperationException("Couldn't modify the database while it is loading");
+            }
+
+            var database = await resourceTask;
+            try
+            {
+                database.Dispose();
+            }
+            catch (Exception e)
+            {
+                Log.ErrorException("Could not dispose database: " + resourceName, e);
+            }
+
+            LastRecentlyUsed.TryRemove(resourceName, out time);
+            ResourcesStoresCache.TryRemove(resourceName, out resourceTask);
+
+            AsyncManualResetEvent modifyLock;
+            if (Modification.TryRemove(resourceName, out modifyLock))
+                modifyLock.Set();
         }
     }
 }

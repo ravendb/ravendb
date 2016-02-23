@@ -8,6 +8,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -106,8 +107,11 @@ namespace Raven.Server.Web.System
 
 
                 ServerStore.Write(context, dbId, dbDoc);
-
                 context.Transaction.Commit();
+
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                Task.Run(() => ServerStore.DatabasesLandlord.ModifyResource(name));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                 HttpContext.Response.StatusCode = 201;
 
@@ -115,7 +119,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/$", "DELETE", "/admin/databases/{databaseName:string}?hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task Delete()
+        public async Task Delete()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
             var isHardDelete = GetBoolValueQueryString("isHardDelete", DefaultValue<bool>.Default);
@@ -129,23 +133,16 @@ namespace Raven.Server.Web.System
                 if (configuration == null)
                 {
                     HttpContext.Response.StatusCode = 404;
-                    return HttpContext.Response.WriteAsync("Database wasn't found");
+                    await HttpContext.Response.WriteAsync("Database wasn't found");
                 }
 
-                var dbId = Constants.Database.Prefix + name;
-                ServerStore.Delete(context, dbId);
-
-                if (isHardDelete)
-                    DatabaseHelper.DeleteDatabaseFiles(configuration);
-
+                await DeleteDatabase(name, context, isHardDelete, configuration);
                 HttpContext.Response.StatusCode = 204; // No Content
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task DeleteBatch()
+        public async Task DeleteBatch()
         {
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
@@ -173,18 +170,24 @@ namespace Raven.Server.Web.System
                         continue;
                     }
 
-                    var dbId = Constants.Database.Prefix + name;
-                    ServerStore.Delete(context, dbId);
-
-                    if (isHardDelete)
-                        DatabaseHelper.DeleteDatabaseFiles(configuration);
-
+                    await DeleteDatabase(name, context, isHardDelete, configuration);
                     writer.WriteString(context.GetLazyString($"Database {name} was deleted successfully"));
                 }
                 writer.WriteEndArray();
             }
+        }
 
-            return Task.CompletedTask;
+        private async Task DeleteDatabase(string name, TransactionOperationContext context, bool isHardDelete, RavenConfiguration configuration)
+        {
+            // ModifyResource should be called before deleteing the DatabaseDocument from the server store,
+            // since ModifyResource will fail if the database is loading or modified right now
+            await ServerStore.DatabasesLandlord.ModifyResource(name);
+
+            var dbId = Constants.Database.Prefix + name;
+            ServerStore.Delete(context, dbId);
+
+            if (isHardDelete)
+                DatabaseHelper.DeleteDatabaseFiles(configuration);
         }
     }
 }
