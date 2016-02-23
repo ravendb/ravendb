@@ -109,7 +109,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 switch (maxIdStatus(currentId))
                 {
                     case MaxTaskIdStatus.Updated:
-                        MergeSimilarTasks(task, updateMaxTaskId);
+                        MergeSimilarTasks(task);
                         break;
                     case MaxTaskIdStatus.MergeDisabled:
                         foundWork.Value = true;
@@ -144,7 +144,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        private void MergeSimilarTasks(DatabaseTask task, Action<IComparable> updateMaxTaskId)
+        private void MergeSimilarTasks(DatabaseTask task)
         {
             var expectedTaskType = task.GetType().FullName;
 
@@ -200,7 +200,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     }
 
                     currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
-                    updateMaxTaskId(currentId);
 
                     totalKeysToProcess += existingTask.NumberOfKeys;
                     task.Merge(existingTask);
