@@ -110,11 +110,11 @@ namespace Raven.Server.Web.System
                 context.Transaction.Commit();
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                // No need to wait for the database to be unloaded
                 Task.Run(() => ServerStore.DatabasesLandlord.ModifyResource(name));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                 HttpContext.Response.StatusCode = 201;
-
             }
         }
 
@@ -179,8 +179,8 @@ namespace Raven.Server.Web.System
 
         private async Task DeleteDatabase(string name, TransactionOperationContext context, bool isHardDelete, RavenConfiguration configuration)
         {
-            // ModifyResource should be called before deleteing the DatabaseDocument from the server store,
-            // since ModifyResource will fail if the database is loading or modified right now
+            // Wait for database to unload. 
+            // NOTE: We should fail to delete the DB here if the database is being loaded or modified right now
             await ServerStore.DatabasesLandlord.ModifyResource(name);
 
             var dbId = Constants.Database.Prefix + name;
