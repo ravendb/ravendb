@@ -95,20 +95,20 @@ namespace Raven.Server.Documents.Queries.Handlers
             { "cutOffEtag", (x, param, handler) => x.CutoffEtag = handler.HttpContext.Request.Query.ContainsKey(param) ? handler.GetLongQueryString(param) : (long?) null },
             { "waitForNonStaleResultsAsOfNow", (x, param, handler) =>
                                                 {
-                                                    x.WaitForNonStaleResultsAsOfNow = handler.GetBoolValueQueryString(param, DefaultValue<bool>.Default);
+                                                    x.WaitForNonStaleResultsAsOfNow = handler.GetBoolValueQueryString(param, required: false);
                                                     if (x.WaitForNonStaleResultsAsOfNow)
                                                         x.Cutoff = SystemTime.UtcNow;
                                                 }
             },
-            { "fetch", (x, param, handler) => x.FieldsToFetch = handler.GetStringValuesQueryString(param, DefaultValue<StringValues>.Default) },
-            { "defaultField", (x, param, handler) => x.DefaultField = handler.GetStringQueryString(param, DefaultValue<string>.Default) },
+            { "fetch", (x, param, handler) => x.FieldsToFetch = handler.GetStringValuesQueryString(param, required: false) },
+            { "defaultField", (x, param, handler) => x.DefaultField = handler.GetStringQueryString(param, required: false) },
             { "operator", (x, param, handler) => x.DefaultOperator =
-                                                    "And".Equals(handler.GetStringQueryString(param, DefaultValue<string>.Default), StringComparison.OrdinalIgnoreCase) ?
+                                                    "And".Equals(handler.GetStringQueryString(param, required: false), StringComparison.OrdinalIgnoreCase) ?
                                                         QueryOperator.And : QueryOperator.Or
             },
             { "sort", (x, param, handler) =>
                         {
-                            var sortedFields = handler.GetStringValuesQueryString(param, DefaultValue<StringValues>.Default);
+                            var sortedFields = handler.GetStringValuesQueryString(param, required: false);
                             
                             if (sortedFields.Count > 0)
                                 x.SortedFields = sortedFields.Select(y => new SortedField(y)).ToArray();

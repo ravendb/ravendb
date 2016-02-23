@@ -269,11 +269,10 @@ namespace Raven.Client.Document.SessionOperations
 
                 if (log.IsDebugEnabled)
                 {
-                    log.Debug( "Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                    log.Debug( "Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried",
                             indexQuery.Query,
                             indexName,
-                            sessionOperations.StoreIdentifier,
-                            result.IndexEtag);
+                            sessionOperations.StoreIdentifier);
 
                 }
                 return false;

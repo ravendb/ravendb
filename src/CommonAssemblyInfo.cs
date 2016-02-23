@@ -20,3 +20,5 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyDelaySign(false)]
 [assembly: NeutralResourcesLanguage("en-US")]
+
+[assembly: InternalsVisibleTo("FastTests")]
