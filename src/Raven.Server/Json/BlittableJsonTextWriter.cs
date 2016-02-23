@@ -50,7 +50,7 @@ namespace Raven.Server.Json
                 var prop = obj.GetPropertyByIndex(props[i]);
                 WritePropertyName(prop.Item1);
 
-                WriteValue(prop.Item3 & BlittableJsonReaderObject.TypesMask, prop.Item2, originalPropertyOrder: true);
+                WriteValue(prop.Item3 & BlittableJsonReaderBase.TypesMask, prop.Item2, originalPropertyOrder: true);
             }
 
             WriteEndObject();

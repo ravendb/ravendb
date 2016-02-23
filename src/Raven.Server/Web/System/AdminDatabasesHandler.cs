@@ -75,11 +75,14 @@ namespace Raven.Server.Web.System
                 var dbId = Constants.Database.Prefix + name;
 
                 var etag = HttpContext.Request.Headers["ETag"];
-                var existingDatabase = ServerStore.Read(context, dbId);
-                if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etag, out errorMessage) == false)
+                using (context.OpenReadTransaction())
                 {
-                    HttpContext.Response.StatusCode = 400;
-                    return HttpContext.Response.WriteAsync(errorMessage);
+                    var existingDatabase = ServerStore.Read(context, dbId);
+                    if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etag, out errorMessage) == false)
+                    {
+                        HttpContext.Response.StatusCode = 400;
+                        return HttpContext.Response.WriteAsync(errorMessage);
+                    }
                 }
 
                 var dbDoc = context.ReadForDisk(RequestBodyStream(), dbId);
