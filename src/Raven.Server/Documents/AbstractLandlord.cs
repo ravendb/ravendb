@@ -48,18 +48,34 @@ namespace Raven.Server.Documents
         {
             Locks.TryAdd(DisposingLock);
 
-            var tasks = ResourcesStoresCache.Select(resourceTask => resourceTask.Value.ContinueWith(task =>
+            var exceptionAggregator = new ExceptionAggregator(Log, "Failure to dispose landlord");
+
+            // shut down all databases in parallel, avoid having to wait for each one
+            Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
             {
-                try
+                if (dbTask.IsCompleted == false)
                 {
-                    task.Result.Dispose();
+                    dbTask.ContinueWith(task =>
+                    {
+                        if (task.Status != TaskStatus.RanToCompletion)
+                            return;
+
+                        try
+                        {
+                            task.Result.Dispose();
+                        }
+                        catch (Exception e)
+                        {
+                            Log.WarnException("Failure in deferred disposal of a database", e);
+                        }
+                    });
                 }
-                catch (Exception)
+                else if (dbTask.Status == TaskStatus.RanToCompletion)
                 {
-                    /* Nothing we can do here */
+                    exceptionAggregator.Execute(dbTask.Result.Dispose);
                 }
-            })).ToArray();
-            Task.WaitAll(tasks);
+                // there is no else, the db is probably faulted
+            });
             ResourcesStoresCache.Clear();
 
             try
