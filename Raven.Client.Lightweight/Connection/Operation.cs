@@ -69,9 +69,16 @@ namespace Raven.Client.Connection
                     if (faulted)
                     {
                         var error = status.Value<RavenJToken>("State");
-                        // since RavenDB-4332 we don't encapsulate Error field in State object
-                        var errorMessage = error is RavenJObject ? error.Value<string>("Error") : error.ToString();
+                        var errorMessage = error.Value<string>("Error");
                         throw new InvalidOperationException("Operation failed: " + errorMessage);
+                    }
+
+                    var canceled = status.Value<bool>("Canceled");
+                    if (canceled)
+                    {
+                        var error = status.Value<RavenJToken>("State");
+                        var errorMessage = error.Value<string>("Error");
+                        throw new InvalidOperationException("Operation canceled: " + errorMessage);
                     }
 
                     return status.Value<RavenJToken>("State");

@@ -1,6 +1,6 @@
 ﻿class runningTask {
     id: number;
-    status: string;
+    status: operationStateDto;
     taskType: string;
     startTime: string;
     description: string;
@@ -40,7 +40,10 @@
             taskState = "Completed";
         }
 
-        var status = dto.Status;
+        var status = null;
+        if (dto.Status) {
+            status = dto.Faulted || dto.Canceled ? dto.Status.Error : dto.Status.Progress;
+        }
 
         return status ? taskState + ": " + status : taskState;
     }

@@ -208,7 +208,7 @@ namespace Raven.Database.Server.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                status.Result = batchOperation(index, indexQuery, option, x =>
+                status.State["Batch"] = batchOperation(index, indexQuery, option, x =>
                 {
                     status.MarkProgress(x);
                 });
@@ -252,7 +252,7 @@ namespace Raven.Database.Server.Controllers
             {
                 OperationProgress.ProcessedEntries = progress.ProcessedEntries;
                 OperationProgress.TotalEntries = progress.TotalEntries;
-                State = $"Processed {progress.ProcessedEntries}/{progress.TotalEntries} items";
+                State["Progress"] = $"Processed {progress.ProcessedEntries}/{progress.TotalEntries} items";
             }
         }
     }

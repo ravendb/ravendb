@@ -16,9 +16,9 @@ namespace Raven.Abstractions.Data
     {
         private readonly Task task;
 
-        private readonly Func<string> stateProvider;
+        private readonly Func<RavenJObject> stateProvider;
 
-        public TaskBasedOperationState(Task task, Func<string> stateProvider = null)
+        public TaskBasedOperationState(Task task, Func<RavenJObject> stateProvider = null)
         {
             this.task = task;
             this.stateProvider = stateProvider;
@@ -30,23 +30,19 @@ namespace Raven.Abstractions.Data
             {
                 var ex = (task.IsFaulted || task.IsCanceled) ? task.Exception.ExtractSingleInnerException() : null;
 
-                if (ex == null && Faulted && State != null)
+                if (ex == null && (Faulted || Canceled) && State != null) 
                 {
-                    ex = new Exception(State);
+                    ex = new Exception(State.Value<string>("Error"));
                 }
                 return ex;
             }
         }
-
-        public bool Canceled => task.IsCanceled;
-
         public bool Completed => task.IsCompleted;
 
         public bool Faulted => task.IsFaulted;
 
-        public string State
-        {
-            get { return !Canceled && !Faulted ? stateProvider?.Invoke() : null; }
-        }
+        public bool Canceled => task.IsCanceled;
+
+        public RavenJObject State => !Faulted && !Canceled ? stateProvider?.Invoke() : new RavenJObject();
     }
 }

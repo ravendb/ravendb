@@ -94,7 +94,7 @@ namespace Raven.Database.Server.Controllers
                     currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, options, batchSize =>
                     {
                         documents += batchSize;
-                        status.State = $"Imported {documents} documents";
+                        status.MarkProgress($"Imported {documents} documents");
                     }), operationId, tre.Token, timeout);
                     status.MarkCompleted($"Imported {documents} documents");
                 }

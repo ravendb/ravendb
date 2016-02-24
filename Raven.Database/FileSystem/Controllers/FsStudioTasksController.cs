@@ -84,7 +84,7 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     var dataDumper = new FilesystemDataDumper(FileSystem);
-                    dataDumper.Progress += s => status.State = s;
+                    dataDumper.Progress += s => status.MarkProgress(s);
                     var smugglerOptions = dataDumper.Options;
                     smugglerOptions.BatchSize = batchSize;
                     smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;

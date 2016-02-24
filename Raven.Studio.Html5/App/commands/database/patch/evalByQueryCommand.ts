@@ -33,8 +33,8 @@ class evalByQueryCommand extends commandBase {
             this.updatePatchingProgress(result);
 
             if (result.Completed) {
-                if (result.Faulted) {
-                    this.reportError("Patch failed", result.State);
+                if (result.Faulted || result.Canceled) {
+                    this.reportError("Patch failed", result.State.Error);
                 } else {
                     this.reportSuccess("Patching completed");
 }

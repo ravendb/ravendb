@@ -15,29 +15,39 @@ namespace Raven.Abstractions.Data
         public bool Completed { get; private set; } 
         public bool Faulted { get; private set; }
         public bool Canceled { get; private set; }
-        public string State { get; set; }
+        public RavenJObject State { get; protected set; }
         public Exception Exception { get; set; }
+
+        public OperationStateBase()
+        {
+            State = new RavenJObject();
+        }
+
+        public void MarkProgress(string progress)
+        {
+            State["Progress"] = progress;
+        }
 
         public void MarkCompleted(string state = null)
         {
             VerifyState();
-            State = state;
+            MarkProgress(state);
             Completed = true;
         }
 
-        public void MarkFaulted(string state = null, Exception exception = null)
+        public void MarkFaulted(string error = null, Exception exception = null)
         {
             VerifyState();
-            State = state;
+            MarkProgress(error);
             Exception = exception;
             Completed = true;
             Faulted = true;
         }
 
-        public void MarkCanceled(string state = null)
+        public void MarkCanceled(string error = null)
         {
             VerifyState();
-            State = state;
+            MarkProgress(error);
             Completed = true;
             Canceled = true;
         }

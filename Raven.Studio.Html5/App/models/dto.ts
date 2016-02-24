@@ -1219,7 +1219,13 @@ interface operationIdDto {
 interface operationStatusDto {
     Completed: boolean;
     Faulted: boolean;
-    State: string;
+    Canceled: boolean;
+    State: operationStateDto;
+}
+
+interface operationStateDto {
+    Error?: string;
+    Progress?: string;
 }
 
 interface bulkOperationStatusDto extends operationStatusDto {
@@ -1304,7 +1310,7 @@ interface countersReplicationTopologyConnectionDto {
 
 interface runningTaskDto {
     Id: number;
-    Status: string;
+    Status: operationStateDto;
     Exception: string;
     Killable: boolean;
     Completed: boolean;
@@ -1313,7 +1319,6 @@ interface runningTaskDto {
     Description: string;
     TaskType: string;
     StartTime: string;
-    
 }
 
 

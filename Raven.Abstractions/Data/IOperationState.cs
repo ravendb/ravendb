@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -15,7 +13,12 @@ namespace Raven.Abstractions.Data
         bool Completed { get; }
         bool Faulted { get; }
         bool Canceled { get; }
-        string State { get; }
         Exception Exception { get; }
+
+        /// <summary>
+        /// Put progress information under Progress field
+        /// and error in Error field
+        /// </summary>
+        RavenJObject State { get; }
     }
 }
