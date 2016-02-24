@@ -38,7 +38,8 @@ namespace Raven.Database.Tasks
 
         public override string ToString()
         {
-            return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
+            return string.Format("Index: {0}, Keys Count: {1}, Keys: {2}", 
+                Index, Keys.Count, string.Join(", ", Keys));
         }
 
         public override void Merge(DatabaseTask task)

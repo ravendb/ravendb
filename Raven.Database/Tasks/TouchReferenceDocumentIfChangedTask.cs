@@ -30,7 +30,8 @@ namespace Raven.Database.Tasks
 
         public override string ToString()
         {
-            return string.Format("Index: {0}, References: {1}", Index, string.Join(", ", ReferencesToCheck.Keys));
+            return string.Format("Index: {0}, References Count: {1}, References: {2}", 
+                Index, ReferencesToCheck.Count, string.Join(", ", ReferencesToCheck.Keys));
         }
 
         public override bool SeparateTasksByIndex

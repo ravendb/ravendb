@@ -1,4 +1,3 @@
-/*
 // -----------------------------------------------------------------------
 //  <copyright file="TasksStorageActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -8,7 +7,6 @@
 using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Tests.Common;
 
 namespace Raven.Tests.Storage
@@ -31,12 +29,7 @@ namespace Raven.Tests.Storage
 
                 storage.Batch(accessor =>
                 {
-                    var foundWork = new Reference<bool>();
-                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        new List<int>());
+                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(new List<int>(), new[] {101});
                     Assert.NotNull(task);
                 });
 
@@ -59,12 +52,7 @@ namespace Raven.Tests.Storage
 
                 storage.Batch(accessor =>
                 {
-                    var foundWork = new Reference<bool>();
-                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => {},
-                        foundWork,
-                        new List<int>());
+                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(new List<int>(), new[] {101});
                     Assert.NotNull(task);
                 });
 
@@ -94,23 +82,17 @@ namespace Raven.Tests.Storage
 
                 storage.Batch(actions =>
                 {
-                    var foundWork = new Reference<bool>();
-                    var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        new List<int>());
+                    var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(new List<int>(), new[] {100});
                     Assert.NotNull(task);
-                    Assert.False(foundWork.Value);
 
-                    foundWork = new Reference<bool>();
-                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        new List<int>());
+                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(new List<int>(), new[] {100});
                     Assert.Null(task);
-                    Assert.False(foundWork.Value);
+                });
+
+                storage.Batch(accessor =>
+                {
+                    Assert.False(accessor.Tasks.HasTasks);
+                    Assert.Equal(0, accessor.Tasks.ApproximateTaskCount);
                 });
 
                 storage.Batch(actions =>
@@ -123,7 +105,7 @@ namespace Raven.Tests.Storage
 
         [Theory]
         [PropertyData("Storages")]
-        public void CanAddAndRemoveMultipleTasks_InSingleTx_OneByOne(string requestedStorage)
+        public void CanAddAndRemoveMultipleTasks_DifferentTypes(string requestedStorage)
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
@@ -135,32 +117,36 @@ namespace Raven.Tests.Storage
                         task.AddKey("tasks/" + i);
                         actions.Tasks.AddTask(task, SystemTime.UtcNow);
                     }
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        var task = new TouchReferenceDocumentIfChangedTask(100);
+                        actions.Tasks.AddTask(task, SystemTime.UtcNow);
+                    }
                 });
 
                 storage.Batch(actions =>
                 {
-                    Reference<bool> foundWork;
-                    DatabaseTask task;
-                    for (int i = 0; i < 3; i++)
-                    {
-                        foundWork = new Reference<bool>();
-                        task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                            x => MaxTaskIdStatus.MergeDisabled,
-                            x => { },
-                            foundWork,
-                            new List<int>());
-                        Assert.NotNull(task);
-                        Assert.False(foundWork.Value);
-                    }
+                    var idsToSkip = new List<int>();
+                    var allIndexes = new[] { 100 };
 
-                    foundWork = new Reference<bool>();
-                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        new List<int>());
-                    Assert.Null(task);
-                    Assert.False(foundWork.Value);
+                    var task1 = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes);
+                    Assert.NotNull(task1);
+
+                    task1 = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes);
+                    Assert.Null(task1);
+
+                    var task2 = actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(idsToSkip, allIndexes);
+                    Assert.NotNull(task2);
+
+                    task2 = actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(idsToSkip, allIndexes);
+                    Assert.Null(task2);
+                });
+
+                storage.Batch(accessor =>
+                {
+                    Assert.False(accessor.Tasks.HasTasks);
+                    Assert.Equal(0, accessor.Tasks.ApproximateTaskCount);
                 });
 
                 storage.Batch(actions =>
@@ -173,50 +159,54 @@ namespace Raven.Tests.Storage
 
         [Theory]
         [PropertyData("Storages")]
-        public void DontRemoveTasksWhenReachingMaxTaskId(string requestedStorage)
+        public void returns_only_tasks_for_existing_indexes(string requestedStorage)
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(actions =>
                 {
+                    int id = 99;
                     for (int i = 0; i < 3; i++)
                     {
-                        var task = new RemoveFromIndexTask(100);
+                        var task = new RemoveFromIndexTask(id);
+                        id++;
                         task.AddKey("tasks/" + i);
+                        actions.Tasks.AddTask(task, SystemTime.UtcNow);
+                    }
+
+                    id = 99;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        var task = new TouchReferenceDocumentIfChangedTask(id);
+                        id++;
                         actions.Tasks.AddTask(task, SystemTime.UtcNow);
                     }
                 });
 
                 storage.Batch(actions =>
                 {
-                    var foundWork = new Reference<bool>();
-                    var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.ReachedMaxTaskId,
-                        x => { },
-                        foundWork,
-                        new List<int>());
-                    Assert.Null(task);
-                    Assert.True(foundWork.Value);
+                    var idsToSkip = new List<int>();
+                    var allIndexes = new[] {100};
 
-                    for (int i = 0; i < 3; i++)
-                    {
-                        foundWork = new Reference<bool>();
-                        task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                            x => MaxTaskIdStatus.MergeDisabled,
-                            x => { },
-                            foundWork,
-                            new List<int>());
-                        Assert.NotNull(task);
-                        Assert.False(foundWork.Value);
-                    }
+                    var task1 = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes);
+                    Assert.NotNull(task1);
+                    Assert.Equal(100, task1.Index);
 
-                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.MergeDisabled,
-                        x => { },
-                        foundWork,
-                        new List<int>());
-                    Assert.Null(task);
-                    Assert.False(foundWork.Value);
+                    task1 = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes);
+                    Assert.Null(task1);
+
+                    var task2 = actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(idsToSkip, allIndexes);
+                    Assert.NotNull(task2);
+                    Assert.Equal(100, task2.Index);
+
+                    task2 = actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(idsToSkip, allIndexes);
+                    Assert.Null(task2);
+                });
+
+                storage.Batch(accessor =>
+                {
+                    Assert.False(accessor.Tasks.HasTasks);
+                    Assert.Equal(0, accessor.Tasks.ApproximateTaskCount);
                 });
 
                 storage.Batch(actions =>
@@ -229,115 +219,63 @@ namespace Raven.Tests.Storage
 
         [Theory]
         [PropertyData("Storages")]
-        public void CanUpdateMaxTaskId(string requestedStorage)
+        public void returns_only_tasks_for_existing_indexes_with_merging(string requestedStorage)
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(actions =>
                 {
+                    int id = 100;
                     for (int i = 0; i < 3; i++)
                     {
-                        var task = new RemoveFromIndexTask(100);
+                        var task = new RemoveFromIndexTask(id);
+                        id++;
                         task.AddKey("tasks/" + i);
+                        actions.Tasks.AddTask(task, SystemTime.UtcNow);
+
+                        task = new RemoveFromIndexTask(id);
+                        id++;
+                        task.AddKey("tasks/" + i + 1);
+                        actions.Tasks.AddTask(task, SystemTime.UtcNow);
+                    }
+
+                    id = 100;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        var task = new TouchReferenceDocumentIfChangedTask(id);
+                        id++;
+                        actions.Tasks.AddTask(task, SystemTime.UtcNow);
+
+                        task = new TouchReferenceDocumentIfChangedTask(id);
+                        id++;
                         actions.Tasks.AddTask(task, SystemTime.UtcNow);
                     }
                 });
 
                 storage.Batch(actions =>
                 {
-                    IComparable maxTaskId = null;
-                    var foundWork = new Reference<bool>();
-                    var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => maxTaskId = x,
-                        foundWork,
-                        new List<int>());
-                    Assert.NotNull(task);
-                    Assert.NotNull(maxTaskId);
-                    Assert.False(foundWork.Value);
+                    var idsToSkip = new List<int>();
+                    var allIndexes = new[] { 100 };
 
-                    maxTaskId = null;
-                    foundWork = new Reference<bool>();
-                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => maxTaskId = x,
-                        foundWork,
-                        new List<int>());
-                    Assert.Null(task);
-                    Assert.Null(maxTaskId);
-                    Assert.False(foundWork.Value);
-                });
-            }
-        }
+                    var task1 = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes);
+                    Assert.NotNull(task1);
+                    Assert.Equal(100, task1.Index);
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void MaxTaskIdIsntUpdatedWhenThereAreNoTasks(string requestedStorage)
-        {
-            using (var storage = NewTransactionalStorage(requestedStorage))
-            {
-                storage.Batch(actions =>
-                {
-                    IComparable maxTaskId = null;
-                    var foundWork = new Reference<bool>();
-                    var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => maxTaskId = x,
-                        foundWork,
-                        new List<int>());
-                    Assert.Null(task);
-                    Assert.Null(maxTaskId);
-                    Assert.False(foundWork.Value);
-                });
-            }
-        }
+                    task1 = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes);
+                    Assert.Null(task1);
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void CorrectlyNotifyAboutWorkAfterReachingMaxTaskId(string requestedStorage)
-        {
-            using (var storage = NewTransactionalStorage(requestedStorage))
-            {
-                storage.Batch(actions =>
-                {
-                    for (int i = 0; i < 3; i++)
-                    {
-                        var task = new RemoveFromIndexTask(100);
-                        task.AddKey("tasks/" + i);
-                        actions.Tasks.AddTask(task, SystemTime.UtcNow);
-                    }
+                    var task2 = actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(idsToSkip, allIndexes);
+                    Assert.NotNull(task2);
+                    Assert.Equal(100, task2.Index);
+
+                    task2 = actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(idsToSkip, allIndexes);
+                    Assert.Null(task2);
                 });
 
-                storage.Batch(actions =>
+                storage.Batch(accessor =>
                 {
-                    var foundWork = new Reference<bool>();
-                    var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.ReachedMaxTaskId,
-                        x => { },
-                        foundWork,
-                        new List<int>());
-                    Assert.Null(task);
-                    Assert.True(foundWork.Value);
-
-                    for (int i = 0; i < 3; i++)
-                    {
-                        foundWork = new Reference<bool>();
-                        task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                            x => MaxTaskIdStatus.MergeDisabled,
-                            x => { },
-                            foundWork,
-                            new List<int>());
-                        Assert.NotNull(task);
-                        Assert.False(foundWork.Value);
-                    }
-
-                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        new List<int>());
-                    Assert.Null(task);
-                    Assert.False(foundWork.Value);
+                    Assert.False(accessor.Tasks.HasTasks);
+                    Assert.Equal(0, accessor.Tasks.ApproximateTaskCount);
                 });
 
                 storage.Batch(actions =>
@@ -400,4 +338,3 @@ namespace Raven.Tests.Storage
         }
     }
 }
-*/

@@ -16,7 +16,7 @@ namespace Raven.Database.Storage
         bool HasTasks { get; }
         long ApproximateTaskCount { get; }
 
-        T GetMergedTask<T>(List<int> idsToSkip)
+        T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes)
             where T : DatabaseTask;
 
         IEnumerable<TaskMetadata> GetPendingTasksForDebug();

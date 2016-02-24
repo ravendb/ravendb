@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
+using System.Linq;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -77,7 +78,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public T GetMergedTask<T>(List<int> idsToSkip) 
+        public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes) 
             where T : DatabaseTask
         {
             var type = CreateKey(typeof(T).FullName);
@@ -108,20 +109,31 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         continue;
                     }
 
-                    if (idsToSkip.Contains(task.Index))
+                    if (indexesToSkip.Contains(task.Index))
                     {
                         if (Logger.IsDebugEnabled)
                             Logger.Debug("Skipping task for index id: {0}", task.Index);
                         continue;
                     }
-                        
+
+                    if (allIndexes.Contains(task.Index) == false)
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Deleting task for non existing index id: {0}", task.Index);
+
+                        RemoveTask(iterator.CurrentKey, task.Index, type);
+                        continue;
+                    }
 
                     var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug("Fetched task id: {0}", currentId);
+
+                    task.Id = currentId;
                     MergeSimilarTasks(task, currentId);
 
                     RemoveTask(iterator.CurrentKey, task.Index, type);
-
-                    task.Id = currentId;
+                    
                     return (T) task;
                 } while (iterator.MoveNext());
             }
@@ -170,6 +182,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     totalKeysToProcess += existingTask.NumberOfKeys;
                     task.Merge(existingTask);
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug("Merged task id: {0} with task id: {1}", currentId, task.Id);
                     RemoveTask(iterator.CurrentKey, task.Index, type);
                 } while (iterator.MoveNext());
             }

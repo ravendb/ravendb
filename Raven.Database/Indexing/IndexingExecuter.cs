@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -100,9 +99,11 @@ namespace Raven.Database.Indexing
             try
             {
                 var result = ExecuteTasksInternal();
-
-                //cleanup of failed tasks
-                CleanupFailedTasks();
+                if (result == false)
+                {
+                    //we can cleanup the tasks failure count if have no more tasks
+                    tasksFailureCount.Clear();
+                }
 
                 return result;
             }
@@ -152,7 +153,7 @@ namespace Raven.Database.Indexing
           
             if (Log.IsDebugEnabled)
             {
-                Log.Debug("Executed {0} tasks, processed documents: {1}, took {2}ms",
+                Log.Debug("Executed {0} tasks, processed documents: {1:#,#;;0}, took {2:#,#;;0}ms",
                     count, totalProcessedKeys, sp.ElapsedMilliseconds);
             }
 
@@ -173,14 +174,14 @@ namespace Raven.Database.Indexing
 
                     return;
                 }
-                
+
                 context.UpdateFoundWork();
 
                 var indexName = GetIndexName(task.Index);
                 if (Log.IsDebugEnabled)
                 {
-                    Log.Debug("Executing {0} task for index: {1} (id: {2}, task id: {3}), details: {4}",
-                        task.GetType(), indexName, task.Index, task.Id, task);
+                    Log.Debug("Executing {0} for index: {1} (id: {2}, task id: {3}), details: {4}",
+                        task.GetType().Name, indexName, task.Index, task.Id, task);
                 }
 
                 processedKeys = task.NumberOfKeys;
@@ -196,13 +197,16 @@ namespace Raven.Database.Indexing
                 catch (Exception e)
                 {
                     Log.WarnException(
-                        string.Format("{0} task for index: {1} (index id: {2}, task id: {3}) has failed, details: {4}",
-                            task.GetType(), indexName, task.Index, task.Id, task), e);
+                        string.Format("{0} for index: {1} (index id: {2}, task id: {3}) has failed, details: {4}",
+                            task.GetType().Name, indexName, task.Index, task.Id, task), e);
                     
                     if (e is CorruptIndexException)
                     {
+                        Log.WarnException(string.Format("Index name: {0}, id: {1} is corrupted and needs to be reset", 
+                            indexName, task.Index), e);
+
                         //the index is corrupted, we couldn't write to index
-                        //we can delete this task and alert
+                        //we can delete this task and issue an alert and set the index to errored
                         var index = context.IndexStorage.GetIndexInstance(task.Index);
                         if (index != null)
                             index.AddIndexCorruptError(e);
@@ -210,20 +214,23 @@ namespace Raven.Database.Indexing
                         return;
                     }
 
-                    var failureCount = 0;
+                    int failureCount = 0;
                     tasksFailureCount.TryGetValue(task.Id, out failureCount);
                     failureCount++;
-                    tasksFailureCount.Add(task.Id, failureCount);
+                    tasksFailureCount[task.Id] = failureCount;
                     if (failureCount >= 3)
                     {
+                        //if we failed to execute the task for more than 3 times,
+                        //we can issue an alert and delete the task
                         context.Database.AddAlert(new Alert
                         {
                             AlertLevel = AlertLevel.Error,
                             CreatedAt = SystemTime.UtcNow,
-                            Message = string.Format("Details: {0}, exception: {1}", task, e),
-                            Title = string.Format("Task failed to execute for {0} times", failureCount),
-                            UniqueKey = string.Format("{0} task for index: {1} (index id: {2}, task id: {3}) has failed ({4} times)",
-                                task.GetType(), indexName, task.Index, task.Id, failureCount),
+                            Message = string.Format("For index: {0} (index id: {1}, task id: {2}), details: {3}, exception: {4}",
+                                indexName, task.Index, task.Id, task, e),
+                            Title = string.Format("{0} failed to execute for {1} times", task.GetType().Name, failureCount),
+                            UniqueKey = string.Format("Task failed for index: {0} (index id: {1}, task id: {2}) has failed ({3} times)",
+                                indexName, task.Index, task.Id, failureCount),
                         });
 
                         return;
@@ -234,7 +241,7 @@ namespace Raven.Database.Indexing
 
                 if (Log.IsDebugEnabled)
                 {
-                    Log.Debug("Task for index: {0} (id: {1}, task id: {2}) has finished, took {3}ms",
+                    Log.Debug("Task for index: {0} (id: {1}, task id: {2}) has finished, took {3:#,#;;0}ms",
                         indexName, task.Index, task.Id, sp.ElapsedMilliseconds);
                 }
             });
@@ -246,34 +253,19 @@ namespace Raven.Database.Indexing
         {
             var disabledIndexIds = context.IndexStorage.GetDisabledIndexIds();
 
-            var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(disabledIndexIds);
+            var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                disabledIndexIds, context.IndexStorage.Indexes);
             if (removeFromIndexTasks != null)
                 return removeFromIndexTasks;
 
-            return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(disabledIndexIds);
+            return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(
+                disabledIndexIds, context.IndexStorage.Indexes);
         }
 
         private string GetIndexName(int indexId)
         {
             var index = context.IndexStorage.GetIndexInstance(indexId);
             return index == null ? string.Format("N/A, index id: {0}", indexId) : index.PublicName;
-        }
-
-        private void CleanupFailedTasks()
-        {
-            var failedToRemove = new HashSet<IComparable>();
-            foreach (var task in tasksFailureCount)
-            {
-                //we can remove tasks which its failure count is above 3
-                //since they were already removed
-                if (task.Value >= 3)
-                    failedToRemove.Add(task.Key);
-            }
-
-            foreach (var taskId in failedToRemove)
-            {
-                tasksFailureCount.Remove(taskId);
-            }
         }
 
         protected override void FlushAllIndexes()

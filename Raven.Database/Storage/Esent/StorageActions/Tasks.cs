@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
@@ -56,7 +57,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        public T GetMergedTask<T>(List<int> idsToSkip)
+        public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes)
             where T : DatabaseTask
         {
             Api.MoveBeforeFirst(session, Tasks);
@@ -78,14 +79,24 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     logger.ErrorException(
                         string.Format("Could not create instance of a task: {0}", taskAsBytes),
                         e);
-                    Api.JetDelete(session, Tasks);
+
+                    DeleteTask();
                     continue;
                 }
 
-                if (idsToSkip.Contains(task.Index))
+                if (indexesToSkip.Contains(task.Index))
                 {
                     if (logger.IsDebugEnabled)
                         logger.Debug("Skipping task for index id: {0}", task.Index);
+                    continue;
+                }
+
+                if (allIndexes.Contains(task.Index) == false)
+                {
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("Deleting task for non existing index id: {0}", task.Index);
+
+                    DeleteTask();
                     continue;
                 }
 
@@ -106,15 +117,31 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 if (logger.IsDebugEnabled)
-                    logger.Debug("Current task id: {0}", currentId);
-
-                MergeSimilarTasks(task);
+                    logger.Debug("Fetched task id: {0}", currentId);
 
                 task.Id = currentId;
+                MergeSimilarTasks(task);
+
                 return (T)task;
             }
 
             return null;
+        }
+
+        private void DeleteTask()
+        {
+            try
+            {
+                Api.JetDelete(session, Tasks);
+            }
+            catch (EsentErrorException e)
+            {
+                logger.WarnException("Failed to delete task", e);
+
+                if (e.Error == JET_err.WriteConflict)
+                    return;
+                throw;
+            }
         }
 
         public IEnumerable<TaskMetadata> GetPendingTasksForDebug()
@@ -187,7 +214,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         logger.ErrorException(
                             string.Format("Could not create instance of a task: {0}", taskAsBytes),
                             e);
-                        Api.JetDelete(session, Tasks);
+
+                        DeleteTask();
                         continue;
                     }
 
@@ -207,6 +235,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 task.Merge(existingTask);
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Merged task id: {0} with task id: {1}", currentId, task.Id);
 
             } while (Api.TryMoveNext(session, Tasks));
         }
