@@ -377,6 +377,7 @@
     <Compile Include="Storage\Voron\StorageActions\StructureSchemas\TaskFields.cs" />
     <Compile Include="Storage\DocCountWithSampleDocIds.cs" />
     <Compile Include="Tasks\CleanupTestIndexesTask.cs" />
+    <Compile Include="Tasks\TaskWithId.cs" />
     <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
     <Compile Include="Util\RavenGC.cs" />

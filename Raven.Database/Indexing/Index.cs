@@ -1954,6 +1954,13 @@ namespace Raven.Database.Indexing
             if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error)
                 return;
 
+            var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+            var title = string.Format("Index '{0}' marked as errored due to write errors", PublicName);
+            AddIndexError(msg, title);
+        }
+
+        private void AddIndexError(string msg, string title)
+        {
             context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
             Priority = IndexingPriority.Error;
 
@@ -1962,8 +1969,6 @@ namespace Raven.Database.Indexing
                 Name = PublicName,
                 Type = IndexChangeTypes.IndexMarkedAsErrored
             });
-
-            var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
 
             logIndexing.Warn(msg);
 
@@ -1974,9 +1979,23 @@ namespace Raven.Database.Indexing
                 AlertLevel = AlertLevel.Error,
                 CreatedAt = SystemTime.UtcNow,
                 Message = msg,
-                Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
+                Title = title,
                 UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
             });
+        }
+
+        public void AddIndexCorruptError(Exception e)
+        {
+            var msg = string.Format("Index '{0}' is corrupted. The index priority was set to Error. Exception: {1}", PublicName, e);
+            var title = string.Format("Index '{0}' marked as errored due to corruption", PublicName);
+            AddIndexError(msg, title);
+        }
+
+        public void AddIndexFailedFlushError(Exception e)
+        {
+            var msg = string.Format("Failed to flush index '{0}'. The index priority was set to Error. Exception: {1}", PublicName, e);
+            var title = string.Format("Index '{0}' marked as errored due to failure to flush index", PublicName);
+            AddIndexError(msg, title);
         }
 
         private void ResetWriteErrors()

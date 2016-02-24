@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Indexing;
@@ -12,6 +13,7 @@ namespace Raven.Database.Tasks
     public abstract class DatabaseTask
     {
         public int Index { get; private set; }
+        public IComparable Id { get; set; }
         public abstract int NumberOfKeys { get; }
 
         public abstract bool SeparateTasksByIndex { get; }
@@ -43,12 +45,5 @@ namespace Raven.Database.Tasks
         }
 
         public abstract DatabaseTask Clone();
-    }
-
-    public enum MaxTaskIdStatus
-    {
-        ReachedMaxTaskId,
-        MergeDisabled,
-        Updated
     }
 }

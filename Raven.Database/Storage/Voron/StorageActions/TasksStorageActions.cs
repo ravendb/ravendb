@@ -77,8 +77,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public T GetMergedTask<T>(Func<IComparable, MaxTaskIdStatus> maxIdStatus, 
-            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork, List<int> idsToSkip) 
+        public T GetMergedTask<T>(List<int> idsToSkip) 
             where T : DatabaseTask
         {
             var type = CreateKey(typeof(T).FullName);
@@ -110,26 +109,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     }
 
                     if (idsToSkip.Contains(task.Index))
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task for index id: {0}", task.Index);
                         continue;
+                    }
+                        
 
                     var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
-                    switch (maxIdStatus(currentId))
-                    {
-                        case MaxTaskIdStatus.ReachedMaxTaskId:
-                            // we found work and next run the merge option will be enabled
-                            foundWork.Value = true;
-                            return null;
-                        case MaxTaskIdStatus.Updated:
-                            MergeSimilarTasks(task, currentId, updateMaxTaskId);
-                            break;
-                        case MaxTaskIdStatus.MergeDisabled:
-                        default:
-                            // returning only one task without merging
-                            break;
-                    }
+                    MergeSimilarTasks(task, currentId);
 
                     RemoveTask(iterator.CurrentKey, task.Index, type);
 
+                    task.Id = currentId;
                     return (T) task;
                 } while (iterator.MoveNext());
             }
@@ -137,7 +129,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return null;
         }
 
-        private void MergeSimilarTasks(DatabaseTask task, Etag taskId, Action<IComparable> updateMaxTaskId)
+        private void MergeSimilarTasks(DatabaseTask task, Etag taskId)
         {
             var type = task.GetType().FullName;
             var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
@@ -175,8 +167,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         RemoveTask(iterator.CurrentKey, task.Index, type);
                         continue;
                     }
-
-                    updateMaxTaskId(currentId);
 
                     totalKeysToProcess += existingTask.NumberOfKeys;
                     task.Merge(existingTask);

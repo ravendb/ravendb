@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Tasks;
 
@@ -57,8 +56,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        public T GetMergedTask<T>(Func<IComparable, MaxTaskIdStatus> maxIdStatus,
-            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork, List<int> idsToSkip)
+        public T GetMergedTask<T>(List<int> idsToSkip)
             where T : DatabaseTask
         {
             Api.MoveBeforeFirst(session, Tasks);
@@ -80,13 +78,14 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     logger.ErrorException(
                         string.Format("Could not create instance of a task: {0}", taskAsBytes),
                         e);
+                    Api.JetDelete(session, Tasks);
                     continue;
                 }
 
                 if (idsToSkip.Contains(task.Index))
                 {
-                    if (logger.IsWarnEnabled)
-                        logger.Warn("Skipping task for index id: {0}", task.Index);
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("Skipping task for index id: {0}", task.Index);
                     continue;
                 }
 
@@ -98,27 +97,23 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
                 catch (EsentErrorException e)
                 {
-                    logger.WarnException(string.Format("Failed to delete task id: {0}", currentId), e);
+                    logger.WarnException(string.Format("Failed to delete task id: {0}, for index id {1}", 
+                        currentId, task.Index), e);
 
                     if (e.Error == JET_err.WriteConflict)
                         continue;
                     throw;
                 }
 
-                switch (maxIdStatus(currentId))
-                {
-                    case MaxTaskIdStatus.Updated:
-                        MergeSimilarTasks(task);
-                        break;
-                    case MaxTaskIdStatus.MergeDisabled:
-                        break;
-                    default:
-                        // returning only one task without merging
-                        break;
-                }
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Current task id: {0}", currentId);
 
+                MergeSimilarTasks(task);
+
+                task.Id = currentId;
                 return (T)task;
             }
+
             return null;
         }
 
@@ -202,12 +197,15 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
                 catch (EsentErrorException e)
                 {
-                    logger.WarnException(string.Format("Failed to merge task id: {0}", currentId), e);
+                    logger.WarnException(string.Format("Failed to merge task id: {0}, for index id: {1}", 
+                        currentId, task.Index), e);
 
                     if (e.Error == JET_err.WriteConflict)
                         return;
+
                     throw;
                 }
+
                 task.Merge(existingTask);
 
             } while (Api.TryMoveNext(session, Tasks));
