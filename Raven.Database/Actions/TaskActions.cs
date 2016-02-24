@@ -16,6 +16,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
@@ -157,11 +158,7 @@ namespace Raven.Database.Actions
         public class PendingTaskDescriptionAndStatus : PendingTaskDescription
         {
             public long Id;
-
-            /// <summary>
-            /// Human readable status like: Processed 1 of 1000 documents
-            /// </summary>
-            public string Status { get; set; }
+            public RavenJToken Status { get; set; }
             public Exception Exception;
             public bool Killable;
             public bool Completed { get; set; }

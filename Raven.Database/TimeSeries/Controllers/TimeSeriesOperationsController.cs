@@ -185,7 +185,7 @@ namespace Raven.Database.TimeSeries.Controllers
                         Message = errorMessage
                     });
 
-                    status.MarkFaulted("errorMessage");
+                    status.MarkFaulted(errorMessage);
                     throw;
                 }
                 finally

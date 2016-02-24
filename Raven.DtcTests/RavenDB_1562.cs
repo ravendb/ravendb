@@ -107,7 +107,7 @@ namespace Raven.DtcTests
                 {
                     RetrieveDetails = true
                 });
-                var array = deleteByIndex.WaitForCompletion() as RavenJArray;
+                var array = deleteByIndex.WaitForCompletion().Value<RavenJArray>("Batch");
 
                 Assert.Equal(1, array.Length);
                 Assert.Equal(docId, array[0].Value<string>("Document"));

@@ -7,7 +7,7 @@ class ioTestCommand extends commandBase {
 
     operationIdTask = $.Deferred();
 
-    constructor(private db: database, private testParameters: performanceTestRequestDto, private onStatus: (state: string) => void) {
+    constructor(private db: database, private testParameters: performanceTestRequestDto, private onStatus: (state: operationStateDto) => void) {
         super();
     }
 
@@ -31,8 +31,8 @@ class ioTestCommand extends commandBase {
             .execute()
             .done((result: operationStatusDto) => {
                 if (result.Completed) {
-                    if (result.Faulted) {
-                        this.reportError("Failed to perform disk IO test!", result.State);
+                    if (result.Faulted || result.Canceled) {
+                        this.reportError("Failed to perform disk IO test!", result.State.Error);
                         parentPromise.reject();
                     } else {
                         this.reportSuccess("Disk IO test completed");   

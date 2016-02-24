@@ -1188,7 +1188,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var killTaskCts = new CancellationTokenSource();
 
-            string operationStatus = null;
+            var operationStatus = new RavenJObject();
 
             var task = Task.Factory.StartNew(() =>
             {
@@ -1198,13 +1198,13 @@ namespace Raven.Database.Server.Controllers.Admin
                 using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, msg =>
                 {
                     debugInfo.Add(msg);
-                    operationStatus = msg;
+                    operationStatus["Progress"] = msg;
                 }, killTaskCts.Token))
                 {
                     diskIo.TestDiskIO();
 
                     // reset operation status after test
-                    operationStatus = null;
+                    operationStatus.Remove("Progress");
 
                     RavenJObject diskPerformanceRequestResponseDoc;
 

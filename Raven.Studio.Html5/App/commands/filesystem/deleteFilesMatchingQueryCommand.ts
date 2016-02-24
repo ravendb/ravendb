@@ -30,7 +30,7 @@ class deleteFilesMatchingQueryCommand extends commandBase {
 
     private deletionStatusRetrieved(fs: filesystem, operationId: number, result: operationStatusDto, task: JQueryDeferred<any>) {
         if (result.Completed) {
-            if (!result.Faulted) {
+            if (!result.Faulted && !result.Canceled) {
                 this.reportSuccess("Files deleted");
                 task.resolve();
             } else {

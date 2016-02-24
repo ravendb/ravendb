@@ -179,7 +179,7 @@ for(var customFunction in customFunctions) {{
                     using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
                     {
                         var dataDumper = new DatabaseDataDumper(Database);
-                        dataDumper.Progress += s => status.State = s;
+                        dataDumper.Progress += s => status.MarkProgress(s);
                         var smugglerOptions = dataDumper.Options;
                         smugglerOptions.BatchSize = batchSize;
                         smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
@@ -202,14 +202,14 @@ for(var customFunction in customFunctions) {{
                         await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
                     }
                     // use the last status which contains info about amount of doc/indexes imported
-                    status.MarkCompleted(status.State);
+                    status.MarkCompleted(status.State.Value<string>("Progress"));
                 }
                 catch (Exception e)
                 {
-                    status.MarkFaulted(e.ToString());
+                    
                     if (cts.Token.IsCancellationRequested)
                     {
-                        status.State = "Task was cancelled";
+                        status.MarkCanceled("Task was cancelled");
                         cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
                     }
 
@@ -231,6 +231,7 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = e.ToString();
                     }
+                    status.MarkFaulted(e.ToString());
                     throw;
                 }
                 finally
