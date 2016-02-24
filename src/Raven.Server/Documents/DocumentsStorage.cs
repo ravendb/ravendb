@@ -560,11 +560,11 @@ namespace Raven.Server.Documents
             table.Insert(tbv);
         }
 
-        public void DeleteCollection(DocumentsOperationContext context, string name, List<long> deletedList, long untilEtag)
+        public bool DeleteCollection(DocumentsOperationContext context, string name, List<long> deletedList, long untilEtag)
         {
             name = "@" + name; //todo: avoid this allocation
             var table = new Table(_docsSchema, name, context.Transaction.InnerTransaction);
-            table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, untilEtag);
+            return table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, untilEtag);
         }
 
         public PutResult Put(DocumentsOperationContext context, string key, long? expectedEtag,

@@ -93,6 +93,12 @@ namespace Raven.Server.ServerWide
             return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, ctx);
         }
 
+        public void Delete(TransactionOperationContext ctx, string id)
+        {
+            var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
+            dbs.Delete(id);
+        }
+
         public class Item
         {
             public string Key;

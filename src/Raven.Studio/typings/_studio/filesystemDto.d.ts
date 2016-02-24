@@ -1,10 +1,4 @@
-const enum filesystemSynchronizationType {
-    Unknown = 0,
-    ContentUpdate = 1,
-    MetadataUpdate = 2,
-    Rename = 3,
-    Delete = 4,
-}
+/// <reference path="../../typescript/common/constants.ts"/>
 
 interface filesystemSynchronizationDetailsDto {
     FileName: string;
@@ -138,16 +132,6 @@ interface synchronizationUpdateNotification {
     Direction: synchronizationDirection;
 }
 
-const enum synchronizationAction {
-    Enqueue,
-    Start,
-    Finish
-}
-
-const enum synchronizationDirection {
-    Outgoing,
-    Incoming
-}
 
 interface synchronizationConflictNotification {
     FileSystemName: string;
@@ -155,11 +139,6 @@ interface synchronizationConflictNotification {
     SourceServerUrl: string;
     Status: conflictStatus;
     RemoteFileHeader: any;
-}
-
-const enum conflictStatus {
-    Detected = 0,
-    Resolved = 1
 }
 
 interface fileChangeNotification {
@@ -174,7 +153,4 @@ interface filesystemConfigNotification {
     Action: filesystemConfigurationChangeAction;
 }
 
-const enum filesystemConfigurationChangeAction {
-    Set,
-    Delete
-}
+

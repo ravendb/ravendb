@@ -57,7 +57,7 @@ namespace Raven.Client.Connection
 
         public static string IndexNames(this string url, int start, int pageSize)
         {
-            return $"{url}/indexes/?namesOnly=true&start={start}&pageSize={pageSize}";
+            return $"{url}/indexes?namesOnly=true&start={start}&pageSize={pageSize}";
         }
 
         public static string Stats(this string url)
@@ -108,12 +108,17 @@ namespace Raven.Client.Connection
 
         public static string Docs(this string url, int start, int pageSize)
         {
-            return $"{url}/docs/?start={start}&pageSize={pageSize}";
+            return $"{url}/docs?start={start}&pageSize={pageSize}";
         }
 
-        public static string Queries(this string url)
+        public static string CollectionsDocs(this string url, string collectionName, int start, int pageSize)
         {
-            return $"{url}/queries/";
+            return $"{url}/collections/docs?name={collectionName}&start={start}&pageSize={pageSize}";
+        }
+
+        public static string CollectionsDocs(this string url, string collectionName)
+        {
+            return $"{url}/collections/docs?name={collectionName}";
         }
 
         public static Uri ToUri(this string url)

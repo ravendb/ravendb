@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 using Microsoft.AspNet.Http;
@@ -12,8 +13,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class CollectionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/collections/stats", "GET")]
-        public async Task GetCollectionStats()
+        [RavenAction("/databases/*/collections/stats", "GET", "/databases/{databaseName:string}/collections/stats")]
+        public Task GetCollectionStats()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -33,10 +34,11 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     context.Write(writer, result);
             }
+            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/docs", "GET")]
-        public async Task GetCollectionDocuments()
+        [RavenAction("/databases/*/collections/docs", "GET", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}&start={pageStart:int|optional}&pageSize={pageSize:int|optional(25)}")]
+        public Task GetCollectionDocuments()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -46,39 +48,58 @@ namespace Raven.Server.Documents.Handlers
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
                 WriteDocuments(context, documents);
             }
+            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/docs", "DELETE")]
+        [RavenAction("/databases/*/collections/docs", "DELETE", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}")]
         public Task DeleteCollectionDocuments()
         {
             var deletedList = new List<long>();
             long totalDocsDeletes = 0;
+            long maxEtag = -1;
             DocumentsOperationContext context;
             var collection = GetStringQueryString("name");
             using (ContextPool.AllocateOperationContext(out context))
             {
-                long maxEtag = -1;
-                while (true)
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    using (context.OpenWriteTransaction())
+                    writer.WriteStartArray();
+                    while (true)
                     {
-                        if (maxEtag == -1)
-                            maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
+                        bool isAllDeleted;
+                        using (context.OpenWriteTransaction())
+                        {
+                            if (maxEtag == -1)
+                                maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
 
-                        Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
-                        context.Transaction.Commit();
+                            isAllDeleted = Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
+                            context.Transaction.Commit();
+                        }
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["BatchSize"] = deletedList.Count
+                        });
+                        writer.WriteComma();
+                        writer.WriteNewLine();
+                        writer.Flush();
+                        
+                        totalDocsDeletes += deletedList.Count;
+
+                        if (isAllDeleted)
+                            break;
+
+                        deletedList.Clear();
                     }
-
-                    if (deletedList.Count == 0)
-                        break;
-
-                    HttpContext.Response.WriteAsync($"Deleted a batch of {deletedList.Count} documents in {collection}\n");
-                    totalDocsDeletes += deletedList.Count;
-                    deletedList.Clear();
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["TotalDocsDeleted"] = totalDocsDeletes
+                    });
+                    writer.WriteNewLine();
+                    writer.WriteEndArray();
                 }
             }
-            HttpContext.Response.WriteAsync($"Deleted a total of {totalDocsDeletes} documents in collection {collection}\n");
             return Task.CompletedTask;
+            
         }
     }
 }
