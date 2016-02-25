@@ -108,7 +108,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [NonLinuxFact]
+        [NonLinuxFact] 
         public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = await GetDocumentStore())
