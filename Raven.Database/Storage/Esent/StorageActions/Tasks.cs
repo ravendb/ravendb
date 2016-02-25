@@ -113,7 +113,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         currentId, task.Index), e);
 
                     if (e.Error == JET_err.WriteConflict)
-                        continue;
+                        throw new ConcurrencyException("Failed to delete task " + currentId);
                     throw;
                 }
 
