@@ -18,12 +18,18 @@ import saveClusterConfigurationCommand = require("commands/database/cluster/save
 import updateRaftClusterCommand = require("commands/database/cluster/updateRaftClusterCommand");
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
 import shell = require("viewmodels/shell");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 
 class cluster extends viewModelBase {
 
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>();
+
+    constructor() {
+        super();
+        autoRefreshBindingHandler.install();
+    }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
@@ -39,7 +45,7 @@ class cluster extends viewModelBase {
     }
 
     refresh() {
-        this.fetchClusterTopology(appUrl.getSystemDatabase())
+        return this.fetchClusterTopology(appUrl.getSystemDatabase())
             .done(() => this.fetchStatus(appUrl.getSystemDatabase()));
     }
 

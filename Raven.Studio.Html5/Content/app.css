@@ -6819,12 +6819,12 @@ body {
 }
 @media (max-device-height: 1024px) {
   .query-stats {
-    width: 80vw!important;
+    width: 80vw !important;
   }
 }
 @media (min-device-height: 1025px) {
   .query-stats {
-    width: 50vw!important;
+    width: 50vw !important;
   }
 }
 .query-stats .row {
@@ -7061,13 +7061,18 @@ body {
   cursor: default;
   text-decoration: line-through;
 }
+.index-lock-mode-disabled {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
+}
 #tenantNameLink {
   padding-left: 5px;
 }
 .resource-link {
   display: inline-block;
   padding-right: 2px;
-  overflow: hidden!important;
+  overflow: hidden !important;
   max-width: 250px;
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
@@ -7536,8 +7541,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 #queryContainer .breadcrumb .dropdown-menu li,
 #reportingContainer .breadcrumb .dropdown-menu li {
-  overflow-x: visible!important;
-  max-width: none!important;
+  overflow-x: visible !important;
+  max-width: none !important;
 }
 #queryContainer .breadcrumb > li,
 #reportingContainer .breadcrumb > li {
@@ -8585,4 +8590,85 @@ a.global_help_link:focus {
   width: 55px;
   display: inline-block;
   font-weight: bold;
+}
+.auto-refresh {
+  position: relative;
+}
+.auto-refresh .circleRefresh {
+  position: absolute;
+  cursor: default;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  top: 50%;
+  left: 50%;
+  opacity: 0;
+  -webkit-transform: translateX(-50%) translateY(-50%);
+  -moz-transform: translateX(-50%) translateY(-50%);
+  -ms-transform: translateX(-50%) translateY(-50%);
+  -o-transform: translateX(-50%) translateY(-50%);
+  transform: translateX(-50%) translateY(-50%);
+  -webkit-transition: opacity .2s linear;
+  -moz-transition: opacity .2s linear;
+  -ms-transition: opacity .2s linear;
+  -o-transition: opacity .2s linear;
+  transition: opacity .2s linear;
+}
+.auto-refresh .circleRefresh svg circle {
+  fill: none;
+  stroke-width: 5;
+  stroke: #fff;
+}
+.auto-refresh .timer {
+  -ms-opacity: 1;
+  opacity: 1;
+}
+.auto-refresh svg path {
+  fill: none;
+  stroke-width: 5;
+  stroke: #f36523;
+  -webkit-transform: rotate(0deg);
+  -moz-transform: rotate(0deg);
+  -ms-transform: rotate(0deg);
+  -o-transform: rotate(0deg);
+  transform: rotate(0deg);
+}
+.auto-refresh .circleRefresh.dashed svg path {
+  stroke-dasharray: 18;
+  -webkit-animation: anim-rotate 4s infinite linear;
+  -moz-animation: anim-rotate 4s infinite linear;
+  -o-animation: anim-rotate 4s infinite linear;
+  animation: anim-rotate 4s infinite linear;
+}
+@-webkit-keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@-moz-keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@-o-keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

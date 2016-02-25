@@ -83,6 +83,7 @@
     <TypeScriptCompile Include="App\commands\saveTransformerLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\autoRefreshBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />

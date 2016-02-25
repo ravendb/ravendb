@@ -2,6 +2,7 @@ import getLogsCommand = require("commands/database/debug/getLogsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
 import document = require("models/database/documents/document");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 
 class logs extends viewModelBase {
 
@@ -26,6 +27,8 @@ class logs extends viewModelBase {
 
     constructor() {
         super();
+
+        autoRefreshBindingHandler.install();
 
         this.debugLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Debug"));
         this.infoLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Info"));
@@ -101,23 +104,14 @@ class logs extends viewModelBase {
         return null;
     }
 
-    processLogResults(results: logDto[], append:boolean=false) {
-        var now = moment();
+    processLogResults(results: logDto[]) {
         results.forEach(r => {
             r['HumanizedTimestamp'] = this.createHumanReadableTime(r.TimeStamp,true,false);
             r['TimeStampText'] = this.createHumanReadableTime(r.TimeStamp,true,true);
             r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r) && !this.filteredLoggers.contains(r.LoggerName));
         });
 
-        if (append === false) {
-            this.allLogs(results.reverse());
-        } else {
-            if (results.length == 1) {
-                this.allLogs.unshift((results[0]));
-            } else {
-                results.forEach(x=>this.allLogs.unshift(x));
-            }
-        }
+        this.allLogs(results.reverse());
     }
 
     matchesFilterAndSearch(log: logDto) {

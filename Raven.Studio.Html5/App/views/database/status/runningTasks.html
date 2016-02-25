@@ -22,7 +22,7 @@
 </style>
 <section id="runningTasksContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div style="height: 65%; position: relative;">
-        <button type="button" class="btn btn-default" data-bind="click: fetchTasks"><i class="fa fa-refresh"></i></button>
+        <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.fetchTasks.bind($root), autoStart:true }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterTypeAll">
                 <input type="radio" name="options" id="option0"> <span data-bind="text: 'All tasks (' + allTasks().length + ')'"></span>
@@ -85,12 +85,14 @@
             </span>
             <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedTasks, delegatedHandler: 'click'">
                 <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectTask" data-bind="css: { warning: canceled, danger: faulted, 'selected': $data === $parent.selectedTask() }">
-                    <div class="column" style="width: 40px"><button  data-bind="visible: killable, click: $root.taskKill.bind($root, $data)" class="btn btn-link negative-margin"><i class="fa fa-bolt"></i></button></div>
-                    <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: taskType"></div> 
+                    <div class="column" style="width: 40px"><button data-bind="visible: killable, click: $root.taskKill.bind($root, $data)" class="btn btn-link negative-margin"><i class="fa fa-bolt"></i></button>
+                    </div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[0]() + 'px' }, text: taskType"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + 'px' }, text: description"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[2]() + 'px' }, text: fullStatus"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[3]() + 'px' }, text: timeStampText, attr: { title: timeStampText }"></div>
-                    <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }"><i data-bind="visible: exceptionText" class="fa fa-exclamation"></i></div>
+                    <div class="column" data-bind="style: { width: $root.columnWidths[4]() + 'px' }"><i data-bind="visible: exceptionText" class="fa fa-exclamation"></i>
+                    </div>
                 </div>
             </div>
         </div>
