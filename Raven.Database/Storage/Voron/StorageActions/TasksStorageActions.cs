@@ -78,7 +78,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes) 
+        public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes, HashSet<IComparable> alreadySeen) 
             where T : DatabaseTask
         {
             var type = CreateKey(typeof(T).FullName);
@@ -109,31 +109,32 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         continue;
                     }
 
+                    var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
+
                     if (indexesToSkip.Contains(task.Index))
                     {
                         if (Logger.IsDebugEnabled)
-                            Logger.Debug("Skipping task for index id: {0}", task.Index);
+                            Logger.Debug("Skipping task id: {0} for index id: {1}", currentId, task.Index);
                         continue;
                     }
+
+                    if (alreadySeen.Add(currentId) == false)
+                        continue;
 
                     if (allIndexes.Contains(task.Index) == false)
                     {
                         if (Logger.IsDebugEnabled)
-                            Logger.Debug("Deleting task for non existing index id: {0}", task.Index);
+                            Logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, task.Index);
 
-                        RemoveTask(iterator.CurrentKey, task.Index, type);
                         continue;
                     }
 
-                    var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
                     if (Logger.IsDebugEnabled)
                         Logger.Debug("Fetched task id: {0}", currentId);
 
                     task.Id = currentId;
-                    MergeSimilarTasks(task, currentId);
+                    MergeSimilarTasks(task, alreadySeen);
 
-                    RemoveTask(iterator.CurrentKey, task.Index, type);
-                    
                     return (T) task;
                 } while (iterator.MoveNext());
             }
@@ -141,7 +142,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return null;
         }
 
-        private void MergeSimilarTasks(DatabaseTask task, Etag taskId)
+        private void MergeSimilarTasks(DatabaseTask task, HashSet<IComparable> alreadySeen)
         {
             var type = task.GetType().FullName;
             var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
@@ -158,8 +159,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         break;
 
                     var currentId = Etag.Parse(iterator.CurrentKey.ToString());
-                    // this is the same task that we are trying to merge
-                    if (currentId == taskId)
+                    if (alreadySeen.Add(currentId) == false)
                         continue;
 
                     ushort version;
@@ -184,7 +184,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     task.Merge(existingTask);
                     if (Logger.IsDebugEnabled)
                         Logger.Debug("Merged task id: {0} with task id: {1}", currentId, task.Id);
-                    RemoveTask(iterator.CurrentKey, task.Index, type);
+
                 } while (iterator.MoveNext());
             }
         }
@@ -203,7 +203,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
             tasksByIndex.MultiDelete(writeBatch.Value, (Slice) indexKey, taskId);
             tasksByIndexAndType.MultiDelete(writeBatch.Value, (Slice) AppendToKey(indexKey, type), taskId);
         }
-
 
         public System.Collections.Generic.IEnumerable<TaskMetadata> GetPendingTasksForDebug()
         {
@@ -238,6 +237,58 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     yield return pendingTasksForDebug;
                 } while (taskIterator.MoveNext());
             }
+        }
+
+        public void DeleteTasks(HashSet<IComparable> alreadySeen)
+        {
+            foreach (Etag etag in alreadySeen)
+            {
+                ushort version;
+                var taskId = new Slice(etag.ToString());
+                var value = LoadStruct(tableStorage.Tasks, taskId, writeBatch.Value, out version);
+                if (value == null)
+                    continue;
+
+                RemoveTask(taskId, value.ReadInt(TaskFields.IndexId), value.ReadString(TaskFields.Type));
+            }
+        }
+
+        public int DeleteTasksForIndex(int indexId)
+        {
+            var count = 0;
+            var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
+            using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, (Slice) CreateKey(indexId)))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                    return count;
+
+                do
+                {
+                    ushort version;
+                    var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
+                    if (value == null)
+                        continue;
+
+                    DatabaseTask task;
+                    try
+                    {
+                        task = DatabaseTask.ToTask(value.ReadString(TaskFields.Type), value.ReadBytes(TaskFields.SerializedTask));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.ErrorException(
+                            string.Format("Could not create instance of a task: {0}, for deletion", value),
+                            e);
+                        continue;
+                    }
+
+                    var type = task.GetType().FullName;
+                    RemoveTask(iterator.CurrentKey, task.Index, type);
+                    count++;
+                } while (iterator.MoveNext());
+            }
+
+            return count;
         }
     }
 }

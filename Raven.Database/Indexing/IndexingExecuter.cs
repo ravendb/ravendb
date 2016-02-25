@@ -111,11 +111,13 @@ namespace Raven.Database.Indexing
                     {
                         if (retries-- > 0)
                         {
-                            Log.Warn("Got 5 consecutive concurrency exception when trying to execute task, giving up and will try again later");
-                            return true;
+                            continue;
                         }
-                        continue;
+
+                        Log.Warn("Got 5 consecutive concurrency exception when trying to execute task, giving up and will try again later");
+                        return true;
                     }
+
                     if (result == false)
                     {
                         //we can cleanup the tasks failure count if have no more tasks
@@ -141,11 +143,12 @@ namespace Raven.Database.Indexing
             var indexIds = new HashSet<int>();
             var totalProcessedKeys = 0;
             
+            var alreadySeen = new HashSet<IComparable>();
             transactionalStorage.Batch(actions =>
             {
                 while (context.RunIndexing && sp.Elapsed.TotalMinutes < 1)
                 {
-                    var processedKeys = ExecuteTask(indexIds);
+                    var processedKeys = ExecuteTask(indexIds, alreadySeen);
                     if (processedKeys == 0)
                         break;
 
@@ -158,8 +161,9 @@ namespace Raven.Database.Indexing
                             // all the completed tasks, so we need to flush 
                             // all the changes made to the indexes to disk before that
                             context.IndexStorage.FlushIndexes(indexIds, onlyAddIndexError: true);
-                            
+                            actions.Tasks.DeleteTasks(alreadySeen);
                             indexIds.Clear();
+                            alreadySeen.Clear();
                         });
 
                     count++;
@@ -167,6 +171,7 @@ namespace Raven.Database.Indexing
 
                 // need to flush all the changes
                 context.IndexStorage.FlushIndexes(indexIds, onlyAddIndexError: true);
+                actions.Tasks.DeleteTasks(alreadySeen);
             });
           
             if (Log.IsDebugEnabled)
@@ -178,13 +183,13 @@ namespace Raven.Database.Indexing
             return count != 0;
         }
 
-        private int ExecuteTask(HashSet<int> indexIds)
+        private int ExecuteTask(HashSet<int> indexIds, HashSet<IComparable> alreadySeen)
         {
             var processedKeys = 0;
 
             transactionalStorage.Batch(actions =>
             {
-                var task = GetApplicableTask(actions);
+                var task = GetApplicableTask(actions, alreadySeen);
                 if (task == null)
                 {
                     if (Log.IsDebugEnabled)
@@ -267,17 +272,17 @@ namespace Raven.Database.Indexing
             return processedKeys;
         }
 
-        private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+        private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, HashSet<IComparable> alreadySeen)
         {
             var disabledIndexIds = context.IndexStorage.GetDisabledIndexIds();
 
             var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                disabledIndexIds, context.IndexStorage.Indexes);
+                disabledIndexIds, context.IndexStorage.Indexes, alreadySeen);
             if (removeFromIndexTasks != null)
                 return removeFromIndexTasks;
 
             return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(
-                disabledIndexIds, context.IndexStorage.Indexes);
+                disabledIndexIds, context.IndexStorage.Indexes, alreadySeen);
         }
 
         private string GetIndexName(int indexId)
