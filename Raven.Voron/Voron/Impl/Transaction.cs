@@ -403,6 +403,8 @@ namespace Voron.Impl
             if (numberOfPages > 1)
                 _dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
 
+            TrackWritablePage(page);
+
             return page;
         }
 
@@ -698,6 +700,8 @@ namespace Voron.Impl
         private Dictionary<long, ulong> readOnlyPages = new Dictionary<long, ulong>();
         private Dictionary<long, ulong> writablePages = new Dictionary<long, ulong>();
 
+        public bool treeCreationTransaction;
+
         private void ValidateAllPages()
         {
             ValidateWritablePages();
@@ -731,7 +735,7 @@ namespace Voron.Impl
                 var page = this.GetReadOnlyPage(pageNumber);
 
                 ulong pageHash = Hashing.XXHash64.Calculate(page.Base, page.PageSize);
-                if (pageHash == writableKey.Value)
+                if (pageHash == writableKey.Value && treeCreationTransaction == false)
                     throw new VoronUnrecoverableErrorException("Writable key is not dirty (which means you are asking for a page modification for no reason).");
             }
         }
