@@ -69,6 +69,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (taskType != typeof(T).FullName)
                     continue;
 
+                var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
                 DatabaseTask task;
                 try
@@ -81,12 +82,10 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         string.Format("Could not create instance of a task: {0}", taskAsBytes),
                         e);
 
-                    DeleteTask();
+                    alreadySeen.Add(currentId);
                     continue;
                 }
 
-                var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
-                
                 if (indexesToSkip.Contains(task.Index))
                 {
                     if (logger.IsDebugEnabled)
@@ -115,22 +114,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
 
             return null;
-        }
-
-        private void DeleteTask()
-        {
-            try
-            {
-                Api.JetDelete(session, Tasks);
-            }
-            catch (EsentErrorException e)
-            {
-                logger.WarnException("Failed to delete task", e);
-
-                if (e.Error == JET_err.WriteConflict)
-                    throw new ConcurrencyException("Failed to delete task");
-                throw;
-            }
         }
 
         public IEnumerable<TaskMetadata> GetPendingTasksForDebug()
@@ -191,6 +174,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
                 var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
 
+                var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 DatabaseTask existingTask;
                 try
                 {
@@ -202,11 +186,10 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         string.Format("Could not create instance of a task: {0}", taskAsBytes),
                         e);
 
-                    DeleteTask();
+                    alreadySeen.Add(currentId);
                     continue;
                 }
 
-                var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 if (indexesToSkip.Contains(existingTask.Index))
                 {
                     if (logger.IsDebugEnabled)

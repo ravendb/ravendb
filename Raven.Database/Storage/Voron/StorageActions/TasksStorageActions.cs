@@ -96,6 +96,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     if (value == null)
                         continue;
 
+                    var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
                     DatabaseTask task;
                     try
                     {
@@ -104,12 +105,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     catch (Exception e)
                     {
                         Logger.ErrorException(
-                            string.Format("Could not create instance of a task: {0}", value),
-                            e);
+                            string.Format("Could not create instance of a task: {0}", value), e);
+
+                        alreadySeen.Add(currentId);
                         continue;
                     }
-
-                    var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
 
                     if (indexesToSkip.Contains(task.Index))
                     {
@@ -175,8 +175,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     catch (Exception e)
                     {
                         Logger.ErrorException(string.Format("Could not create instance of a task: {0}", value), e);
-
-                        RemoveTask(iterator.CurrentKey, task.Index, type);
+                        alreadySeen.Add(currentId);
                         continue;
                     }
 
