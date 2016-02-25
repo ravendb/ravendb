@@ -1,6 +1,10 @@
 <section id="requestTracingContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+
     <div style="height: 65%; position: relative;">
-        <button type="button" class="btn btn-default" data-bind="click: fetchRequestTracing"><i class="fa fa-refresh"></i></button>
+
+        <button class="btn btn-default" data-bind="autoRefresh: { duration: 10000, onRefresh: $root.fetchRequestTracing.bind($root), autoStart:true }">
+        </button>
+
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setStatusAll">
                 <input type="radio" name="options" id="option1"> All requests <span class="badge" data-bind="text: allEntries().length"></span>

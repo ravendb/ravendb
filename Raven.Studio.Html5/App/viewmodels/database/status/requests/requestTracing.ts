@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getRequestTracingCommand = require("commands/database/debug/getRequestTracingCommand");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 
 class requestTracing extends viewModelBase {
     
@@ -12,6 +13,8 @@ class requestTracing extends viewModelBase {
 
     constructor() {
         super();
+
+        autoRefreshBindingHandler.install();
 
         this.failedCount = ko.computed(() => this.allEntries().count(l => l.StatusCode >= 400));
         this.successCount = ko.computed(() => this.allEntries().count(l => l.StatusCode < 400));

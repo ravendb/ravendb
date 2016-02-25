@@ -4,6 +4,7 @@ import getRunningTasksCommand = require("commands/operations/getRunningTasksComm
 import moment = require("moment");
 import document = require("models/database/documents/document");
 import runningTask = require("models/database/debug/runningTask");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 
 type taskType = {
     name: string;
@@ -30,6 +31,8 @@ class runningTasks extends viewModelBase {
 
     constructor() {
         super();
+
+        autoRefreshBindingHandler.install();
 
         this.searchTextThrottled = this.searchText.throttle(200);
         this.activeDatabase.subscribe(() => this.fetchTasks());
