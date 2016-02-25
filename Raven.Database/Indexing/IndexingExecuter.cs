@@ -12,6 +12,7 @@ using System.Threading;
 using Lucene.Net.Index;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -98,14 +99,31 @@ namespace Raven.Database.Indexing
         {
             try
             {
-                var result = ExecuteTasksInternal();
-                if (result == false)
+                int retries = 5;
+                while (true)
                 {
-                    //we can cleanup the tasks failure count if have no more tasks
-                    tasksFailureCount.Clear();
-                }
+                    bool result;
+                    try
+                    {
+                        result = ExecuteTasksInternal();
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        if (retries-- > 0)
+                        {
+                            Log.Warn("Got 5 consecutive concurrency exception when trying to execute task, giving up and will try again later");
+                            return true;
+                        }
+                        continue;
+                    }
+                    if (result == false)
+                    {
+                        //we can cleanup the tasks failure count if have no more tasks
+                        tasksFailureCount.Clear();
+                    }
 
-                return result;
+                    return result;
+                }
             }
             catch (Exception e)
             {

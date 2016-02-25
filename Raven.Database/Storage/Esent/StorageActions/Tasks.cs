@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Tasks;
 
@@ -139,7 +140,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 logger.WarnException("Failed to delete task", e);
 
                 if (e.Error == JET_err.WriteConflict)
-                    return;
+                    throw new ConcurrencyException("Failed to delete task");
                 throw;
             }
         }
