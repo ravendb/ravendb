@@ -131,9 +131,9 @@ class logs extends viewModelBase {
                 var dateMoment = moment(time);
                 var humanized = "", formattedDateTime = "";
                 var agoInMs = dateMoment.diff(this.now());
-                if (chainHumanized == true)
+                if (chainHumanized)
                     humanized = moment.duration(agoInMs).humanize(true);
-                if (chainDateTime == true)
+                if (chainDateTime)
                     formattedDateTime = dateMoment.format(" (MM/DD/YY, h:mma)");
                 return humanized + formattedDateTime;
             });

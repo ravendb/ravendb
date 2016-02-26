@@ -14,6 +14,7 @@ interface autoRefreshContext extends autoRefreshConfigDto {
     path: D3.Selection;
     refreshing: KnockoutObservable<boolean>;
     autorefreshEnabled: KnockoutObservable<boolean>;
+    disposed: boolean;
 }
 
 class autoRefreshBindingHandler {
@@ -52,6 +53,15 @@ class autoRefreshBindingHandler {
 
         var childBindingContext = bindingContext.createChildContext(context, null, context => ko.utils.extend(context, autoRefreshBindingHandler));
         ko.applyBindingsToDescendants(childBindingContext, element);
+
+        ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
+            // break animation (if any)
+            context.path
+                .transition()
+                .duration(0);
+
+            context.disposed = true;
+        });
 
         return { controlsDescendantBindings: true };
     }
@@ -118,8 +128,9 @@ class autoRefreshBindingHandler {
             refreshing: ko.observable<boolean>(false),
             duration: config.duration,
             onRefresh: config.onRefresh,
-            autoStart: config.autoStart
-        };
+            autoStart: config.autoStart,
+            disposed: false
+    };
     }
 
     private static animatePath(context: autoRefreshContext) {
@@ -132,7 +143,11 @@ class autoRefreshBindingHandler {
                 context.refreshing(true);
 
                 context.onRefresh()
-                    .always(() => this.animatePath(context));
+                    .always(() => {
+                        if (!context.disposed) {
+                            this.animatePath(context);    
+                        }
+                    });
             });
     }
 
