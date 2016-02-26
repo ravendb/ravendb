@@ -39,7 +39,12 @@
                             <div class="form-group">
                                 <label for="location" class="col-sm-2 control-label">Location</label>
                                 <div class="col-sm-5">
-                                    <input type="text" required class="form-control" id="location" data-bind="value: backupLocation" placeholder="C:&#92;path-to-your-backup-folder">
+                                    <input type="text" required class="form-control" id="location" data-bind="value: backupLocation, valueUpdate: 'afterkeydown'" placeholder="C:&#92;path-to-your-backup-folder">
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="visible: displaySameDriveWarning">
+                                <div class="col-sm-5 col-sm-offset-2 text-warning">
+                                    <i class="fa fa-warning"></i> Backup to database drive is not suggested.
                                 </div>
                             </div>
                             <div class="form-group">
@@ -91,7 +96,12 @@
                             <div class="form-group">
                                 <label for="location" class="col-sm-2 control-label">Location</label>
                                 <div class="col-sm-5">
-                                    <input type="text" required class="form-control" id="Text1" data-bind="value: backupLocation" placeholder="C:&#92;path-to-your-backup-folder">
+                                    <input type="text" required class="form-control" id="Text1" data-bind="value: backupLocation, valueUpdate: 'afterkeydown'" placeholder="C:&#92;path-to-your-backup-folder">
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="visible: displaySameDriveWarning">
+                                <div class="col-sm-5 col-sm-offset-2 text-warning">
+                                    <i class="fa fa-warning"></i> Backup to filesystem drive is not suggested.
                                 </div>
                             </div>
                             <div class="form-group">
@@ -116,7 +126,7 @@
 
             <div role="tabpanel" class="tab-pane" id="backupCs">
                 <form class="form-horizontal" role="form" data-bind="submit: startCsBackup">
-                    <div class="panel panel-default" data-bind="with: fsBackupOptions">
+                    <div class="panel panel-default" data-bind="with: csBackupOptions">
                         <div class="panel-heading">
                             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                             <div class="btn-group">
@@ -143,7 +153,12 @@
                             <div class="form-group">
                                 <label for="location" class="col-sm-2 control-label">Location</label>
                                 <div class="col-sm-5">
-                                    <input type="text" required class="form-control" id="Text1" data-bind="value: backupLocation" placeholder="C:&#92;path-to-your-backup-folder">
+                                    <input type="text" required class="form-control" id="Text1" data-bind="value: backupLocation, valueUpdate: 'afterkeydown'" placeholder="C:&#92;path-to-your-backup-folder">
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="visible: displaySameDriveWarning">
+                                <div class="col-sm-5 col-sm-offset-2 text-warning">
+                                    <i class="fa fa-warning"></i> Backup to counter storage drive is not suggested.
                                 </div>
                             </div>
                             <div class="form-group">

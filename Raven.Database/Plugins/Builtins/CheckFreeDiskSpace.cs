@@ -83,7 +83,7 @@ namespace Raven.Database.Plugins.Builtins
 
             var roots = new List<PathToCheck>();
             var unc = new List<PathToCheck>();
-            foreach (var pathToCheck in pathsToCheck.Where(pathToCheck => pathToCheck.Path != null && Path.IsPathRooted(pathToCheck.Path) && pathToCheck.Path.StartsWith("\\\\") == false))
+            foreach (var pathToCheck in pathsToCheck.Where(pathToCheck => pathToCheck.Path != null))
             {
                 if (Path.IsPathRooted(pathToCheck.Path) && pathToCheck.Path.StartsWith("\\\\") == false)
                 {

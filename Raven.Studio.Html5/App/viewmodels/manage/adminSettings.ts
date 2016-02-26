@@ -57,7 +57,7 @@ class adminSettings extends viewModelBase {
             consoleRoute,
             studioConfigRoute
         ];
-        if (license.licenseStatus().Attributes.hotSpare === "true")
+        if (license.licenseStatus() && license.licenseStatus().Attributes.hotSpare === "true")
             routes.push(hotSpareRoute);
 
         this.router = durandalRouter.createChildRouter()
