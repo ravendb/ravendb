@@ -385,6 +385,8 @@ namespace Voron.Impl
 
             _scratchPagesTable[pageNumber.Value] = pageFromScratchBuffer;
 
+            TrackWritablePage(page);
+
             page.Lower = (ushort)Constants.PageHeaderSize;
             page.Flags = flags;
 
@@ -401,9 +403,7 @@ namespace Voron.Impl
             _dirtyPages.Add(page.PageNumber);
 
             if (numberOfPages > 1)
-                _dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
-
-            TrackWritablePage(page);
+                _dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);           
 
             return page;
         }
@@ -695,12 +695,10 @@ namespace Voron.Impl
             return this;
         }
 
-#if VALIDATE
+#if VALIDATE_PAGES
 
         private Dictionary<long, ulong> readOnlyPages = new Dictionary<long, ulong>();
         private Dictionary<long, ulong> writablePages = new Dictionary<long, ulong>();
-
-        public bool treeCreationTransaction;
 
         private void ValidateAllPages()
         {
@@ -735,7 +733,7 @@ namespace Voron.Impl
                 var page = this.GetReadOnlyPage(pageNumber);
 
                 ulong pageHash = Hashing.XXHash64.Calculate(page.Base, page.PageSize);
-                if (pageHash == writableKey.Value && treeCreationTransaction == false)
+                if (pageHash == writableKey.Value)
                     throw new VoronUnrecoverableErrorException("Writable key is not dirty (which means you are asking for a page modification for no reason).");
             }
         }
@@ -777,23 +775,28 @@ namespace Voron.Impl
             }
         }
 
+        public void NotifyCreationTransaction() { }
+
 #else
         // This will only be used as placeholder for compilation when not running with validation started.
 
-        [Conditional("VALIDATE")]
+        [Conditional("VALIDATE_PAGES")]
         private void ValidateAllPages() { }
 
-        [Conditional("VALIDATE")]
+        [Conditional("VALIDATE_PAGES")]
         private void ValidateReadOnlyPages() { }
 
-        [Conditional("VALIDATE")]
+        [Conditional("VALIDATE_PAGES")]
         private void TrackWritablePage(Page page) { }
 
-        [Conditional("VALIDATE")]
+        [Conditional("VALIDATE_PAGES")]
         private void TrackReadOnlyPage(Page page) { }
 
-        [Conditional("VALIDATE")]
+        [Conditional("VALIDATE_PAGES")]
         private void UntrackPage(long pageNumber) { }
+
+        [Conditional("VALIDATE_PAGES")]
+        public void NotifyCreationTransaction() { }
 #endif
 
     }
