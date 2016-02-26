@@ -66,10 +66,7 @@ namespace Voron.Data.Compact
 
             var state = new PrefixTreeRootMutableState(tx, header);
             state.TranslationTable.Initialize(subtreeDepth);
-
-            var tablePage = InternalTable.Allocate(tx, state);
-            state.Table = tablePage.PageNumber;
-
+            state.Table.Initialize();
             state.IsModified = true;
 
             return new PrefixTree(tx, parent, state, treeName);    
