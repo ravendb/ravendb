@@ -29,11 +29,11 @@ namespace Voron.Benchmark
                 });
         }
 
-        public unsafe long SetHelper(Table table, out TableValueBuilder builder, params object[] args)
+        public unsafe long SetHelper(Table table, params object[] args)
         {
             var handles1 = new List<GCHandle>();
 
-            builder = new TableValueBuilder();
+            var builder = new TableValueBuilder();
             foreach (var o in args)
             {
                 byte[] buffer;
@@ -101,12 +101,12 @@ namespace Voron.Benchmark
             Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw));
 
             //Doesnt work yet. Problems with some data not being written when multiple transactions are involved.
-            //Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw));
+            Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw));
 
             Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw));
 
             //Doesnt work yet. Problems with some data not being written when multiple transactions are involved.
-            //Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw));
+            Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw));
 
             Benchmark.Time("Data for tests", sw => FillSeqOneTransaction(sw));
 
@@ -156,12 +156,15 @@ namespace Voron.Benchmark
                     {
                         ms.Position = 0;
 
-                        TableValueBuilder builder;
-                        var recordId = SetHelper(docs, out builder, l.ToString("0000000000000000"), ms);
+                        var recordId = SetHelper(docs, l.ToString("0000000000000000"), ms);
 
-                        int size;
-                        byte* key = builder.Read(0, out size);
-                        tree.Add(new Slice(key, (ushort)size), recordId);
+                        int dataSize;
+                        byte* data = docs.DirectRead(recordId, out dataSize);
+                        var r = new TableValueReader(data, dataSize);
+
+                        int keySize;
+                        var key = r.Read(0, out keySize);
+                        tree.Add(new Slice(key, (ushort)keySize), recordId);
                     }
 
                     tx.Commit();
@@ -198,12 +201,15 @@ namespace Voron.Benchmark
                     {
                         ms.Position = 0;
 
-                        TableValueBuilder builder;
-                        var recordId = SetHelper(docs, out builder, i.ToString("0000000000000000"), ms);
+                        var recordId = SetHelper(docs, i.ToString("0000000000000000"), ms);
 
-                        int size;
-                        byte* key = builder.Read(0, out size);
-                        tree.Add(new Slice(key, (ushort)size), recordId);
+                        int dataSize;
+                        byte* data = docs.DirectRead(recordId, out dataSize);
+                        var r = new TableValueReader(data, dataSize);
+
+                        int keySize;
+                        var key = r.Read(0, out keySize);
+                        tree.Add(new Slice(key, (ushort)keySize), recordId);
                     }
 
                     tx.Commit();
@@ -245,12 +251,15 @@ namespace Voron.Benchmark
 
                             enumerator.MoveNext();
 
-                            TableValueBuilder builder;
-                            var recordId = SetHelper(docs, out builder, enumerator.Current.ToString("0000000000000000"), ms);
+                            var recordId = SetHelper(docs, enumerator.Current.ToString("0000000000000000"), ms);
 
-                            int size;
-                            byte* key = builder.Read(0, out size);
-                            tree.Add(new Slice(key, (ushort)size), recordId);
+                            int dataSize;
+                            byte* data = docs.DirectRead(recordId, out dataSize);
+                            var r = new TableValueReader(data, dataSize);
+
+                            int keySize;
+                            var key = r.Read(0, out keySize);
+                            tree.Add(new Slice(key, (ushort)keySize), recordId);
                         }
 
                         tx.Commit();
@@ -291,12 +300,15 @@ namespace Voron.Benchmark
                         {
                             ms.Position = 0;
 
-                            TableValueBuilder builder;
-                            var recordId = SetHelper(docs, out builder, (counter++).ToString("0000000000000000"), ms);
+                            var recordId = SetHelper(docs, (counter++).ToString("0000000000000000"), ms);
 
-                            int size;
-                            byte* key = builder.Read(0, out size);
-                            tree.Add(new Slice(key, (ushort)size), recordId);
+                            int dataSize;
+                            byte* data = docs.DirectRead(recordId, out dataSize);
+                            var r = new TableValueReader(data, dataSize);
+
+                            int keySize;
+                            var key = r.Read(0, out keySize);
+                            tree.Add(new Slice(key, (ushort)keySize), recordId);
                         }
 
                         tx.Commit();
