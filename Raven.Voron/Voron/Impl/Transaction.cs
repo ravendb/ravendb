@@ -775,8 +775,6 @@ namespace Voron.Impl
             }
         }
 
-        public void NotifyCreationTransaction() { }
-
 #else
         // This will only be used as placeholder for compilation when not running with validation started.
 
@@ -794,9 +792,6 @@ namespace Voron.Impl
 
         [Conditional("VALIDATE_PAGES")]
         private void UntrackPage(long pageNumber) { }
-
-        [Conditional("VALIDATE_PAGES")]
-        public void NotifyCreationTransaction() { }
 #endif
 
     }
