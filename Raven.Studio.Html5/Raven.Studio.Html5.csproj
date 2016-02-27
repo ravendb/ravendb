@@ -33,6 +33,7 @@
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\forceLicenseUpdate.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugTasksSummaryCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStudioConfig.ts" />
     <TypeScriptCompile Include="App\commands\licenseCheckConnectivityCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
