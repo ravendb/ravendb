@@ -43,7 +43,9 @@
                 </div>
             </div>
             <span><br/></span>
-            <div id="filesTree" data-bind="tree: { selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories }" ></div>
+            <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: '#uploadQueueContainer', bottomMargin: 5}">
+                <div id="filesTree" data-bind="tree: { selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories }"></div>
+            </div>
         </div>
         <div class="col-md-10">
             <div class="btn-toolbar" role="toolbar">
