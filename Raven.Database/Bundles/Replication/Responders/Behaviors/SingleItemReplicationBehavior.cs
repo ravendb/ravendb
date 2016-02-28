@@ -137,6 +137,31 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                                                                     }));
             }
 
+        public void ResolveConflict(string id, RavenJObject metadata, TExternal incoming, TInternal existingItem)
+        {
+            RavenJObject resolvedMetadataToSave;
+            TExternal resolvedItemToSave;
+            if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
+            {
+                if (metadata.ContainsKey("Raven-Remove-Document-Marker") &&
+                    metadata.Value<bool>("Raven-Remove-Document-Marker"))
+                {
+                    DeleteItem(id, null);
+                    MarkAsDeleted(id, metadata);
+                }
+                else
+                {
+                    var resolvedItemJObject = resolvedItemToSave as RavenJObject;
+                    if (resolvedItemJObject != null)
+                        ExecuteRemoveConflictOnPutTrigger(id, metadata, resolvedItemJObject);
+                    resolvedMetadataToSave.Remove(Constants.RavenReplicationConflict);
+                    resolvedMetadataToSave.Remove(Constants.RavenReplicationConflictDocument);
+                    AddWithoutConflict(id, null, resolvedMetadataToSave, resolvedItemToSave);
+
+                }
+            }
+        }
+
         private void ExecuteRemoveConflictOnPutTrigger(string id, RavenJObject metadata, RavenJObject resolvedItemJObject)
         {
 //since we are in replication handler, triggers are disabled, and if we are replicating PUT of conflict resolution,

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -25,9 +26,11 @@ using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Responders;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client.Connection;
+using Raven.Database.Actions;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Config;
+using Raven.Database.Queries;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
@@ -244,6 +247,155 @@ namespace Raven.Database.Bundles.Replication.Controllers
             }
         }
 
+        private const int ConflictBatchSize = 1024;
+
+        [HttpGet]
+        [RavenRoute("replication/forceConflictResolution")]
+        [RavenRoute("databases/{databaseName}/replication/forceConflictResolution")]
+        public HttpResponseMessage ForceConflictResolution()
+        {
+            long operationId;
+            ConflictResolveStatus status = new ConflictResolveStatus
+            {
+                Cts = new CancellationTokenSource(),
+                Completed = false,
+                Faulted = false,
+                State = "Not started",
+                FailedConflictResolvingAttempts = 0
+            };
+            Task conflictResolvingTask = Task.Run(() =>
+            {
+                var resultsProcessed = 0;
+                List<ConflictToResolve> conflicts = new List<ConflictToResolve>();
+                var res = Database.Queries.Query(Constants.ConflictDocumentsIndex, new IndexQuery {Query = String.Empty, PageSize = int.MaxValue}, status.Cts.Token);
+                res.Results.ForEach(conflict =>
+                {
+                    status.Cts.Token.ThrowIfCancellationRequested();
+                    AddSingleConflict(conflict, conflicts);
+                    resultsProcessed++;
+                    if (resultsProcessed%ConflictBatchSize == 0)
+                    {
+                        HandleBatchOfConflicts(conflicts, status);
+                    }
+                });
+                //Handle the remaining conflicts (last batch)
+                HandleBatchOfConflicts(conflicts, status);
+            }, status.Cts.Token);
+
+            conflictResolvingTask.ContinueWith(
+                task =>
+                {
+                    if (task.IsFaulted)
+                    {
+                        status.State = "Faulted";
+                        status.Faulted = true;
+                        status.Completed = false;
+                    }
+                    else if (task.IsCanceled)
+                    {
+                        status.State = "Canceled";
+                        status.Completed = false;
+                        status.Faulted = false;
+                    }
+                    else if (task.IsCompleted)
+                    {
+                        status.State = "Completed";
+                        status.Completed = true;
+                        status.Faulted = false;
+                    }
+                    status.Cts = null;
+                });
+            Database.Tasks.AddTask(conflictResolvingTask, status, new TaskActions.PendingTaskDescription
+            {
+                StartTime = DateTime.UtcNow,TaskType = TaskActions.PendingTaskType.ResolveConflicts
+            },out operationId, status.Cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = operationId
+            }, HttpStatusCode.Accepted);
+        }
+
+        private void HandleBatchOfConflicts(List<ConflictToResolve> conflicts, ConflictResolveStatus status)
+        {
+            using (Database.DocumentLock.Lock())
+            {
+                Database.TransactionalStorage.Batch(actions =>
+                {
+                    int i = 0;
+                    conflicts.ForEach(c => { HandleSingleConflictResolving(actions, c, status, ref i); });
+                });
+            }
+            conflicts.Clear();
+        }
+
+        private void HandleSingleConflictResolving(IStorageActionsAccessor actions, ConflictToResolve c, ConflictResolveStatus status,ref int i)
+        {
+            try
+            {
+                var replicationBehavior = new DocumentReplicationBehavior
+                {
+                    Actions = actions,
+                    Database = Database,
+                    ReplicationConflictResolvers = DocsReplicationConflictResolvers,
+                    Src = "DontCare"
+                };
+                replicationBehavior.ResolveConflict(c.Id, c.Metadata, c.Document,c.ExistingDocument); 
+            }
+            catch (Exception e)
+            {
+                status.FailedConflictResolvingAttempts++;
+                log.InfoException($"Failed to resolve conflict for document key: {c}", e);
+            }
+            finally
+            {
+                i++;
+            }
+        }
+
+        private void AddSingleConflict(RavenJObject conflict , List<ConflictToResolve> conflicts)
+        {
+            var conflictsJArray = conflict.Value<RavenJArray>("Conflicts");
+            JsonDocument conflict1 = null;
+            JsonDocument conflict2 = null;
+            Database.TransactionalStorage.Batch(actions =>
+            {
+                conflict1 = actions.Documents.DocumentByKey(conflictsJArray[0].Value<string>());
+                conflict2 = actions.Documents.DocumentByKey(conflictsJArray[1].Value<string>());
+            });
+            
+            JsonDocument remote;
+            JsonDocument local;
+            if (!conflict1.Metadata.Value<string>(Constants.RavenReplicationSource).Equals(Database.TransactionalStorage.Id.ToString()))
+            {
+                remote = conflict1;
+                local = conflict2;
+            }
+            else
+            {
+                remote = conflict2;
+                local = conflict1;
+            }
+            var id = conflict.Value<RavenJObject>("@metadata").Value<string>("@id");
+            conflicts.Add(new ConflictToResolve {Id=id,Document = remote.DataAsJson,Metadata = remote.Metadata, ExistingDocument = local});
+        }
+
+        private class ConflictToResolve
+        {
+            public string Id { get; set; }
+            public RavenJObject Document { get; set; }
+            public RavenJObject Metadata { get; set; }
+            public JsonDocument ExistingDocument { get; set; }
+        }
+
+        private class ConflictResolveStatus : IOperationState
+        {
+            public bool Completed { get; set; }
+            public bool Faulted { get; set; }
+            public long FailedConflictResolvingAttempts { get; set; }
+            public RavenJToken State { get; set; }
+            public CancellationTokenSource Cts { get; set; }
+        }
         [HttpPost]
         [RavenRoute("replication/replicateDocs")]
         [RavenRoute("databases/{databaseName}/replication/replicateDocs")]
