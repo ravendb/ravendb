@@ -14,6 +14,7 @@
   },
 
   "dependencies": {
+    "Jint": "2.7.1",
     "Lucene.Net": "3.0.4-*",
     "Lucene.Net.Contrib.Spatial.NTS": "3.0.4-*",
     "Raven.Client": "4.0.0-*",

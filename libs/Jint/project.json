@@ -1,0 +1,11 @@
+﻿{
+  "version": "2.7.1",
+  "frameworks": {
+    "dnxcore50": {
+      "bin": {
+        "assembly": "dnxcore50\\Jint.dll",
+        "pdb": "dnxcore50\\Jint.pdb"
+      }
+    }
+  }
+}
