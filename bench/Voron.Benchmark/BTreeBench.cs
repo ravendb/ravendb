@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 
 namespace Voron.Benchmark
 {
-    public class BTreeBench
+    public class BTreeBench : IHasStorageLocation
     {
+        public string Path => Configuration.Path + ".btree";
+
         private HashSet<long> _randomNumbers;
 
         public BTreeBench(HashSet<long> _randomNumbers)
@@ -23,39 +25,39 @@ namespace Voron.Benchmark
             Console.WriteLine("General BTree Benchmarking.");
             Console.WriteLine();
 
-            Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw));
+            Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw), this);
 
-            Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw));
+            Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw), this);
 
-            Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw));
+            Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw), this);
 
-            Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw));
+            Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw), this);
 
-            Benchmark.Time("Data for tests", sw => FillSeqOneTransaction(sw));
+            Benchmark.Time("Data for tests", sw => FillSeqOneTransaction(sw), this);
 
-            Benchmark.Time("read seq", ReadOneTransaction, delete: false);
+            Benchmark.Time("read seq", ReadOneTransaction, this, delete: false);
 
-            Benchmark.Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
-            Benchmark.Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
-            Benchmark.Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
-            Benchmark.Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
-            Benchmark.Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+            Benchmark.Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), this, delete: false);
+            Benchmark.Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), this, delete: false);
+            Benchmark.Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), this, delete: false);
+            Benchmark.Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), this, delete: false);
+            Benchmark.Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), this, delete: false);
 
 
-            Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), delete: false);
-            Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), delete: false);
-            Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), delete: false);
-            Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), delete: false);
-            Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), delete: false);
+            Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), this, delete: false);
+            Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), this, delete: false);
+            Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), this, delete: false);
+            Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), this, delete: false);
+            Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), this, delete: false);
 
-            Benchmark.Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
-            Benchmark.Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8));
-            Benchmark.Time("fill seq non then read parallel 16", stopwatch => ReadAndWriteOneTransaction(stopwatch, 16));
+            Benchmark.Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4), this);
+            Benchmark.Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8), this);
+            Benchmark.Time("fill seq non then read parallel 16", stopwatch => ReadAndWriteOneTransaction(stopwatch, 16), this);
         }
 
         private void FillRandomOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -86,7 +88,7 @@ namespace Voron.Benchmark
 
         private void FillSeqOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -94,7 +96,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
+                    //env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
                     tx.CreateTree("test");
 
                     tx.Commit();
@@ -119,7 +121,7 @@ namespace Voron.Benchmark
 
         private void FillRandomMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -127,7 +129,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
+                    //env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
                     tx.CreateTree("test");
 
                     tx.Commit();
@@ -155,7 +157,7 @@ namespace Voron.Benchmark
 
         private void FillSeqMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -163,7 +165,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
+                    //env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
                     tx.CreateTree("test");
 
                     tx.Commit();
@@ -192,7 +194,7 @@ namespace Voron.Benchmark
 
         private void ReadOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var countdownEvent = new CountdownEvent(concurrency);
 
@@ -229,7 +231,7 @@ namespace Voron.Benchmark
 
         private void IterateAllKeysInOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var countdownEvent = new CountdownEvent(concurrency);
 
@@ -267,7 +269,7 @@ namespace Voron.Benchmark
 
         private void ReadOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 sw.Start();
                 using (var tx = env.ReadTransaction())
@@ -293,7 +295,7 @@ namespace Voron.Benchmark
 
         private void ReadAndWriteOneTransaction(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Configuration.Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);

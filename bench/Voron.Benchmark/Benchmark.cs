@@ -8,12 +8,17 @@ using System.Threading.Tasks;
 
 namespace Voron.Benchmark
 {
+    public interface IHasStorageLocation
+    {
+        string Path { get; }
+    }
+
     public static class Benchmark
     {
-        public static void Time(string name, Action<Stopwatch> action, bool delete = true)
+        public static void Time(string name, Action<Stopwatch> action, IHasStorageLocation storage, bool delete = true)
         {
             if (delete)
-                DeleteDirectory(Configuration.Path);
+                DeleteDirectory(storage.Path);
 
             var sp = new Stopwatch();
             Console.Write("{0,-35}: running...", name);
