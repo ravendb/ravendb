@@ -64,9 +64,9 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private IEnumerable<User> AddDocuments(IDocumentStore store, int docCount = 10000)
+        private IEnumerable<User> AddDocuments(IDocumentStore store, int docCount = 5000)
         {
-            using (var bulkInsert = store.BulkInsert())
+            using (var bulkInsert = store.BulkInsert(options:new BulkInsertOptions {BatchSize = 16}))
             {
                 for (int i = 0; i < docCount; i++)
                 {

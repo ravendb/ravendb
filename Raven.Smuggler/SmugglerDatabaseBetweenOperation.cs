@@ -300,6 +300,7 @@ namespace Raven.Smuggler
             bulkInsertOperation.Report += text => ShowProgress(text);
             var jintHelper = new SmugglerJintHelper();
             jintHelper.Initialize(databaseOptions);
+            var isLastLoop = false;
             try
             {
                 while (true)
@@ -383,15 +384,15 @@ namespace Raven.Smuggler
                         var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();
                         
                         var lastEtagComparable = new ComparableByteArray(lastEtag);
-                        if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) <= 0)
+                        if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) <= 0 && !isLastLoop)
                         {
                             if (totalCount == beforeCount)
-                            {
-                                lastEtag = EtagUtil.Increment(lastEtag, exportBatchSize);
-                                ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+                            {                                
+                                isLastLoop = true;
+                                ShowProgress("Got no new results , trying one more loop from: {0}", lastEtag);
                             }
                             else
-                                ShowProgress("Finished streaming batch, but haven't reached an end (last etag = {0})", lastEtag);
+                                ShowProgress("Finished streaming batch, but haven't reached an end (last reached etag = {0})", lastEtag);
                             continue;
                         }
 
