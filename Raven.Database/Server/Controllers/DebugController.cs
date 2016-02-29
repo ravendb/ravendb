@@ -596,7 +596,34 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/debug/tasks")]
         public HttpResponseMessage Tasks()
         {
-            return GetMessageWithObject(DebugInfoProvider.GetTasksForDebug(Database));
+            return new HttpResponseMessage
+            {
+                Content = new PushStreamContent((stream, content, context) =>
+                {
+                    using (var writer = new StreamWriter(stream))
+                    {
+                        var tasks = DebugInfoProvider.GetTasksForDebug(Database);
+
+                        writer.WriteLine("Id,IndexId,IndexName,AddedTime,Type");
+                        foreach (var task in tasks)
+                        {
+                            writer.WriteLine("{0},{1},{2},{3},{4}", task.Id, task.IndexId, task.IndexName, task.AddedTime, task.Type);
+                        }
+                        writer.Flush();
+                        stream.Flush();
+                    }
+                })
+                {
+                    Headers =
+                    {
+                        ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                        {
+                            FileName = "tasks.csv",
+                        },
+                        ContentType = new MediaTypeHeaderValue("text/csv")
+                    }
+                }
+            };
         }
 
         [HttpGet]
