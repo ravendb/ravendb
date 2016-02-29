@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
     [CLSCompliant(false)]
     public class SchemaCreator
     {
-        public const string SchemaVersion = "5.1";
+        public const string SchemaVersion = "5.2";
         private readonly Session session;
 
         public SchemaCreator(Session session)
@@ -649,7 +649,13 @@ namespace Raven.Storage.Esent
                           {
                               szIndexName = "by_index_and_task_type",
                               szKey = "+for_index\0+task_type\0\0",
-                              grbit = CreateIndexGrbit.IndexIgnoreNull,
+                              grbit = CreateIndexGrbit.IndexIgnoreNull
+                          },
+                          new JET_INDEXCREATE
+                          {
+                              szIndexName = "by_task_type",
+                              szKey = "+task_type\0\0",
+                              grbit = CreateIndexGrbit.IndexIgnoreNull
                           });
         }
 

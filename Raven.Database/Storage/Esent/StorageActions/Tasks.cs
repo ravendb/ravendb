@@ -61,15 +61,45 @@ namespace Raven.Database.Storage.Esent.StorageActions
         public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes, HashSet<IComparable> alreadySeen)
             where T : DatabaseTask
         {
-            Api.MoveBeforeFirst(session, Tasks);
+            var expectedType = typeof(T).FullName;
+            Api.JetSetCurrentIndex(session, Tasks, "by_task_type");
 
-            while (Api.TryMoveNext(session, Tasks))
+            Api.MakeKey(session, Tasks, expectedType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
+            {
+                return null;
+            }
+
+            Api.MakeKey(session, Tasks, expectedType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+
+            do
             {
                 var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
-                if (taskType != typeof(T).FullName)
+                // esent index ranges are approximate, and we need to check them ourselves as well
+                if (taskType != expectedType)
                     continue;
 
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
+                var index = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]).Value;
+                if (indexesToSkip.Contains(index))
+                {
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("Skipping task id: {0} for index id: {1}", currentId, index);
+                    continue;
+                }
+
+                if (alreadySeen.Add(currentId) == false)
+                    continue;
+
+                if (allIndexes.Contains(index) == false)
+                {
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, index);
+
+                    continue;
+                }
+
                 var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
                 DatabaseTask task;
                 try
@@ -86,24 +116,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     continue;
                 }
 
-                if (indexesToSkip.Contains(task.Index))
-                {
-                    if (logger.IsDebugEnabled)
-                        logger.Debug("Skipping task id: {0} for index id: {1}", currentId, task.Index);
-                    continue;
-                }
-
-                if (alreadySeen.Add(currentId) == false)
-                    continue;
-
-                if (allIndexes.Contains(task.Index) == false)
-                {
-                    if (logger.IsDebugEnabled)
-                        logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, task.Index);
-
-                    continue;
-                }
-
                 if (logger.IsDebugEnabled)
                     logger.Debug("Fetched task id: {0}", currentId);
 
@@ -111,7 +123,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 MergeSimilarTasks(task, alreadySeen, indexesToSkip, allIndexes);
 
                 return (T)task;
-            }
+
+            } while (Api.TryMoveNext(session, Tasks));
 
             return null;
         }
@@ -140,25 +153,35 @@ namespace Raven.Database.Storage.Esent.StorageActions
         {
             var expectedTaskType = task.GetType().FullName;
 
-            Api.JetSetCurrentIndex(session, Tasks, "by_index_and_task_type");
-
             if (task.SeparateTasksByIndex)
             {
+                Api.JetSetCurrentIndex(session, Tasks, "by_index_and_task_type");
+
                 Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
                 Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
-                // there are no tasks matching the current one, just return
                 if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
                 {
+                    // there are no tasks matching the current one, just return
                     return;
                 }
+
                 Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
                 Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
                 Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
             }
             else
             {
-                if (Api.TryMoveFirst(session, Tasks) == false)
+                Api.JetSetCurrentIndex(session, Tasks, "by_task_type");
+
+                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
+                {
+                    // there are no tasks matching the current one, just return
                     return;
+                }
+
+                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
             }
 
             var totalKeysToProcess = task.NumberOfKeys;
@@ -167,14 +190,32 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (totalKeysToProcess >= 5 * 1024)
                     break;
 
+                var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
                 // esent index ranges are approximate, and we need to check them ourselves as well
-                if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != expectedTaskType)
+                if (taskType != expectedTaskType)
                     continue;
 
-                var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
-                var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
-
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
+                var index = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]).Value;
+                if (indexesToSkip.Contains(index))
+                {
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("Skipping task id: {0} for index id: {1}", currentId, index);
+                    continue;
+                }
+
+                if (alreadySeen.Add(currentId) == false)
+                    continue;
+
+                if (allIndexes.Contains(index) == false)
+                {
+                    if (logger.IsDebugEnabled)
+                        logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, index);
+
+                    continue;
+                }
+
+                var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
                 DatabaseTask existingTask;
                 try
                 {
@@ -187,24 +228,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
                         e);
 
                     alreadySeen.Add(currentId);
-                    continue;
-                }
-
-                if (indexesToSkip.Contains(existingTask.Index))
-                {
-                    if (logger.IsDebugEnabled)
-                        logger.Debug("Skipping task id: {0} for index id: {1}", currentId, existingTask.Index);
-                    continue;
-                }
-
-                if (alreadySeen.Add(currentId) == false)
-                    continue;
-
-                if (allIndexes.Contains(existingTask.Index) == false)
-                {
-                    if (logger.IsDebugEnabled)
-                        logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, existingTask.Index);
-
                     continue;
                 }
 
