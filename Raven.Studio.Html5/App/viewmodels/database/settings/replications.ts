@@ -21,6 +21,7 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import replicationPatchScript = require("models/database/replication/replicationPatchScript");
+import ResolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 
 class replications extends viewModelBase {
 
@@ -324,6 +325,15 @@ class replications extends viewModelBase {
             alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
         }
 
+    }
+
+    sendResolveAllConflictsCommand() {
+        var db = this.activeDatabase();
+        if (db) {
+            new ResolveAllConflictsCommand(db).execute();
+        } else {
+            alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
+        }
     }
 
     saveServerPrefixForHiLo() {

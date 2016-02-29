@@ -27,10 +27,11 @@ namespace Raven.Database.Bundles.Replication.Plugins
             if (existingDocumentIsInConflict && existingDocumentIsDeleted == false)
             {
                 var conflictIds =
-                    existingDoc.DataAsJson.Value<RavenJArray>("Conflicts")
+                    existingDoc.DataAsJson.Value<RavenJArray>("Conflicts")?
                                .Select(x => x.Value<string>())
                                .ToArray();
-
+                if (conflictIds == null)
+                    return false;
                 if (conflictIds.Length == 0)
                     return false;
 

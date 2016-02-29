@@ -173,6 +173,7 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
+    <Content Include="App\commands\database\replication\resolveAllConflictsCommand.ts" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <Content Include="App\views\common\deleteDocuments.html" />

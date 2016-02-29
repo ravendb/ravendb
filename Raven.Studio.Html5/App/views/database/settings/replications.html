@@ -332,22 +332,30 @@
                 </div>
             </div>
         </div>
-        <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
-            <div class="panel-heading">
-                <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
-                <span style="margin-left: 5px;">
+    <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
+        <div class="panel-heading">
+            <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll"/>
+            <span style="margin-left: 5px;">
                     Skip index replication for all destinations
                 </span>
-            </div>
-            <div class="panel-heading">
-                <button type="submit" data-bind="click:sendReplicateAllCommand, enable: !isSetupSaveEnabled()" class="btn btn-primary" title="Replicate Indexes To All Destinations">
-                    <i class="fa fa-send"></i>
-                </button>
-                <span style="margin-left: 5px;">
+        </div>
+        <div class="panel-heading">
+            <button type="submit" data-bind="click:sendResolveAllConflictsCommand" class="btn btn-primary" title="Resolve all existing conflict acording to the current conflict resolution">
+                <i class="fa fa-send"></i>
+            </button>
+            <span style="margin-left: 5px;">
+                Resolve all existing conflict acording to the current conflict resolution
+            </span>
+        </div>
+        <div class="panel-heading">
+            <button type="submit" data-bind="click:sendReplicateAllCommand, enable: !isSetupSaveEnabled()" class="btn btn-primary" title="Replicate Indexes To All Destinations">
+                <i class="fa fa-send"></i>
+            </button>
+            <span style="margin-left: 5px;">
                     Replicate all indexes and transformers to configured destinations
                 </span>
-            </div>
         </div>
+    </div>
         <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
             <div class="panel-heading">
                 <button data-bind="click: saveServerPrefixForHiLo, enable: isServerPrefixForHiLoSaveEnabled" type="submit" class="btn btn-primary" title="Save changes">
