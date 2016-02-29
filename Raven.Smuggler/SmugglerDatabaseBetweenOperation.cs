@@ -286,7 +286,7 @@ namespace Raven.Smuggler
         {
             var now = SystemTime.UtcNow;
 
-            string lastEtag = databaseOptions.StartDocsEtag;
+            var lastEtag = databaseOptions.StartDocsEtag;
             var totalCount = 0;
             var lastReport = SystemTime.UtcNow;
             var reportInterval = TimeSpan.FromSeconds(2);
@@ -306,63 +306,23 @@ namespace Raven.Smuggler
                 {
                     try
                     {
+                        var beforeCount = totalCount;
                         if (exportStoreSupportedFeatures.IsDocsStreamingSupported)
                         {
-                            ShowProgress("Streaming documents from " + lastEtag);
-                            using (var documentsEnumerator = await exportStore.AsyncDatabaseCommands.StreamDocsAsync(lastEtag))
-                            {
-                                while (await documentsEnumerator.MoveNextAsync())
-                                {
-                                    var document = documentsEnumerator.Current;
-                                    var metadata = document.Value<RavenJObject>("@metadata");
-                                    var id = metadata.Value<string>("@id");
-                                    var etag = Etag.Parse(metadata.Value<string>("@etag"));
+                            ShowProgress("Streaming documents from " + lastEtag);	                        
+                            var res = await TransferStreamedDocuments(exportStore, 
+                                databaseOptions, 
+                                now, 
+                                jintHelper, 
+                                bulkInsertOperation, 
+                                reportInterval, 
+                                totalCount,
+                                lastEtag,
+                                lastReport);
 
-                                    lastEtag = etag;
-
-                                    if (!databaseOptions.MatchFilters(document))
-                                        continue;
-                                    if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
-                                        continue;
-
-                                    if (databaseOptions.StripReplicationInformation)
-                                        document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
-
-                                    if (databaseOptions.ShouldDisableVersioningBundle)
-                                        document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
-
-                                    document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
-
-                                    if (!string.IsNullOrEmpty(databaseOptions.TransformScript))
-                                    {
-                                        document = jintHelper.Transform(databaseOptions.TransformScript, document);
-                                        if (document == null)
-                                            continue;
-                                        metadata = document.Value<RavenJObject>("@metadata");
-                                    }
-
-                                    document.Remove("@metadata");
-                                    try
-                                    {
-                                        bulkInsertOperation.Store(document, metadata, id);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        if (databaseOptions.IgnoreErrorsAndContinue == false)
-                                            throw;
-
-                                        ShowProgress("IMPORT of a document {0} failed. Message: {1}", document, e.Message);
-                                    }
-
-                                    totalCount++;
-
-                                    if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                                    {
-                                        ShowProgress("Exported {0} documents", totalCount);
-                                        lastReport = SystemTime.UtcNow;
-                                    }
-                                }
-                            }
+                            totalCount = res.Item1;
+                            lastEtag = res.Item2;
+                            lastReport = res.Item3;
                         }
                         else
                         {
@@ -380,52 +340,21 @@ namespace Raven.Smuggler
                                     try
                                     {
                                         ShowProgress("Get documents from " + lastEtag);
-                                        var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, exportBatchSize, operationMetadata);
-                                        foreach (var jToken in documents)
-                                        {
-                                            var document = (RavenJObject)jToken;
-                                            var metadata = document.Value<RavenJObject>("@metadata");
-                                            var id = metadata.Value<string>("@id");
-                                            var etag = Etag.Parse(metadata.Value<string>("@etag"));
-                                            lastEtag = etag;
+                                        var res = await TransferDocumentsWithoutStreaming(exportStore, 
+                                            databaseOptions, 
+                                            exportBatchSize, 
+                                            operationMetadata, 
+                                            now, 
+                                            bulkInsertOperation, 
+                                            reportInterval,
+                                            totalCount,
+                                            lastEtag,
+                                            lastReport);
 
-                                            if (!databaseOptions.MatchFilters(document))
-                                                continue;
-                                            if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
-                                                continue;
+                                        totalCount = res.Item1;
+                                        lastEtag = res.Item2;
+                                        lastReport = res.Item3;
 
-                                            if (databaseOptions.StripReplicationInformation)
-                                                document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
-
-                                            if (databaseOptions.ShouldDisableVersioningBundle)
-                                                document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
-
-                                            document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
-
-                                            document.Remove("@metadata");
-                                            metadata.Remove("@id");
-                                            metadata.Remove("@etag");
-
-                                            try
-                                            {
-                                                bulkInsertOperation.Store(document, metadata, id);
-                                            }
-                                            catch (Exception e)
-                                            {
-                                                if (databaseOptions.IgnoreErrorsAndContinue == false)
-                                                    throw;
-
-                                                ShowProgress("IMPORT of a document {0} failed. Message: {1}", document, e.Message);
-                                            }
-
-                                            totalCount++;
-
-                                            if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                                            {
-                                                ShowProgress("Exported {0} documents", totalCount);
-                                                lastReport = SystemTime.UtcNow;
-                                            }
-                                        }
                                         break;
                                     }
                                     catch (Exception e)
@@ -450,12 +379,19 @@ namespace Raven.Smuggler
 
                         // In a case that we filter all the results, the formEtag hasn't updaed to the latest, 
                         // but we still need to continue until we finish all the docs.
+
                         var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();
+                        
                         var lastEtagComparable = new ComparableByteArray(lastEtag);
-                        if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+                        if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) <= 0)
                         {
-                            lastEtag = EtagUtil.Increment(lastEtag, exportBatchSize);
-                            ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+                            if (totalCount == beforeCount)
+                            {
+                                lastEtag = EtagUtil.Increment(lastEtag, exportBatchSize);
+                                ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+                            }
+                            else
+                                ShowProgress("Finished streaming batch, but haven't reached an end (last etag = {0})", lastEtag);
                             continue;
                         }
 
@@ -497,8 +433,127 @@ namespace Raven.Smuggler
             }
         }
 
+        private static async Task<Tuple<int, string, DateTime>> TransferDocumentsWithoutStreaming(DocumentStore exportStore, SmugglerDatabaseOptions databaseOptions, int exportBatchSize, OperationMetadata operationMetadata, DateTime now, BulkInsertOperation bulkInsertOperation, TimeSpan reportInterval, int totalCount, string fromEtag, DateTime lastReport)
+        {
+            var documents = await ((AsyncServerClient) exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, fromEtag, exportBatchSize, operationMetadata);
+            foreach (var jToken in documents)
+            {
+                var document = (RavenJObject) jToken;
+                var metadata = document.Value<RavenJObject>("@metadata");
+                var id = metadata.Value<string>("@id");
+                var etag = Etag.Parse(metadata.Value<string>("@etag"));
+                fromEtag = etag;
+
+                if (!databaseOptions.MatchFilters(document))
+                    continue;
+                if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
+                    continue;
+
+                if (databaseOptions.StripReplicationInformation)
+                    document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
+
+                if (databaseOptions.ShouldDisableVersioningBundle)
+                    document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
+
+                document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
+
+                document.Remove("@metadata");
+                metadata.Remove("@id");
+                metadata.Remove("@etag");
+
+                try
+                {
+                    bulkInsertOperation.Store(document, metadata, id);
+                }
+                catch (Exception e)
+                {
+                    if (databaseOptions.IgnoreErrorsAndContinue == false)
+                        throw;
+
+                    ShowProgress("IMPORT of a document {0} failed. Message: {1}", document, e.Message);
+                }
+
+                totalCount++;
+
+                if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                {
+                    ShowProgress("Exported {0} documents", totalCount);
+                    lastReport = SystemTime.UtcNow;
+                }
+            }
+            return Tuple.Create(totalCount, fromEtag, lastReport);
+        }
+
+        private static async Task<Tuple<int, Etag, DateTime>> TransferStreamedDocuments(DocumentStore exportStore, 
+            SmugglerDatabaseOptions databaseOptions, 
+            DateTime now, 
+            SmugglerJintHelper jintHelper, 
+            BulkInsertOperation bulkInsertOperation, 
+            TimeSpan reportInterval, 
+            int totalCount, 
+            string fromEtag, 
+            DateTime lastReport)
+        {
+            Etag lastReadEtag = fromEtag;
+            using (var documentsEnumerator = await exportStore.AsyncDatabaseCommands.StreamDocsAsync(fromEtag))
+            {
+                while (await documentsEnumerator.MoveNextAsync())
+                {
+                    var document = documentsEnumerator.Current;
+                    var metadata = document.Value<RavenJObject>("@metadata");
+                    var id = metadata.Value<string>("@id");
+                    var etag = Etag.Parse(metadata.Value<string>("@etag"));
+
+                    lastReadEtag = etag;
+
+                    if (!databaseOptions.MatchFilters(document))
+                        continue;
+                    if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
+                        continue;
+
+                    if (databaseOptions.StripReplicationInformation)
+                        document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
+
+                    if (databaseOptions.ShouldDisableVersioningBundle)
+                        document["@metadata"] = SmugglerHelper.DisableVersioning(document["@metadata"] as RavenJObject);
+
+                    document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
+
+                    if (!string.IsNullOrEmpty(databaseOptions.TransformScript))
+                    {
+                        document = jintHelper.Transform(databaseOptions.TransformScript, document);
+                        if (document == null)
+                            continue;
+                        metadata = document.Value<RavenJObject>("@metadata");
+                    }
+
+                    document.Remove("@metadata");
+                    try
+                    {
+                        bulkInsertOperation.Store(document, metadata, id);
+                    }
+                    catch (Exception e)
+                    {
+                        if (databaseOptions.IgnoreErrorsAndContinue == false)
+                            throw;
+
+                        ShowProgress("IMPORT of a document {0} failed. Message: {1}", document, e.Message);
+                    }
+
+                    totalCount++;
+
+                    if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                    {
+                        ShowProgress("Exported {0} documents", totalCount);
+                        lastReport = SystemTime.UtcNow;
+                    }
+                }
+            }
+            return Tuple.Create(totalCount, lastReadEtag, lastReport);
+        }
+
         [Obsolete("Use RavenFS instead.")]
-        private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerDatabaseOptions databaseOptions, int exportBatchSize)
+        private static async Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerDatabaseOptions databaseOptions, int exportBatchSize)
         {
             Etag lastEtag = databaseOptions.StartAttachmentsEtag;
             int totalCount = 0;

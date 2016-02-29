@@ -793,7 +793,7 @@ namespace Raven.Database.Actions
 
                     actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
                 });
-            });
+            });			
 
             long taskId;
             Database.Tasks.AddTask(deleteIndexTask, null, new TaskActions.PendingTaskDescription
