@@ -994,7 +994,10 @@ namespace Raven.Database.Prefetching
                 }
             }
 
-            return null;
+            if (minEtag != null && minEtag != Etag.Empty)
+                minEtag = Abstractions.Util.EtagUtil.Increment(minEtag, -1);
+
+            return minEtag;
         }
 
         private FutureIndexBatch GetCompletedFutureBatchWithMaxStartingEtag()
