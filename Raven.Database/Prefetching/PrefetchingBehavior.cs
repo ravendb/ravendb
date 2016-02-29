@@ -220,21 +220,24 @@ namespace Raven.Database.Prefetching
             foreach (FutureIndexBatch source in futureIndexBatches.Values.Where(x => etag.CompareTo(x.StartingEtag) > 0))
             {
                 ObserveDiscardedTask(source);
-                var cts = source.CancellationTokenSource;
-                if (cts != null)
-                {
-                    try
-                    {
-                        cts.Cancel();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // this is expected with a race against the prefetching queue
-                        
-                    }
-                }
+                DisposeCancellationToken(source.CancellationTokenSource);
                 FutureIndexBatch batch;
                 futureIndexBatches.TryRemove(source.StartingEtag, out batch);
+            }
+        }
+
+        private static void DisposeCancellationToken(CancellationTokenSource cts)
+        {
+            if (cts != null)
+            {
+                try
+                {
+                    cts.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // this is an expected race with the actual task, this is fine
+                }
             }
         }
 
@@ -1204,8 +1207,7 @@ namespace Raven.Database.Prefetching
             foreach (FutureIndexBatch source in futureIndexBatches.Values.Where(x => (indexingAge - x.Age) > numberOfIndexingGenerationsAllowed).ToList())
             {
                 ObserveDiscardedTask(source);
-                if (source.CancellationTokenSource != null)
-                    source.CancellationTokenSource.Cancel();
+                DisposeCancellationToken(source.CancellationTokenSource);
                 FutureIndexBatch batch;
                 futureIndexBatches.TryRemove(source.StartingEtag, out batch);  
             }
@@ -1424,18 +1426,7 @@ namespace Raven.Database.Prefetching
             //cancel any running future batches and prevent the creation of new ones
             foreach (var futureIndexBatch in futureIndexBatches)
             {
-                var cancellationTokenSource = futureIndexBatch.Value.CancellationTokenSource;
-                if (cancellationTokenSource != null)
-                {
-                    try
-                    {
-                        cancellationTokenSource.Cancel();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // race with the actual task, this is fine
-                    }
-                }
+                DisposeCancellationToken(futureIndexBatch.Value.CancellationTokenSource);
             }
 
             futureIndexBatches.Clear();
