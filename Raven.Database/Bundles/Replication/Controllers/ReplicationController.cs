@@ -255,60 +255,38 @@ namespace Raven.Database.Bundles.Replication.Controllers
         public HttpResponseMessage ForceConflictResolution()
         {
             long operationId;
-            ConflictResolveStatus status = new ConflictResolveStatus
+            var cts = new CancellationTokenSource();
+
+            var status = new ConflictResolveStatus
             {
-                Cts = new CancellationTokenSource(),
-                Completed = false,
-                Faulted = false,
-                State = "Not started",
                 FailedConflictResolvingAttempts = 0
             };
             Task conflictResolvingTask = Task.Run(() =>
             {
                 var resultsProcessed = 0;
+                status.ConflictsResolved = 0;
                 List<ConflictToResolve> conflicts = new List<ConflictToResolve>();
-                var res = Database.Queries.Query(Constants.ConflictDocumentsIndex, new IndexQuery {Query = String.Empty, PageSize = int.MaxValue}, status.Cts.Token);
+                var res = Database.Queries.Query(Constants.ConflictDocumentsIndex, new IndexQuery {Query = String.Empty, PageSize = int.MaxValue}, cts.Token);
+                //res.Results is a List<> so res.Results.Count is O(1)
+                status.TotalConflicts = res.Results.Count;
                 res.Results.ForEach(conflict =>
                 {
-                    status.Cts.Token.ThrowIfCancellationRequested();
+                    cts.Token.ThrowIfCancellationRequested();
                     AddSingleConflict(conflict, conflicts);
                     resultsProcessed++;
-                    if (resultsProcessed%ConflictBatchSize == 0)
+                    if (resultsProcessed % ConflictBatchSize == 0)
                     {
-                        HandleBatchOfConflicts(conflicts, status);
+                        status.ConflictsResolved += HandleBatchOfConflicts(conflicts, status);
                     }
                 });
                 //Handle the remaining conflicts (last batch)
-                HandleBatchOfConflicts(conflicts, status);
-            }, status.Cts.Token);
+                status.ConflictsResolved += HandleBatchOfConflicts(conflicts, status);
+            }, cts.Token);
 
-            conflictResolvingTask.ContinueWith(
-                task =>
-                {
-                    if (task.IsFaulted)
-                    {
-                        status.State = "Faulted";
-                        status.Faulted = true;
-                        status.Completed = false;
-                    }
-                    else if (task.IsCanceled)
-                    {
-                        status.State = "Canceled";
-                        status.Completed = false;
-                        status.Faulted = false;
-                    }
-                    else if (task.IsCompleted)
-                    {
-                        status.State = "Completed";
-                        status.Completed = true;
-                        status.Faulted = false;
-                    }
-                    status.Cts = null;
-                });
-            Database.Tasks.AddTask(conflictResolvingTask, status, new TaskActions.PendingTaskDescription
+            Database.Tasks.AddTask(conflictResolvingTask, new TaskBasedOperationState(conflictResolvingTask, () => RavenJObject.FromObject(status)), new TaskActions.PendingTaskDescription
             {
                 StartTime = DateTime.UtcNow,TaskType = TaskActions.PendingTaskType.ResolveConflicts
-            },out operationId, status.Cts);
+            }, out operationId, cts);
 
             return GetMessageWithObject(new
             {
@@ -316,17 +294,18 @@ namespace Raven.Database.Bundles.Replication.Controllers
             }, HttpStatusCode.Accepted);
         }
 
-        private void HandleBatchOfConflicts(List<ConflictToResolve> conflicts, ConflictResolveStatus status)
+        private int HandleBatchOfConflicts(List<ConflictToResolve> conflicts, ConflictResolveStatus status)
         {
+            int i = 0;
             using (Database.DocumentLock.Lock())
             {
                 Database.TransactionalStorage.Batch(actions =>
-                {
-                    int i = 0;
+                {                    
                     conflicts.ForEach(c => { HandleSingleConflictResolving(actions, c, status, ref i); });
                 });
             }
             conflicts.Clear();
+            return i;
         }
 
         private void HandleSingleConflictResolving(IStorageActionsAccessor actions, ConflictToResolve c, ConflictResolveStatus status,ref int i)
@@ -388,14 +367,13 @@ namespace Raven.Database.Bundles.Replication.Controllers
             public JsonDocument ExistingDocument { get; set; }
         }
 
-        private class ConflictResolveStatus : IOperationState
+        private class ConflictResolveStatus
         {
-            public bool Completed { get; set; }
-            public bool Faulted { get; set; }
             public long FailedConflictResolvingAttempts { get; set; }
-            public RavenJToken State { get; set; }
-            public CancellationTokenSource Cts { get; set; }
+            public long ConflictsResolved { get; set; }
+            public long TotalConflicts { get; set; }
         }
+
         [HttpPost]
         [RavenRoute("replication/replicateDocs")]
         [RavenRoute("databases/{databaseName}/replication/replicateDocs")]

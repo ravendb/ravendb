@@ -114,7 +114,7 @@ namespace Raven.Tests.Common
             return !timeouted;
         }
 
-        protected bool WaitForConflictDocumentsToAppear(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+        protected bool WaitForConflictDocumentsCore(Func<JsonDocument[],bool> conditionFunc ,IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
         {
             var beginningTime = DateTime.UtcNow;
             var timeouted = false;
@@ -128,9 +128,18 @@ namespace Raven.Tests.Common
                     break;
                 }
                 docs = store.DatabaseCommands.ForDatabase(databaseName).GetDocuments(0, maxDocumentsToCheck);
-            } while (!docs.Any(d => d.Key.Contains(id + "/conflicts")));
+            } while (conditionFunc(docs));
 
             return !timeouted;
+        }
+        protected bool WaitForConflictDocumentsToAppear(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+        {
+            return WaitForConflictDocumentsCore(docs => !docs.Any(d => d.Key.Contains(id + "/conflicts")), store, id, databaseName, maxDocumentsToCheck, timeoutMs);
+        }
+
+        protected bool WaitForConflictDocumentsToDisappear(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+        {
+            return WaitForConflictDocumentsCore(docs =>docs.Any(d => d.Key.Contains(id + "/conflicts")), store, id, databaseName, maxDocumentsToCheck, timeoutMs);
         }
 
         protected virtual void ConfigureServer(RavenDBOptions options)
