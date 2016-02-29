@@ -348,7 +348,7 @@ namespace Raven.Database.Prefetching
                         {
                             //if the first etag in queue is smaller than the already requested one,
                             //we can look for the next etag in the future batches
-                            firstEtagInQueue = GetMinimumEtagFromFutureBatches(etag);
+                            firstEtagInQueue = GetMinimumEtagFromFutureBatches(Abstractions.Util.EtagUtil.Increment(etag, 1));
                         }
                         // if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
                         LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
