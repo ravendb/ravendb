@@ -281,6 +281,8 @@ namespace Voron.Impl
             newPage.LastMatch = page.LastMatch;
             tree.RecentlyFoundPages.Reset(num);
 
+            TrackWritablePage(newPage);
+
             return newPage;
         }
 
@@ -333,6 +335,8 @@ namespace Voron.Impl
 
             Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
 
+            TrackReadOnlyPage(p);
+
             return p;
         }
 
@@ -381,6 +385,8 @@ namespace Voron.Impl
 
             _scratchPagesTable[pageNumber.Value] = pageFromScratchBuffer;
 
+            TrackWritablePage(page);
+
             page.Lower = (ushort)Constants.PageHeaderSize;
             page.Flags = flags;
 
@@ -397,7 +403,7 @@ namespace Voron.Impl
             _dirtyPages.Add(page.PageNumber);
 
             if (numberOfPages > 1)
-                _dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);
+                _dirtyOverflowPages.Add(page.PageNumber + 1, numberOfPages - 1);           
 
             return page;
         }
@@ -434,7 +440,7 @@ namespace Voron.Impl
                 throw new InvalidOperationException("Cannot commit already committed transaction.");
 
             if (RolledBack)
-                throw new InvalidOperationException("Cannot commit rolled-back transaction.");
+                throw new InvalidOperationException("Cannot commit rolled-back transaction.");                        
 
             FlushAllMultiValues();
 
@@ -475,6 +481,8 @@ namespace Voron.Impl
                 FlushedToJournal = true;
             }
 
+            ValidateAllPages();
+
             // release scratch file page allocated for the transaction header
             _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);            
 
@@ -493,9 +501,10 @@ namespace Voron.Impl
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
-
             if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
                 return;
+
+            ValidateReadOnlyPages();
 
             foreach (var pageFromScratch in _transactionPages)
             {
@@ -508,7 +517,7 @@ namespace Voron.Impl
             }
 
             // release scratch file page allocated for the transaction header
-            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);    
+            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);            
 
             RolledBack = true;
             if (Environment.IsDebugRecording)
@@ -559,6 +568,8 @@ namespace Voron.Impl
         {
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
+
+            UntrackPage(pageNumber);
 
             Debug.Assert(pageNumber >= 0);
             _freeSpaceHandling.FreePage(this, pageNumber);
@@ -683,5 +694,105 @@ namespace Voron.Impl
             CreatedByJournalApplicator = true;
             return this;
         }
+
+#if VALIDATE_PAGES
+
+        private Dictionary<long, ulong> readOnlyPages = new Dictionary<long, ulong>();
+        private Dictionary<long, ulong> writablePages = new Dictionary<long, ulong>();
+
+        private void ValidateAllPages()
+        {
+            ValidateWritablePages();
+            ValidateReadOnlyPages();
+        }
+
+        private void ValidateReadOnlyPages()
+        {
+            foreach(var readOnlyKey in readOnlyPages )
+            {
+                long pageNumber = readOnlyKey.Key;
+                if (_dirtyPages.Contains(pageNumber))
+                    throw new VoronUnrecoverableErrorException("Read only page is dirty (which means you are modifying a page directly in the data -- non transactionally -- ).");
+
+                var page = this.GetReadOnlyPage(pageNumber);
+
+                ulong pageHash = Hashing.XXHash64.Calculate(page.Base, page.PageSize);
+                if (pageHash != readOnlyKey.Value)
+                    throw new VoronUnrecoverableErrorException("Read only page content is different (which means you are modifying a page directly in the data -- non transactionally -- ).");
+            }
+        }
+
+        private void ValidateWritablePages()
+        {
+            foreach(var writableKey in writablePages)
+            {
+                long pageNumber = writableKey.Key;
+                if (!_dirtyPages.Contains(pageNumber))
+                    throw new VoronUnrecoverableErrorException("Writable key is not dirty (which means you are asking for a page modification for no reason).");
+
+                var page = this.GetReadOnlyPage(pageNumber);
+
+                ulong pageHash = Hashing.XXHash64.Calculate(page.Base, page.PageSize);
+                if (pageHash == writableKey.Value)
+                    throw new VoronUnrecoverableErrorException("Writable key is not dirty (which means you are asking for a page modification for no reason).");
+            }
+        }
+
+        private void UntrackPage(long pageNumber)
+        {
+            readOnlyPages.Remove(pageNumber);
+            writablePages.Remove(pageNumber);                
+        }
+
+        private void TrackWritablePage(Page page)
+        {
+            if (readOnlyPages.ContainsKey(page.PageNumber))
+                readOnlyPages.Remove(page.PageNumber);            
+
+            if (!writablePages.ContainsKey(page.PageNumber))
+            {
+                ulong pageHash = Hashing.XXHash64.Calculate(page.Base, page.PageSize);
+                writablePages[page.PageNumber] = pageHash;
+            }
+        }
+
+        private void TrackReadOnlyPage(Page page)
+        {
+            if (writablePages.ContainsKey(page.PageNumber))
+                return;
+
+            ulong pageHash = Hashing.XXHash64.Calculate(page.Base, page.PageSize);
+
+            ulong storedHash;
+            if ( readOnlyPages.TryGetValue(page.PageNumber, out storedHash) )
+            {
+                if (pageHash != storedHash)
+                    throw new VoronUnrecoverableErrorException("Read Only Page has change between tracking requests.");
+            }
+            else
+            {
+                readOnlyPages[page.PageNumber] = pageHash;
+            }
+        }
+
+#else
+        // This will only be used as placeholder for compilation when not running with validation started.
+
+        [Conditional("VALIDATE_PAGES")]
+        private void ValidateAllPages() { }
+
+        [Conditional("VALIDATE_PAGES")]
+        private void ValidateReadOnlyPages() { }
+
+        [Conditional("VALIDATE_PAGES")]
+        private void TrackWritablePage(Page page) { }
+
+        [Conditional("VALIDATE_PAGES")]
+        private void TrackReadOnlyPage(Page page) { }
+
+        [Conditional("VALIDATE_PAGES")]
+        private void UntrackPage(long pageNumber) { }
+#endif
+
     }
 }
