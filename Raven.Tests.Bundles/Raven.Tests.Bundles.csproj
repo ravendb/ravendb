@@ -171,6 +171,7 @@
     <Compile Include="Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Replication\Bugs\Vlad.cs" />
     <Compile Include="Replication\CollectionSpecific.cs" />
+    <Compile Include="Replication\ConflictResolving.cs" />
     <Compile Include="Replication\ConflictsInEmbeddableStore.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailoverBetweenTwoMultiTenantDatabases.cs" />
