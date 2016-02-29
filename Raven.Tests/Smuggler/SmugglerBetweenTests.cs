@@ -71,7 +71,7 @@ namespace Raven.Tests.Smuggler
         [Fact]
         public async Task ShouldSupportIncremental()
         {
-            using (var server1 = GetNewServer(port: 8079))
+            using (var server1 = GetNewServer())
             using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
             {
                 using (var session = store1.OpenAsyncSession("Database1"))
@@ -84,55 +84,63 @@ namespace Raven.Tests.Smuggler
                 await store1.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] {2}), new RavenJObject());
 
                 using (var server2 = GetNewServer(port: 8078))
+                using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
                 {
-                    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
+                    var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
                     {
-                        var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
-                        {
-                            Incremental = true,
-                        });
+                        Incremental = true,
+                    });
 
-                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-                        {
-                            From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-                            To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-                        });
-
-                        using (var session = store1.OpenAsyncSession("Database1"))
-                        {
-                            var oren = await session.LoadAsync<User>("users/1");
-                            oren.Name += " Changed";
-                            await session.StoreAsync(new User {Name = "Daniel Dar"});
-                            await session.SaveChangesAsync();
-                        }
-                        await store1.AsyncDatabaseCommands.PutAttachmentAsync("ayende", null, new MemoryStream(new byte[] {4}), new RavenJObject());
-                        await store1.AsyncDatabaseCommands.PutAttachmentAsync("daniel", null, new MemoryStream(new byte[] {5}), new RavenJObject());
+                    await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                    {
+                        From = new RavenConnectionStringOptions {Url = server1.Configuration.ServerUrl, DefaultDatabase = "Database1"},
+                        To = new RavenConnectionStringOptions {Url = server2.Configuration.ServerUrl, DefaultDatabase = "Database2"}
+                    });
                     
-                        using (var session2 = store2.OpenAsyncSession("Database2"))
-                        {
-                            var oren = await session2.LoadAsync<User>("users/2");
-                            oren.Name += " Not Changed";
-                            await session2.SaveChangesAsync();
-                        }
-                        await store2.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] { 6 }), new RavenJObject());
 
-                        await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
-                        {
-                            From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
-                            To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-                        });
-                        WaitForIndexing(store2);
-                        using (var session2 = store2.OpenAsyncSession("Database2"))
-                        {
-                            Assert.Equal(3, await session2.Query<User>().CountAsync());
-                            Assert.Equal("Oren Eini Changed", (await session2.LoadAsync<User>("users/1")).Name);
-                            Assert.Equal("Fitzchak Yitzchaki Not Changed", (await session2.LoadAsync<User>("users/2")).Name); // Test that this value won't be overwritten by the export server
-                        }
-
-                        Assert.Equal(3, (await store2.AsyncDatabaseCommands.GetAttachmentsAsync(0, Etag.Empty, 25)).Length);
-                        await AssertAttachmentContent(store2, "ayende", new byte[] {4});
-                        await AssertAttachmentContent(store2, "fitzchak", new byte[] {6}); // Test that this value won't be overwritten by the export server
+                    using (var session = store1.OpenAsyncSession("Database1"))
+                    {
+                        var oren = await session.LoadAsync<User>("users/1");
+                        oren.Name += " Changed";
+                        await session.StoreAsync(new User {Name = "Daniel Dar"});
+                        await session.SaveChangesAsync();
                     }
+                    await store1.AsyncDatabaseCommands.PutAttachmentAsync("ayende", null, new MemoryStream(new byte[] {4}), new RavenJObject());
+                    await store1.AsyncDatabaseCommands.PutAttachmentAsync("daniel", null, new MemoryStream(new byte[] {5}), new RavenJObject());
+
+                    using (var session2 = store2.OpenAsyncSession("Database2"))
+                    {
+                        var oren = await session2.LoadAsync<User>("users/2");
+                        oren.Name += " Not Changed";
+                        await session2.SaveChangesAsync();
+                    }
+                    await store2.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] {6}), new RavenJObject());
+
+                    await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                    {
+                        From = new RavenConnectionStringOptions {Url = server1.Configuration.ServerUrl, DefaultDatabase = "Database1"},
+                        To = new RavenConnectionStringOptions {Url = server2.Configuration.ServerUrl, DefaultDatabase = "Database2"}
+                    });
+
+                    using (var session1 = store1.OpenAsyncSession("Database1"))
+                    using (var session2 = store2.OpenAsyncSession("Database2"))
+                    {
+                        var xxx1 = await session1.Query<User>().Select(x => x.Name).ToListAsync();
+                        var xxx2 = await session2.Query<User>().Select(x => x.Name).ToListAsync();
+                    }
+
+                    WaitForIndexing(store2);
+
+                    using (var session2 = store2.OpenAsyncSession("Database2"))
+                    {
+                        Assert.Equal(3, await session2.Query<User>().CountAsync());
+                        Assert.Equal("Oren Eini Changed", (await session2.LoadAsync<User>("users/1")).Name);
+                        Assert.Equal("Fitzchak Yitzchaki Not Changed", (await session2.LoadAsync<User>("users/2")).Name); // Test that this value won't be overwritten by the export server
+                    }
+
+                    Assert.Equal(3, (await store2.AsyncDatabaseCommands.GetAttachmentsAsync(0, Etag.Empty, 25)).Length);
+                    await AssertAttachmentContent(store2, "ayende", new byte[] {4});
+                    await AssertAttachmentContent(store2, "fitzchak", new byte[] {6}); // Test that this value won't be overwritten by the export server
                 }
             }
         }
