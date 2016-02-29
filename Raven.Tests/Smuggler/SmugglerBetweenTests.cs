@@ -120,14 +120,7 @@ namespace Raven.Tests.Smuggler
                     {
                         From = new RavenConnectionStringOptions {Url = server1.Configuration.ServerUrl, DefaultDatabase = "Database1"},
                         To = new RavenConnectionStringOptions {Url = server2.Configuration.ServerUrl, DefaultDatabase = "Database2"}
-                    });
-
-                    using (var session1 = store1.OpenAsyncSession("Database1"))
-                    using (var session2 = store2.OpenAsyncSession("Database2"))
-                    {
-                        var xxx1 = await session1.Query<User>().Select(x => x.Name).ToListAsync();
-                        var xxx2 = await session2.Query<User>().Select(x => x.Name).ToListAsync();
-                    }
+                    });                   
 
                     WaitForIndexing(store2);
 
