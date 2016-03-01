@@ -1,51 +1,104 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using Metrics.Core;
 
-namespace metrics
+namespace Metrics
 {
     /// <summary>
-    /// A manager class for health checks
+    /// Structure describing the status of executing all the health checks operations.
     /// </summary>
-    public class HealthChecks
+    public struct HealthStatus
     {
-        private static readonly ConcurrentDictionary<string, HealthCheck> _checks = new ConcurrentDictionary<string, HealthCheck>();
-
-        private HealthChecks() { }
+        /// <summary>
+        /// Flag indicating whether any checks are registered
+        /// </summary>
+        public readonly bool HasRegisteredChecks;
 
         /// <summary>
-        /// Registers an application <see cref="HealthCheck" /> with a given name
+        /// All health checks passed.
         /// </summary>
-        /// <param name="name">The named health check instance</param>
-        /// <param name="check">The <see cref="HealthCheck" /> function</param>
-        public static void Register(string name, Func<HealthCheck.Result> check)
+        public readonly bool IsHealthy;
+
+        /// <summary>
+        /// Result of each health check operation
+        /// </summary>
+        public readonly HealthCheck.Result[] Results;
+
+        public HealthStatus(IEnumerable<HealthCheck.Result> results)
         {
-            var healthCheck = new HealthCheck(name, check);
-            if(!_checks.ContainsKey(healthCheck.Name))
-            {
-                _checks.TryAdd(healthCheck.Name, healthCheck);
-            }
-        }
-
-        /// <summary>
-        /// Returns <code>true</code>  <see cref="HealthCheck"/>s have been registered, <code>false</code> otherwise
-        /// </summary>
-        public static bool HasHealthChecks { get { return _checks.IsEmpty; }}
-        
-        /// <summary>
-        /// Runs the registered health checks and returns a map of the results.
-        /// </summary>
-        public static IDictionary<string, HealthCheck.Result> RunHealthChecks()
-        {
-            var results = new SortedDictionary<string, HealthCheck.Result>();
-            foreach (var entry in _checks)
-            {
-                var result = entry.Value.Execute();
-                results.Add(entry.Key, result);
-            }
-            return results;
+            this.Results = results.ToArray();
+            this.IsHealthy = this.Results.All(r => r.Check.IsHealthy);
+            this.HasRegisteredChecks = this.Results.Length > 0;
         }
     }
+
+    /// <summary>
+    /// Registry for health checks
+    /// </summary>
+    public static class HealthChecks
+    {
+        private static readonly ConcurrentDictionary<string, HealthCheck> checks = new ConcurrentDictionary<string, HealthCheck>();
+
+        /// <summary>
+        /// Registers an action to monitor. If the action throws the health check fails, otherwise is successful.
+        /// </summary>
+        /// <param name="name">Name of the health check.</param>
+        /// <param name="check">Action to execute.</param>
+        public static void RegisterHealthCheck(string name, Action check)
+        {
+            RegisterHealthCheck(new HealthCheck(name, check));
+        }
+
+        /// <summary>
+        /// Registers an action to monitor. If the action throws the health check fails, 
+        /// otherwise is successful and the returned string is used as status message.
+        /// </summary>
+        /// <param name="name">Name of the health check.</param>
+        /// <param name="check">Function to execute.</param>
+        public static void RegisterHealthCheck(string name, Func<string> check)
+        {
+            RegisterHealthCheck(new HealthCheck(name, check));
+        }
+
+        /// <summary>
+        /// Registers a function to monitor. If the function throws or returns an HealthCheckResult.Unhealthy the check fails,
+        /// otherwise the result of the function is used as a status.
+        /// </summary>
+        /// <param name="name">Name of the health check.</param>
+        /// <param name="check">Function to execute</param>
+        public static void RegisterHealthCheck(string name, Func<HealthCheckResult> check)
+        {
+            RegisterHealthCheck(new HealthCheck(name, check));
+        }
+
+        /// <summary>
+        /// Registers a custom health check.
+        /// </summary>
+        /// <param name="healthCheck">Custom health check to register.</param>
+        public static void RegisterHealthCheck(HealthCheck healthCheck)
+        {
+            checks.TryAdd(healthCheck.Name, healthCheck);
+        }
+
+        /// <summary>
+        /// Execute all registered checks and return overall.
+        /// </summary>
+        /// <returns>Status of the system.</returns>
+        public static HealthStatus GetStatus()
+        {
+            var results = checks.Values.Select(v => v.Execute()).OrderBy(r => r.Name);
+            return new HealthStatus(results);
+        }
+
+        /// <summary>
+        /// Remove all the registered health checks.
+        /// </summary>
+        public static void UnregisterAllHealthChecks()
+        {
+            checks.Clear();
+        }
+
+    }
 }
-
-

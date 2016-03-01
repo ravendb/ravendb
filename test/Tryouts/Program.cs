@@ -27,7 +27,7 @@ namespace Tryouts
         public static void Main(string[] args)
         {
             //new DuplicatePageUsage().ShouldNotHappen();
-            new MetricsTests().MetricsTest();
+            //new MetricsTests().MetricsTest();
         }
 
         private static void Run()

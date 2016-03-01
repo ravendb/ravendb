@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+    <metadata>
+        <id>Metrics.NET</id>
+        <version>0.2.16</version>
+        <title>Metrics.NET</title>
+        <authors>iulian.margarintescu</authors>
+        <owners>Iulian Margarintescu</owners>
+        <licenseUrl>https://github.com/etishor/Metrics.NET/blob/master/LICENSE</licenseUrl>
+        <projectUrl>https://github.com/etishor/Metrics.NET</projectUrl>
+        <iconUrl>http://www.erata.net/Metrics.NET/metrics_32.png</iconUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>The library provides support for capturing: Gauges, Counters, Meters, Histograms and Timers</description>
+        <summary>.NET Port of the Java Metrics Library, a library for collecting metrics. Library also provides Health Checks.</summary>
+        <copyright>Iulian Margarintescu</copyright>
+        <tags>metrics, measurements, charts, timer, histogram, duration, graphite, health checks</tags>
+    </metadata>
+    <files>
+      <file src="lib\net45\Metrics.dll" target="lib\net45\Metrics.dll" />
+      <file src="lib\net45\Metrics.pdb" target="lib\net45\Metrics.pdb" />
+      <file src="lib\net45\Metrics.XML" target="lib\net45\Metrics.XML" />      
+    </files>
+</package>

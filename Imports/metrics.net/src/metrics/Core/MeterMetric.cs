@@ -1,197 +1,136 @@
-﻿using System;
-using System.Runtime.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using metrics.Stats;
-using metrics.Support;
-using System.Text;
-
-namespace metrics.Core
+﻿
+using System;
+using System.Collections.Concurrent;
+using System.Linq;
+using Metrics.MetricData;
+using Metrics.Utils;
+namespace Metrics.Core
 {
-    /// <summary>
-    /// A meter metric which measures mean throughput and one-, five-, and fifteen-minute exponentially-weighted moving average throughputs.
-    /// </summary>
-    /// <see href="http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average">EMA</see>
-    public class MeterMetric : IMetric, IMetered, IDisposable
+    
+
+    public sealed class MeterMetric : Meter, IDisposable
     {
-        private AtomicLong _count = new AtomicLong();
-        private readonly long _startTime = DateTime.Now.Ticks;
-        private static readonly TimeSpan Interval = TimeSpan.FromSeconds(5);
+        public static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(5);
 
-        private EWMA _m1Rate = EWMA.OneMinuteEWMA();
-        private EWMA _m5Rate = EWMA.FiveMinuteEWMA();
-        private EWMA _m15Rate = EWMA.FifteenMinuteEWMA();
-        
-        private readonly CancellationTokenSource _token = new CancellationTokenSource();
-
-        public static MeterMetric New(string eventType, TimeUnit rateUnit)
+        private class MeterWrapper
         {
-            var meter = new MeterMetric(eventType, rateUnit);
-
-            Task.Factory.StartNew(async () =>
+            public MeterWrapper(string name)
             {
-                while (!meter._token.IsCancellationRequested)
+                _name = name;
+            }
+            public readonly EWMA m1Rate = EWMA.OneMinuteEWMA();
+            public readonly EWMA m5Rate = EWMA.FiveMinuteEWMA();
+            public readonly EWMA m15Rate = EWMA.FifteenMinuteEWMA();
+            public AtomicLong count = new AtomicLong();
+            private string _name;
+
+            public void Tick()
+            {
+                this.m1Rate.Tick();
+                this.m5Rate.Tick();
+                this.m15Rate.Tick();
+            }
+
+            public void Mark(long count)
+            {
+                this.count.Add(count);
+                this.m1Rate.Update(count);
+                this.m5Rate.Update(count);
+                this.m15Rate.Update(count);
+            }
+
+            public void Reset()
+            {
+                this.count.SetValue(0);
+                this.m1Rate.Reset();
+                this.m5Rate.Reset();
+                this.m15Rate.Reset();
+            }
+
+            public MeterValue GetValue(double elapsed)
+            {
+                return new MeterValue(_name, this.count.Value, this.GetMeanRate(elapsed), this.OneMinuteRate, this.FiveMinuteRate, this.FifteenMinuteRate);
+            }
+
+            private double GetMeanRate(double elapsed)
+            {
+                if (this.count.Value == 0)
                 {
-	                await Task.Delay(Interval, meter._token.Token);
-                    meter.Tick();
+                    return 0.0;
                 }
-            }, meter._token.Token);
 
-            return meter;
+                return this.count.Value / elapsed * Clock.NANOSECONDS_IN_SECOND;
+            }
+
+            private double FifteenMinuteRate { get { return this.m15Rate.GetRate(); } }
+            private double FiveMinuteRate { get { return this.m5Rate.GetRate(); } }
+            private double OneMinuteRate { get { return this.m1Rate.GetRate(); } }
         }
 
-        private MeterMetric(string eventType, TimeUnit rateUnit)
+        private readonly MeterWrapper wrapper;
+        
+        private readonly Scheduler tickScheduler;
+
+        private long startTime;
+     
+
+        public MeterMetric(string name,Scheduler scheduler)
         {
-            EventType = eventType;
-            RateUnit = rateUnit;
+            this.startTime = Clock.Nanoseconds;
+            this.tickScheduler = scheduler;
+            this.Name = name;
+            this.wrapper = new MeterWrapper(name);
+            this.tickScheduler.Start(TickInterval, Tick);
         }
 
-        /// <summary>
-        /// Returns the meter's rate unit
-        /// </summary>
-        /// <returns></returns>
-        public TimeUnit RateUnit { get; private set; }
+        public void Mark()
+        {
+            Mark(1L);
+        }
 
-        /// <summary>
-        /// Returns the type of events the meter is measuring
-        /// </summary>
-        /// <returns></returns>
-        public string EventType { get; private set; }
+        public void Mark(long count)
+        {
+            this.wrapper.Mark(count);
+        }
+
+        public MeterValue GetValue(bool resetMetric = false)
+        {
+            var value = this.Value;
+            if (resetMetric)
+            {
+                this.Reset();
+            }
+            return value;
+        }
+
+        public MeterValue Value
+        {
+            get
+            {
+                double elapsed = (Clock.Nanoseconds - startTime);
+                var value = this.wrapper.GetValue(elapsed);
+
+                return new MeterValue(Name,value.Count, value.MeanRate, value.OneMinuteRate, value.FiveMinuteRate, value.FifteenMinuteRate);
+            }
+        }
 
         private void Tick()
         {
-            _m1Rate.Tick();
-            _m5Rate.Tick();
-            _m15Rate.Tick();
-        }
-
-        public void LogJson(StringBuilder sb)
-        {
-            sb.Append("{\"count\":").Append(Count)
-              .Append(",\"rate unit\":").Append(RateUnit)
-              .Append(",\"fifteen minute rate\":").Append(FifteenMinuteRate)
-              .Append(",\"five minute rate\":").Append(FiveMinuteRate)
-              .Append(",\"one minute rate\":").Append(OneMinuteRate)
-              .Append(",\"mean rate\":").Append(MeanRate).Append("}"); 
-
-        }
-        /// <summary>
-        /// Mark the occurrence of an event
-        /// </summary>
-        public void Mark()
-        {
-            Mark(1);
-        }
-
-        /// <summary>
-        /// Mark the occurrence of a given number of events
-        /// </summary>
-        public void Mark(long n)
-        {
-            _count.AddAndGet(n);
-            _m1Rate.Update(n);
-            _m5Rate.Update(n);
-            _m15Rate.Update(n);
-        }
-
-        /// <summary>
-        ///  Returns the number of events which have been marked
-        /// </summary>
-        /// <returns></returns>
-        public long Count
-        {
-            get { return _count.Get(); }
-        }
-
-        /// <summary>
-        /// Returns the fifteen-minute exponentially-weighted moving average rate at
-        /// which events have occured since the meter was created
-        /// <remarks>
-        /// This rate has the same exponential decay factor as the fifteen-minute load
-        /// average in the top Unix command.
-        /// </remarks> 
-        /// </summary>
-        public double FifteenMinuteRate
-        {
-            get
-            {
-                return _m15Rate.Rate(RateUnit);
-            }
-        }
-
-        /// <summary>
-        /// Returns the five-minute exponentially-weighted moving average rate at
-        /// which events have occured since the meter was created
-        /// <remarks>
-        /// This rate has the same exponential decay factor as the five-minute load
-        /// average in the top Unix command.
-        /// </remarks>
-        /// </summary>
-        public double FiveMinuteRate
-        {
-            get
-            {
-                return _m5Rate.Rate(RateUnit);
-            }
-        }
-
-        /// <summary>
-        /// Returns the mean rate at which events have occured since the meter was created
-        /// </summary>
-        public double MeanRate
-        {
-            get
-            {
-                if (Count != 0)
-                {
-                    var elapsed = (DateTime.Now.Ticks - _startTime) * 100; // 1 DateTime Tick == 100ns
-                    return ConvertNanosRate(Count / (double)elapsed);
-                }
-                return 0.0;
-            }
-        }
-
-        /// <summary>
-        /// Returns the one-minute exponentially-weighted moving average rate at
-        /// which events have occured since the meter was created
-        /// <remarks>
-        /// This rate has the same exponential decay factor as the one-minute load
-        /// average in the top Unix command.
-        /// </remarks>
-        /// </summary>
-        /// <returns></returns>
-        public double OneMinuteRate
-        {
-            get
-            {
-                return _m1Rate.Rate(RateUnit);    
-            }
-        }
-        
-        private double ConvertNanosRate(double ratePerNs)
-        {
-            return ratePerNs * RateUnit.ToNanos(1);
-        }
-
-        [IgnoreDataMember]
-        public IMetric Copy
-        {
-            get
-            {
-                var metric = new MeterMetric(EventType, RateUnit)
-                                 {
-                                     _count = Count,
-                                     _m1Rate = _m1Rate,
-                                     _m5Rate = _m5Rate,
-                                     _m15Rate = _m15Rate
-                                 };
-                return metric;
-            }
+            this.wrapper.Tick();
         }
 
         public void Dispose()
         {
-            _token.Cancel();
+            this.tickScheduler.Stop();
+            using (this.tickScheduler) { }
+        }
+
+        public string Name { get; private set; }
+
+        public void Reset()
+        {
+            this.startTime = Clock.Nanoseconds;
+            this.wrapper.Reset();
         }
     }
 }
