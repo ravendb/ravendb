@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Tasks;
 
@@ -26,7 +25,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             {
                 Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task"], task.AsBytes());
                 Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index);
-                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.GetType().FullName, Encoding.Unicode);
+                Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.GetType().FullName, Encoding.ASCII);
                 Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], addedAt.ToBinary());
 
                 update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
@@ -61,24 +60,29 @@ namespace Raven.Database.Storage.Esent.StorageActions
         public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes, HashSet<IComparable> alreadySeen)
             where T : DatabaseTask
         {
-            var expectedType = typeof(T).FullName;
+            var expectedTaskType = typeof(T).FullName;
             Api.JetSetCurrentIndex(session, Tasks, "by_task_type");
 
-            Api.MakeKey(session, Tasks, expectedType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, Tasks, expectedTaskType, Encoding.ASCII, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
             {
                 return null;
             }
 
-            Api.MakeKey(session, Tasks, expectedType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, Tasks, expectedTaskType, Encoding.ASCII, MakeKeyGrbit.NewKey);
             Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 
             do
             {
-                var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
+                var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.ASCII);
                 // esent index ranges are approximate, and we need to check them ourselves as well
-                if (taskType != expectedType)
+                if (taskType != expectedTaskType)
+                {
+                    //this shouldn't happen
+                    logger.Warn("Tasks type mismatch: expected task type: {0}, current task type: {1}",
+                        expectedTaskType, taskType);
                     continue;
+                }
 
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 var index = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]).Value;
@@ -134,7 +138,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             Api.MoveBeforeFirst(session, Tasks);
             while (Api.TryMoveNext(session, Tasks))
             {
-                var type = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
+                var type = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.ASCII);
                 var index = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]);
                 var addedTime64 = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
                 var id = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
@@ -158,7 +162,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 Api.JetSetCurrentIndex(session, Tasks, "by_index_and_task_type");
 
                 Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
-                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
+                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.ASCII, MakeKeyGrbit.None);
                 if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
                 {
                     // there are no tasks matching the current one, just return
@@ -166,21 +170,21 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
 
                 Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
-                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
+                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.ASCII, MakeKeyGrbit.None);
                 Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
             }
             else
             {
                 Api.JetSetCurrentIndex(session, Tasks, "by_task_type");
 
-                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.ASCII, MakeKeyGrbit.NewKey);
                 if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
                 {
                     // there are no tasks matching the current one, just return
                     return;
                 }
 
-                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.ASCII, MakeKeyGrbit.NewKey);
                 Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
             }
 
@@ -190,10 +194,16 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (totalKeysToProcess >= 5 * 1024)
                     break;
 
-                var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
+                var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.ASCII);
                 // esent index ranges are approximate, and we need to check them ourselves as well
                 if (taskType != expectedTaskType)
+                {
+                    //this shouldn't happen
+                    logger.Warn("Tasks type mismatch: expected task type: {0}, current task type: {1}", 
+                        expectedTaskType, taskType);
                     continue;
+                }
+                    
 
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 var index = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]).Value;
