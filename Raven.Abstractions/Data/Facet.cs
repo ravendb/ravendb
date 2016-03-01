@@ -157,9 +157,7 @@ namespace Raven.Abstractions.Data
 
         public static string Parse(Expression<Func<T, bool>> expr)
         {
-            Expression body = expr.Body;
-
-            var operation = (BinaryExpression)expr.Body;
+            var operation = (BinaryExpression) expr.Body;
 
             if (operation.Left is MemberExpression)
             {
@@ -168,28 +166,42 @@ namespace Raven.Abstractions.Data
                 return expression;
             }
 
-            if (body is BinaryExpression)
-            {
-                var method = body as BinaryExpression;
-                var left = method.Left as BinaryExpression;
-                var right = method.Right as BinaryExpression;
-                if ((left == null || right == null) || method.NodeType != ExpressionType.AndAlso)
-                    throw new InvalidOperationException("Expression doesn't have the correct sub-expression(s) (expected \"&&\")");
+            var left = operation.Left as BinaryExpression;
+            var right = operation.Right as BinaryExpression;
+            if ((left == null || right == null) || operation.NodeType != ExpressionType.AndAlso)
+                throw new InvalidOperationException("Range can be only specified using: \"&&\". Cannot use: \"" + operation.NodeType + "\"");
 
-                var leftMember = left.Left as MemberExpression;
-                var rightMember = right.Left as MemberExpression;
-                var validOperators = ((left.NodeType == ExpressionType.LessThan || left.NodeType == ExpressionType.LessThanOrEqual)
-                    && (right.NodeType == ExpressionType.GreaterThan) || right.NodeType == ExpressionType.GreaterThanOrEqual) ||
-                    ((left.NodeType == ExpressionType.GreaterThan || left.NodeType == ExpressionType.GreaterThanOrEqual)
-                    && (right.NodeType == ExpressionType.LessThan || right.NodeType == ExpressionType.LessThanOrEqual));
-                var validMemberNames = leftMember != null && rightMember != null &&
-                                        GetFieldName(leftMember) == GetFieldName(rightMember);
-                if (validOperators && validMemberNames)
-                {
-                    return GetStringRepresentation(left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
-                }
+            var leftMember = left.Left as MemberExpression;
+            var rightMember = right.Left as MemberExpression;
+            if (leftMember == null || rightMember == null)
+            {
+                throw new InvalidOperationException("Expressions on both sides of \"&&\" must point to range field. Ex. x => x.Age > 18 && x.Age < 99");
             }
-            throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
+
+            if (GetFieldName(leftMember) != GetFieldName(rightMember))
+            {
+                throw new InvalidOperationException("Different range fields were detected: \"" + GetFieldName(leftMember) + "\" and \"" + GetFieldName(rightMember) + "\"");
+            }
+
+            // option #1: expression has form: x > 5 && x < 10
+            var hasForm1 = (left.NodeType == ExpressionType.GreaterThan || left.NodeType == ExpressionType.GreaterThanOrEqual)
+                           && (right.NodeType == ExpressionType.LessThan || right.NodeType == ExpressionType.LessThanOrEqual);
+
+            if (hasForm1)
+            {
+                return GetStringRepresentation(left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
+            }
+
+            // option #2: expression has form x < 10 && x > 5 --> reverse expression to end up with form #1
+            var hasForm2 = (left.NodeType == ExpressionType.LessThan || left.NodeType == ExpressionType.LessThanOrEqual)
+                           && (right.NodeType == ExpressionType.GreaterThan || right.NodeType == ExpressionType.GreaterThanOrEqual);
+
+            if (hasForm2)
+            {
+                return GetStringRepresentation(right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
+            }
+
+            throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\", \"<=\", \">\" or \">=\")");
         }
 
         private static string GetFieldName(MemberExpression left)
@@ -290,11 +302,21 @@ namespace Raven.Abstractions.Data
                 return String.Format("[NULL TO {0}}}", valueAsStr);
             if (op == ExpressionType.GreaterThanOrEqual)
                 return String.Format("{{{0} TO NULL]", valueAsStr);
-            throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
+            throw new InvalidOperationException("Cannot use " + op + " as facet range. Allowed operators: <, <=, >, >=.");
         }
 
         private static string GetStringRepresentation(ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
         {
+            var lValueAsComparable = lValue as IComparable;
+            var rValueAsComparable = rValue as IComparable;
+
+            if (lValueAsComparable != null && rValueAsComparable != null)
+            {
+                if (lValueAsComparable.CompareTo(rValueAsComparable) > 0)
+                {
+                    throw new InvalidOperationException("Invalid range: " + lValue + ".." + rValue);
+                }
+            }
             var lValueAsStr = GetStringValue(lValue);
             var rValueAsStr = GetStringValue(rValue);
             if (lValueAsStr != null && rValueAsStr != null)
