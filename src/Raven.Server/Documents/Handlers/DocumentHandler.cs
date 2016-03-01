@@ -33,6 +33,8 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                context.OpenReadTransaction();
+
                 var document = Database.DocumentsStorage.Get(context, ids[0]);
                 if (document == null)
                     HttpContext.Response.StatusCode = 404;

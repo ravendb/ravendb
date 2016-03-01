@@ -81,7 +81,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                 var collection = Collections.First();
 
                 writer.WritePropertyName(context.GetLazyString(nameof(Collections)));
+                writer.WriteStartArray();
                 writer.WriteString(context.GetLazyString(collection));
+                writer.WriteEndArray();
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
@@ -133,10 +135,11 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
                 {
-                    string collection;
-                    reader.TryGet(nameof(Collections), out collection);
-
                     BlittableJsonReaderArray jsonArray;
+                    reader.TryGet(nameof(Collections), out jsonArray);
+
+                    var collection = jsonArray.GetStringByIndex(0);
+
                     reader.TryGet(nameof(MapFields), out jsonArray);
 
                     var fields = new AutoIndexField[jsonArray.Length];

@@ -2,15 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Server.Web;
 
 namespace Raven.Server.Documents.Queries.Handlers
 {
@@ -20,7 +17,7 @@ namespace Raven.Server.Documents.Queries.Handlers
         public Task Get()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var query = IndexQueryBuilder.Build(this);
+            var query = GetIndexQuery();
 
             //TODO arek - cancellation token
 
@@ -69,10 +66,78 @@ namespace Raven.Server.Documents.Queries.Handlers
             }
         }
 
-        private Dictionary<string, SortOptions> GetSortHints(string sortHintPrefix)
+        private IndexQuery GetIndexQuery()
+        {
+            var result = new IndexQuery
+            {
+                // all defaults which need to have custom value
+                PageSize = Database.Configuration.Core.MaxPageSize
+            };
+
+            foreach (var item in HttpContext.Request.Query)
+            {
+                try
+                {
+                    switch (item.Key)
+                    {
+                        case "query":
+                            result.Query = item.Value[0];
+                            break;
+                        case StartParameter:
+                            result.Start = int.Parse(item.Value[0]);
+                            break;
+                        case PageSizeParameter:
+                            result.PageSize = int.Parse(item.Value[0]);
+                            break;
+                        case "cutOff":
+                            result.Cutoff = DateTime.Parse(item.Value[0]);
+                            break;
+                        case "cutOffEtag":
+                            result.CutoffEtag = long.Parse(item.Value[0]);
+                            break;
+                        case "waitForNonStaleResultsAsOfNow":
+                            result.WaitForNonStaleResultsAsOfNow = bool.Parse(item.Value[0]);
+
+                            if (result.WaitForNonStaleResultsAsOfNow)
+                                result.Cutoff = SystemTime.UtcNow;
+                            break;
+                        case "fetch":
+                            result.FieldsToFetch = item.Value;
+                            break;
+                        case "defaultField":
+                            result.DefaultOperator = "And".Equals(item.Value[0], StringComparison.OrdinalIgnoreCase) ?
+                                                            QueryOperator.And : QueryOperator.Or;
+                            break;
+                        case "sort":
+                            result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
+                            break;
+                        // TODO arek: SortHints - RavenDB-4371
+
+                        // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
+                        // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
+                        // TODO: We also need to make sure that we aren't using headers
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
+                }
+            }
+
+            if (result.Query == null)
+            {
+                /* TODO arek queryFromPostRequest ?? */
+
+                result.Query = string.Empty;
+            }
+
+            return result;
+        }
+
+        private Dictionary<string, SortOptions> GetSortHints(string sortHintPrefix) // TODO arek: RavenDB-4371
         {
             var result = new Dictionary<string, SortOptions>();
-            
+
             foreach (var pair in HttpContext.Request.Query.Where(pair => pair.Key.StartsWith(sortHintPrefix, StringComparison.OrdinalIgnoreCase)))
             {
                 var key = pair.Key;
@@ -85,41 +150,5 @@ namespace Raven.Server.Documents.Queries.Handlers
 
             return result;
         }
-
-        private static readonly QueryStringMapping<IndexQuery, QueriesHandler> IndexQueryBuilder = new QueryStringMapping<IndexQuery, QueriesHandler>
-        {
-            { "query", (x, param, handler) => x.Query = handler.GetStringQueryString(param) ?? /* TODO arek queryFromPostRequest ?? */ string.Empty },
-            { StartParameter, (x, _, handler) => x.Start = handler.GetStart() },
-            { PageSizeParameter, (x, _, handler) => x.PageSize = handler.GetPageSize(handler.Database.Configuration.Core.MaxPageSize) },
-            { "cutOff", (x, param, handler) => x.Cutoff = handler.GetDateTimeQueryString(param) },
-            { "cutOffEtag", (x, param, handler) => x.CutoffEtag = handler.HttpContext.Request.Query.ContainsKey(param) ? handler.GetLongQueryString(param) : (long?) null },
-            { "waitForNonStaleResultsAsOfNow", (x, param, handler) =>
-                                                {
-                                                    x.WaitForNonStaleResultsAsOfNow = handler.GetBoolValueQueryString(param, DefaultValue<bool>.Default);
-                                                    if (x.WaitForNonStaleResultsAsOfNow)
-                                                        x.Cutoff = SystemTime.UtcNow;
-                                                }
-            },
-            { "fetch", (x, param, handler) => x.FieldsToFetch = handler.GetStringValuesQueryString(param, DefaultValue<StringValues>.Default) },
-            { "defaultField", (x, param, handler) => x.DefaultField = handler.GetStringQueryString(param, DefaultValue<string>.Default) },
-            { "operator", (x, param, handler) => x.DefaultOperator =
-                                                    "And".Equals(handler.GetStringQueryString(param, DefaultValue<string>.Default), StringComparison.OrdinalIgnoreCase) ?
-                                                        QueryOperator.And : QueryOperator.Or
-            },
-            { "sort", (x, param, handler) =>
-                        {
-                            var sortedFields = handler.GetStringValuesQueryString(param, DefaultValue<StringValues>.Default);
-                            
-                            if (sortedFields.Count > 0)
-                                x.SortedFields = sortedFields.Select(y => new SortedField(y)).ToArray();
-                            else
-                                x.SortedFields = Enumerable.Empty<SortedField>().ToArray();
-                        }
-            },
-            { "SortHint-", (x, param, handler) => x.SortHints = handler.GetSortHints(param) }
-            // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
-            // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
-            // TODO: We also need to make sure that we aren't using headers
-        };
     }
 }

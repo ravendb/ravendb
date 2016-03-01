@@ -8,6 +8,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -48,6 +49,7 @@ namespace Raven.Server.Web.System
 
         private void UnprotectSecuredSettingsOfDatabaseDocument(BlittableJsonReaderObject obj)
         {
+            //TODO: implement this
             object securedSettings;
             if (obj.TryGetMember("SecuredSettings", out securedSettings) == false)
             {
@@ -56,8 +58,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/$", "PUT", "/admin/databases/{databaseName:string}")]
-
-        public async Task Put()
+        public Task Put()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -65,26 +66,26 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory, out errorMessage) == false)
             {
                 HttpContext.Response.StatusCode = 400;
-                await HttpContext.Response.WriteAsync(errorMessage);
-                return;
+                return HttpContext.Response.WriteAsync(errorMessage);
             }
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.OpenWriteTransaction();
                 var dbId = Constants.Database.Prefix + name;
 
                 var etag = HttpContext.Request.Headers["ETag"];
-                var existingDatabase = ServerStore.Read(context, dbId);
-                if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etag, out errorMessage) == false)
+                using (context.OpenReadTransaction())
                 {
-                    HttpContext.Response.StatusCode = 400;
-                    await HttpContext.Response.WriteAsync(errorMessage);
-                    return;
+                    var existingDatabase = ServerStore.Read(context, dbId);
+                    if (DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etag, out errorMessage) == false)
+                    {
+                        HttpContext.Response.StatusCode = 400;
+                        return HttpContext.Response.WriteAsync(errorMessage);
+                    }
                 }
 
-                var dbDoc = await context.ReadForDiskAsync(RequestBodyStream(), dbId);
+                var dbDoc = context.ReadForDisk(RequestBodyStream(), dbId);
 
                 //TODO: Fix this
                 //int size;
@@ -96,37 +97,39 @@ namespace Raven.Server.Web.System
                 //if (reader.TryGetMember("SecureSettings", out result))
                 //{
                 //    var secureSettings = (BlittableJsonReaderObject) result;
-                //    secureSettings.Modifications = new DynamicJsonValue(secureSettings);
+                //    secureSettings.Unloading = new DynamicJsonValue(secureSettings);
                 //    foreach (var propertyName in secureSettings.GetPropertyNames())
                 //    {
                 //        secureSettings.TryGetMember(propertyName, out result);
                 //        // protect
-                //        secureSettings.Modifications[propertyName] = "fooo";
+                //        secureSettings.Unloading[propertyName] = "fooo";
                 //    }
                 //}
 
-
-                ServerStore.Write(context, dbId, dbDoc);
-
-                context.Transaction.Commit();
+                ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
+                {
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        ServerStore.Write(context, dbId, dbDoc);
+                        tx.Commit();
+                    }
+                });
 
                 HttpContext.Response.StatusCode = 201;
 
             }
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/databases/$", "DELETE", "/admin/databases/{databaseName:string}?hard-delete={isHardDelete:bool|optional(false)}")]
-
         public Task Delete()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var isHardDelete = GetBoolValueQueryString("isHardDelete", DefaultValue<bool>.Default);
+            var isHardDelete = GetBoolValueQueryString("isHardDelete");
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.OpenWriteTransaction();
-
                 var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
                 if (configuration == null)
                 {
@@ -134,33 +137,24 @@ namespace Raven.Server.Web.System
                     return HttpContext.Response.WriteAsync("Database wasn't found");
                 }
 
-                var dbId = Constants.Database.Prefix + name;
-                ServerStore.Delete(context, dbId);
-
-                if (isHardDelete)
-                    DatabaseHelper.DeleteDatabaseFiles(configuration);
-
+                DeleteDatabase(name, context, isHardDelete, configuration);
                 HttpContext.Response.StatusCode = 204; // No Content
+                return Task.CompletedTask;
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
-
         public Task DeleteBatch()
         {
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var isHardDelete = GetBoolValueQueryString("isHardDelete", DefaultValue<bool>.Default);
+            var isHardDelete = GetBoolValueQueryString("isHardDelete");
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.OpenWriteTransaction();
-
                 writer.WriteStartArray();
                 var first = true;
                 foreach (var name in names)
@@ -176,18 +170,28 @@ namespace Raven.Server.Web.System
                         continue;
                     }
 
-                    var dbId = Constants.Database.Prefix + name;
-                    ServerStore.Delete(context, dbId);
-
-                    if (isHardDelete)
-                        DatabaseHelper.DeleteDatabaseFiles(configuration);
-
+                    DeleteDatabase(name, context, isHardDelete, configuration);
                     writer.WriteString(context.GetLazyString($"Database {name} was deleted successfully"));
                 }
                 writer.WriteEndArray();
             }
-
             return Task.CompletedTask;
+        }
+
+        private void DeleteDatabase(string name, TransactionOperationContext context, bool isHardDelete, RavenConfiguration configuration)
+        {
+            ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
+            {
+                var dbId = Constants.Database.Prefix + name;
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    ServerStore.Delete(context, dbId);
+                    tx.Commit();
+                }
+
+                if (isHardDelete)
+                    DatabaseHelper.DeleteDatabaseFiles(configuration);
+            });
         }
     }
 }

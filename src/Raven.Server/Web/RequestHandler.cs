@@ -157,53 +157,53 @@ namespace Raven.Server.Web
             return result;
         }
 
-        protected string GetStringQueryString(string name, DefaultValue<string> defaultValue = null)
+        protected string GetStringQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0)
             {
-                if (defaultValue == null)
+                if (required)
                     throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
 
-                return defaultValue.Value;
+                return null;
             }
 
             return val[0];
         }
 
-        protected StringValues GetStringValuesQueryString(string name, DefaultValue<StringValues> defaultValue = null)
+        protected StringValues GetStringValuesQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0)
             {
-                if (defaultValue == null)
+                if (required)
                     throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
 
-                return defaultValue.Value;
+                return default(StringValues);
             }
 
             return val;
         }
 
-        protected bool GetBoolValueQueryString(string name, DefaultValue<bool> defaultValue = null)
+        protected bool GetBoolValueQueryString(string name, bool required = true)
         {
-            var boolAsString = GetStringQueryString(name, defaultValue: DefaultValue<string>.Default);
+            var boolAsString = GetStringQueryString(name, required: false);
 
             if (boolAsString == null)
             {
-                if (defaultValue == null)
+                if (required)
                     throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
 
-                return defaultValue.Value;
+                return false;
             }
 
             bool result;
             if (bool.TryParse(boolAsString, out result) == false)
             {
-                if (defaultValue == null)
+                if (required)
                     throw new ArgumentException($"Could not parse query string '{name}' as bool");
 
-                return defaultValue.Value;
+                return false;
             }
 
             return result;
@@ -211,7 +211,7 @@ namespace Raven.Server.Web
 
         protected DateTime? GetDateTimeQueryString(string name)
         {
-            var dataAsString = GetStringQueryString(name, defaultValue: DefaultValue<string>.Default);
+            var dataAsString = GetStringQueryString(name, required: false);
             if (dataAsString == null)
                 return null;
 

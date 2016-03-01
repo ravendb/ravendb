@@ -56,12 +56,6 @@ namespace Raven.Abstractions.Data
         public string IndexName { get; set; }
 
         /// <summary>
-        /// The last etag indexed by the index.
-        /// This can be used to determine whatever the results can be cached.
-        /// </summary>
-        public long? IndexEtag { get; set; }
-
-        /// <summary>
         /// The ETag value for this index current state, which include what docs were indexed,
         /// what document were deleted, etc.
         /// </summary>
@@ -132,22 +126,21 @@ namespace Raven.Abstractions.Data
         {
             return new QueryResult
             {
-                Results = new List<RavenJObject>(this.Results.Select(x => x != null ? (RavenJObject)x.CreateSnapshot() : null)),
-                Includes = new List<RavenJObject>(this.Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
-                IndexEtag = this.IndexEtag,
-                IndexName = this.IndexName,
-                IndexTimestamp = this.IndexTimestamp,
-                IsStale = this.IsStale,
-                SkippedResults = this.SkippedResults,
-                TotalResults = this.TotalResults,
-                Highlightings = this.Highlightings == null ? null : this.Highlightings.ToDictionary(
+                Results = new List<RavenJObject>(Results.Select(x => x != null ? (RavenJObject)x.CreateSnapshot() : null)),
+                Includes = new List<RavenJObject>(Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
+                IndexName = IndexName,
+                IndexTimestamp = IndexTimestamp,
+                IsStale = IsStale,
+                SkippedResults = SkippedResults,
+                TotalResults = TotalResults,
+                Highlightings = Highlightings == null ? null : Highlightings.ToDictionary(
                     pair => pair.Key,
                     x => new Dictionary<string, string[]>(x.Value)),
-                ScoreExplanations = this.ScoreExplanations == null ? null : this.ScoreExplanations.ToDictionary(x => x.Key, x => x.Value),
-                TimingsInMilliseconds = this.TimingsInMilliseconds == null ? null : this.TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
-                LastQueryTime = this.LastQueryTime,
-                DurationMilliseconds = this.DurationMilliseconds,
-                ResultEtag = this.ResultEtag
+                ScoreExplanations = ScoreExplanations == null ? null : ScoreExplanations.ToDictionary(x => x.Key, x => x.Value),
+                TimingsInMilliseconds = TimingsInMilliseconds == null ? null : TimingsInMilliseconds.ToDictionary(x => x.Key, x => x.Value),
+                LastQueryTime = LastQueryTime,
+                DurationMilliseconds = DurationMilliseconds,
+                ResultEtag = ResultEtag
             };
         }
     }
