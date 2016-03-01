@@ -8,6 +8,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using System.Linq;
+using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -97,6 +98,25 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         continue;
 
                     var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
+                    var indexId = value.ReadInt(TaskFields.IndexId);
+                    if (indexesToSkip.Contains(indexId))
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for index id: {1}", currentId, indexId);
+                        continue;
+                    }
+
+                    if (alreadySeen.Add(currentId) == false)
+                        continue;
+
+                    if (allIndexes.Contains(indexId) == false)
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, indexId);
+
+                        continue;
+                    }
+
                     DatabaseTask task;
                     try
                     {
@@ -111,29 +131,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         continue;
                     }
 
-                    if (indexesToSkip.Contains(task.Index))
-                    {
-                        if (Logger.IsDebugEnabled)
-                            Logger.Debug("Skipping task id: {0} for index id: {1}", currentId, task.Index);
-                        continue;
-                    }
-
-                    if (alreadySeen.Add(currentId) == false)
-                        continue;
-
-                    if (allIndexes.Contains(task.Index) == false)
-                    {
-                        if (Logger.IsDebugEnabled)
-                            Logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, task.Index);
-
-                        continue;
-                    }
-
                     if (Logger.IsDebugEnabled)
                         Logger.Debug("Fetched task id: {0}", currentId);
 
                     task.Id = currentId;
-                    MergeSimilarTasks(task, alreadySeen);
+                    MergeSimilarTasks(task, alreadySeen, indexesToSkip, allIndexes);
 
                     return (T) task;
                 } while (iterator.MoveNext());
@@ -142,12 +144,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return null;
         }
 
-        private void MergeSimilarTasks(DatabaseTask task, HashSet<IComparable> alreadySeen)
+        private void MergeSimilarTasks(DatabaseTask task, HashSet<IComparable> alreadySeen, List<int> indexesToSkip, int[] allIndexes)
         {
+            IIterator treeIterator;
             var type = task.GetType().FullName;
-            var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
-
-            using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, (Slice) CreateKey(task.Index, type)))
+            if (task.SeparateTasksByIndex)
+            {
+                
+                var index = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+                treeIterator = index.MultiRead(Snapshot, (Slice) CreateKey(task.Index, type));
+            }
+            else
+            {
+                var index = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
+                treeIterator = index.MultiRead(Snapshot, (Slice)type);
+            }
+            
+            using (var iterator = treeIterator)
             {
                 if (!iterator.Seek(Slice.BeforeAllKeys))
                     return;
@@ -158,14 +171,30 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     if (totalKeysToProcess >= 5*1024)
                         break;
 
-                    var currentId = Etag.Parse(iterator.CurrentKey.ToString());
-                    if (alreadySeen.Add(currentId) == false)
-                        continue;
-
                     ushort version;
                     var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
                     if (value == null)
                         continue;
+
+                    var currentId = Etag.Parse(iterator.CurrentKey.ToString());
+                    var indexId = value.ReadInt(TaskFields.IndexId);
+                    if (indexesToSkip.Contains(indexId))
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for index id: {1}", currentId, indexId);
+                        continue;
+                    }
+
+                    if (alreadySeen.Add(currentId) == false)
+                        continue;
+
+                    if (allIndexes.Contains(indexId) == false)
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, indexId);
+
+                        continue;
+                    }
 
                     DatabaseTask existingTask;
                     try
