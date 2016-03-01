@@ -94,6 +94,7 @@ namespace Voron.Data.Compact
         {
             // We prepare the signature to compute incrementally. 
             BitVector searchKey = key.ToBitVector();
+            int keySize = searchKey.Count;
 
 #if DETAILED_DEBUG
             Console.WriteLine(string.Format("Add(Binary: {1}, Key: {0})", key.ToString(), searchKey.ToBinaryString()));
@@ -101,7 +102,7 @@ namespace Voron.Data.Compact
             if (Count == 0)
             {
                 Leaf* rootLeaf;
-                var newNodeName = CreateLeaf(Constants.InvalidNodeName, 0, dataPtr, out rootLeaf);
+                var newNodeName = CreateLeaf(Constants.InvalidNodeName, 0, dataPtr, keySize, out rootLeaf);
 
                 // We add the leaf after the head.                  
                 Leaf* head = &(_state.Pointer->Head);
@@ -131,7 +132,7 @@ namespace Voron.Data.Compact
 #endif
 
                 // If the exit node is a leaf and the key is equal to the LCP                 
-                if (exitNode->IsLeaf && GetKeySize(((Leaf*)exitNode)->DataPtr) == cutPoint.LongestPrefix)
+                if (exitNode->IsLeaf && ((Leaf*)exitNode)->KeySize == cutPoint.LongestPrefix)
                     return false; // Then we are done (we found the key already).
 
                 int exitNodeHandleLength = this.GetHandleLength(exitNode);
@@ -150,7 +151,7 @@ namespace Voron.Data.Compact
                 Leaf* newLeaf;
 
                 // The new leaf is inserted into the left position.
-                newLeafNodeName = CreateLeaf(cutPoint.Parent, (short)(cutPoint.LongestPrefix + 1), dataPtr, out newLeaf);
+                newLeafNodeName = CreateLeaf(cutPoint.Parent, (short)(cutPoint.LongestPrefix + 1), dataPtr, keySize, out newLeaf);
                 // Link the new internal node with the new leaf and the old node.   
                 newInternalName = CreateInternal(cutPoint.Parent, exitNode->NameLength, cutPoint.LongestPrefix, out newInternal);
                 // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property)
@@ -896,9 +897,9 @@ namespace Voron.Data.Compact
             // We look for the parent of the exit node for the key.
             var exitNode = FindExitNode(key);
             var node = ReadNodeByName(exitNode.Exit);
-
+          
             // If the exit node is a leaf and the key is equal to the LCP 
-            if (node->IsLeaf && GetKeySize(((Leaf*)node)->DataPtr) == exitNode.LongestPrefix)
+            if (node->IsLeaf && ((Leaf*)node)->KeySize == exitNode.LongestPrefix)
             {
                 value = ((Leaf*)node)->DataPtr;
 
@@ -919,7 +920,7 @@ namespace Voron.Data.Compact
             var node = ReadNodeByName(exitNode.Exit);
 
             // If the exit node is a leaf and the key is equal to the LCP 
-            if (node->IsLeaf && GetKeySize(((Leaf*)node)->DataPtr) == exitNode.LongestPrefix)
+            if (node->IsLeaf && ((Leaf*)node)->KeySize == exitNode.LongestPrefix)
                 return true; // Then we are done (we found the key already).
 
             return false;
@@ -1381,7 +1382,7 @@ namespace Voron.Data.Compact
             return nodeName;
         }
 
-        private long CreateLeaf(long parentNode, short nameLength, long dataPtr, out Leaf* ptr)
+        private long CreateLeaf(long parentNode, short nameLength, long dataPtr, int keySize, out Leaf* ptr)
         {
             long nodeName = _translationTable.AllocateNodeName(parentNode);
 
@@ -1392,6 +1393,7 @@ namespace Voron.Data.Compact
             Debug.Assert(ptr->Type == 0);
             ptr->Initialize(nameLength);
             ptr->DataPtr = dataPtr;
+            ptr->KeySize = (ushort)keySize;
 
             Debug.Assert(page.FreeSpace.Get((int)location.NodeOffset) == false);
 
@@ -1436,7 +1438,6 @@ namespace Voron.Data.Compact
             previousNode->NextPtr = node->NextPtr;            
         }
 
-
         internal Slice ReadKey(long dataPtr)
         {
             int size;
@@ -1447,20 +1448,6 @@ namespace Voron.Data.Compact
             var keyPtr = reader.Read(0, out keySize);
 
             return new Slice(keyPtr, (ushort)keySize);                  
-        }
-
-        internal int GetKeySize(long dataPtr)
-        {
-            int size;
-            var pointer = RawDataSection.DirectRead(_tx, dataPtr, out size);
-            var reader = new TableValueReader(pointer, size);
-
-            int keySize;
-            var keyPtr = reader.Read(0, out keySize);
-
-            // The key is written without the prefix. But for the bitvector calculations that means we need the 
-            // prefix version size. 
-            return ( keySize + 2 ) * BitVector.BitsPerByte;
         }
     }
 }

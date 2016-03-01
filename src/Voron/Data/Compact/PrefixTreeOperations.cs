@@ -108,8 +108,8 @@ namespace Voron.Data.Compact
                 return ((Internal*)@this)->ExtentLength;
             }
             else
-            {
-                return tree.GetKeySize(((Leaf*)@this)->DataPtr);
+            {                
+                return ((Leaf*)@this)->KeySize;
             }
         }
 
