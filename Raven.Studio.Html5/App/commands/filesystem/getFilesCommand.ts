@@ -2,6 +2,7 @@ import commandBase = require("commands/commandBase");
 import file = require("models/filesystem/file");
 import filesystem = require("models/filesystem/filesystem");
 import pagedResultSet = require("common/pagedResultSet");
+import queryUtil = require("common/queryUtil");
 
 class getFilesystemFilesCommand extends commandBase {
 
@@ -34,7 +35,7 @@ class getFilesystemFilesCommand extends commandBase {
 
         var levelQuery = "__level:" + level;
         var args = {
-            query: this.directory ? "__directoryName:" + this.directory + " AND " + levelQuery : levelQuery,
+            query: this.directory ? "__directoryName:" + queryUtil.escapeTerm(this.directory) + " AND " + levelQuery : levelQuery,
             start: this.skip,
             pageSize: this.take
         };
