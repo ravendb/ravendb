@@ -33,6 +33,7 @@ namespace Voron.Data.Compact
         private readonly InternalTable _table;
         private readonly PrefixTreeRootMutableState _state;
         private readonly PrefixTreeTranslationTableMutableState _translationTable;
+        private readonly PageLocator _pageLocator;
 
         public string Name { get; set; }
 
@@ -43,6 +44,7 @@ namespace Voron.Data.Compact
             _state = state;
             _table = new InternalTable(this, _tx, _state);
             _translationTable = _state.TranslationTable;
+            _pageLocator = new PageLocator(tx, 16);
 
             Name = treeName.ToString();
         }
@@ -1325,10 +1327,9 @@ namespace Voron.Data.Compact
             if (location.PageNumber == Constants.InvalidPage)
                 return null;
 
-            // TODO: Cache last access, it may be the very same page.
-
-            var page = _tx.GetPage(location.PageNumber).ToPrefixTreePage();
-            return page.GetNodePointer(location.NodeOffset);
+            return _pageLocator.GetReadOnlyPage(location.PageNumber)
+                     .ToPrefixTreePage()
+                     .GetNodePointer(location.NodeOffset);
         }
 
         private Node* ModifyNodeByName(long nodeName)
@@ -1355,12 +1356,11 @@ namespace Voron.Data.Compact
             if (location.PageNumber == Constants.InvalidPage)
                 return null;
 
-            // TODO: Cache last access, it may be the very same page.
-
-            var page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();
-            return page.GetNodePointer(location.NodeOffset);
+            return _pageLocator.GetWritablePage(location.PageNumber)
+                     .ToPrefixTreePage()
+                     .GetNodePointer(location.NodeOffset);
         }
-
+ 
         private static bool IsTombstone(long nodeName)
         {
             return nodeName < PrefixTree.Constants.TombstoneNodeName;                
@@ -1371,7 +1371,8 @@ namespace Voron.Data.Compact
             long nodeName = _translationTable.AllocateNodeName(parentNode);
 
             var location = _translationTable.MapVirtualToPhysical(nodeName);
-            PrefixTreePage page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();
+            
+            PrefixTreePage page = _pageLocator.GetWritablePage(location.PageNumber).ToPrefixTreePage();
 
             ptr = (Internal*)page.GetNodePointer(location.NodeOffset);
             Debug.Assert(ptr->Type == NodeType.Uninitialized);
@@ -1385,7 +1386,7 @@ namespace Voron.Data.Compact
             long nodeName = _translationTable.AllocateNodeName(parentNode);
 
             var location = _translationTable.MapVirtualToPhysical(nodeName);
-            PrefixTreePage page = _tx.ModifyPage(location.PageNumber).ToPrefixTreePage();            
+            PrefixTreePage page = _pageLocator.GetWritablePage(location.PageNumber).ToPrefixTreePage();            
 
             ptr = (Leaf*)page.GetNodePointer(location.NodeOffset);
             Debug.Assert(ptr->Type == 0);

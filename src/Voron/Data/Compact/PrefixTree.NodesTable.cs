@@ -37,7 +37,7 @@ namespace Voron.Data.Compact
 
         internal sealed class InternalTable
         {
-            private const int InitialCapacity = 64;
+            private const int InitialCapacity = 150000;
 
             private const uint kDeleted = 0xFFFFFFFE;
             private const uint kUnused = 0xFFFFFFFF;
@@ -46,16 +46,6 @@ namespace Voron.Data.Compact
             private const uint kHashMask = 0xFFFFFFFE;
             private const uint kSignatureMask = 0x7FFFFFFE;
             private const uint kDuplicatedMask = 0x80000000;
-
-            /// <summary>
-            /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and at least kMinCapacity.
-            /// </summary>
-            private const int kInitialCapacity = 64;
-
-            /// <summary>
-            /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and at least kMinCapacity.
-            /// </summary>
-            private const int kMinCapacity = 4;
 
             /// <summary>
             /// LoadFactor - controls hash map load. 4 means 100% load, ie. hashmap will grow
@@ -69,6 +59,7 @@ namespace Voron.Data.Compact
             private readonly LowLevelTransaction _tx;
             private readonly PrefixTreeRootMutableState _root;
             private readonly PrefixTreeTableMutableState _state;
+            private readonly PageLocator _pageLocator;
 
             private readonly int _entriesPerPage;
 
@@ -133,7 +124,8 @@ namespace Voron.Data.Compact
                 this._root = root;
                 this._state = root.Table;
 
-                this._entriesPerPage = _tx.DataPager.PageMaxSpace / sizeof(Entry);           
+                this._entriesPerPage = _tx.DataPager.PageMaxSpace / sizeof(Entry);
+                this._pageLocator = new PageLocator(tx);     
             }      
             
 
@@ -222,7 +214,6 @@ namespace Voron.Data.Compact
                     }
 
                     bucket = (bucket + numProbes) % Capacity;
-                    numProbes++;
                 }
                 while (true);
 
@@ -250,9 +241,7 @@ namespace Voron.Data.Compact
                 int pageNumber = bucket / _entriesPerPage;
                 int entryNumber = bucket % _entriesPerPage;
 
-                // TODO: Cache the last page (it will be probably be a hit).
-
-                Page page = _tx.GetPage(tablePage + pageNumber);
+                Page page = _pageLocator.GetReadOnlyPage(tablePage + pageNumber);
                 return ((Entry*)page.DataPointer) + entryNumber;
             }
 
@@ -268,9 +257,7 @@ namespace Voron.Data.Compact
                 int pageNumber = bucket / _entriesPerPage;
                 int entryNumber = bucket % _entriesPerPage;
 
-                // TODO: Cache the last page (it will be probably be a hit).
-
-                Page page = _tx.ModifyPage(tablePage + pageNumber);
+                Page page = _pageLocator.GetWritablePage(tablePage + pageNumber);
 
                 var entry = ((Entry*)page.DataPointer) + entryNumber;
                 entry->Hash = uhash;
@@ -324,7 +311,7 @@ namespace Voron.Data.Compact
                     }
 
                     bucket = (int)((bucket + numProbes) % Capacity);
-                    numProbes++;                    
+                    //numProbes++;                    
 
                     Debug.Assert(numProbes < 100);
 
@@ -346,7 +333,7 @@ namespace Voron.Data.Compact
                 while (entry->NodePtr != oldNodePtr)
                 {
                     bucket = (bucket + numProbes) % Capacity;
-                    numProbes++;
+                    //numProbes++;
 
                     entry = ReadEntry(bucket);
                 }
@@ -408,7 +395,6 @@ namespace Voron.Data.Compact
                     }
 
                     bucket = (bucket + numProbes) % Capacity;
-                    numProbes++;
 
                     Debug.Assert(numProbes < 100);
 
@@ -438,10 +424,10 @@ namespace Voron.Data.Compact
 
                     if ((nSignature & kSignatureMask) == signature)
                     {                        
-                        var node = (Node*)this.owner.ReadNodeByName(entry->NodePtr);
                         if ((nSignature & kDuplicatedMask) == 0) 
                             return bucket;
-                        
+
+                        var node = (Node*)this.owner.ReadNodeByName(entry->NodePtr);
                         if (this.owner.GetHandleLength(node) == prefixLength)
                         {
                             Node* referenceNodePtr = this.owner.ReadNodeByName(node->ReferencePtr);
@@ -452,7 +438,6 @@ namespace Voron.Data.Compact
                     }
 
                     bucket = (bucket + numProbes) % Capacity;
-                    numProbes++;
 
                     Debug.Assert(numProbes < 100);
 
@@ -629,8 +614,6 @@ namespace Voron.Data.Compact
 
                             bucket = (bucket + numProbes) % destCapacity;
                             newEntry = this.ReadEntry((int)bucket, destinationTablePage);
-
-                            numProbes++;
                         }
 
                         WriteEntry((int)bucket, destinationTablePage, sourceEntry->Hash, signature, sourceEntry->NodePtr);

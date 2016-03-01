@@ -15,13 +15,11 @@ namespace Voron.Data.Compact
     {
         private readonly LowLevelTransaction _tx;
         private readonly PrefixTreeRootHeader* _pointer;
-
-        private IntPtr _innerCopyPtr;
-        private PrefixTreeRootHeader* _innerCopy;
-
         private readonly PrefixTreeTranslationTableMutableState _translationTable;
         private readonly PrefixTreeTableMutableState _table;
 
+        private IntPtr _innerCopyPtr;
+        private PrefixTreeRootHeader* _innerCopy;
         private bool _isModified;
 
         public PrefixTreeRootMutableState(LowLevelTransaction tx, PrefixTreeRootHeader* header)

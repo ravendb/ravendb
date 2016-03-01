@@ -5,9 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Voron.Data.BTrees;
 
-namespace Voron.Data
+namespace Voron.Data.BTrees
 {
     public class RecentlyFoundPages
     {

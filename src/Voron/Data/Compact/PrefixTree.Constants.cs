@@ -21,7 +21,7 @@ namespace Voron.Data.Compact
             public static int NodesPerCacheLine = L1CacheSize / sizeof(PrefixTree.Node);
             public static int DepthPerCacheLine = (int) Math.Log(NodesPerCacheLine, 2);
 
-            public static int TranslationTableInitialItems = 1950;
+            public static int TranslationTableInitialItems = 10000;
 
         }
     }
