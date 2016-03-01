@@ -348,7 +348,6 @@
     <TypeScriptCompile Include="App\commands\getDocRefsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugCurrentlyIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugQueriesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getStatusDebugTasksCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugRoutesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugIndexFieldsCommand.ts" />
