@@ -282,7 +282,10 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 //Handle the remaining conflicts (last batch)
                 status.ConflictsResolved += HandleBatchOfConflicts(conflicts, status);
             }, cts.Token);
-
+            conflictResolvingTask.ContinueWith(_ =>
+            {
+                cts.Dispose();
+            });
             Database.Tasks.AddTask(conflictResolvingTask, new TaskBasedOperationState(conflictResolvingTask, () => RavenJObject.FromObject(status)), new TaskActions.PendingTaskDescription
             {
                 StartTime = DateTime.UtcNow,TaskType = TaskActions.PendingTaskType.ResolveConflicts
