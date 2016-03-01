@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class performanceTestRequest {
 
     path = ko.observable<string>();

@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class statusDebugQueriesQuery {
     startTime: string;
     queryInfo = ko.observable<any>();

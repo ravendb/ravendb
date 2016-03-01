@@ -3,7 +3,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
-using Voron.Data.BTrees;
 using Voron.Impl;
 
 namespace Voron.Data.RawData
@@ -218,7 +217,10 @@ namespace Voron.Data.RawData
             {
                 // this is in another section, cannot free it directly, so we'll forward to the right section
                 var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection;
-                return new RawDataSection(_tx, sectionPageNumber).Free(id);
+                var actualSection = new RawDataSection(_tx, sectionPageNumber);
+                if(actualSection.Contains(id)==false)
+                    throw new InvalidDataException($"Cannot delete {id} because the raw data section starting in {sectionPageNumber} with size {actualSection.AllocatedSize} doesn't own it. Possible data corruption?");
+                return actualSection.Free(id);
             }
 
             pageHeader = ModifyPage(pageHeader);

@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class spatialIndexField {
     name = ko.observable<string>().extend({ required: true });
     type = ko.observable<string>().extend({ required: true });

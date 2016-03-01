@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class synchronizationDestination {
 
     url = ko.observable<string>().extend({ required: true });

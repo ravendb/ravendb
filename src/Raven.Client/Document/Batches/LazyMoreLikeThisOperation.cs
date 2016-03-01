@@ -15,12 +15,12 @@ namespace Raven.Client.Document.Batches
 {
     public class LazyMoreLikeThisOperation<T> : ILazyOperation
     {
-        private readonly MultiLoadOperation multiLoadOperation;
+        private readonly LoadOperation _loadOperation;
         private readonly MoreLikeThisQuery query;
 
-        public LazyMoreLikeThisOperation(MultiLoadOperation multiLoadOperation, MoreLikeThisQuery query)
+        public LazyMoreLikeThisOperation(LoadOperation loadOperation, MoreLikeThisQuery query)
         {
-            this.multiLoadOperation = multiLoadOperation;
+            _loadOperation = loadOperation;
             this.query = query;
         }
 
@@ -45,7 +45,7 @@ namespace Raven.Client.Document.Batches
         {
             var result = response.Result;
 
-            var multiLoadResult = new MultiLoadResult
+            var multiLoadResult = new LoadResult
             {
                 Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
                 Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
@@ -54,19 +54,19 @@ namespace Raven.Client.Document.Batches
             HandleResponse(multiLoadResult);
         }
 
-        private void HandleResponse(MultiLoadResult multiLoadResult)
+        private void HandleResponse(LoadResult loadResult)
         {
-            RequiresRetry = multiLoadOperation.SetResult(multiLoadResult);
+            RequiresRetry = _loadOperation.SetResult(loadResult);
             if (RequiresRetry == false)
-                Result = multiLoadOperation.Complete<T>();
+                Result = _loadOperation.Complete<T>();
         }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var list = new List<MultiLoadResult>(
+            var list = new List<LoadResult>(
                 from response in responses
                 let result = response.Result
-                select new MultiLoadResult
+                select new LoadResult
                 {
                     Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
                     Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
@@ -74,7 +74,7 @@ namespace Raven.Client.Document.Batches
 
             var capacity = list.Max(x => x.Results.Count);
 
-            var finalResult = new MultiLoadResult
+            var finalResult = new LoadResult
             {
                 Includes = new List<RavenJObject>(),
                 Results = new List<RavenJObject>(Enumerable.Range(0, capacity).Select(x => (RavenJObject)null))
@@ -91,14 +91,14 @@ namespace Raven.Client.Document.Batches
                         finalResult.Results[i] = multiLoadResult.Results[i];
                 }
             }
-            RequiresRetry = multiLoadOperation.SetResult(finalResult);
+            RequiresRetry = _loadOperation.SetResult(finalResult);
             if (RequiresRetry == false)
-                Result = multiLoadOperation.Complete<T>();
+                Result = _loadOperation.Complete<T>();
         }
 
         public IDisposable EnterContext()
         {
-            return multiLoadOperation.EnterMultiLoadContext();
+            return _loadOperation.EnterLoadContext();
         }
     }
 }

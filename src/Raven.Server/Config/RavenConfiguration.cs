@@ -3,10 +3,11 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-using Raven.Server.Extensions;
 using Raven.Server.Utils;
+using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 
 namespace Raven.Server.Config
 {
@@ -24,6 +25,8 @@ namespace Raven.Server.Config
         public StorageConfiguration Storage { get; }
 
         public EncryptionConfiguration Encryption { get; }
+
+        public IndexingConfiguration Indexing { get; set; }
 
         public MonitoringConfiguration Monitoring { get; }
 
@@ -64,6 +67,7 @@ namespace Raven.Server.Config
             Replication = new ReplicationConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
+            Indexing = new IndexingConfiguration(() => Core.RunInMemory, () => Core.DataDirectory);
             WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
@@ -93,6 +97,7 @@ namespace Raven.Server.Config
             Memory.Initialize(Settings);
             Storage.Initialize(Settings);
             Encryption.Initialize(Settings);
+            Indexing.Initialize(Settings);
             Monitoring.Initialize(Settings);
             Expiration.Initialize(Settings);
             Versioning.Initialize(Settings);
@@ -136,7 +141,7 @@ namespace Raven.Server.Config
 
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
-            var prop = getKey.ToProperty();
+            var prop = ExpressionExtensions.ToProperty(getKey);
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
         }
 

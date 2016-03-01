@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class counterChange {
     value = ko.observable(0);
     counterName = ko.observable("");

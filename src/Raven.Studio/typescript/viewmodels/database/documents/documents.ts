@@ -1,11 +1,12 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
+
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
-
 import changesContext = require("common/changesContext");
+
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import selectColumns = require("viewmodels/common/selectColumns");
@@ -14,6 +15,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
 import alert = require("models/database/debug/alert");
+import document = require("models/database/documents/document");
 import changeSubscription = require("common/changeSubscription");
 import customFunctions = require("models/database/documents/customFunctions");
 import customColumns = require("models/database/documents/customColumns");
@@ -23,7 +25,6 @@ import collectionsStats = require("models/database/documents/collectionsStats");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
-import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
@@ -92,7 +93,7 @@ class documents extends viewModelBase {
             var docsGrid = this.getDocumentsGrid();
 
             if (!!docsGrid) {
-                var cachedItems = docsGrid.getNumberOfCachedItems();
+                const cachedItems = docsGrid.getNumberOfCachedItems();
                 return cachedItems >= numOfSelectedDocuments;
             }
 
@@ -174,7 +175,7 @@ class documents extends viewModelBase {
         var startingRightWidth = 0;
         var totalStartingWidth = 0;
 
-        $(document).on("mousedown.collectionsResize", ".collection-resize",(e: any) => {
+        $(document).on("mousedown.collectionsResize", ".collection-resize", (e: JQueryMouseEventObject) => {
             startX = e.pageX;
             resizingColumn = true;
             startingLeftWidth = $("#documents-page-container").innerWidth();
@@ -182,11 +183,11 @@ class documents extends viewModelBase {
             totalStartingWidth = startingLeftWidth + startingRightWidth;
         });
 
-        $(document).on("mouseup.collectionsResize", "", (e: any) => {
+        $(document).on("mouseup.collectionsResize", "", () => {
             resizingColumn = false;
         });
 
-        $(document).on("mousemove.collectionsResize", "", (e: any) => {
+        $(document).on("mousemove.collectionsResize", "", (e: JQueryMouseEventObject) => {
             if (resizingColumn) {
 
                 // compute new percentage values
@@ -200,9 +201,8 @@ class documents extends viewModelBase {
                 if (e.preventDefault) e.preventDefault();
                 e.cancelBubble = true;
                 e.returnValue = false;
-
-                return false;
             }
+            return false;
         });
     }
 
@@ -293,8 +293,6 @@ class documents extends viewModelBase {
         var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
         this.collections(allCollections);
 
-        
-
         var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
         collectionToSelect.activate();
     }
@@ -331,10 +329,10 @@ class documents extends viewModelBase {
         }
     }
 
-    deleteCollection(collection: collection) {
+    private deleteCollection(collection: collection) {
         if (collection) {
             var viewModel = new deleteCollection(collection);
-            viewModel.deletionTask.done((result: operationIdDto) => {
+            viewModel.deletionTask.done(() => {
                 if (!collection.isAllDocuments) {
                     this.collections.remove(collection);
 
@@ -346,30 +344,22 @@ class documents extends viewModelBase {
                     this.selectNone();
                 }
 
-                this.updateGridAfterOperationComplete(collection, result.OperationId);
+                this.updateGrid();
             });
             app.showDialog(viewModel);
         }
     }
 
-    private updateGridAfterOperationComplete(collection: collection, operationId: number) {
-        var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
-        getOperationStatusTask.execute()
-            .done((result: bulkOperationStatusDto) => {
-                if (result.Completed) {
-                    var selectedCollection: collection = this.selectedCollection();
+    private updateGrid() {
+        var selectedCollection: collection = this.selectedCollection();
 
-                    if (selectedCollection.isAllDocuments) {
-                        var docsGrid = this.getDocumentsGrid();
-                        docsGrid.refreshCollectionData();
-                    } else {
-                        var allDocumentsPagedList = this.allDocumentsCollection.getDocuments();
-                        allDocumentsPagedList.invalidateCache();
-                    }
-                } else {
-                    setTimeout(() => this.updateGridAfterOperationComplete(collection, operationId), 500);
-                }
-            });
+        if (selectedCollection.isAllDocuments) {
+            var docsGrid = this.getDocumentsGrid();
+            docsGrid.refreshCollectionData();
+        } else {
+            var allDocumentsPagedList = this.allDocumentsCollection.getDocuments();
+            allDocumentsPagedList.invalidateCache();
+        }
     }
 
     private updateCollections(receivedCollections: Array<collection>) {
@@ -474,7 +464,7 @@ class documents extends viewModelBase {
             } else {
                 docsGrid.selectSome();
 
-                this.isAnyDocumentsAutoSelected(this.hasAllDocumentsSelected() == false);
+                this.isAnyDocumentsAutoSelected(!this.hasAllDocumentsSelected());
             }
         }
     }
@@ -531,15 +521,14 @@ class documents extends viewModelBase {
     generateDocCode() {
         var grid = this.getDocumentsGrid();
         if (grid) {
-            var selectedItem = <Document>grid.getSelectedItems(1).first();
+            var selectedItem = <document>grid.getSelectedItems(1).first();
 
-            var metadata = selectedItem["__metadata"];
-            var id = metadata["id"];
-            var generate = new generateClassCommand(this.activeDatabase(),id, "csharp");
-            var deffered = generate.execute();
-            deffered.done((code: generatedCodeDto) => {
-                app.showDialog(new showDataDialog("Generated Class", code.Code));
-            });
+            var id = selectedItem.getId();
+            new generateClassCommand(this.activeDatabase(), id, "csharp")
+                .execute()
+                .done((code: generatedCodeDto) => {
+                    app.showDialog(new showDataDialog("Generated Class", code.Code));
+                });
         }
     }
 

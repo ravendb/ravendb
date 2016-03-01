@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Json.Parsing
 {
@@ -10,6 +11,8 @@ namespace Raven.Server.Json.Parsing
         public int? CompressedSize;
         public long Long;
         public JsonParserToken CurrentTokenType;
+        public JsonParserTokenContinuation Continuation;
+
         public readonly List<int> EscapePositions = new List<int>();
 
         private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };
@@ -54,6 +57,11 @@ namespace Raven.Server.Json.Parsing
 
         public void FindEscapePositionsIn(string str)
         {
+            FindEscapePositionsIn(new StringSegment(str,0,str.Length));				
+        }
+
+        public void FindEscapePositionsIn(StringSegment str)
+        {
             EscapePositions.Clear();
             var lastEscape = 0;
             while (true)
@@ -65,6 +73,31 @@ namespace Raven.Server.Json.Parsing
                 lastEscape = curEscape + 1;
             }
         }
+
+
+        public void FindEscapePositionsIn(char[] buffer, int start, int count)
+        {
+            EscapePositions.Clear();
+            //TODO: inefficient, need to copy  COMString::IndexOfCharArray
+            var lastEscape = 0;
+            while (true)
+            {
+                var curEscape = -1;
+
+                foreach (var escapeChar in EscapeChars)
+                {
+                    curEscape = Array.IndexOf(buffer, escapeChar, start + lastEscape, count);
+                    if (curEscape != -1)
+                        break;
+                }
+
+                if (curEscape == -1)
+                    break;
+                EscapePositions.Add(curEscape - lastEscape);
+                lastEscape = curEscape + 1;
+            }
+        }
+
 
         public void WriteEscapePositionsTo(byte* buffer)
         {

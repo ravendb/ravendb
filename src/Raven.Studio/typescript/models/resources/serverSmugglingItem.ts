@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 import database = require("models/resources/database");
 
 class serverSmugglingItem {

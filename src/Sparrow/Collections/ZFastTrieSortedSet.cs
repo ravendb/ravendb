@@ -1,3 +1,6 @@
+#define DETAILED_DEBUG
+#define DETAILED_DEBUG_H
+
 using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
@@ -284,12 +287,15 @@ namespace Sparrow.Collections
             /// </summary>
             public readonly Node Exit;
 
+            public readonly bool IsRightChild;
+
             public CutPoint(int lcp, Internal parent, Node exit, BitVector searchKey)
             {
                 this.LongestPrefix = lcp;
                 this.Parent = parent;
                 this.Exit = exit;
                 this.SearchKey = searchKey;
+                this.IsRightChild = parent != null && parent.Right == exit;
             }
 
             /// <summary>
@@ -301,11 +307,6 @@ namespace Sparrow.Collections
                 // Theorem 3: Page 165 of [1]
                 var handleLength = this.Exit.GetHandleLength(owner);
                 return this.LongestPrefix >= handleLength;
-            }
-
-            public bool IsRightChild
-            {
-                get { return this.Parent != null && this.Parent.Right == this.Exit; }
             }
         }
 
@@ -428,9 +429,6 @@ namespace Sparrow.Collections
                 var newLeaf = new Leaf(cutPoint.LongestPrefix + 1, key, value);
                 var newInternal = new Internal(exitNode.NameLength, cutPoint.LongestPrefix);
 
-                newInternal.ReferencePtr = newLeaf;
-                newLeaf.ReferencePtr = newInternal;
-
                 // Link the internal and the leaf according to its exit direction.
                 if (exitDirection)
                 {
@@ -448,6 +446,9 @@ namespace Sparrow.Collections
                     newInternal.Right = cutPoint.Exit;
                     newInternal.JumpRightPtr = isCutLow && exitNodeAsInternal != null ? exitNodeAsInternal.JumpRightPtr : cutPoint.Exit;
                 }
+
+                newInternal.ReferencePtr = newLeaf;
+                newLeaf.ReferencePtr = newInternal;
 
                 // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
                 Debug.Assert(newInternal.IsInternal && newInternal.Left.Name(this)[newInternal.GetExtentLength(this)] == false);

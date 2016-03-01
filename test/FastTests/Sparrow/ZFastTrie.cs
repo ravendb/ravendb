@@ -1,20 +1,22 @@
+using Sparrow;
+using Sparrow.Binary;
+using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Sparrow;
-using Sparrow.Binary;
-using Sparrow.Collections;
+using System.Text;
+using System.Threading.Tasks;
 using Xunit;
+using Xunit.Extensions;
 
 namespace FastTests.Sparrow
 {
-    public class ZFastTrieTest
+    public class ZFastTrieTests
     {
-        private readonly Func<string, BitVector> binarize = x => BitVector.Of(x, true);
-
-
+        private readonly Func<string, BitVector> binarize = x => BitVector.Of(true, Encoding.UTF8.GetBytes(x));
+        
         [Fact]
         public void Construction()
         {
@@ -96,7 +98,9 @@ namespace FastTests.Sparrow
 
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
             Assert.True(tree.Add(lesserKey, "eini"));
+            ZFastTrieDebugHelpers.DumpTree(tree);
             Assert.True(tree.Add(greaterKey, "Eini"));
+            ZFastTrieDebugHelpers.DumpTree(tree);
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
 
@@ -179,35 +183,31 @@ namespace FastTests.Sparrow
         {
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
-            Assert.True(tree.Add("8Jp3", "8Jp3"));
-            Assert.True(tree.Add("GX37", "GX37"));
-            Assert.True(tree.Add("f04o", "f04o"));
-            Assert.True(tree.Add("KmGx", "KmGx"));
+            Assert.True(tree.Add("8Jp3", "8Jp"));
+            Assert.True(tree.Add("GX37", "GX3"));
+            Assert.True(tree.Add("f04o", "f04"));
+            Assert.True(tree.Add("KmGx", "KmG"));
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(4, tree.Count);
         }
-
         [Fact]
         public void Structure_MultipleBranchDeletion()
         {
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
-            Assert.True(tree.Add("8Jp3", "8Jp3"));
-            Assert.True(tree.Add("GX37", "GX37"));
-            Assert.True(tree.Add("f04o", "f04o"));
-            Assert.True(tree.Add("KmGx", "KmGx"));
-
+            Assert.True(tree.Add("8Jp3", "8Jp"));
+            Assert.True(tree.Add("GX37", "GX3"));
+            Assert.True(tree.Add("f04o", "f04"));
+            Assert.True(tree.Add("KmGx", "KmG"));
             Assert.True(tree.Remove("8Jp3"));
-            ZFastTrieDebugHelpers.StructuralVerify(tree);
-
             Assert.True(tree.Remove("GX37"));
-            ZFastTrieDebugHelpers.StructuralVerify(tree);
-
             Assert.True(tree.Remove("f04o"));
+            Assert.True(tree.Remove("KmGx"));
+
             ZFastTrieDebugHelpers.StructuralVerify(tree);
 
-            Assert.True(tree.Remove("KmGx"));
-            ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(0, tree.Count);
         }
 
         [Fact]
@@ -215,32 +215,29 @@ namespace FastTests.Sparrow
         {
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
-            Assert.True(tree.Add("CDb", "8Jp3"));
-            Assert.True(tree.Add("tCK", "GX37"));
-            Assert.True(tree.Add("B25", "f04o"));
-            Assert.True(tree.Add("2mW", "KmGx"));
+            Assert.True(tree.Add("CDb", "8J3"));
+            Assert.True(tree.Add("tCK", "GX7"));
+            Assert.True(tree.Add("B25", "f0o"));
+            Assert.True(tree.Add("2mW", "Kmx"));
             Assert.True(tree.Add("gov", string.Empty));
             ZFastTrieDebugHelpers.DumpTree(tree);
 
             Assert.True(tree.Remove("CDb"));
             ZFastTrieDebugHelpers.DumpTree(tree);
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            Assert.Equal(4, tree.Count);
         }
-
-
-
-
-
 
         [Fact]
         public void Structure_MultipleBranchDeletion3()
         {
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
 
-            Assert.True(tree.Add("0tA", "0tA"));
-            Assert.True(tree.Add("UUa", "UUa"));
-            Assert.True(tree.Add("0b5", "0b5"));
-            Assert.True(tree.Add("8ll", "8ll"));
+            Assert.True(tree.Add("0tA", "0A"));
+            Assert.True(tree.Add("UUa", "Ua"));
+            Assert.True(tree.Add("0b5", "05"));
+            Assert.True(tree.Add("8ll", "8l"));
             ZFastTrieDebugHelpers.DumpTree(tree);
 
             Assert.True(tree.Remove("0tA"));
@@ -260,6 +257,7 @@ namespace FastTests.Sparrow
             tree.Add("KmGx", "KmGx");
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(5, tree.Count);
         }
 
         [Fact]
@@ -274,7 +272,8 @@ namespace FastTests.Sparrow
             tree.Add("7H", "KmGx");
             tree.Add("73", "KmGx");
 
-            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(6, tree.Count);
         }
 
         [Fact]
@@ -289,6 +288,8 @@ namespace FastTests.Sparrow
 
             ZFastTrieDebugHelpers.DumpTree(tree);
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            Assert.Equal(4, tree.Count);
         }
 
         [Fact]
@@ -304,6 +305,8 @@ namespace FastTests.Sparrow
             tree.Add("cI", "KmGx");
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            Assert.Equal(6, tree.Count);
         }
 
         [Fact]
@@ -311,12 +314,18 @@ namespace FastTests.Sparrow
         {
             var tree = new ZFastTrieSortedSet<string, string>(binarize);
             tree.Add("8Jp3V6sl", "8Jp3");
+            ZFastTrieDebugHelpers.DumpTree(tree);
             tree.Add("VJ7hXe8d", "V6sl");
+            ZFastTrieDebugHelpers.DumpTree(tree);
             tree.Add("39XCGX37", "GX37");
+            ZFastTrieDebugHelpers.DumpTree(tree);
             tree.Add("f04oKmGx", "f04o");
+            ZFastTrieDebugHelpers.DumpTree(tree);
             tree.Add("feiF1gdt", "KmGx");
+            ZFastTrieDebugHelpers.DumpTree(tree);
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(5, tree.Count);
         }
 
         [Fact]
@@ -361,6 +370,7 @@ namespace FastTests.Sparrow
             tree.Add("L5", "MU");
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(6, tree.Count);
         }
 
         [Fact]
@@ -375,6 +385,7 @@ namespace FastTests.Sparrow
             tree.Add("3", "KmG3");
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(6, tree.Count);
         }
 
         [Fact]
@@ -404,6 +415,7 @@ namespace FastTests.Sparrow
             tree.Add("rqqjR5", string.Empty);
 
             ZFastTrieDebugHelpers.StructuralVerify(tree);
+            Assert.Equal(20, tree.Count);
         }
 
         private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -539,6 +551,10 @@ namespace FastTests.Sparrow
 
         private static int DumpNodes<T, W>(ZFastTrieSortedSet<T, W> tree, ZFastTrieSortedSet<T, W>.Node node, ZFastTrieSortedSet<T, W>.Node parent, int nameLength, int depth) where T : IEquatable<T>
         {
+
+            if (Debugger.IsAttached == false)
+                return 0;
+
             if (node == null)
                 return 0;
 

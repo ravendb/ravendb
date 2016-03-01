@@ -1,4 +1,4 @@
-/// <reference path="../../../models/dto.ts" />
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 class documentMetadata {
     ravenEntityName: string;

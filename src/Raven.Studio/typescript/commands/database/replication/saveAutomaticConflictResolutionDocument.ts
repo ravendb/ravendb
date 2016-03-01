@@ -16,7 +16,7 @@ class saveAutomaticConflictResolutionDocument extends commandBase {
 
     private saveConfig(): JQueryPromise<any> {
         var id = "Raven/Replication/Config";
-        var url = "/docs/" + id;
+        var url = "/document?id=" + id;
         var putArgs = JSON.stringify(this.dto);
         return this.put(url, putArgs, this.db);
     }

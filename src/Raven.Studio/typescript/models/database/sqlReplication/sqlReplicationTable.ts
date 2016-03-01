@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class sqlReplicationTable {
 
     tableName = ko.observable<string>().extend({ required: true });

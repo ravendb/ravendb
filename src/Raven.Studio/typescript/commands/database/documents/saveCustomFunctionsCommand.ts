@@ -21,7 +21,7 @@ class saveCustomFunctionsCommand extends commandBase {
         return this.validateCustomFunctions(args)
             .fail((response) => this.reportError("Failed to validate custom functions!", response.responseText, response.statusText))
             .then(() => {
-                var url = this.global ? "/docs/Raven/Global/Javascript/Functions" : "/docs/Raven/Javascript/Functions";
+                var url = this.global ? "/document?id=Raven/Global/Javascript/Functions" : "/document?id=Raven/Javascript/Functions";
                 var saveTask = this.put(url, args, this.db, null);
 
                 saveTask.done(() => this.reportSuccess("Custom functions saved!"));

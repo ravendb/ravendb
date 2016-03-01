@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class databaseStatistics {
     countOfDocuments = ko.observable<number>();
     databaseId = ko.observable<string>();

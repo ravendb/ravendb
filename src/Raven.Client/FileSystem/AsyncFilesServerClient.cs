@@ -251,7 +251,7 @@ namespace Raven.Client.FileSystem
             return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
                 var requestUriBuilder = new StringBuilder(operation.Url)
-                    .Append("/search/?query=")
+                    .Append("/search?query=")
                     .Append(Uri.EscapeUriString(query))
                     .Append("&start=")
                     .Append(start)
@@ -1047,7 +1047,7 @@ namespace Raven.Client.FileSystem
                 return client.ExecuteWithReplication(HttpMethods.Get, async operation =>
                 {
                     var requestUriBuilder = new StringBuilder(operation.Url)
-                        .Append("/config/search/?prefix=")
+                        .Append("/config/search?prefix=")
                         .Append(Uri.EscapeUriString(prefix))
                         .Append("&start=")
                         .Append(start)

@@ -1,4 +1,4 @@
-/// <reference path="../models/dto.ts" />
+/// <reference path="../../typings/tsd.d.ts" />
 
 import alertType = require("common/alertType");
 import messagePublisher = require("common/messagePublisher");
@@ -6,7 +6,7 @@ import database = require("models/resources/database");
 import resource = require("models/resources/resource");
 import appUrl = require("common/appUrl");
 import oauthContext = require("common/oauthContext");
-import forge = require("forge/forge_custom.min");
+import forge = require("forge");
 import router = require("plugins/router");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.

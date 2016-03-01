@@ -26,7 +26,7 @@ namespace Raven.Server.Routing
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
 
             var actions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
-                .SelectMany(type => type.GetMembers())
+                .SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
                 .Where(type => type.IsDefined(typeof(RavenActionAttribute)))
                 .ToList();
 

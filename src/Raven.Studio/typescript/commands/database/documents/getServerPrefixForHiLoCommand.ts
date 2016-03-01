@@ -13,7 +13,7 @@ class getServerPrefixForHiLoCommand extends commandBase {
 
     execute(): JQueryPromise<string> {
         var resultsSelector = (queryResult: any) => queryResult.ServerPrefix;
-        var url = "/docs/Raven/ServerPrefixForHilo";
+        var url = "/document?id=Raven/ServerPrefixForHilo";
         return this.query(url, null, this.db, resultsSelector);
     }
 }

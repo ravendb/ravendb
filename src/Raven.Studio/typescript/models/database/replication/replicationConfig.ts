@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class replicationConfig {
 
     private static DO_NOT_RESOLVE_AUTOMATICALLY = "None";

@@ -1,15 +1,14 @@
-/// <reference path="../../../typings/tsd.d.ts" />
-
 import viewModelBase = require("viewmodels/viewModelBase");
+/* TODO
 import d3 = require("d3");
-import nv = require("nvd3");
+import nv = require("nvd3");*/
 import appUrl = require("common/appUrl");
 import listDiskPerformanceRunsCommand = require("commands/maintenance/listDiskPerformanceRunsCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 
 class diskIoViewer extends viewModelBase {
-
+/* TODO
     isoFormat = d3.time.format.iso;
 
     showChart = ko.observable<boolean>(true);
@@ -216,7 +215,7 @@ class diskIoViewer extends viewModelBase {
                 this.currentPerformanceRun(null);
                 this.showChart(false);
             });
-    }
+    }*/
 }
 
 export = diskIoViewer; 

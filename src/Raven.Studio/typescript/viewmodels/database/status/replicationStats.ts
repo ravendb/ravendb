@@ -1,5 +1,3 @@
-/// <reference path="../../../../typings/tsd.d.ts" />
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import getReplicationStatsCommand = require("commands/database/replication/getReplicationStatsCommand");
 import moment = require("moment");

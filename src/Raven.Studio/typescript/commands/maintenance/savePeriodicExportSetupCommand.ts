@@ -28,7 +28,7 @@ class savePeriodicExportSetupCommand extends commandBase {
     }
 
     private saveSetup(): JQueryPromise<any> {
-        var url = this.globalConfig ? "/docs/Raven/Global/Backup/Periodic/Setup" : "/docs/Raven/Backup/Periodic/Setup";
+        var url = this.globalConfig ? "/document?id=Raven/Global/Backup/Periodic/Setup" : "/document?id=Raven/Backup/Periodic/Setup";
         var putArgs = JSON.stringify(this.setupToPersist.toDto());
         return this.put(url, putArgs, this.db);
     }

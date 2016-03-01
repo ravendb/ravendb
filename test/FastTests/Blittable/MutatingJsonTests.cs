@@ -10,6 +10,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Blittable
@@ -19,9 +22,9 @@ namespace FastTests.Blittable
         private const string InitialJson = @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false}}";
 
         [Fact]
-        public async Task CanAddProperty()
+        public void CanAddProperty()
         {
-            await AssertEqualAfterRoundTrip(source =>
+            AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -31,9 +34,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public async Task CanCompressFields()
+        public void CanCompressFields()
         {
-            await AssertEqualAfterRoundTrip(source =>
+            AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -45,9 +48,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public async Task WillPreserveEscapes()
+        public void WillPreserveEscapes()
         {
-            await AssertEqualAfterRoundTrip(source =>
+            AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -59,9 +62,9 @@ namespace FastTests.Blittable
 
 
         [Fact]
-        public async Task CanModifyArrayProperty()
+        public void CanModifyArrayProperty()
         {
-            await AssertEqualAfterRoundTrip(source =>
+            AssertEqualAfterRoundTrip(source =>
             {
                 object result;
                 source.TryGetMember("Dogs", out result);
@@ -76,9 +79,9 @@ namespace FastTests.Blittable
 
 
         [Fact]
-        public async Task CanModifyNestedObjectProperty()
+        public void CanModifyNestedObjectProperty()
         {
-            await AssertEqualAfterRoundTrip(source =>
+            AssertEqualAfterRoundTrip(source =>
             {
                 object result;
                 source.TryGetMember("State", out result);
@@ -91,9 +94,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public async Task CanRemoveAndAddProperty()
+        public void CanRemoveAndAddProperty()
         {
-            await AssertEqualAfterRoundTrip(source =>
+            AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue(source)
                 {
@@ -104,9 +107,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public async Task CanAddAndRemoveProperty()
+        public void CanAddAndRemoveProperty()
         {
-            await AssertEqualAfterRoundTrip(source =>
+            AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue(source)
                 {
@@ -116,23 +119,23 @@ namespace FastTests.Blittable
             }, @"{""Name"":""Oren"",""State"":{""Sleep"":false}}");
         }
 
-        private static async Task AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
+        private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new MemoryOperationContext(pool))
             {
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
                 streamWriter.Write(json ?? InitialJson);
                 streamWriter.Flush();
                 stream.Position = 0;
-                using (var writer = await ctx.Read(stream, "foo"))
+                using (var writer = ctx.Read(stream, "foo"))
                 {
                     mutate(writer);
-                    using (var document = await ctx.ReadObject(writer, "foo"))
+                    using (var document = ctx.ReadObject(writer, "foo"))
                     {
                         var ms = new MemoryStream();
-                        document.WriteTo(ms, originalPropertyOrder: true);
+                        ctx.WriteOrdered(ms, document);
                         var actual = Encoding.UTF8.GetString(ms.ToArray());
                         Assert.Equal(expected, actual);
                     }

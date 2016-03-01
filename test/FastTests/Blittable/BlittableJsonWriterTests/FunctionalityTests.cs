@@ -8,6 +8,9 @@ using Newtonsoft.Json;
 using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Voron.Util;
 using Xunit;
 
@@ -16,13 +19,13 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
     public class FunctionalityTests : BlittableJsonTestBase
     {
         [Fact]
-        public async Task FunctionalityTest()
+        public void FunctionalityTest()
         {
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = GenerateSimpleEntityForFunctionalityTest();
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+            using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
                 dynamic dynamicBlittableJObject = new DynamicBlittableJson(employee);
@@ -37,31 +40,31 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
                 Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
                 var ms = new MemoryStream();
-                employee.WriteTo(ms, originalPropertyOrder:true);
+                blittableContext.WriteOrdered(ms, employee);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 
         [Fact]
-        public async Task FunctionalityTest2()
+        public void FunctionalityTest2()
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 AssertComplexEmployee(str, employee, blittableContext);
             }
         }
 
         [Fact]
-        public async Task EmptyArrayTest()
+        public void EmptyArrayTest()
         {
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = "{\"Alias\":\"Jimmy\",\"Data\":[],\"Name\":\"Trolo\",\"SubData\":{\"SubArray\":[]}}";
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(employee);
                 Assert.Equal(dynamicObject.Alias, "Jimmy");
@@ -115,7 +118,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(10)]
         [InlineData(100)]
         [InlineData(1000)]
-        public async Task LongStringsTest(int repeatSize)
+        public void LongStringsTest(int repeatSize)
         {
             var originStr = string.Join("", Enumerable.Repeat(1, repeatSize).Select(x => "sample"));
             var sampleObject = new
@@ -135,8 +138,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var doc = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+            using (var doc =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(doc);
                 Assert.Equal(sampleObject.Value, dynamicObject.Value);
@@ -151,13 +154,13 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
                 Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
                 var ms = new MemoryStream();
-                doc.WriteTo(ms, originalPropertyOrder: true);
+                blittableContext.WriteOrdered(ms, doc);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 
         [Fact]
-        public async Task BasicCopyToStream()
+        public void BasicCopyToStream()
         {
             var json = JsonConvert.SerializeObject(new
             {
@@ -173,16 +176,35 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             });
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new RavenOperationContext(pool))
-            using (var r = await ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
+            using (var ctx = new MemoryOperationContext(pool))
+            using (var r =  ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();
-                r.WriteTo(ms, originalPropertyOrder: true);
+                ctx.Write(ms, r);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
             }
         }
 
+        [Fact]
+        public void UsingBoolleans()
+        {
+            var json = JsonConvert.SerializeObject(new
+            {
+                Name = "Oren",
+                Dogs = true
+            });
+
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var ctx = new MemoryOperationContext(pool))
+            using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
+            {
+                var ms = new MemoryStream();
+                ctx.WriteOrdered(ms, r);
+
+                Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
+            }
+        }
 
     }
 }

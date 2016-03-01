@@ -12,7 +12,8 @@ using Raven.Client.Extensions;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
-using Raven.Server.Json;
+using Raven.Server.Extensions;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 namespace Raven.Tests.Core
@@ -22,8 +23,30 @@ namespace Raven.Tests.Core
         public const string ServerName = "Raven.Tests.Core.Server";
 
         protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
+        protected readonly HashSet<string> PathsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public Lazy<RavenServer> Server  = new Lazy<RavenServer>(CreateServer);
+        private static int _currentServerUsages;
+        private static RavenServer _globalServer;
+        private static readonly object ServerLocker = new object();
+        private RavenServer _localServer;
+        private static int _pathCount;
+
+        public RavenServer Server
+        {
+            get
+            {
+                if (_localServer != null)
+                    return _localServer;
+                lock (ServerLocker)
+                {
+                    if (_globalServer == null)
+                        _globalServer = CreateServer();
+                    _currentServerUsages++;
+                    _localServer = _globalServer;
+                }
+                return _globalServer;
+            }
+        }
 
         private static RavenServer CreateServer()
         {
@@ -59,22 +82,23 @@ namespace Raven.Tests.Core
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
             modifyDatabaseDocument?.Invoke(doc);
 
-            RavenOperationContext context;
-            using (Server.Value.ServerStore.ContextPool.AllocateOperationContext(out context))
+            TransactionOperationContext context;
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
-                if (Server.Value.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
+                context.OpenReadTransaction();
+                if (Server.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
                     throw new InvalidOperationException($"Database '{databaseName}' already exists");
             }
-            
+
             var store = new DocumentStore
             {
-                Url = UseFiddler(Server.Value.Configuration.Core.ServerUrl),
+                Url = UseFiddler(Server.Configuration.Core.ServerUrl),
                 DefaultDatabase = databaseName,
             };
+            ModifyStore(store);
             store.Initialize();
 
-            await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc);
+            await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
             store.AfterDispose += (sender, args) =>
             {
                 store.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(databaseName, hardDelete: true);
@@ -83,10 +107,16 @@ namespace Raven.Tests.Core
             return store;
         }
 
+        protected virtual void ModifyStore(DocumentStore store)
+        {
+
+        }
+
         private static string UseFiddler(string url)
         {
             if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
                 return url.Replace("localhost", "localhost.fiddler");
+
             return url;
         }
 
@@ -108,16 +138,118 @@ namespace Raven.Tests.Core
             } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
         }
 
+        protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
+        {
+            prefix = prefix?.Replace("<", "").Replace(">", "");
+
+            var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Interlocked.Increment(ref _pathCount)));
+            if (forceCreateDir && Directory.Exists(newDataDir) == false)
+                Directory.CreateDirectory(newDataDir);
+            PathsToDelete.Add(newDataDir);
+            return newDataDir;
+        }
 
         public void Dispose()
         {
-            foreach (var documentStore in CreatedStores)
+            GC.SuppressFinalize(this);
+
+            var errors = new List<Exception>();
+            foreach (var store in CreatedStores)
             {
-                documentStore.Dispose();
+                try
+                {
+                    store.Dispose();
+                }
+                catch (Exception e)
+                {
+                    errors.Add(e);
+                }
             }
 
-            if(Server.IsValueCreated)
-                Server.Value.Dispose();
+            if (_localServer != null)
+            {
+                lock (ServerLocker)
+                {
+                    if (--_currentServerUsages > 0)
+                        return;
+
+                    try
+                    {
+                        _globalServer.Dispose();
+                        _globalServer = null;
+                        _currentServerUsages = 0;
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
+            }
+
+            GC.Collect(2);
+            GC.WaitForPendingFinalizers();
+
+            foreach (var pathToDelete in PathsToDelete)
+            {
+                try
+                {
+                    ClearDatabaseDirectory(pathToDelete);
+                }
+                catch (Exception e)
+                {
+                    errors.Add(e);
+                }
+                finally
+                {
+                    if (File.Exists(pathToDelete)) // Just in order to be sure we didn't created a file in that path, by mistake)
+                    {
+                        errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory, but failed because it is a file.\r\n{1}", pathToDelete,
+                            WhoIsLocking.ThisFile(pathToDelete))));
+                    }
+                    else if (Directory.Exists(pathToDelete))
+                    {
+                        string filePath;
+                        try
+                        {
+                            filePath = Directory.GetFiles(pathToDelete, "*", SearchOption.AllDirectories).FirstOrDefault() ?? pathToDelete;
+                        }
+                        catch (Exception)
+                        {
+                            filePath = pathToDelete;
+                        }
+                        errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory.\r\n{1}", pathToDelete,
+                            WhoIsLocking.ThisFile(filePath))));
+                    }
+                }
+            }
+
+            if (errors.Count > 0)
+                throw new AggregateException(errors);
+        }
+
+        private void ClearDatabaseDirectory(string dataDir)
+        {
+            var isRetry = false;
+
+            while (true)
+            {
+                try
+                {
+                    IOExtensions.DeleteDirectory(dataDir);
+                    break;
+                }
+                catch (IOException)
+                {
+                    if (isRetry)
+                        throw;
+
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    isRetry = true;
+
+                    Thread.Sleep(2500);
+                }
+            }
         }
     }
 }

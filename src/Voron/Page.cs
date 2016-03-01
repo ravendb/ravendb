@@ -53,6 +53,7 @@ namespace Voron
             set { ((PageHeader*)Pointer)->Flags = value; }
         }
 
+        // TODO: Convert all these methods in explicit casting operators. 
         public TreePage ToTreePage()
         {
             return new TreePage(Pointer, Source.DebugInfo, Source.PageSize);

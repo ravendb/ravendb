@@ -1,3 +1,5 @@
+/// <reference path="../../typings/tsd.d.ts"/>
+
 class chunkFetcher<T> {
 
     constructor(private fetcher: (skip: number, take: number) => JQueryPromise<T[]>) {

@@ -64,7 +64,7 @@ namespace Raven.Client.Document.Batches
                 throw new InvalidOperationException("Got bad status code: " + response.Status);
             }
 
-            HandleRespose(new MultiLoadResult
+            HandleRespose(new LoadResult
             {
                 Includes = response.Result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
                 Results = response.Result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
@@ -76,9 +76,9 @@ namespace Raven.Client.Document.Batches
             return null;
         }
 
-        private void HandleRespose(MultiLoadResult multiLoadResult)
+        private void HandleRespose(LoadResult loadResult)
         {
-            T[] complete = loadTransformerOperation.Complete<T>(multiLoadResult);
+            T[] complete = loadTransformerOperation.Complete<T>(loadResult);
             if (singleResult)
             {
                 Result = complete.Length > 0 ? complete[0] : (object)null;

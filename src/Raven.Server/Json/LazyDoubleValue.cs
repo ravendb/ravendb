@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Json
 {
@@ -6,6 +8,9 @@ namespace Raven.Server.Json
     {
         public readonly LazyStringValue Inner;
         private double? _val;
+
+        private double Val => _val.GetValueOrDefault();
+
         public LazyDoubleValue(LazyStringValue inner)
         {
             Inner = inner;
@@ -20,6 +25,5 @@ namespace Raven.Server.Json
             self._val = val;
             return val;
         }
-
     }
 }

@@ -1,67 +1,64 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
+using Sparrow;
 
 namespace Raven.Server.Documents
 {
-    public class DatabasesLandlord : AbstractLandlord<DocumentsStorage>
+    public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
         public event Action<string> OnDatabaseLoaded = delegate { };
 
-        public override async Task<DocumentsStorage> GetResourceInternal(StringSegment resourceName)
+        public override async Task<DocumentDatabase> GetResourceInternal(StringSegment resourceName)
         {
-            Task<DocumentsStorage> db;
-            if (TryGetOrCreateResourceStore(resourceName, out db))
-                return await db.ConfigureAwait(false);
-            return null;
+            var database = await TryGetOrCreateResourceStore(resourceName);
+            if (database == null)
+                return null;
+            return await database.ConfigureAwait(false);
         }
 
-        public override bool TryGetOrCreateResourceStore(StringSegment databaseId, out Task<DocumentsStorage> database)
+        public override async Task<Task<DocumentDatabase>> TryGetOrCreateResourceStore(StringSegment databaseName)
         {
-            //TODO: Restore those
-            // if (Locks.Contains(DisposingLock))
-            //     throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
-            // 
-            // if (Locks.Contains(tenantId))
-            //     throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
-            // 
-            // ManualResetEvent cleanupLock;
-            // if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
-            //     throw new InvalidOperationException($"Database '{tenantId}' is currently being restarted and cannot be accessed. We already waited {MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds} seconds.");
+            if (Locks.Contains(DisposingLock))
+                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
+            
+            if (Locks.Contains(databaseName))
+                throw new InvalidOperationException($"Database '{databaseName}' is currently locked and cannot be accessed.");
 
-            if (ResourcesStoresCache.TryGetValue(databaseId, out database))
+            Task<DocumentDatabase> database;
+            if (ResourcesStoresCache.TryGetValue(databaseName, out database))
             {
                 if (database.IsFaulted || database.IsCanceled)
                 {
-                    ResourcesStoresCache.TryRemove(databaseId, out database);
+                    ResourcesStoresCache.TryRemove(databaseName, out database);
                     DateTime time;
-                    LastRecentlyUsed.TryRemove(databaseId, out time);
+                    LastRecentlyUsed.TryRemove(databaseName, out time);
                     // and now we will try creating it again
                 }
                 else
                 {
-                    return true;
+                    return database;
                 }
             }
 
-            var config = CreateDatabaseConfiguration(databaseId);
+            var config = CreateDatabaseConfiguration(databaseName);
             if (config == null)
-                return false;
+                return null;
 
             var hasAcquired = false;
             try
@@ -71,8 +68,8 @@ namespace Raven.Server.Documents
 
                 hasAcquired = true;
 
-                var task = new Task<DocumentsStorage>(() => CreateDocumentsStorage(databaseId, config));
-                database = ResourcesStoresCache.GetOrAdd(databaseId, task);
+                var task = new Task<DocumentDatabase>(() => CreateDocumentsStorage(databaseName, config));
+                database = ResourcesStoresCache.GetOrAdd(databaseName, task);
                 if (database == task)
                     task.Start();
 
@@ -83,12 +80,12 @@ namespace Raven.Server.Documents
                     // Note that we return the faulted task anyway, because we need the user to look at the error
                     if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
                     {
-                        Task<DocumentsStorage> val;
-                        ResourcesStoresCache.TryRemove(databaseId, out val);
+                        Task<DocumentDatabase> val;
+                        ResourcesStoresCache.TryRemove(databaseName, out val);
                     }
                 }
 
-                return true;
+                return database;
             }
             finally
             {
@@ -97,13 +94,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DocumentsStorage CreateDocumentsStorage(StringSegment databaseId, RavenConfiguration config)
+        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config)
         {
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentsStorage(config.DatabaseName, config);
-
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config);
                 documentDatabase.Initialize();
 
                 if (Log.IsInfoEnabled)
@@ -114,7 +110,7 @@ namespace Raven.Server.Documents
                 OnDatabaseLoaded(config.DatabaseName);
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(databaseId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                LastRecentlyUsed.AddOrUpdate(databaseName, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
                 return documentDatabase;
             }
             catch(Exception e)
@@ -125,18 +121,18 @@ namespace Raven.Server.Documents
             }
         }
 
-        public RavenConfiguration CreateDatabaseConfiguration(StringSegment tenantId, bool ignoreDisabledDatabase = false)
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
-            if (tenantId.IsNullOrWhiteSpace())
-                throw new ArgumentNullException(nameof(tenantId), "Tenant ID cannot be empty");
-            if (tenantId.Equals("<system>"))
-                throw new ArgumentNullException(nameof(tenantId), "Tenant ID cannot be <system>");
+            if (databaseName.IsNullOrWhiteSpace())
+                throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
+            if (databaseName.Equals("<system>"))
+                throw new ArgumentNullException(nameof(databaseName), "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
 
-            var document = GetDatabaseDocument(tenantId, ignoreDisabledDatabase);
+            var document = GetDatabaseDocument(databaseName, ignoreDisabledDatabase);
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.Core.DataDirectory));
+            return CreateConfiguration(databaseName, document, RavenConfiguration.GetKey(x => x.Core.DataDirectory));
         }
 
         protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseDocument document, string folderPropName)
@@ -191,16 +187,16 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DatabaseDocument GetDatabaseDocument(StringSegment tenantId, bool ignoreDisabledDatabase = false)
+        private DatabaseDocument GetDatabaseDocument(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
             // We allocate the context here because it should be relatively rare operation
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
-                var id = Constants.Database.Prefix + tenantId;
-                var jsonReaderObject = ServerStore.Read(context, id);
+                var dbId = Constants.Database.Prefix + databaseName;
+                var jsonReaderObject = ServerStore.Read(context, dbId);
                 if (jsonReaderObject == null)
                     return null;
 

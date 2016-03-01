@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Server.Routing;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Json
@@ -21,20 +25,18 @@ namespace Raven.Server.Json
 
         public DynamicJsonValue Modifications;
 
-        private Dictionary<string, object> _objectsPathCache;
+        private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
         public override string ToString()
         {
             var memoryStream = new MemoryStream();
-            var writer = new BlittableJsonTextWriter(_context, memoryStream);
-            WriteToOrdered(writer);
-            writer.Flush();
+            _context.WriteOrdered(memoryStream, this);
             memoryStream.Position = 0;
             return new StreamReader(memoryStream).ReadToEnd();
         }
 
-        public BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context, 
+        public BlittableJsonReaderObject(byte* mem, int size, MemoryOperationContext context, 
             BlittableJsonDocumentBuilder builder = null,
             CachedProperties cachedProperties = null)
         {
@@ -224,6 +226,11 @@ namespace Raven.Server.Json
 
         public bool TryGet<T>(string name, out T obj)
         {
+            return TryGet(new StringSegment(name,0,name.Length),out obj);
+        }
+
+        public bool TryGet<T>(StringSegment name, out T obj)
+        {
             object result;
             if (TryGetMember(name, out result) == false)
             {
@@ -259,6 +266,12 @@ namespace Raven.Server.Json
 
         public bool TryGet(string name, out string str)
         {
+            return TryGet(new StringSegment(name,0,name.Length),out str);
+        }
+
+
+        public bool TryGet(StringSegment name, out string str)
+        {
             object result;
             if (TryGetMember(name, out result) == false)
             {
@@ -283,6 +296,12 @@ namespace Raven.Server.Json
 
         public bool TryGetMember(string name, out object result)
         {
+            return TryGetMember(new StringSegment(name,0,name.Length),out result);
+        }
+
+
+        public bool TryGetMember(StringSegment name, out object result)
+        {
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
             {
@@ -301,7 +320,7 @@ namespace Raven.Server.Json
             {
                 if (_objectsPathCache == null)
                 {
-                    _objectsPathCache = new Dictionary<string, object>();
+                    _objectsPathCache = new Dictionary<StringSegment, object>();
                     _objectsPathCacheByIndex = new Dictionary<int, object>();
                 }
                 _objectsPathCache[name] = result;
@@ -334,14 +353,20 @@ namespace Raven.Server.Json
 
         public int GetPropertyIndex(string name)
         {
+            return GetPropertyIndex(new StringSegment(name,0,name.Length));
+        }
+
+
+        public int GetPropertyIndex(StringSegment name)
+        {
             if (_cachedProperties != null)
             {
-                var propName = _context.GetLazyStringFor(name);
+                var propName = _context.GetLazyStringForFieldWithCaching(name.Value);
                 return _cachedProperties.GetPropertyId(propName);
             }
 
             int min = 0, max = _propCount;
-            var comparer = _context.GetLazyStringFor(name);
+            var comparer = _context.GetLazyStringForFieldWithCaching(name.Value);
 
             int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)
@@ -400,39 +425,6 @@ namespace Raven.Server.Json
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
-        public void WriteTo(Stream stream, bool originalPropertyOrder = false)
-        {
-            var writer = new BlittableJsonTextWriter(_context, stream);
-            if (originalPropertyOrder)
-                WriteToOrdered(writer);
-            else
-                WriteTo(writer);
-            writer.Flush();
-        }
-
-
-        // keeping this here because we aren't sure whatever it is worth it to 
-        // get the same order of the documents for the perf cost
-        public void WriteToOrdered(BlittableJsonTextWriter writer)
-        {
-            writer.WriteStartObject();
-            var props = GetPropertiesByInsertionOrder();
-            for (int i = 0; i < props.Length; i++)
-            {
-                if (i != 0)
-                {
-                    writer.WriteComma();
-                }
-
-                var prop = GetPropertyByIndex(props[i]);
-                writer.WritePropertyName(prop.Item1);
-
-                WriteValue(writer, prop.Item3 & typesMask, prop.Item2, originalPropertyOrder: true);
-            }
-
-            writer.WriteEndObject();
-        }
-
         public int[] GetPropertiesByInsertionOrder()
         {
             var props = new int[_propCount];
@@ -448,83 +440,11 @@ namespace Raven.Server.Json
             return props;
         }
 
-        public void WriteTo(BlittableJsonTextWriter writer)
-        {
-            writer.WriteStartObject();
-            for (int i = 0; i < _propCount; i++)
-            {
-                if (i != 0)
-                {
-                    writer.WriteComma();
-                }
-                var prop = GetPropertyByIndex(i);
-                writer.WritePropertyName(prop.Item1);
-
-                WriteValue(writer, prop.Item3 & typesMask, prop.Item2, originalPropertyOrder: false);
-            }
-
-            writer.WriteEndObject();
-        }
-
-        private void WriteValue(BlittableJsonTextWriter writer, BlittableJsonToken token, object val, bool originalPropertyOrder = false)
-        {
-            switch (token)
-            {
-                case BlittableJsonToken.StartArray:
-                    WriteArrayToStream((BlittableJsonReaderArray)val, writer, originalPropertyOrder);
-                    break;
-                case BlittableJsonToken.StartObject:
-                    var blittableJsonReaderObject = ((BlittableJsonReaderObject)val);
-                    if (originalPropertyOrder)
-                        blittableJsonReaderObject.WriteToOrdered(writer);
-                    else
-                        blittableJsonReaderObject.WriteTo(writer);
-                    break;
-                case BlittableJsonToken.String:
-                    writer.WriteString((LazyStringValue)val);
-                    break;
-                case BlittableJsonToken.CompressedString:
-                    writer.WriteString((LazyCompressedStringValue)val);
-                    break;
-                case BlittableJsonToken.Integer:
-                    writer.WriteInteger((long)val);
-                    break;
-                case BlittableJsonToken.Float:
-                    writer.WriteDouble((LazyDoubleValue)val);
-                    break;
-                case BlittableJsonToken.Boolean:
-                    writer.WriteBool((bool)val);
-                    break;
-                case BlittableJsonToken.Null:
-                    writer.WriteNull();
-                    break;
-                default:
-                    throw new DataMisalignedException($"Unidentified Type {token}");
-            }
-        }
-
-        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, BlittableJsonTextWriter writer, bool originalPropertyOrder)
-        {
-            writer.WriteStartArray();
-            var length = blittableArray.Length;
-            for (var i = 0; i < length; i++)
-            {
-                var propertyValueAndType = blittableArray.GetValueTokenTupleByIndex(i);
-
-                if (i != 0)
-                {
-                    writer.WriteComma();
-                }
-                // write field value
-                WriteValue(writer, propertyValueAndType.Item2, propertyValueAndType.Item1, originalPropertyOrder);
-
-            }
-            writer.WriteEndArray();
-        }
+        
 
         internal object GetObject(BlittableJsonToken type, int position)
         {
-            switch (type & typesMask)
+            switch (type & TypesMask)
             {
                 case BlittableJsonToken.StartObject:
                     return new BlittableJsonReaderObject(position, _parent ?? this, type);

@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Server.Documents;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Routing
 {
@@ -100,7 +100,6 @@ namespace Raven.Server.Routing
 
         }
 
-
         public MatchResult TryMatch(string method, string url)
         {
             var match = new MatchResult
@@ -113,7 +112,7 @@ namespace Raven.Server.Routing
             };
 
             var result = match.SearchTrie(this, method);
-            if (result == null /*|| result.c != result.Key.Length*/)
+            if (result == null)
             {
                 return match;
             }

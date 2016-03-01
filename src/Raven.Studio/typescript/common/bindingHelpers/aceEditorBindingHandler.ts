@@ -1,8 +1,9 @@
+/// <reference path="../../../typings/tsd.d.ts" />
 /// <amd-dependency path="ace/ext/language_tools" />
 /// <amd-dependency path="ace/mode/lucene" />
 /// <amd-dependency path="ace/theme/xcode" />
-/// <amd-dependency path="ace/mode/json_newline_friendly" />
 /// <amd-dependency path="ace/mode/json" />
+//TODO: <amd-dependency path="ace/mode/json_newline_friendly" />
 import composition = require("durandal/composition");
 import ace = require("ace/ace");
 

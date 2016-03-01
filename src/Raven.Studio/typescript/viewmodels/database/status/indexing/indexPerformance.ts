@@ -1,5 +1,3 @@
-/// <reference path="../../../../../typings/tsd.d.ts" />
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
 import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexingBatchStatsCommand");

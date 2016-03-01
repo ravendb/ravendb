@@ -6,21 +6,25 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Sparrow;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class DocumentsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs")]
         public async Task GetDocuments()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.OpenReadTransaction();
 
                 // everything here operates on all docs
                 var actualEtag = ComputeAllDocumentsEtag(context);
@@ -35,12 +39,12 @@ namespace Raven.Server.Documents
                 IEnumerable<Document> documents;
                 if (HttpContext.Request.Query.ContainsKey("etag"))
                 {
-                    documents = DocumentsStorage.GetDocumentsAfter(context,
+                    documents = Database.DocumentsStorage.GetDocumentsAfter(context,
                         GetLongQueryString("etag"), GetStart(), GetPageSize());
                 }
                 else if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
-                    documents = DocumentsStorage.GetDocumentsStartingWith(context,
+                    documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                         HttpContext.Request.Query["startsWith"],
                         HttpContext.Request.Query["matches"],
                         HttpContext.Request.Query["excludes"],
@@ -50,18 +54,18 @@ namespace Raven.Server.Documents
                 }
                 else // recent docs
                 {
-                    documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
+                    documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
                 }
-                await WriteDocumentsAsync(context, documents);
+                WriteDocuments(context, documents);
             }
         }
 
-        private unsafe long ComputeAllDocumentsEtag(RavenOperationContext context)
+        private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)
         {
             var buffer = stackalloc long[2];
 
-            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction);
-            buffer[1] = DocumentsStorage.GetNumberOfDocuments(context);
+            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
+            buffer[1] = Database.DocumentsStorage.GetNumberOfDocuments(context);
 
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }

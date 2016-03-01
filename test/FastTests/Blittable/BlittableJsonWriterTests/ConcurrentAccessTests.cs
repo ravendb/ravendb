@@ -3,6 +3,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
@@ -10,13 +13,13 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
     public class ConcurrentAccessTests: BlittableJsonTestBase
     {
         [Fact]
-        public async Task ConcurrentReadsTest()
+        public void ConcurrentReadsTest()
         {
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = GenerateSimpleEntityForFunctionalityTest2();
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+            using (var employee =  blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                /* FileStream file = new FileStream(@"c:\Temp\example.txt",FileMode.Create);
                 employee.WriteTo(file);
@@ -33,7 +36,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
             Parallel.ForEach(Enumerable.Range(0, 100), x =>
             {
-                using (var localCtx = new RavenOperationContext(unmanagedPool))
+                using (var localCtx = new MemoryOperationContext(unmanagedPool))
                 {
                     AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
                 }

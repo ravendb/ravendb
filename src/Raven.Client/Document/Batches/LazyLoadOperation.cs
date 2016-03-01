@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Specialized;
+using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
@@ -12,38 +10,86 @@ namespace Raven.Client.Document.Batches
 {
     public class LazyLoadOperation<T> : ILazyOperation
     {
-        private readonly string key;
         private readonly LoadOperation loadOperation;
-        private readonly Action<RavenJObject> handleInternalMetadata;
+        private readonly string[] ids;
+        private readonly string transformer;
+        private readonly KeyValuePair<string, Type>[] includes;
 
-        public LazyLoadOperation(string key, LoadOperation loadOperation, Action<RavenJObject> handleInternalMetadata)
+        public LazyLoadOperation(
+            LoadOperation loadOperation,
+            string[] ids,
+            KeyValuePair<string, Type>[] includes,
+            string transformer = null)
         {
-            this.key = key;
             this.loadOperation = loadOperation;
-            this.handleInternalMetadata = handleInternalMetadata;
+            this.ids = ids;
+            this.includes = includes;
+            this.transformer = transformer;
+        }
+
+        public LazyLoadOperation(
+            LoadOperation loadOperation,
+            string id)
+        {
+            this.loadOperation = loadOperation;
+            ids = new[] {id};
         }
 
         public GetRequest CreateRequest()
         {
-            const string path = "/document";
-            var query = "id=" + Uri.EscapeDataString(key);
+            string query = "?";
+            if (includes != null && includes.Length > 0)
+            {
+                query += string.Join("&", includes.Select(x => "include=" + x.Key).ToArray());
+            }
+            query += "&" + string.Join("&", ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
+            if (!string.IsNullOrEmpty(transformer))
+                query += "&transformer=" + transformer;
             return new GetRequest
             {
-                Url = path,
-                Query = query
+                Url = "/document",
+                Query = query 
             };
         }
 
         public object Result { get; set; }
-
         public QueryResult QueryResult { get; set; }
-
         public bool RequiresRetry { get; set; }
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
-            HandleResponse(response);
+            var list = new List<LoadResult>(
+                from response in responses
+                let result = response.Result
+                select new LoadResult
+                {
+                    Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
+                    Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
+                });
+
+            var capacity = list.Max(x => x.Results.Count);
+
+            var finalResult = new LoadResult
+            {
+                Includes = new List<RavenJObject>(),
+                Results = new List<RavenJObject>(Enumerable.Range(0, capacity).Select(x => (RavenJObject) null))
+            };
+
+
+            foreach (var multiLoadResult in list)
+            {
+                finalResult.Includes.AddRange(multiLoadResult.Includes);
+
+                for (int i = 0; i < multiLoadResult.Results.Count; i++)
+                {
+                    if (finalResult.Results[i] == null)
+                        finalResult.Results[i] = multiLoadResult.Results[i];
+                }
+            }
+            RequiresRetry = loadOperation.SetResult(finalResult);
+            if (RequiresRetry == false)
+                Result = loadOperation.Complete<T>();
+
         }
 
         public void HandleResponse(GetResponse response)
@@ -55,25 +101,19 @@ namespace Raven.Client.Document.Batches
                 return;
             }
 
-            if (response.Status == 404)
-            {
-                Result = null;
-                RequiresRetry = false;
-                return;
-            }
+            var result = response.Result;
 
-            var headers = new NameValueCollection();
-            foreach (var header in response.Headers)
+            var multiLoadResult = new LoadResult
             {
-                headers[header.Key] = header.Value;
-            }
-            var jsonDocument = SerializationHelper.DeserializeJsonDocument(key, response.Result, headers, (HttpStatusCode)response.Status);
-            HandleResponse(jsonDocument);
+                Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
+                Results = result.Value<RavenJArray>("Results").Select(x=>x as RavenJObject).ToList()
+            };
+            HandleResponse(multiLoadResult);
         }
 
-        private void HandleResponse(JsonDocument jsonDocument)
+        private void HandleResponse(LoadResult loadResult)
         {
-            RequiresRetry = loadOperation.SetResult(jsonDocument);
+            RequiresRetry = loadOperation.SetResult(loadResult);
             if (RequiresRetry == false)
                 Result = loadOperation.Complete<T>();
         }
@@ -82,5 +122,5 @@ namespace Raven.Client.Document.Batches
         {
             return loadOperation.EnterLoadContext();
         }
-        }
-            }
+    }
+}

@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class querySort {
     fieldName = ko.observable<string>();
     fieldNameOrDefault: KnockoutComputed<string>;

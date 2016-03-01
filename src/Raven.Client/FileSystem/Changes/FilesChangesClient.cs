@@ -33,7 +33,7 @@ namespace Raven.Client.FileSystem.Changes
                                        HttpJsonRequestFactory jsonRequestFactory, FilesConvention conventions,
                                        Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync,
                                        Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+            : base(url, apiKey, credentials, conventions, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }

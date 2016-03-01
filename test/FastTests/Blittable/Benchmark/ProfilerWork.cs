@@ -8,23 +8,26 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 //using Raven.Imports.Newtonsoft.Json;
 
 namespace FastTests.Blittable.Benchmark
 {
     public class ProfilerWork
     {
-        public static async Task Run(int take)
+        public static void Run(int take)
         {
             string directory = @"C:\Users\bumax_000\Downloads\JsonExamples";
             var files = Directory.GetFiles(directory, "*.json");
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
             {
                 foreach (var file in files.OrderBy(x=> new FileInfo(x).Length).Take(take))
                 {
                     var v = File.ReadAllBytes(file);
-                    using (await blittableContext.Read(new MemoryStream(v), "doc1"))
+                    using (blittableContext.Read(new MemoryStream(v), "doc1"))
                     {
                     }
                 }

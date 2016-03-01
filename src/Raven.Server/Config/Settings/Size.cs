@@ -12,40 +12,37 @@ namespace Raven.Server.Config.Settings
 {
     public struct Size
     {
-        public static readonly Type TypeOf = typeof (Size);
-        public static readonly Type NullableTypeOf = typeof (Size?);
+        public static readonly Type TypeOf = typeof(Size);
+        public static readonly Type NullableTypeOf = typeof(Size?);
 
         private const long OneKb = 1024;
         private const long OneMb = OneKb * 1024;
         private const long OneGb = OneMb * 1024;
         private const long OneTb = OneGb * 1024;
 
-        private readonly SizeUnit unit;
-        private readonly long value;
-        private readonly long valueInBytes;
+        private readonly SizeUnit _unit;
+        private long _valueInBytes;
 
         public Size(long value, SizeUnit unit)
         {
-            this.value = value;
-            this.unit = unit;
+            _unit = unit;
+            _valueInBytes = ConvertToBytes(value, unit);
+        }
 
+        private static long ConvertToBytes(long value, SizeUnit unit)
+        {
             switch (unit)
             {
                 case SizeUnit.Bytes:
-                    valueInBytes = value;
-                    break;
+                    return value;
                 case SizeUnit.Kilobytes:
-                    valueInBytes = value * OneKb;
-                    break;
+                    return value * OneKb;
                 case SizeUnit.Megabytes:
-                    valueInBytes = value * OneMb;
-                    break;
+                    return value * OneMb;
                 case SizeUnit.Gigabytes:
-                    valueInBytes = value * OneGb;
-                    break;
+                    return value * OneGb;
                 case SizeUnit.Terabytes:
-                    valueInBytes = value * OneTb;
-                    break;
+                    return value * OneTb;
                 default:
                     throw new NotSupportedException("Not supported size unit: " + unit);
             }
@@ -56,96 +53,101 @@ namespace Raven.Server.Config.Settings
             switch (requestedUnit)
             {
                 case SizeUnit.Bytes:
-                    return valueInBytes;
+                    return _valueInBytes;
                 case SizeUnit.Kilobytes:
-                    return valueInBytes / OneKb;
+                    return _valueInBytes / OneKb;
                 case SizeUnit.Megabytes:
-                    return valueInBytes / OneMb;
+                    return _valueInBytes / OneMb;
                 case SizeUnit.Gigabytes:
-                    return valueInBytes / OneGb;
+                    return _valueInBytes / OneGb;
                 case SizeUnit.Terabytes:
-                    return valueInBytes / OneTb;
+                    return _valueInBytes / OneTb;
                 default:
-                    throw new NotSupportedException("Not supported size unit: " + unit);
+                    throw new NotSupportedException("Not supported size unit: " + _unit);
             }
+        }
+
+        public void Add(int value, SizeUnit unit)
+        {
+            _valueInBytes += ConvertToBytes(value, unit);
         }
 
         public static bool operator <(Size x, Size y)
         {
-            return x.valueInBytes < y.valueInBytes;
+            return x._valueInBytes < y._valueInBytes;
         }
 
         public static bool operator >(Size x, Size y)
         {
-            return x.valueInBytes > y.valueInBytes;
+            return x._valueInBytes > y._valueInBytes;
         }
 
         public static bool operator <=(Size x, Size y)
         {
-            return x.valueInBytes <= y.valueInBytes;
+            return x._valueInBytes <= y._valueInBytes;
         }
 
         public static bool operator >=(Size x, Size y)
         {
-            return x.valueInBytes >= y.valueInBytes;
+            return x._valueInBytes >= y._valueInBytes;
         }
 
         public static Size operator +(Size x, Size y)
         {
-            return new Size(x.valueInBytes + y.valueInBytes, SizeUnit.Bytes);
+            return new Size(x._valueInBytes + y._valueInBytes, SizeUnit.Bytes);
         }
 
         public static Size operator -(Size x, Size y)
         {
-            return new Size(x.valueInBytes - y.valueInBytes, SizeUnit.Bytes);
+            return new Size(x._valueInBytes - y._valueInBytes, SizeUnit.Bytes);
         }
 
         public static Size operator *(Size x, long y)
         {
-            return new Size(x.valueInBytes * y, SizeUnit.Bytes);
+            return new Size(x._valueInBytes * y, SizeUnit.Bytes);
         }
 
         public static Size operator *(Size x, double y)
         {
-            return new Size((long)(x.valueInBytes * y), SizeUnit.Bytes);
+            return new Size((long)(x._valueInBytes * y), SizeUnit.Bytes);
         }
 
         public static Size operator *(double y, Size x)
         {
-            return new Size((long)(x.valueInBytes * y), SizeUnit.Bytes);
+            return new Size((long)(x._valueInBytes * y), SizeUnit.Bytes);
         }
 
         public static Size operator /(Size x, int y)
         {
-            return new Size(x.valueInBytes / y, SizeUnit.Bytes);
+            return new Size(x._valueInBytes / y, SizeUnit.Bytes);
         }
 
         public static Size Min(Size x, Size y)
         {
-            return x.valueInBytes < y.valueInBytes ? x : y;
+            return x._valueInBytes < y._valueInBytes ? x : y;
         }
 
         public static Size Max(Size x, Size y)
         {
-            return x.valueInBytes > y.valueInBytes ? x : y;
+            return x._valueInBytes > y._valueInBytes ? x : y;
         }
 
         public static Size Sum(ICollection<Size> sizes)
         {
-            return new Size(sizes.Sum(x => x.valueInBytes), SizeUnit.Bytes);
+            return new Size(sizes.Sum(x => x._valueInBytes), SizeUnit.Bytes);
         }
 
         public override string ToString()
         {
-            if (valueInBytes > OneTb)
-                return $"{valueInBytes / OneTb:#,#.##} TBytes";
-            if (valueInBytes > OneGb)
-                return $"{valueInBytes / OneGb:#,#.##} GBytes";
-            if (valueInBytes > OneMb)
-                return $"{valueInBytes / OneMb:#,#.##} MBytes";
-            if (valueInBytes > OneKb)
-                return $"{valueInBytes / OneKb:#,#.##} KBytes";
-            return $"{valueInBytes:#,#} Bytes";
+            if (_valueInBytes > OneTb)
+                return $"{_valueInBytes / OneTb:#,#.##} TBytes";
+            if (_valueInBytes > OneGb)
+                return $"{_valueInBytes / OneGb:#,#.##} GBytes";
+            if (_valueInBytes > OneMb)
+                return $"{_valueInBytes / OneMb:#,#.##} MBytes";
+            if (_valueInBytes > OneKb)
+                return $"{_valueInBytes / OneKb:#,#.##} KBytes";
+            return $"{_valueInBytes:#,#} Bytes";
         }
     }
 

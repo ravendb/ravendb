@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class counterStorageReplicationDestination {
 
     disabled = ko.observable<boolean>().extend({ required: true });

@@ -57,11 +57,6 @@ namespace Raven.Client
         public DateTime IndexTimestamp { get; set; }
 
         /// <summary>
-        /// The etag of the queried index
-        /// </summary>
-        public long? IndexEtag { get; set; }
-
-        /// <summary>
         /// The timestamp of the last time the index was queried
         /// </summary>
         public DateTime LastQueryTime { get; set; }
@@ -93,7 +88,6 @@ namespace Raven.Client
             Timestamp = qr.IndexTimestamp;
             IndexName = qr.IndexName;
             IndexTimestamp = qr.IndexTimestamp;
-            IndexEtag = qr.IndexEtag;
             TimingsInMilliseconds = qr.TimingsInMilliseconds;
             LastQueryTime = qr.LastQueryTime;
             ResultSize = qr.ResultSize;

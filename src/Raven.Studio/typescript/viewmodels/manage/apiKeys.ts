@@ -67,7 +67,8 @@ class apiKeys extends viewModelBase {
 
     private saveLoadedApiKeys(apiKeys: apiKey[]) {
         // clones the apiKeys object
-        this.loadedApiKeys = ko.mapping.fromJS(ko.mapping.toJS(apiKeys));
+        //TODO: clone using different method!
+        this.loadedApiKeys = null; // TODO: ko.mapping.fromJS(ko.mapping.toJS(apiKeys));
     }
 
     private subscribeToObservableKeyName(key: apiKey) {

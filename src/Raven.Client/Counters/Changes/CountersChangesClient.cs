@@ -23,9 +23,9 @@ namespace Raven.Client.Counters.Changes
 
         public CountersChangesClient(string url, string apiKey,
                                        ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, CountersConvention conventions,
+                                       CountersConvention conventions,
                                        Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+            : base(url, apiKey, credentials, conventions, onDispose)
         {
         }
 
@@ -195,15 +195,15 @@ namespace Raven.Client.Counters.Changes
                 {
                     if (watchedBulkOperations.Contains(id)) // might have been removed in the meantime
                         return Send("watch-bulk-operation", id);
-                    return Task;
+                    return ConnectionTask;
                 });
 
                 return new CountersConnectionState(
                     () =>
                     {
                         watchedBulkOperations.TryRemove(id);
-                        Send("unwatch-bulk-operation", id);
                         Counters.Remove(key);
+                        return Send("unwatch-bulk-operation", id);
                     },
                     existingConnectionState =>
                     {
@@ -217,7 +217,7 @@ namespace Raven.Client.Counters.Changes
                         {
                             if (watchedBulkOperations.Contains(id)) // might have been removed in the meantime
                                 return Send("watch-bulk-operation", id);
-                            return Task;
+                            return ConnectionTask;
                         });
                     },
                     bulkOperationSubscriptionTask);

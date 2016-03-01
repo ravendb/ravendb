@@ -1,9 +1,10 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.AspNet.WebSockets.Protocol;
+
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
-using Constants = Raven.Abstractions.Data.Constants;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.System
 {
@@ -36,33 +37,34 @@ namespace Raven.Server.Web.System
 
         private async Task ReturnResources(string prefix)
         {
-            RavenOperationContext context;
+            TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                writer.WriteStartArray();
-                var first = true;
-                foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
+                context.OpenReadTransaction();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    if(first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    //TODO: Actually handle this properly
-                    var doc = new DynamicJsonValue
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
                     {
-                        ["Bundles"] = new DynamicJsonArray(),
-                        ["Name"] = db.Key.Substring(prefix.Length),
-                        ["RejectClientsEnabled"] = false,
-                        ["IndexingDisabled"] = false,
-                        ["Disabled"] = false,
-                        ["IsAdminCurrentTenant"] = true
-                    };
-                    await context.WriteAsync(writer, doc);
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        //TODO: Actually handle this properly
+                        var doc = new DynamicJsonValue
+                        {
+                            ["Bundles"] = new DynamicJsonArray(),
+                            ["Name"] = db.Key.Substring(prefix.Length),
+                            ["RejectClientsEnabled"] = false,
+                            ["IndexingDisabled"] = false,
+                            ["Disabled"] = false,
+                            ["IsAdminCurrentTenant"] = true
+                        };
+                        context.Write(writer, doc);
+                    }
+                    writer.WriteEndArray();
                 }
-                writer.WriteEndArray();
-                writer.Flush();
             }
         }
     }

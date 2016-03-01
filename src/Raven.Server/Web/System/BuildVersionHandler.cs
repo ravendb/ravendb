@@ -11,6 +11,7 @@ using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.System
 {
@@ -21,16 +22,18 @@ namespace Raven.Server.Web.System
         private static async Task<byte[]> GetVersionBuffer()
         {
             using (var pool = new UnmanagedBuffersPool("build/version"))
-            using (var context = new RavenOperationContext(pool))
+            using (var context = new MemoryOperationContext(pool))
             {
                 var stream = new MemoryStream();
-                var writer = new BlittableJsonTextWriter(context, stream);
-                await context.WriteAsync(writer, new DynamicJsonValue
+                using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
-                    ["BuildVersion"] = ServerVersion.Build,
-                    ["ProductVersion"] = ServerVersion.Version,
-                    ["CommitHash"] = ServerVersion.CommitHash
-                });
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["BuildVersion"] = ServerVersion.Build,
+                        ["ProductVersion"] = ServerVersion.Version,
+                        ["CommitHash"] = ServerVersion.CommitHash
+                    });
+                }
                 var versionBuffer = stream.ToArray();
                 return versionBuffer;
             }

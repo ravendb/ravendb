@@ -2,17 +2,18 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Sparrow;
 
 namespace Raven.Server.Json
 {
-    public class BlittableJsonTextWriter
+    public class BlittableJsonTextWriter : IDisposable
     {
         private readonly Stream _stream;
-
         private const byte StartObject = (byte)'{';
         private const byte EndObject = (byte)'}';
         private const byte StartArray = (byte)'[';
@@ -27,11 +28,109 @@ namespace Raven.Server.Json
         private int _pos;
         private readonly byte[] _buffer;
 
-        public BlittableJsonTextWriter(RavenOperationContext context, Stream stream)
+        public BlittableJsonTextWriter(MemoryOperationContext context, Stream stream)
         {
             _stream = stream;
             _buffer = context.GetManagedBuffer();
         }
+
+        public int Position => _pos;
+
+        public void WriteToOrdered(BlittableJsonReaderObject obj)
+        {
+            WriteStartObject();
+            var props = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < props.Length; i++)
+            {
+                if (i != 0)
+                {
+                    WriteComma();
+                }
+
+                var prop = obj.GetPropertyByIndex(props[i]);
+                WritePropertyName(prop.Item1);
+
+                WriteValue(prop.Item3 & BlittableJsonReaderBase.TypesMask, prop.Item2, originalPropertyOrder: true);
+            }
+
+            WriteEndObject();
+        }
+
+        public void WriteTo(BlittableJsonReaderObject obj)
+        {
+            WriteStartObject();
+            for (int i = 0; i < obj.Count; i++)
+            {
+                if (i != 0)
+                {
+                    WriteComma();
+                }
+                var prop = obj.GetPropertyByIndex(i);
+                WritePropertyName(prop.Item1);
+
+                WriteValue(prop.Item3 & BlittableJsonReaderObject.TypesMask, prop.Item2, originalPropertyOrder: false);
+            }
+
+            WriteEndObject();
+        }
+
+
+        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, bool originalPropertyOrder)
+        {
+            WriteStartArray();
+            var length = blittableArray.Length;
+            for (var i = 0; i < length; i++)
+            {
+                var propertyValueAndType = blittableArray.GetValueTokenTupleByIndex(i);
+
+                if (i != 0)
+                {
+                    WriteComma();
+                }
+                // write field value
+                WriteValue(propertyValueAndType.Item2, propertyValueAndType.Item1, originalPropertyOrder);
+
+            }
+            WriteEndArray();
+        }
+
+        private void WriteValue(BlittableJsonToken token, object val, bool originalPropertyOrder = false)
+        {
+            switch (token)
+            {
+                case BlittableJsonToken.StartArray:
+                    WriteArrayToStream((BlittableJsonReaderArray)val, originalPropertyOrder);
+                    break;
+                case BlittableJsonToken.StartObject:
+                    var blittableJsonReaderObject = ((BlittableJsonReaderObject)val);
+                    if (originalPropertyOrder)
+                        WriteToOrdered(blittableJsonReaderObject);
+                    else
+                        WriteTo(blittableJsonReaderObject);
+                    break;
+                case BlittableJsonToken.String:
+                    WriteString((LazyStringValue)val);
+                    break;
+                case BlittableJsonToken.CompressedString:
+                    WriteString((LazyCompressedStringValue)val);
+                    break;
+                case BlittableJsonToken.Integer:
+                    WriteInteger((long)val);
+                    break;
+                case BlittableJsonToken.Float:
+                    WriteDouble((LazyDoubleValue)val);
+                    break;
+                case BlittableJsonToken.Boolean:
+                    WriteBool((bool)val);
+                    break;
+                case BlittableJsonToken.Null:
+                    WriteNull();
+                    break;
+                default:
+                    throw new DataMisalignedException($"Unidentified Type {token}");
+            }
+        }
+
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -269,96 +368,18 @@ namespace Raven.Server.Json
             WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
         }
 
-        private unsafe void WriteString(RavenOperationContext context, JsonParserState state)
+        
+
+        public void Dispose()
         {
-            WriteString(new LazyStringValue(null, state.StringBuffer,state.StringSize, context));
+            Flush();
         }
 
-        public async Task WriteObjectAsync(RavenOperationContext context,JsonParserState state, IJsonParser parser)
+        public void WriteNewLine()
         {
-            if (state.CurrentTokenType != JsonParserToken.StartObject)
-                throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
-
-            WriteStartObject();
-            bool first = true;
-            while (true)
-            {
-                await parser.ReadAsync();
-                if (state.CurrentTokenType == JsonParserToken.EndObject)
-                    break;
-
-                if (state.CurrentTokenType != JsonParserToken.String)
-                    throw new InvalidOperationException("Property expected, but got " + state.CurrentTokenType);
-
-                if(first == false)
-                    WriteComma();
-                first = false;
-
-                WriteString(context, state);
-                EnsureBuffer(1);
-                _buffer[_pos++] = Colon;
-
-                await parser.ReadAsync();
-
-                await WriteValueAsync(context, state, parser);
-            }
-            WriteEndObject();
+            EnsureBuffer(2);
+            _buffer[_pos++] = (byte) '\r';
+            _buffer[_pos++] = (byte) '\n';
         }
-
-        private async Task WriteValueAsync(RavenOperationContext context, JsonParserState state, IJsonParser parser)
-        {
-            switch (state.CurrentTokenType)
-            {
-                case JsonParserToken.Null:
-                    WriteNull();
-                    break;
-                case JsonParserToken.False:
-                    WriteBool(false);
-                    break;
-                case JsonParserToken.True:
-                    WriteBool(true);
-                    break;
-                case JsonParserToken.String:
-                    WriteString(context, state);
-                    break;
-                case JsonParserToken.Float:
-                    WriteString(context, state);
-                    break;
-                case JsonParserToken.Integer:
-                    WriteInteger(state.Long);
-                    break;
-                case JsonParserToken.StartObject:
-                    await WriteObjectAsync(context, state, parser);
-                    break;
-                case JsonParserToken.StartArray:
-                    await WriteArrayAsync(context, state, parser);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
-            }
-        }
-
-        public async Task WriteArrayAsync(RavenOperationContext context, JsonParserState state, IJsonParser parser)
-        {
-            if (state.CurrentTokenType != JsonParserToken.StartArray)
-                throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
-
-            WriteStartArray();
-            bool first = true;
-            while (true)
-            {
-                await parser.ReadAsync();
-                if (state.CurrentTokenType == JsonParserToken.EndArray)
-                    break;
-
-                if (first == false)
-                    WriteComma();
-                first = false;
-
-                await WriteValueAsync(context, state, parser);
-            }
-            WriteEndArray();
-        }
-
     }
 }

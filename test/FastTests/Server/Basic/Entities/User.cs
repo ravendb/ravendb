@@ -12,6 +12,7 @@ namespace Raven.Tests.Core.Utils.Entities
         public string LastName { get; set; }
         public string AddressId { get; set; }
         public int Count { get; set; }
+        public int Age { get; set; }
     }
 
     public class Address

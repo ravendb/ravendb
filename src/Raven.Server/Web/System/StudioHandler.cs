@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Web.System
 {

@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 
 class pointChange {

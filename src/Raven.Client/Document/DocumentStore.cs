@@ -234,19 +234,14 @@ namespace Raven.Client.Document
 
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
+            // if this is still going, we continue with disposal, it is for graceful shutdown only, anyway
 
-            if (Subscriptions != null)
-                Subscriptions.Dispose();
-
-            // if this is still going, we continue with disposal, it is for grace only, anyway
-
-            if (jsonRequestFactory != null)
-                jsonRequestFactory.Dispose();
+            Subscriptions?.Dispose();
 
             WasDisposed = true;
-            var afterDispose = AfterDispose;
-            if (afterDispose != null)
-                afterDispose(this, EventArgs.Empty);
+            AfterDispose?.Invoke(this, EventArgs.Empty);
+
+            jsonRequestFactory?.Dispose();
         }
 
         /// <summary>
@@ -533,19 +528,17 @@ namespace Raven.Client.Document
             database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
 
             var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-            if (string.IsNullOrEmpty(database) == false &&
-                string.Equals(database, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.IsNullOrEmpty(database) == false)
                 dbUrl = dbUrl + "/databases/" + database;
 
             using (NoSynchronizationContext.Scope())
             {
                 return new RemoteDatabaseChanges(dbUrl,
-                        ApiKey,
+                    ApiKey,
                     Credentials,
-                    jsonRequestFactory,
                     Conventions,
                     () => databaseChanges.Remove(database),
-                    (key, etag, conflictIds, metadata) => ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
+                    (key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
             }
         }
 

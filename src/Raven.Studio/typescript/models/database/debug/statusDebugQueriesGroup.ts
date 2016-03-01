@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 import statusDebugQueriesQuery = require("models/database/debug/statusDebugQueriesQuery");
 
 class statusDebugQueriesGroup {

@@ -6,29 +6,32 @@ using System.Threading.Tasks;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    
+
     public class BlittableFormatTests
     {
         [Theory]
         [MemberData("Samples")]
-        public async Task CheckRoundtrip(string name)
+        public void CheckRoundtrip(string name)
         {
             using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             {
                 var compacted = JObject.Parse(new StreamReader(stream).ReadToEnd()).ToString(Formatting.None);
                 stream.Position = 0;
-                using (var pool = new UnmanagedBuffersPool("test") )
-                using (var context = new RavenOperationContext(pool))
+                using (var pool = new UnmanagedBuffersPool("test"))
+                using (var context = new MemoryOperationContext(pool))
                 {
-                    var writer = await context.Read(stream, "docs/1");
+                    var writer = context.Read(stream, "docs/1");
 
                     var memoryStream = new MemoryStream();
-                    writer.WriteTo(memoryStream, originalPropertyOrder: true);
+                    context.Write(memoryStream, writer);
                     var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
                     JObject.Parse(s); // can parse the output
@@ -39,26 +42,26 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         [Fact]
-        public async Task ShouldNotCrashForManyDifferentProperties()
+        public void ShouldNotCrashForManyDifferentProperties()
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })
             {
                 using (var pool = new UnmanagedBuffersPool("test"))
-                using (var context = new RavenOperationContext(pool))
+                using (var context = new MemoryOperationContext(pool))
                 {
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
-                    
+
                     using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly
                         .GetManifestResourceStream(resource))
                     {
                         var compacted = JObject.Load(new JsonTextReader(new StreamReader(stream))).ToString(Formatting.None);
                         stream.Position = 0;
-                       
-                        using (var writer = await context.Read(stream, "docs/1 "))
+
+                        using (var writer = context.Read(stream, "docs/1 "))
                         {
 
                             var memoryStream = new MemoryStream();
-                            writer.WriteTo(memoryStream, originalPropertyOrder: true);
+                            context.WriteOrdered(memoryStream, writer);
                             var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
                             JObject.Parse(s); // can parse the output

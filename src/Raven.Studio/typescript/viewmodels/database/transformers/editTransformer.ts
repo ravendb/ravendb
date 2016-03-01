@@ -1,5 +1,3 @@
-/// <reference path="../../../models/dto.ts" />
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/database/index/transformer");
 import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");

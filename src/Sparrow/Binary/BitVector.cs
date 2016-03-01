@@ -416,73 +416,167 @@ namespace Sparrow.Binary
             return new BitVector(size);
         }
 
+        public static BitVector Of(bool prefixFree, params ulong[] values)
+        {
+            unsafe
+            {
+                fixed (ulong* ptr = values)
+                {
+                    return Of(prefixFree, ptr, values.Length);
+                }
+            }
+        }
+
         public static BitVector Of(params ulong[] values)
         {
-            return new BitVector(values.Length * BitVector.BitsPerWord, values);
+            return Of(false, values);
         }
 
-        public static BitVector Of(bool prefixFree, params long[] values)
+        public static BitVector Of(bool prefixFree, params uint[] values)
         {
-            int prefixAdjustment = (prefixFree ? 1 : 0);
-
-            ulong[] newValue = new ulong[values.Length + prefixAdjustment];
-            for( int i = 0; i < values.Length; i++ )
-                newValue[i] = (ulong) values[i];
-
-            return new BitVector((values.Length + prefixAdjustment) * BitVector.BitsPerWord, newValue);
-        }
-
-        public static BitVector Of(params long[] values)
-        {
-            ulong[] newValue = new ulong[values.Length];
-            for( int i = 0; i < values.Length; i++ )
-                newValue[i] = (ulong) values[i];
-
-            return new BitVector(values.Length * BitVector.BitsPerWord, newValue);
+            unsafe
+            {
+                fixed (uint* ptr = values)
+                {
+                    return Of(prefixFree, ptr, values.Length);
+                }
+            }
         }
 
         public static BitVector Of(params uint[] values)
         {
-            int lastLong = values.Length / 2;
-            int size = lastLong + values.Length % 2;
+            return Of(false, values);
+        }
+
+        public static BitVector Of(string value)
+        {
+            return Of(false, value);
+        }
+
+        public static BitVector Of(bool prefixFree, string value)
+        {
+            unsafe
+            {
+                fixed (char* ptr = value)
+                {
+                    return Of(prefixFree, (ushort*)ptr, value.Length);
+                }
+            }
+        }
+
+        public static BitVector Of(bool prefixFree, params byte[] values)
+        {
+            unsafe
+            {
+                fixed (byte* ptr = values)
+                {
+                    return Of(prefixFree, ptr, values.Length);
+                }
+            }
+        }
+
+        public static BitVector Of(params byte[] values)
+        {
+            return Of(false, values);
+        }
+
+
+        public unsafe static BitVector Of(bool prefixFree, ulong* values, int length)
+        {
+            int prefixAdjustment = (prefixFree ? 2 : 0);
+
+            ulong[] newValue = new ulong[length + prefixAdjustment];
+            fixed( ulong* newValuePtr = newValue)
+            {
+                Memory.CopyInline((byte*)newValuePtr, (byte*)values, length * sizeof(ulong));
+            }
+
+            return new BitVector(length * BitsPerWord + prefixAdjustment * BitVector.BitsPerByte, newValue);
+        }
+
+        public unsafe static BitVector Of(bool prefixFree, uint* values, int length)
+        {
+            int prefixAdjustment = (prefixFree ? 1 : 0);
+
+            int valueLength = length + prefixAdjustment;
+            int size = valueLength / 2;
+            if (valueLength % 2 != 0)
+                size++;
+
+            int lastLong = length / 2;
 
             ulong[] newValue = new ulong[size];
             for (int i = 0; i < lastLong; i++)
                 newValue[i] = (ulong)values[2 * i] << 32 | (ulong)values[2 * i + 1];
 
-            if (values.Length % 2 == 1)
-                newValue[newValue.Length - 1] = (ulong)values[values.Length - 1] << 32;
+            if (length % 2 == 1)
+                newValue[lastLong] = (ulong)values[length - 1] << 32;
 
-            return new BitVector(values.Length * BitVector.BitsPerWord / 2, newValue);
+            return new BitVector(length * BitVector.BitsPerWord / 2 + prefixAdjustment * 2 * BitVector.BitsPerByte, newValue);
         }
 
-        public static BitVector Of(params byte[] values)
+        public unsafe static BitVector Of(bool prefixFree, ushort* values, int length)
         {
-            int extraBytes = values.Length % sizeof(ulong);
-            int lastLong = values.Length / sizeof(ulong);
+            int prefixAdjustment = (prefixFree ? 1 : 0);
 
-            int size = lastLong + ((extraBytes == 0) ? 0 : 1);
+            int valueLength = length + prefixAdjustment;
+            int size = valueLength / 4;
+            if (valueLength % 4 != 0)
+                size++;
+
+            int position = 0;
+            int lastLong = length / 4;
+            ulong[] newValue = new ulong[size];
+
+            for (int i = 0; i < lastLong; i++)
+            {
+                newValue[i] = (ulong)values[position] << 48 | (ulong)values[position + 1] << 32 | (ulong)values[position + 2] << 16 | (ulong)values[position + 3];
+                position += 4;
+            }
+
+            switch (length % 4)
+            {
+                case 3: newValue[lastLong] = (ulong)values[position] << 48 | (ulong)values[position + 1] << 32 | (ulong)values[position + 2] << 16; break;
+                case 2: newValue[lastLong] = (ulong)values[position] << 48 | (ulong)values[position + 1] << 32; break;
+                case 1: newValue[lastLong] = (ulong)values[position] << 48; break;
+                default: break;
+            }
+
+            return new BitVector(valueLength * BitVector.BitsPerWord / 4, newValue);
+        }
+
+        public unsafe static BitVector Of(bool prefixFree, byte* values, int length)
+        {
+            int prefixAdjustment = (prefixFree ? 2 : 0);          
+
+            int size = (length + prefixAdjustment) / 8;
+
+            int extraBytes = (length + prefixAdjustment) % sizeof(ulong);
+            if (extraBytes != 0)
+                size++;
 
             int position;
             ulong[] newValue = new ulong[size];
+
+            int lastLong = (length + prefixAdjustment) / sizeof(ulong);
             for (int i = 0; i < lastLong; i++)
             {
                 position = i * sizeof(ulong);
-                newValue[i] = (ulong)values[position] << 64 - 8 | 
-                              (ulong)values[position + 1] << 64 - 16 | 
+                newValue[i] = (ulong)values[position] << 64 - 8 |
+                              (ulong)values[position + 1] << 64 - 16 |
                               (ulong)values[position + 2] << 64 - 24 |
                               (ulong)values[position + 3] << 32 |
                               (ulong)values[position + 4] << 24 |
-                              (ulong)values[position + 5] << 16 | 
+                              (ulong)values[position + 5] << 16 |
                               (ulong)values[position + 6] << 8 |
                               (ulong)values[position + 7];
             }
-
-            if ( extraBytes != 0 )
+          
+            if (extraBytes != 0)
             {
                 position = lastLong * sizeof(ulong);
 
-                int bytesLeft = extraBytes;
+                int bytesLeft = length % sizeof(ulong);
                 ulong lastValue = 0;
                 do
                 {
@@ -493,41 +587,12 @@ namespace Sparrow.Binary
                 }
                 while (bytesLeft > 0);
 
-                newValue[size - 1] = lastValue << (8 - extraBytes) * BitVector.BitsPerByte;
+                newValue[lastLong] = lastValue << ((8 - length % sizeof(ulong)) * BitVector.BitsPerByte);
             }
 
-            return new BitVector(values.Length * BitVector.BitsPerByte, newValue);
+            return new BitVector((length + prefixAdjustment) * BitVector.BitsPerByte, newValue);
         }
 
-        public static BitVector Of(string value, bool prefixFree = false)
-        {
-            int prefixAdjustment = (prefixFree ? 1 : 0);
-
-            int valueLength = value.Length + prefixAdjustment;            
-            int size = valueLength / 4;
-            if (valueLength % 4 != 0)
-                size++;
-
-            int position = 0;
-            int lastLong = value.Length / 4;
-            ulong[] newValue = new ulong[size];            
-            for (int i = 0; i < lastLong; i++)
-            {                
-                newValue[i] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32 | (ulong)value[position + 2] << 16 | (ulong)value[position + 3];
-                position += 4;
-            }
-
-            switch( value.Length % 4)
-            {
-                case 3: newValue[newValue.Length - 1] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32 | (ulong)value[position + 2] << 16; break;
-                case 2: newValue[newValue.Length - 1] = (ulong)value[position] << 48 | (ulong)value[position + 1] << 32; break;
-                case 1: newValue[newValue.Length - 1] = (ulong)value[position] << 48; break;
-                default: break;
-            }
-
-            return new BitVector((value.Length + prefixAdjustment) * BitVector.BitsPerWord / 4, newValue);
-                
-        }
 
         public static BitVector Parse(string value)
         {

@@ -154,7 +154,7 @@ namespace Voron.Data.Tables
 
         }
 
-        private byte* DirectRead(long id, out int size)
+        public byte* DirectRead(long id, out int size)
         {
             var posInPage = id % _pageSize;
             if (posInPage == 0) // large
@@ -171,7 +171,7 @@ namespace Voron.Data.Tables
             return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size);
         }
 
-        public void Update(long id, TableValueBuilder builder)
+        public long Update(long id, TableValueBuilder builder)
         {
             int size = builder.Size;
 
@@ -190,7 +190,8 @@ namespace Voron.Data.Tables
                     // MemoryCopy into final position.
                     builder.CopyTo(pos);
                     InsertIndexValuesFor(id, new TableValueReader(pos, size));
-                    return;
+
+                    return id;
                 }
             }
             else if (prevIsSmall == false)
@@ -212,13 +213,13 @@ namespace Voron.Data.Tables
 
                     InsertIndexValuesFor(id, new TableValueReader(pos, size));
 
-                    return;
+                    return id;
                 }
             }
 
             // can't fit in place, will just delete & insert instead
             Delete(id);
-            Insert(builder);
+            return Insert(builder);
         }
 
         public void Delete(long id)
@@ -308,7 +309,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public void Insert(TableValueBuilder builder)
+        public long Insert(TableValueBuilder builder)
         {
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
@@ -344,11 +345,13 @@ namespace Voron.Data.Tables
             }
 
             InsertIndexValuesFor(id, new TableValueReader(pos, size));
+
+            return id;
         }
 
         private void InsertIndexValuesFor(long id, TableValueReader value)
         {
-            
+
             var pkval = _schema.Key.GetSlice(value);
             var pkIndex = GetTree(_schema.Key);
             pkIndex.Add(pkval, new Slice((byte*)&id, sizeof(long)));
@@ -376,7 +379,7 @@ namespace Voron.Data.Tables
                 return new FixedSizeTree(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects, indexDef.NameAsSlice, sizeof(long));
             }
             var tableTree = _tx.ReadTree(Name);
-            var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof (long));
+            var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof(long));
             return index;
         }
 
@@ -550,10 +553,13 @@ namespace Voron.Data.Tables
         private TableValueReader GetTableValueReader(FixedSizeTree.IFixedSizeIterator it)
         {
             long id;
-            it.Value.CopyTo((byte*) &id);
+            it.Value.CopyTo((byte*)&id);
             int size;
             var ptr = DirectRead(id, out size);
-            return new TableValueReader(ptr, size);
+            return new TableValueReader(ptr, size)
+            {
+                Id = id
+            };
         }
 
 
@@ -565,40 +571,47 @@ namespace Voron.Data.Tables
             return new TableValueReader(ptr, size);
         }
 
-        public void Set(TableValueBuilder builder)
+        public long Set(TableValueBuilder builder)
         {
             int size;
             var read = builder.Read(_schema.Key.StartIndex, out size);
+
             long id;
             if (TryFindIdFromPrimaryKey(new Slice(read, (ushort)size), out id))
             {
-                Update(id, builder);
-                return;
+                id = Update(id, builder);
+                return id;
             }
-            Insert(builder);
+
+            return Insert(builder);
         }
 
-        public void DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)
+        public bool DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
                 if (it.Seek(long.MinValue) == false)
-                    return;
-                
+                    return true;
+
                 do
                 {
-                    if (it.CurrentKey >= maxValue)
+                    if (it.CurrentKey > maxValue)
                         break;
 
+                    if (deletedList.Count > 10*1024)
+                        return false;
+
                     deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
-                } while (it.MoveNext() && deletedList.Count < 10*1024);
+                } while (it.MoveNext());
             }
 
             foreach (var id in deletedList)
             {
                 Delete(id);
             }
+
+            return true;
         }
     }
 }

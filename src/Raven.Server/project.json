@@ -14,6 +14,8 @@
   },
 
   "dependencies": {
+    "Lucene.Net": "3.0.4-*",
+    "Lucene.Net.Contrib.Spatial.NTS": "3.0.4-*",
     "Raven.Client": "4.0.0-*",
     "Sparrow": "4.0.0-*",
     "Voron": "4.0.0-*"

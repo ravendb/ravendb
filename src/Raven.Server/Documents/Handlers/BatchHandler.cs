@@ -2,13 +2,17 @@
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.WebSockets.Protocol;
+
 using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Raven.Server.Json.Parsing;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Constants = Raven.Abstractions.Data.Constants;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
@@ -24,13 +28,13 @@ namespace Raven.Server.Documents
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            RavenOperationContext context;
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 BlittableJsonReaderArray commands;
                 try
                 {
-                    commands = await context.ParseArrayToMemory(RequestBodyStream(), "bulk/docs",
+                    commands = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "bulk/docs",
                         // we will prepare the docs to disk in the actual PUT command
                         BlittableJsonDocumentBuilder.UsageMode.None);
                 }
@@ -45,7 +49,7 @@ namespace Raven.Server.Documents
 
                 var parsedCommands = new CommandData[commands.Length];
 
-                for (int i = 0; i < commands.Count; i++)
+                for (int i = 0; i < commands.Length; i++)
                 {
                     var cmd = commands.GetByIndex<BlittableJsonReaderObject>(i);
 
@@ -90,7 +94,7 @@ namespace Raven.Server.Documents
 
                             mutableMetadata["Raven-Last-Modified"] = DateTime.UtcNow.GetDefaultRavenFormat();
 
-                            parsedCommands[i].Document = await context.ReadObject(doc, parsedCommands[i].Key,
+                            parsedCommands[i].Document = context.ReadObject(doc, parsedCommands[i].Key,
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             break;
 
@@ -99,7 +103,7 @@ namespace Raven.Server.Documents
 
                 var reply = new DynamicJsonArray();
 
-                using (context.Transaction = context.Environment.WriteTransaction())
+                using (context.OpenWriteTransaction())
                 {
 
                     for (int i = 0; i < parsedCommands.Length; i++)
@@ -107,7 +111,7 @@ namespace Raven.Server.Documents
                         switch (parsedCommands[i].Method)
                         {
                             case "PUT":
-                                var putResult = DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
+                                var putResult = Database.DocumentsStorage.Put(context, parsedCommands[i].Key, parsedCommands[i].Etag,
                                     parsedCommands[i].Document);
 
                                 BlittableJsonReaderObject metadata;
@@ -123,7 +127,7 @@ namespace Raven.Server.Documents
                                 });
                                 break;
                             case "DELETE":
-                                var deleted = DocumentsStorage.Delete(context, parsedCommands[i].Key, parsedCommands[i].Etag);
+                                var deleted = Database.DocumentsStorage.Delete(context, parsedCommands[i].Key, parsedCommands[i].Etag);
                                 reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = parsedCommands[i].Key,
@@ -140,12 +144,10 @@ namespace Raven.Server.Documents
 
                 HttpContext.Response.StatusCode = 201;
 
-                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
-                await context.WriteAsync(writer, reply);
-                writer.Flush();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    context.Write(writer, reply);
             }
         }
     }
 }
 
-      

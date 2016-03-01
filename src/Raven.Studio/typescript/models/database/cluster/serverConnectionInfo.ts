@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class serverConnectionInfo {
 
     url = ko.observable<string>();

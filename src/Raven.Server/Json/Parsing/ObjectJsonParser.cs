@@ -6,6 +6,8 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Linq;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Json.Parsing
 {
@@ -90,11 +92,11 @@ namespace Raven.Server.Json.Parsing
     public unsafe class ObjectJsonParser : IJsonParser
     {
         private readonly JsonParserState _state;
-        private readonly RavenOperationContext _ctx;
+        private readonly MemoryOperationContext _ctx;
         private readonly Stack<object> _elements = new Stack<object>();
         private static readonly Encoding Utf8Encoding = Encoding.UTF8;
 
-        public ObjectJsonParser(JsonParserState state, object root, RavenOperationContext ctx)
+        public ObjectJsonParser(JsonParserState state, object root, MemoryOperationContext ctx)
         {
             _state = state;
             _ctx = ctx;
@@ -106,7 +108,13 @@ namespace Raven.Server.Json.Parsing
 
         }
 
-        public Task ReadAsync()
+        public bool Read()
+        {
+            ReadInternal();
+            return true;
+        }
+
+        private void ReadInternal()
         {
             if (_elements.Count == 0)
                 throw new EndOfStreamException();
@@ -123,12 +131,12 @@ namespace Raven.Server.Json.Parsing
                         value.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         _elements.Push(value);
-                        return Task.CompletedTask;
+                        return;
                     }
                     if (value.Properties.Count == 0)
                     {
                         _state.CurrentTokenType = JsonParserToken.EndObject;
-                        return Task.CompletedTask; ;
+                        return;
                     }
                     _elements.Push(value);
                     current = value.Properties.Dequeue();
@@ -142,12 +150,12 @@ namespace Raven.Server.Json.Parsing
                         array.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         _elements.Push(array);
-                        return Task.CompletedTask; ;
+                        return;
                     }
                     if (array.Items.Count == 0)
                     {
                         _state.CurrentTokenType = JsonParserToken.EndArray;
-                        return Task.CompletedTask; ;
+                        return;
                     }
                     _elements.Push(array);
                     current = array.Items.Dequeue();
@@ -178,7 +186,7 @@ namespace Raven.Server.Json.Parsing
                         bjro.Modifications.AlreadySeen = true;
                         bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
-                        return Task.CompletedTask; ;
+                        return;
                     }
 
                     var modifications = bjro.Modifications;
@@ -209,11 +217,11 @@ namespace Raven.Server.Json.Parsing
                         _elements.Push(bjra);
                         bjra.Modifications.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
-                        return Task.CompletedTask; ;
+                        return;
                     }
                     var modifications = bjra.Modifications;
                     modifications.SourceIndex++;
-                    if (modifications.SourceIndex < bjra.Count)
+                    if (modifications.SourceIndex < bjra.Length)
                     {
                         if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
                         {
@@ -235,7 +243,7 @@ namespace Raven.Server.Json.Parsing
                     _state.CompressedSize = -1;// don't even try
                     _state.CurrentTokenType = JsonParserToken.String;
                     ReadEscapePositions(lsv.Buffer, lsv.Size);
-                    return Task.CompletedTask; ;
+                    return;
                 }
                 var lcsv = current as LazyCompressedStringValue;
                 if (lcsv != null)
@@ -245,31 +253,31 @@ namespace Raven.Server.Json.Parsing
                     _state.CompressedSize = lcsv.CompressedSize;
                     _state.CurrentTokenType = JsonParserToken.String;
                     ReadEscapePositions(lcsv.Buffer, lcsv.CompressedSize);
-                    return Task.CompletedTask; ;
+                    return;
                 }
                 var str = current as string;
                 if (str != null)
                 {
                     SetStringBuffer(str);
                     _state.CurrentTokenType = JsonParserToken.String;
-                    return Task.CompletedTask; ;
+                    return;
                 }
                 if (current is int)
                 {
                     _state.Long = (int)current;
                     _state.CurrentTokenType = JsonParserToken.Integer;
-                    return Task.CompletedTask; ;
+                    return;
                 }
                 if (current is long)
                 {
                     _state.Long = (long)current;
                     _state.CurrentTokenType = JsonParserToken.Integer;
-                    return Task.CompletedTask; ;
+                    return;
                 }
                 if (current is bool)
                 {
                     _state.CurrentTokenType = ((bool)current) ? JsonParserToken.True : JsonParserToken.False;
-                    return Task.CompletedTask; ;
+                    return;
                 }
                 if (current is float)
                 {
@@ -285,12 +293,12 @@ namespace Raven.Server.Json.Parsing
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
-                    return Task.CompletedTask; ;
+                    return;
                 }
                 if (current == null)
                 {
                     _state.CurrentTokenType = JsonParserToken.Null;
-                    return Task.CompletedTask; ;
+                    return;
                 }
 
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);

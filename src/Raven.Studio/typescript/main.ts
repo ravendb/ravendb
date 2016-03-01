@@ -1,37 +1,33 @@
 requirejs.config({
     paths: {
-        text: '../Scripts/text',
-        durandal: '../Scripts/durandal',
-        plugins: '../Scripts/durandal/plugins',
-        transitions: '../Scripts/durandal/transitions',
-        ace: '../Scripts/ace',
-        moment: '../Scripts/moment',
-        forge: '../Scripts/forge'
+        text: '../lib/requirejs-text/text',
+        durandal: '../lib/Durandal/js',
+        plugins: '../lib/Durandal/js/plugins',
+        ace: '../lib/ace/lib/ace'
     },
 
     map: {
       '*' : {
-          "jszip": "../Scripts/jszip/jszip",
-          "jszip-utils": "../Scripts/jszip/jszip-utils.min",
-          "d3": "../Scripts/d3/d3",
-          "dagre": "../Scripts/d3/dagre"
+          "jszip": "../lib/jszip/dist/jszip",
+          "jszip-utils": "../lib/jszip-utils/dist/jszip-utils",
+          "d3": "../lib/d3/d3",
+          "dagre": "../lib/dagre/dist/dagre.core",
+          "forge": "../lib/forge/js/forge",
+          "moment": "../lib/moment/moment"
       }  
     },
-    
- 
+
     // 0 disables the timeout completely, default is 7 seconds
     waitSeconds: 30
 });
 
 define('jquery', () => jQuery);
 define('knockout', () => ko);
+/* TODO
 define('nvd3', ['d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], (d3, nv, timelines, chart) => nv);
 define('dagre', ['d3', 'd3/dagre'], (d3, dagre) => dagre);
-
-// Do not remove the below comment, as it's used by the optimized build to inline Durandal scripts.
-// OPTIMIZED BUILD INLINE DURANDAL HERE
-
-define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], function (system, app, viewLocator, dialog, composition) {
+*/
+define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], (system, app, viewLocator, dialog, composition) => {
     system.debug(true);
     
     NProgress.configure({ showSpinner: false });
@@ -45,7 +41,7 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
         widget: true
     });
 
-    app.start().then(function() {
+    app.start().then(() => {
         //Replace 'viewmodels' in the moduleId with 'views' to locate the view.
         //Look for partial views in a 'views' folder in the root.
         viewLocator.useConvention();

@@ -1,6 +1,7 @@
 ﻿using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -15,6 +16,18 @@ namespace Voron.Data.Compact
         /// The name of a node, is the string deprived of the string stored at it. Page 163 of [1]
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static BitVector Name(this PrefixTree tree, Leaf* @this)
+        {
+            Debug.Assert(@this->IsLeaf);
+
+            Slice key = tree.ReadKey(@this->DataPtr);
+            return key.ToBitVector();
+        }
+
+        /// <summary>
+        /// The name of a node, is the string deprived of the string stored at it. Page 163 of [1]
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BitVector Name(this PrefixTree tree, Node* @this)
         {
             if (@this->IsInternal)
@@ -23,10 +36,8 @@ namespace Voron.Data.Compact
                 return tree.Name(refNode);
             }
             else
-            {
-                var ptr = (Leaf*)@this;
-                Slice key = tree.ReadKey(ptr->DataPtr);
-                return key.ToBitVector();
+            {                
+                return tree.Name((Leaf*)@this);
             }
         }
 
@@ -37,6 +48,9 @@ namespace Voron.Data.Compact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BitVector Handle(this PrefixTree tree, Node* @this)
         {
+            // This cannot happen. We will never call Handle() in a single item tree where the root is a leaf. 
+            Debug.Assert(@this->ReferencePtr != Constants.InvalidNodeName); 
+
             var refNode = tree.ReadNodeByName(@this->ReferencePtr);
             if (@this->IsInternal)
             {
@@ -54,16 +68,17 @@ namespace Voron.Data.Compact
         /// </summary>  
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BitVector Extent(this PrefixTree tree, Node* @this)
-        {
-            var refNode = tree.ReadNodeByName(@this->ReferencePtr);
-            var refName = tree.Name(refNode);
+        {          
             if (@this->IsInternal)
             {
+                var refNode = tree.ReadNodeByName(@this->ReferencePtr);
+                var refName = tree.Name(refNode);
                 return refName.SubVector(0, ((Internal*)@this)->ExtentLength);
             }
             else
             {
-                return refName;
+                var leaf = (Leaf*)@this;
+                return tree.ReadKey(leaf->DataPtr).ToBitVector();
             }
         }
 
@@ -111,7 +126,7 @@ namespace Voron.Data.Compact
         /// <summary>
         /// There are two cases. We say that x cuts high if the cutpoint is strictly smaller than |handle(exit(x))|, cuts low otherwise. Page 165 of [1]
         /// </summary>
-        /// <remarks>Only when the cut is low, the handle(exit(x)) is a prefix of x.</remarks>
+        /// <remarks>Only when the cut is low, the handle(exit(x)) is a prefix of x.</remarks>        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsCutLow(this PrefixTree owner, Node* node, long prefix)
         {
@@ -133,35 +148,41 @@ namespace Voron.Data.Compact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Leaf* GetRightLeaf(this PrefixTree tree, Node* @this)
+        public static long GetRightLeaf(this PrefixTree tree, long @thisName)
         {
+            var @this = tree.ReadNodeByName(@thisName);
             if (@this->IsLeaf)
-                return (Leaf*)@this;
+                return @thisName;
 
+            long nodeName;
             Node* node = @this;
             do
             {
-                node = tree.ReadNodeByName(((Internal*)node)->JumpRightPtr);
+                nodeName = ((Internal*)node)->JumpRightPtr;
+                node = tree.ReadNodeByName(nodeName);
             }
             while (node->IsInternal);
 
-            return (Leaf*)node;
+            return nodeName;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Leaf* GetLeftLeaf(this PrefixTree tree, Node* @this)
+        public static long GetLeftLeaf(this PrefixTree tree, long @thisName)
         {
+            var @this = tree.ReadNodeByName(@thisName);
             if (@this->IsLeaf)
-                return (Leaf*)@this;
+                return @thisName;
 
+            long nodeName;
             Node* node = @this;
             do
             {
-                node = tree.ReadNodeByName(((Internal*)node)->JumpLeftPtr);
+                nodeName = ((Internal*)node)->JumpLeftPtr;
+                node = tree.ReadNodeByName(nodeName);
             }
             while (node->IsInternal);
 
-            return (Leaf*)node;
+            return nodeName;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -181,7 +202,30 @@ namespace Voron.Data.Compact
 
         public static string ToDebugString(this PrefixTree tree, Node* @this)
         {
-            throw new NotImplementedException();
+            Leaf* leaf;
+            if (@this->IsInternal)
+            {
+                var referenceName = @this->ReferencePtr;
+                leaf = (Leaf*)tree.ReadNodeByName(referenceName);
+                Debug.Assert(leaf->IsLeaf);
+            }
+            else
+            {
+                leaf = (Leaf*) @this;
+            }
+
+            var key = tree.ReadKey(leaf->DataPtr);
+
+            BitVector extent = tree.Extent(@this);
+            int extentLength = tree.GetExtentLength(@this);
+
+            string openBracket = @this->IsLeaf ? "[" : "(";
+            string closeBracket = @this->IsLeaf ? "]" : ")";
+            string extentBinary = extentLength > 16 ? extent.SubVector(0, 8).ToBinaryString() + "..." + extent.SubVector(extent.Count - 8, 8).ToBinaryString() : extent.ToBinaryString();
+            string lenghtInformation = "[" + @this->NameLength + ".." + extentLength + "]";
+            string jumpInfo = @this->IsInternal ? (tree.GetHandleLength(@this) + "->" + (tree.GetJumpLength((Internal*) @this))) : "";
+
+            return string.Format("{0}{2}, {4}, {3}{1}", openBracket, closeBracket, extentBinary, jumpInfo, lenghtInformation);
         }
     }
 }

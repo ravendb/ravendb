@@ -1,3 +1,4 @@
+/// <reference path="../../../typings/tsd.d.ts" />
 import composition = require("durandal/composition");
 
 /*
@@ -12,8 +13,8 @@ class dynamicHeightBindingHandler {
     constructor() {
         var $window = $(window);
         this.windowHeightObservable = ko.observable<number>($window.height());
-        window['ravenStudioWindowHeight'] = this.windowHeightObservable.throttle(this.throttleTimeMs);
-        $window.resize((ev: JQueryEventObject) => this.windowHeightObservable($window.height()));
+        window["ravenStudioWindowHeight"] = this.windowHeightObservable.throttle(this.throttleTimeMs);
+        $window.resize(() => this.windowHeightObservable($window.height()));
     }
 
     static install() {
@@ -24,7 +25,7 @@ class dynamicHeightBindingHandler {
             // is complete and attached to the DOM.
             // This is required so that we know the correct height for the element.
             // See http://durandaljs.com/documentation/Interacting-with-the-DOM/
-            composition.addBindingHandler('dynamicHeight');
+            composition.addBindingHandler("dynamicHeight");
         }
     }
 
@@ -55,7 +56,6 @@ class dynamicHeightBindingHandler {
     }
 
     static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number) {
-        var targetElement = $(targetSelector);
         if (targetSelector.length === 0) {
             throw new Error("Couldn't configure dynamic height because the target element isn't on the page. Target element: " + targetSelector);
         }

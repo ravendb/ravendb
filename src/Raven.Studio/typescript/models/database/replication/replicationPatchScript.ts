@@ -1,3 +1,5 @@
+/// <reference path="../../../../typings/tsd.d.ts"/>
+
 class replicationPatchScript {
 
     constructor(collection: string, script: string) {

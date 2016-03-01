@@ -21,16 +21,16 @@ namespace Raven.Client.Document.SessionOperations
             this.ids = ids;
         }
 
-        public T[] Complete<T>(MultiLoadResult multiLoadResult)
+        public T[] Complete<T>(LoadResult loadResult)
         {
-            foreach (var include in SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes))
+            foreach (var include in SerializationHelper.RavenJObjectsToJsonDocuments(loadResult.Includes))
             {
                 documentSession.TrackIncludedDocument(include);
             }
 
             if (typeof (T).IsArray)
             {
-                var arrayOfArrays = multiLoadResult.Results
+                var arrayOfArrays = loadResult.Results
                                                    .Select(x =>
                                                    {
                                                        if (x == null)
@@ -54,7 +54,7 @@ namespace Raven.Client.Document.SessionOperations
                 return arrayOfArrays;
             }
 
-            var items = ParseResults<T>(multiLoadResult.Results)
+            var items = ParseResults<T>(loadResult.Results)
                 .ToArray();
 
             if (items.Length > ids.Length)

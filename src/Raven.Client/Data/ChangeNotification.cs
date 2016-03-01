@@ -4,8 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using Raven.Database.Util;
+
+using Raven.Client.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Data
         public Guid OperationId { get; set; }
     }
 
-    public class DocumentChangeNotification : EventArgs
+    public class DocumentChangeNotification : Notification
     {
         /// <summary>
         /// Type of change that occurred on document.
@@ -28,7 +28,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Identifier of document for which notification was created.
         /// </summary>
-        public string Id { get; set; }
+        public string Key { get; set; }
 
         /// <summary>
         /// Document collection name.
@@ -45,14 +45,9 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public long? Etag { get; set; }
 
-        /// <summary>
-        /// Notification message.
-        /// </summary>
-        public string Message { get; set; }
-
         public override string ToString()
         {
-            return string.Format("{0} on {1}", Type, Id);
+            return string.Format("{0} on {1}", Type, Key);
         }
     }
 
@@ -102,7 +97,7 @@ namespace Raven.Abstractions.Data
         TransformerRemoved = 2
     }
 
-    public class IndexChangeNotification : EventArgs
+    public class IndexChangeNotification : Notification
     {
         /// <summary>
         /// Type of change that occurred on index.
@@ -129,7 +124,7 @@ namespace Raven.Abstractions.Data
         }
     }
 
-    public class TransformerChangeNotification : EventArgs
+    public class TransformerChangeNotification : Notification
     {
         /// <summary>
         /// Type of change that occurred on transformer.
@@ -147,7 +142,7 @@ namespace Raven.Abstractions.Data
         }
     }
 
-    public class ReplicationConflictNotification : EventArgs
+    public class ReplicationConflictNotification : Notification
     {
         /// <summary>
         /// Type of conflict that occurred (None, DocumentReplicationConflict).
@@ -196,8 +191,8 @@ namespace Raven.Abstractions.Data
         Put = 1,
         Delete = 2,
     }
-    
-    public class TrafficWatchNotification : EventArgs
+
+    public class TrafficWatchNotification : Notification
     {
         public DateTime TimeStamp { get; set; }
         public int RequestId { get; set; }

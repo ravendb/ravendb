@@ -117,7 +117,7 @@ namespace Raven.Client.Document
         {
             if (IsLoaded(id))
                 return new Lazy<T>(() => Load<T>(id));
-            var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), HandleInternalMetadata);
+            var lazyLoadOperation = new LazyLoadOperation<T>(new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), id );
             return AddLazyOperation(lazyLoadOperation, onEval);
         }
 
@@ -280,7 +280,7 @@ namespace Raven.Client.Document
                     retry = loadOperation.SetResult(DatabaseCommands.Get(id));
                 }
             } while (retry);
-            return loadOperation.Complete<T>();
+            return loadOperation.Complete<T>().FirstOrDefault();
         }
 
         /// <summary>
@@ -391,18 +391,18 @@ namespace Raven.Client.Document
 
 
             IncrementRequestCount();
-            var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
-            MultiLoadResult multiLoadResult;
+            var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
+            LoadResult loadResult;
             do
             {
-                multiLoadOperation.LogOperation();
-                using (multiLoadOperation.EnterMultiLoadContext())
+                loadOperation.LogOperation();
+                using (loadOperation.EnterLoadContext())
                 {
-                    multiLoadResult = DatabaseCommands.Get(ids, includePaths);
+                    loadResult = DatabaseCommands.Get(ids, includePaths);
                 }
-            } while (multiLoadOperation.SetResult(multiLoadResult));
+            } while (loadOperation.SetResult(loadResult));
 
-            return multiLoadOperation.Complete<T>();
+            return loadOperation.Complete<T>();
         }
 
         public T[] LoadInternal<T>(string[] ids)
@@ -418,18 +418,18 @@ namespace Raven.Client.Document
             if (idsOfNotExistingObjects.Length > 0)
             {
                 IncrementRequestCount();
-                var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
-                MultiLoadResult multiLoadResult;
+                var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
+                LoadResult loadResult;
                 do
                 {
-                    multiLoadOperation.LogOperation();
-                    using (multiLoadOperation.EnterMultiLoadContext())
+                    loadOperation.LogOperation();
+                    using (loadOperation.EnterLoadContext())
                     {
-                        multiLoadResult = DatabaseCommands.Get(idsOfNotExistingObjects, null);
+                        loadResult = DatabaseCommands.Get(idsOfNotExistingObjects, null);
                     }
-                } while (multiLoadOperation.SetResult(multiLoadResult));
+                } while (loadOperation.SetResult(loadResult));
 
-                multiLoadOperation.Complete<T>();
+                loadOperation.Complete<T>();
             }
 
             return ids.Select(Load<T>).ToArray();
@@ -904,8 +904,8 @@ namespace Raven.Client.Document
             {
                 return new Lazy<T[]>(() => ids.Select(Load<T>).ToArray());
             }
-            var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
-            var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+            var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
+            var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
             return AddLazyOperation(lazyOp, onEval);
         }
 
@@ -1021,8 +1021,8 @@ namespace Raven.Client.Document
 
         public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
-            var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
-            var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
+            var loadOperation = new LoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
+            var lazyOp = new LazyMoreLikeThisOperation<TResult>(loadOperation, query);
             return AddLazyOperation<TResult[]>(lazyOp, null);
 }
 

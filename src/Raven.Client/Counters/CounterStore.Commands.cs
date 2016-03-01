@@ -53,7 +53,7 @@ namespace Raven.Client.Counters
 
             await ReplicationInformer.ExecuteWithReplicationAsync(Url, HttpMethods.Post, async (url, counterStoreName) =>
             {
-                var requestUriString = $"{url}/cs/{counterStoreName}/delete/?groupName={groupName}&counterName={counterName}";
+                var requestUriString = $"{url}/cs/{counterStoreName}/delete?groupName={groupName}&counterName={counterName}";
                 using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Delete))
                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
             }, token).WithCancellation(token).ConfigureAwait(false);

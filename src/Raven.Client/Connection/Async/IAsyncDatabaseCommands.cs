@@ -84,6 +84,12 @@ namespace Raven.Client.Connection.Async
         Task DeleteAsync(string key, long? etag, CancellationToken token = default (CancellationToken));
 
         /// <summary>
+        ///     Perform a set based deletes using the collection
+        /// </summary>
+        /// <param name="token">The cancellation token.</param>
+        Task DeleteCollectionAsync(string collectionName, CancellationToken token = default (CancellationToken));
+
+        /// <summary>
         ///     Perform a set based deletes using the specified index
         /// </summary>
         /// <param name="indexName">name of an index to perform a query on</param>
@@ -148,7 +154,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
         /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
         /// <param name="token">The cancellation token.</param>
-        Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default (CancellationToken));
+        Task<LoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Get the low level bulk insert operation
@@ -333,7 +339,7 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="query">more like this query definition that will be executed</param>
         /// <param name="token">The cancellation token.</param>
-        Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
+        Task<LoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Perform a single POST request containing multiple nested GET requests

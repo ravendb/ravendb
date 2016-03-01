@@ -6,15 +6,15 @@ namespace Raven.Client.Changes
     public abstract class ConnectionStateBase : IChangesConnectionState
     {
         public event Action<Exception> OnError;
-        private readonly Action onZero;
-        private int value;
+        private readonly Func<Task> _disconnectAction;
+        private int _value;
 
         public Task Task { get; private set; }
 
-        protected ConnectionStateBase(Action onZero, Task task)
+        protected ConnectionStateBase(Func<Task> disconnectAction, Task task)
         {
-            value = 0;
-            this.onZero = onZero;
+            _value = 0;
+            _disconnectAction = disconnectAction;
             Task = task;
         }
 
@@ -24,7 +24,7 @@ namespace Raven.Client.Changes
         {
             lock (this)
             {
-                if (++value == 1)
+                if (++_value == 1)
                     Task = EnsureConnection();
             }
         }
@@ -33,16 +33,14 @@ namespace Raven.Client.Changes
         {
             lock(this)
             {
-                if(--value == 0)
-                    onZero();
+                if(--_value == 0)
+                    _disconnectAction();
             }
         }
 
         public void Error(Exception e)
         {
-            var onOnError = OnError;
-            if (onOnError != null)
-                onOnError(e);
+            OnError?.Invoke(e);
         }
     }
 }

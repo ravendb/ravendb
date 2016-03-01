@@ -1,5 +1,3 @@
-/// <reference path="../../../typings/tsd.d.ts" />
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");

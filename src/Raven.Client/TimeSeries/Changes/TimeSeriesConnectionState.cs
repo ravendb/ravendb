@@ -9,8 +9,8 @@ namespace Raven.Client.TimeSeries.Changes
     {
         private readonly Func<TimeSeriesConnectionState, Task> ensureConnection;
 
-        public TimeSeriesConnectionState(Action onZero, Func<TimeSeriesConnectionState, Task> ensureConnection, Task task)
-            : base(onZero, task)
+        public TimeSeriesConnectionState(Func<Task> disconnectAction, Func<TimeSeriesConnectionState, Task> ensureConnection, Task task)
+            : base(disconnectAction, task)
         {
             this.ensureConnection = ensureConnection;
         }

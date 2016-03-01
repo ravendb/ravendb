@@ -3,6 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // ----------------------------------------------------------------------
+
+using System;
+
 namespace Raven.Tests.Core.Utils.Entities
 {
     public class Post
@@ -12,5 +15,6 @@ namespace Raven.Tests.Core.Utils.Entities
         public string Desc { get; set; }
         public Post[] Comments { get; set; }
         public string[] AttachmentIds { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

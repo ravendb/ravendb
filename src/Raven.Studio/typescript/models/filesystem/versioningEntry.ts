@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class versioningEntry {
     maxRevisions = ko.observable<number>();
     exclude = ko.observable<boolean>();

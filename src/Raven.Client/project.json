@@ -24,6 +24,7 @@
         "System.IO": "4.0.11-beta-23516",
         "System.IO.Compression": "4.1.0-beta-23516",
         "System.IO.FileSystem": "4.0.1-beta-23516",
+        "System.Console": "4.0.0-beta-23516",
         "System.Linq": "4.0.1-beta-23516",
         "System.Net.Http": "4.0.1-beta-23516",
         "System.Net.Http.WinHttpHandler": "4.0.0-beta-23516",
@@ -39,8 +40,8 @@
         "System.Text.RegularExpressions": "4.0.11-beta-23516",
         "System.Threading.Thread": "4.0.0-beta-23516",
         "System.Xml.XDocument": "4.0.11-beta-23516",
-        "System.AppContext": "4.0.1-beta-23516"
-
+        "System.AppContext": "4.0.1-beta-23516",
+        "System.Net.WebSockets.Client": "4.0.0-beta-23516"
       }
     }
   }

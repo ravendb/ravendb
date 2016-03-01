@@ -32,9 +32,13 @@ namespace Raven.Server.Routing
             Path = path;
         }
 
-        public void Build(MemberInfo memberInfo)
+        public void Build(MethodInfo action)
         {
-            if (typeof(DatabaseRequestHandler).IsAssignableFrom(memberInfo.DeclaringType))
+            if (action.ReturnType != typeof (Task))
+                throw new InvalidOperationException(action.DeclaringType.FullName + "." + action.Name +
+                                                    " must return Task");
+
+            if (typeof(DatabaseRequestHandler).IsAssignableFrom(action.DeclaringType))
             {
                 _typeOfRoute = RouteType.Databases;
             }
@@ -42,28 +46,28 @@ namespace Raven.Server.Routing
             // CurrentRequestContext currentRequestContext
             var currentRequestContext = Expression.Parameter(typeof (RequestHandlerContext), "currentRequestContext");
             // new Handler(currentRequestContext)
-            var constructorInfo = memberInfo.DeclaringType.GetConstructor(new Type[0]);
+            var constructorInfo = action.DeclaringType.GetConstructor(new Type[0]);
             var newExpression = Expression.New(constructorInfo);
-            var handler = Expression.Parameter(memberInfo.DeclaringType, "handler");
+            var handler = Expression.Parameter(action.DeclaringType, "handler");
 
             var block = Expression.Block(typeof(Task),new [] {handler},
                 Expression.Assign(handler, newExpression),
                 Expression.Call(handler, "Init", new Type[0], currentRequestContext),
-                Expression.Call(handler, memberInfo.Name, new Type[0]));
+                Expression.Call(handler, action.Name, new Type[0]));
             // .Handle();
             _request = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
         }
 
         public async Task CreateDatabase(RequestHandlerContext context)
         {
-            var databaseId = context.RouteMatch.GetCapture();
-            var databasesLandlord = context.ServerStore.DatabasesLandlord;
-            Task<DocumentsStorage> task;
-            if (databasesLandlord.TryGetOrCreateResourceStore(databaseId, out task) == false)
+            var databaseName = context.RouteMatch.GetCapture();
+            var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
+            var database = await databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            if (database == null)
             {
-                throw new DatabaseDoesNotExistsException($"Database '{databaseId}' was not found");
+                throw new DatabaseDoesNotExistsException($"Database '{databaseName}' was not found");
             }
-            context.DocumentsStorage = await task;
+            context.Database = await database;
         }
 
         public async Task<HandleRequest> CreateHandler(RequestHandlerContext context)
@@ -75,6 +79,11 @@ namespace Raven.Server.Routing
                     break;
             }
 
+            return _request;
+        }
+
+        public HandleRequest GetRequestHandler()
+        {
             return _request;
         }
     }

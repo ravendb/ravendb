@@ -5,7 +5,7 @@ class getWindowsAuthCommand extends commandBase {
     
     execute(): JQueryPromise<windowsAuthSetup> {
         return this.query(
-            "/docs",
+            "/document",
             { id: "Raven/Authorization/WindowsSettings" },
             null,
             (dto: windowsAuthDto) => new windowsAuthSetup(dto)

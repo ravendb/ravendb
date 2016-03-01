@@ -1,3 +1,5 @@
+/// <reference path="../../typings/tsd.d.ts" />
+
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher"); 
 

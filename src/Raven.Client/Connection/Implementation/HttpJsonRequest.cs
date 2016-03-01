@@ -650,28 +650,6 @@ namespace Raven.Client.Connection.Implementation
             }
         }
 
-        public async Task<IObservable<string>> ServerPullAsync()
-        {
-            return await RunWithAuthRetry(async () =>
-            {
-                var httpRequestMessage = new HttpRequestMessage(Method, Url);
-                Response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-                SetResponseHeaders(Response);
-                AssertServerVersionSupported();
-
-                await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
-
-                var stream = await Response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                var observableLineStream = new ObservableLineStream(stream, () =>
-                {
-                    Response.Dispose();
-                    factory.HttpClientCache.ReleaseClient(httpClient, _credentials);
-                });
-                observableLineStream.Start();
-                return (IObservable<string>)observableLineStream;
-            }).ConfigureAwait(false);
-        }
-
         public Task WriteWithObjectAsync<T>(IEnumerable<T> data)
         {
             return WriteAsync(JsonExtensions.ToJArray(data));

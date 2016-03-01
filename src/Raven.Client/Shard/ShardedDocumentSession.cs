@@ -149,11 +149,11 @@ namespace Raven.Client.Shard
                         retry = loadOperation.SetResult(commands.Get(id));
                     }
                 } while (retry);
-                return loadOperation.Complete<T>();
+                return loadOperation.Complete<T>().FirstOrDefault();
             });
 
             var shardsContainThisDocument = results.Where(x => !Equals(x, default(T))).ToArray();
-            if (shardsContainThisDocument.Count() > 1)
+            if (shardsContainThisDocument.Length > 1)
             {
                 throw new InvalidOperationException("Found document with id: " + id +
                                                     " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
@@ -352,16 +352,16 @@ namespace Raven.Client.Shard
                     Keys = currentShardIds.ToList()
                 }, (dbCmd, i) =>
                 {
-                    var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
-                    MultiLoadResult multiLoadResult;
+                    var multiLoadOperation = new LoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
+                    LoadResult loadResult;
                     do
                     {
                         multiLoadOperation.LogOperation();
-                        using (multiLoadOperation.EnterMultiLoadContext())
+                        using (multiLoadOperation.EnterLoadContext())
                         {
-                            multiLoadResult = dbCmd.Get(currentShardIds, includePaths);
+                            loadResult = dbCmd.Get(currentShardIds, includePaths);
                         }
-                    } while (multiLoadOperation.SetResult(multiLoadResult));
+                    } while (multiLoadOperation.SetResult(loadResult));
                     return multiLoadOperation;
                 });
                 foreach (var multiLoadOperation in multiLoadOperations)
@@ -445,11 +445,11 @@ namespace Raven.Client.Shard
                 EntityType = typeof(T)
             });
 
-            var lazyLoadOperation = new LazyLoadOperation<T>(id, new LoadOperation(this, () =>
+            var lazyLoadOperation = new LazyLoadOperation<T>(new LoadOperation(this, () =>
             {
                 var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
                 return new DisposableAction(() => list.ForEach(x => x.Dispose()));
-            }, id), HandleInternalMetadata);
+            }, id), id);
             return AddLazyOperation(lazyLoadOperation, onEval, cmds);
         }
 
@@ -605,12 +605,12 @@ namespace Raven.Client.Shard
                                   .GroupBy(x => x.shards, new DbCmdsListComparer());
             var cmds = idsAndShards.SelectMany(idAndShard => idAndShard.Key).Distinct().ToList();
 
-            var multiLoadOperation = new MultiLoadOperation(this, () =>
+            var multiLoadOperation = new LoadOperation(this, () =>
             {
                 var list = cmds.Select(cmd => cmd.DisableAllCaching()).ToList();
                 return new DisposableAction(() => list.ForEach(disposable => disposable.Dispose()));
             }, ids, includes);
-            var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+            var lazyOp = new LazyLoadOperation<T>(multiLoadOperation, ids, includes);
             return AddLazyOperation(lazyOp, onEval, cmds);
         }
 

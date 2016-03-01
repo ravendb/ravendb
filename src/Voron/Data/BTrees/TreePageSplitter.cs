@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 using Voron.Impl;
+using Voron.Impl.FreeSpace;
 
 namespace Voron.Data.BTrees
 {
@@ -40,76 +41,88 @@ namespace Voron.Data.BTrees
             _cursor.Pop();
         }
 
+        private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
+        {
+            if (_tree == _tx.RootObjects)
+            {
+                return _tx.Environment.FreeSpaceHandling.Disable();
+            }
+            return new FreeSpaceHandlingDisabler();
+        }
+
         public byte* Execute()
         {
-            TreePage rightPage = _tree.NewPage(_page.TreeFlags, 1);
-
-            if (_cursor.PageCount == 0) // we need to do a root split
+            using (DisableFreeSpaceUsageIfSplittingRootTree())
             {
-                TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch, 1);
-                _cursor.Push(newRootPage);
-                _tree.State.RootPageNumber = newRootPage.PageNumber;
-                _tree.State.Depth++;
+                TreePage rightPage = _tree.NewPage(_page.TreeFlags, 1);
 
-                // now add implicit left page
-                newRootPage.AddPageRefNode(0, Slice.BeforeAllKeys, _page.PageNumber);
-                _parentPage = newRootPage;
-                _parentPage.LastSearchPosition++;
-            }
-            else
-            {
-                // we already popped the page, so the current one on the stack is the parent of the page
-
-                _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
-
-                _cursor.Update(_cursor.Pages.First, _parentPage);
-            }
-
-            if (_page.IsLeaf)
-            {
-                _tree.ClearRecentFoundPages();
-            }
-
-            if (_page.LastSearchPosition >= _page.NumberOfEntries)
-            {
-                // when we get a split at the end of the page, we take that as a hint that the user is doing 
-                // sequential inserts, at that point, we are going to keep the current page as is and create a new 
-                // page, this will allow us to do minimal amount of work to get the best density
-
-                byte* pos;
-                if (_page.IsBranch)
+                if (_cursor.PageCount == 0) // we need to do a root split
                 {
-                    if (_page.NumberOfEntries > 2)
-                    {
-                        // here we steal the last entry from the current page so we maintain the implicit null left entry
+                    TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch, 1);
+                    _cursor.Push(newRootPage);
+                    _tree.State.RootPageNumber = newRootPage.PageNumber;
+                    _tree.State.Depth++;
 
-                        TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
-                        Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
-                        rightPage.AddPageRefNode(0, Slice.BeforeAllKeys, node->PageNumber);
-                        pos = AddNodeToPage(rightPage, 1);
-
-                        var separatorKey = _page.GetNodeKey(node);
-
-                        AddSeparatorToParentPage(rightPage.PageNumber, separatorKey);
-
-                        _page.RemoveNode(_page.NumberOfEntries - 1);
-                    }
-                    else
-                    {
-                        _tree.FreePage(rightPage); // return the unnecessary right page
-                        return AddSeparatorToParentPage(_pageNumber, _newKey);
-                    }
+                    // now add implicit left page
+                    newRootPage.AddPageRefNode(0, Slice.BeforeAllKeys, _page.PageNumber);
+                    _parentPage = newRootPage;
+                    _parentPage.LastSearchPosition++;
                 }
                 else
                 {
-                    AddSeparatorToParentPage(rightPage.PageNumber, _newKey);
-                    pos = AddNodeToPage(rightPage, 0);
-                }
-                _cursor.Push(rightPage);
-                return pos;
-            }
+                    // we already popped the page, so the current one on the stack is the parent of the page
 
-            return SplitPageInHalf(rightPage);
+                    _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
+
+                    _cursor.Update(_cursor.Pages.First, _parentPage);
+                }
+
+                if (_page.IsLeaf)
+                {
+                    _tree.ClearRecentFoundPages();
+                }
+
+                if (_page.LastSearchPosition >= _page.NumberOfEntries)
+                {
+                    // when we get a split at the end of the page, we take that as a hint that the user is doing 
+                    // sequential inserts, at that point, we are going to keep the current page as is and create a new 
+                    // page, this will allow us to do minimal amount of work to get the best density
+
+                    byte* pos;
+                    if (_page.IsBranch)
+                    {
+                        if (_page.NumberOfEntries > 2)
+                        {
+                            // here we steal the last entry from the current page so we maintain the implicit null left entry
+
+                            TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
+                            Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
+                            rightPage.AddPageRefNode(0, Slice.BeforeAllKeys, node->PageNumber);
+                            pos = AddNodeToPage(rightPage, 1);
+
+                            var separatorKey = _page.GetNodeKey(node);
+
+                            AddSeparatorToParentPage(rightPage.PageNumber, separatorKey);
+
+                            _page.RemoveNode(_page.NumberOfEntries - 1);
+                        }
+                        else
+                        {
+                            _tree.FreePage(rightPage); // return the unnecessary right page
+                            return AddSeparatorToParentPage(_pageNumber, _newKey);
+                        }
+                    }
+                    else
+                    {
+                        AddSeparatorToParentPage(rightPage.PageNumber, _newKey);
+                        pos = AddNodeToPage(rightPage, 0);
+                    }
+                    _cursor.Push(rightPage);
+                    return pos;
+                }
+
+                return SplitPageInHalf(rightPage);
+            }
         }
 
         private byte* AddNodeToPage(TreePage page, int index, Slice alreadyPreparedNewKey = null)
@@ -178,7 +191,7 @@ namespace Voron.Data.BTrees
 
             bool addedAsImplicitRef = false;
 
-            if (_page.IsBranch && toRight && seperatorKey == _newKey)
+            if (_page.IsBranch && toRight && seperatorKey.Equals(_newKey))
             {
                 // _newKey needs to be inserted as first key (BeforeAllKeys) to the right page, so we need to add it before we move entries from the current page
                 AddNodeToPage(rightPage, 0, Slice.BeforeAllKeys);

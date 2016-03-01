@@ -148,7 +148,7 @@ namespace Raven.Abstractions.Data
                 pathSuffix = DocumentId;
             }
 
-            uri.AppendFormat("/morelikethis/?index={0}&docid={1}&", Uri.EscapeUriString(IndexName), Uri.EscapeDataString(pathSuffix));
+            uri.AppendFormat("/morelikethis?index={0}&docid={1}&", Uri.EscapeUriString(IndexName), Uri.EscapeDataString(pathSuffix));
             if (Fields != null)
             {
                 foreach (var field in Fields)

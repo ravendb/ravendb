@@ -1,5 +1,8 @@
 ﻿using System;
 
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonReaderBase
@@ -9,7 +12,7 @@ namespace Raven.Server.Json
         protected int _size;
         protected byte* _propNames;
         protected int _propNamesDataOffsetSize;
-        protected RavenOperationContext _context;
+        protected MemoryOperationContext _context;
 
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
@@ -52,7 +55,7 @@ namespace Raven.Server.Json
             }
         }
 
-        internal const BlittableJsonToken typesMask =
+        internal const BlittableJsonToken TypesMask =
                 BlittableJsonToken.Boolean |
                 BlittableJsonToken.Float |
                 BlittableJsonToken.Integer |

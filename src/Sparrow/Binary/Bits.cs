@@ -9,7 +9,6 @@ namespace Sparrow.Binary
 {
     public static class Bits
     {
-
         // Code taken from http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn
 
         private static readonly int[] MultiplyDeBruijnBitPosition = 
@@ -263,6 +262,28 @@ namespace Sparrow.Binary
         public static ulong RotateRight64(ulong value, int count)
         {
             return (value >> count) | (value << (64 - count));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong SwapBytes(uint value)
+        {
+            return (((value & 0xff000000) >> 24) |
+                    ((value & 0x00ff0000) >> 8)  |
+                    ((value & 0x0000ff00) << 8)  |
+                    ((value & 0x000000ff) << 24));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong SwapBytes(ulong value)
+        {
+            return (((value & 0xff00000000000000UL) >> 56) |
+                    ((value & 0x00ff000000000000UL) >> 40) |
+                    ((value & 0x0000ff0000000000UL) >> 24) |
+                    ((value & 0x000000ff00000000UL) >> 8) |
+                    ((value & 0x00000000ff000000UL) << 8) |
+                    ((value & 0x0000000000ff0000UL) << 24) |
+                    ((value & 0x000000000000ff00UL) << 40) |
+                    ((value & 0x00000000000000ffUL) << 56));
         }
     }
 }

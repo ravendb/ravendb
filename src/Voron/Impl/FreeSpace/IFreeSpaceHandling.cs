@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Voron.Impl.FreeSpace
@@ -9,5 +10,6 @@ namespace Voron.Impl.FreeSpace
         void FreePage(LowLevelTransaction tx, long pageNumber);
         long GetFreePagesOverhead(LowLevelTransaction tx);
         IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);
+        FreeSpaceHandlingDisabler Disable();
     }
 }

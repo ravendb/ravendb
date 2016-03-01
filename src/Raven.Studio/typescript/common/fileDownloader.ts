@@ -1,3 +1,5 @@
+/// <reference path="../../typings/tsd.d.ts" />
+
 class fileDownloader {
 
     private static cleanup(domCacheElementName: string) {

@@ -281,7 +281,7 @@ namespace Raven.Client.Connection
             AsyncHelpers.RunSync(() => asyncServerClient.DeleteIndexAsync(name));
         }
 
-        public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null,
+        public LoadResult Get(string[] ids, string[] includes, string transformer = null,
             Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(ids, includes, transformer, transformerParameters, metadataOnly));
@@ -373,7 +373,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.SuggestAsync(index, suggestionQuery));
         }
 
-        public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
+        public LoadResult MoreLikeThis(MoreLikeThisQuery query)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.MoreLikeThisAsync(query));
         }

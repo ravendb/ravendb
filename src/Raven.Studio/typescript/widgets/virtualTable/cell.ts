@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class cell {
     data = ko.observable<any>();
     resetFlag = false;

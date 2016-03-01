@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts"/>
+
 class environmentColor {
     public name: string;
     public backgroundColor: string;

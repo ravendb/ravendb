@@ -10,6 +10,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+
 using Xunit;
 
 namespace FastTests.Blittable
@@ -18,25 +21,26 @@ namespace FastTests.Blittable
     public class PartialBlitable
     {
         [Fact]
-        public async Task CanSkipWritingPropertyNames()
+        public void CanSkipWritingPropertyNames()
         {
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new RavenOperationContext(pool))
+            using (var ctx = new MemoryOperationContext(pool))
             {
-                var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes("{\"Name\":\"Oren\"}"));
+                var buffer = Encoding.UTF8.GetBytes("{\"Name\":\"Oren\"}");
                 var state = new JsonParserState();
-                using (var parser = new UnmanagedJsonStreamParser(memoryStream, ctx, state, "test"))
+                using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
                 {
+                    parser.SetBuffer(buffer, buffer.Length);
                     var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk,
                         "test", parser, state);
                     ctx.CachedProperties.NewDocument();
-                    var writeToken = await writer.ReadPartialObject();
+                    writer.ReadObject();
+                    Assert.True(writer.Read());
 
-                    writer.FinalizeDocumentWithoutProperties(writeToken, 1);
+                    writer.FinalizeDocumentWithoutProperties(1);
                     ctx.CachedProperties.Version = 1;
                     var reader = writer.CreateReader(ctx.CachedProperties);
 
-                    Console.WriteLine(reader.Size);
                     string str;
                     Assert.True(reader.TryGet("Name", out str));
                     Assert.Equal("Oren", str);
