@@ -8,7 +8,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using System.Linq;
-using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
@@ -79,7 +78,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes, HashSet<IComparable> alreadySeen) 
+        public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes, HashSet<IComparable> alreadySeen)
             where T : DatabaseTask
         {
             var type = CreateKey(typeof(T).FullName);
@@ -137,7 +136,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     task.Id = currentId;
                     MergeSimilarTasks(task, alreadySeen, indexesToSkip, allIndexes);
 
-                    return (T) task;
+                    return (T)task;
                 } while (iterator.MoveNext());
             }
 
@@ -146,21 +145,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private void MergeSimilarTasks(DatabaseTask task, HashSet<IComparable> alreadySeen, List<int> indexesToSkip, int[] allIndexes)
         {
-            IIterator treeIterator;
+            string tree;
+            Slice slice;
             var type = task.GetType().FullName;
             if (task.SeparateTasksByIndex)
             {
-                
-                var index = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
-                treeIterator = index.MultiRead(Snapshot, (Slice) CreateKey(task.Index, type));
+                tree = Tables.Tasks.Indices.ByIndexAndType;
+                slice = (Slice)CreateKey(task.Index, type);
             }
             else
             {
-                var index = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
-                treeIterator = index.MultiRead(Snapshot, (Slice)type);
+                tree = Tables.Tasks.Indices.ByType;
+                slice = (Slice)CreateKey(type);
             }
-            
-            using (var iterator = treeIterator)
+
+            using (var iterator = tableStorage.Tasks.GetIndex(tree).MultiRead(Snapshot, slice))
             {
                 if (!iterator.Seek(Slice.BeforeAllKeys))
                     return;
@@ -168,7 +167,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 var totalKeysToProcess = task.NumberOfKeys;
                 do
                 {
-                    if (totalKeysToProcess >= 5*1024)
+                    if (totalKeysToProcess >= 5 * 1024)
                         break;
 
                     ushort version;
@@ -227,9 +226,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var indexKey = CreateKey(index);
 
-            tasksByType.MultiDelete(writeBatch.Value, (Slice) CreateKey(type), taskId);
-            tasksByIndex.MultiDelete(writeBatch.Value, (Slice) indexKey, taskId);
-            tasksByIndexAndType.MultiDelete(writeBatch.Value, (Slice) AppendToKey(indexKey, type), taskId);
+            tasksByType.MultiDelete(writeBatch.Value, (Slice)CreateKey(type), taskId);
+            tasksByIndex.MultiDelete(writeBatch.Value, (Slice)indexKey, taskId);
+            tasksByIndexAndType.MultiDelete(writeBatch.Value, (Slice)AppendToKey(indexKey, type), taskId);
         }
 
         public System.Collections.Generic.IEnumerable<TaskMetadata> GetPendingTasksForDebug()
@@ -254,7 +253,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     {
                         pendingTasksForDebug = new TaskMetadata
                         {
-                            Id = Etag.Parse(taskData.ReadBytes(TaskFields.TaskId)), AddedTime = DateTime.FromBinary(taskData.ReadLong(TaskFields.AddedAt)), Type = taskData.ReadString(TaskFields.Type), IndexId = taskData.ReadInt(TaskFields.IndexId)
+                            Id = Etag.Parse(taskData.ReadBytes(TaskFields.TaskId)),
+                            AddedTime = DateTime.FromBinary(taskData.ReadLong(TaskFields.AddedAt)),
+                            Type = taskData.ReadString(TaskFields.Type),
+                            IndexId = taskData.ReadInt(TaskFields.IndexId)
                         };
                     }
                     catch (Exception e)
@@ -285,7 +287,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var count = 0;
             var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
-            using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, (Slice) CreateKey(indexId)))
+            using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, (Slice)CreateKey(indexId)))
             {
                 if (iterator.Seek(Slice.BeforeAllKeys) == false)
                     return count;
