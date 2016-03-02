@@ -31,12 +31,12 @@ namespace Metrics.Core
                 this.m15Rate.Tick();
             }
 
-            public void Mark(long count)
+            public void Mark(long val)
             {
-                this.count.Add(count);
-                this.m1Rate.Update(count);
-                this.m5Rate.Update(count);
-                this.m15Rate.Update(count);
+                this.count.Add(val);
+                this.m1Rate.Update(val);
+                this.m5Rate.Update(val);
+                this.m15Rate.Update(val);
             }
 
             public void Reset()

@@ -25,22 +25,16 @@ namespace Metrics.Utils
             this.value = value;
         }
 
-        public long Value
+        public long Value => Volatile.Read(ref this.value);
+
+        public void SetValue(long val)
         {
-            get
-            {
-                return Volatile.Read(ref this.value);
-            }
+            Volatile.Write(ref this.value, val);
         }
 
-        public void SetValue(long value)
+        public long Add(long val)
         {
-            Volatile.Write(ref this.value, value);
-        }
-
-        public long Add(long value)
-        {
-            return Interlocked.Add(ref this.value, value);
+            return Interlocked.Add(ref this.value, val);
         }
 
         public long Increment()

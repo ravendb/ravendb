@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using Metrics.Logging;
 
 namespace Metrics
 {
@@ -9,7 +8,6 @@ namespace Metrics
     /// </summary>
     public static class Metric
     {
-        private static readonly ILog log = LogProvider.GetCurrentClassLogger();
 
         private static readonly DefaultMetricsContext globalContext;
 
@@ -89,12 +87,10 @@ namespace Metrics
             {
 
                 var name = Process.GetCurrentProcess().ProcessName.Replace('.', '_');
-                log.Debug(() => "Metrics: GlobalContext Name set to " + name);
                 return name;
             }
             catch (Exception x)
             {
-                log.ErrorException("Metrics: Error reading config value for Metrics.GlobalContetName", x);
                 throw new InvalidOperationException("Invalid Metrics Configuration: Metrics.GlobalContextName must be non empty string", x);
             }
         }
