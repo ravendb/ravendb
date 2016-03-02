@@ -40,7 +40,7 @@ namespace Metrics.Sampling
             this.values = new SortedList<double, WeightedSample>(size, ReverseOrderDoubleComparer.Instance);
 
             this.rescaleScheduler = scheduler;
-            this.rescaleScheduler.Start(RescaleInterval, () => Rescale());
+            this.rescaleScheduler.Start(RescaleInterval, Rescale);
 
             this.startTime = new AtomicLong(Clock.Seconds);
         }
