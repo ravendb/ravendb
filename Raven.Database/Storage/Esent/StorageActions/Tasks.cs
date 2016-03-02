@@ -207,8 +207,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
                 var index = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]).Value;
-                if (indexesToSkip.Contains(index))
+                if (task.SeparateTasksByIndex == false && indexesToSkip.Contains(index))
                 {
+                    //need to check this only when not separating tasks by index
                     if (logger.IsDebugEnabled)
                         logger.Debug("Skipping task id: {0} for index id: {1}", currentId, index);
                     continue;
@@ -217,8 +218,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (alreadySeen.Add(currentId) == false)
                     continue;
 
-                if (allIndexes.Contains(index) == false)
+                if (task.SeparateTasksByIndex == false && allIndexes.Contains(index) == false)
                 {
+                    //need to check this only when not separating tasks by index
                     if (logger.IsDebugEnabled)
                         logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, index);
 
