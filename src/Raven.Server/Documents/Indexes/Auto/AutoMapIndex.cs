@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return instance;
         }
 
-        protected override void DoIndexingWork(CancellationToken cancellationToken)
+        public override void DoIndexingWork(CancellationToken cancellationToken)
         {
             ExecuteCleanup(cancellationToken);
             ExecuteMap(cancellationToken);

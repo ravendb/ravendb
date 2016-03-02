@@ -386,7 +386,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected abstract void DoIndexingWork(CancellationToken cancellationToken);
+        public abstract void DoIndexingWork(CancellationToken cancellationToken);
 
 
 

@@ -25,7 +25,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckDispose()
         {
-            using (var database = CreateDocumentDatabase())
+            using (var database = LowLevel_CreateDocumentDatabase())
             {
                 var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
                 {
@@ -68,7 +68,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanDispose()
         {
-            using (var database = CreateDocumentDatabase(runInMemory: false))
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false))
             {
                 Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
                 {
@@ -89,7 +89,7 @@ namespace FastTests.Server.Documents.Indexing
         public void CanPersist()
         {
             var path = NewDataPath(); 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var name1 = new IndexField
                 {
@@ -109,7 +109,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(2) != null, TimeSpan.FromSeconds(15)));
 
@@ -141,7 +141,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void SimpleIndexing()
         {
-            using (var database = CreateDocumentDatabase())
+            using (var database = LowLevel_CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
                 {
@@ -183,7 +183,7 @@ namespace FastTests.Server.Documents.Indexing
 
                         index.Execute();
 
-                        WaitForIndexMap(index, 2);
+                        LowLevel_WaitForIndexMap(index, 2);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -202,7 +202,7 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        WaitForIndexMap(index, 3);
+                        LowLevel_WaitForIndexMap(index, 3);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -217,11 +217,6 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        private static void WaitForIndexMap(Index index, long etag)
-        {
-            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
-            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtags().Values.Min() == etag, timeout));
-        }
 
         private static void WaitForTombstone(Index index, long etag)
         {
@@ -234,24 +229,5 @@ namespace FastTests.Server.Documents.Indexing
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        private DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null)
-        {
-            var name = caller ?? Guid.NewGuid().ToString("N");
-
-            if (string.IsNullOrEmpty(dataDirectory) == false)
-                PathsToDelete.Add(dataDirectory);
-            else
-                dataDirectory = NewDataPath(name);
-
-            var configuration = new RavenConfiguration();
-            configuration.Initialize();
-            configuration.Core.RunInMemory = runInMemory;
-            configuration.Core.DataDirectory = dataDirectory;
-
-            var documentDatabase = new DocumentDatabase(name, configuration);
-            documentDatabase.Initialize();
-
-            return documentDatabase;
-        }
     }
 }

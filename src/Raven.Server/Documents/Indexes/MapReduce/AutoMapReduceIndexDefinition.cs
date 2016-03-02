@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes
 
         public override void Persist(TransactionOperationContext context)
         {
-            throw new System.NotImplementedException();
+
         }
     }
 }

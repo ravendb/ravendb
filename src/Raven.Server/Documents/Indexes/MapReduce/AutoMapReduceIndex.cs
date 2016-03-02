@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -105,97 +106,84 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 foreach (var collection in _parent.Collections)
                 {
                     long lastMappedEtag;
-                    using (indexContext.OpenReadTransaction())
-                    {
-                        lastMappedEtag = _parent.ReadLastMappedEtag(indexContext.Transaction, collection);
-                    }
+                    lastMappedEtag = _parent.ReadLastMappedEtag(indexContext.Transaction, collection);
 
                     _cancellationToken.ThrowIfCancellationRequested();
 
                     var lastEtag = DoMap(collection, lastMappedEtag);
+                    WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+                }
 
-                    var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
-                    var parentPagesToAggregate = new HashSet<long>();
-                    foreach (var modifiedState in stateByReduceKeyHash.Values)
+                var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
+                var parentPagesToAggregate = new Dictionary<long, Tree>();
+                foreach (var modifiedState in stateByReduceKeyHash.Values)
+                {
+                    foreach (var modifiedPage in modifiedState.ModifiedPages)
                     {
-                        foreach (var modifiedPage in modifiedState.ModifiedPages)
-                        {
-                            if (modifiedState.FreedPages.Contains(modifiedPage))
-                                continue;
+                        if (modifiedState.FreedPages.Contains(modifiedPage))
+                            continue;
 
-                            var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
-                            if (page.IsLeaf == false)
-                                continue;
+                        var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
+                        if (page.IsLeaf == false)
+                            continue;
 
-                            var parentPage = modifiedState.Tree.GetParentPageOf(page);
-                            if (parentPage != -1)
-                                parentPagesToAggregate.Add(parentPage);
+                        var parentPage = modifiedState.Tree.GetParentPageOf(page);
+                        if (parentPage != -1)
+                            parentPagesToAggregate[parentPage] = modifiedState.Tree;
 
-                            AggregateLeafPage(page, lowLevelTransaction, modifiedPage);
-                        }
-
-                        long tmp = 0;
-                        Slice pageNumberSlice = new Slice((byte*)&tmp, sizeof(long));
-                        foreach (var freedPage in modifiedState.FreedPages)
-                        {
-                            tmp = freedPage;
-                            _table.DeleteByKey(pageNumberSlice);
-                        }
-
-                        HashSet<long> other = new HashSet<long>();
-                        while (parentPagesToAggregate.Count > 0)
-                        {
-                            // if we have deep hierarchy, only allocate two sets
-                            HashSet<long> swap = other;
-                            other = parentPagesToAggregate;
-                            parentPagesToAggregate = swap;
-                            parentPagesToAggregate.Clear();
-
-                            foreach (var parentPage in other)
-                            {
-                                var page = lowLevelTransaction.GetPage(parentPage).ToTreePage();
-                                if (page.IsBranch == false)
-                                {
-                                    //TODO: this is an error
-                                    throw new InvalidOperationException("Parent page was found that wasn't a branch, error at " + page.PageNumber);
-                                }
-
-
-
-                                for (int i = 0; i < page.NumberOfEntries; i++)
-                                {
-                                    var pageNumber = page.GetNode(i)->PageNumber;
-                                    var tvr = _table.ReadByKey(new Slice((byte*)&pageNumber, sizeof(long)));
-                                    if (tvr == null)
-                                    {
-                                        //TODO: this is an error
-                                        throw new InvalidOperationException(
-                                            "Couldn't find pre-computed results for existing page " + pageNumber);
-                                    }
-                                    int size;
-                                    _aggregationBatch.Add(new BlittableJsonReaderObject(tvr.Read(1, out size), size,
-                                        indexContext));
-                                }
-                                AggregateBatchResults(parentPage);
-                            }
-                        }
+                        AggregateLeafPage(page, lowLevelTransaction, modifiedPage);
                     }
 
-                    if (_count == 0)
-                        return;
+                    long tmp = 0;
+                    Slice pageNumberSlice = new Slice((byte*)&tmp, sizeof(long));
+                    foreach (var freedPage in modifiedState.FreedPages)
+                    {
+                        tmp = freedPage;
+                        _table.DeleteByKey(pageNumberSlice);
+                    }
 
-                    if (lastEtag <= lastMappedEtag)
-                        return;
+                    while (parentPagesToAggregate.Count > 0)
+                    {
+                        var other = parentPagesToAggregate;
+                        parentPagesToAggregate = new Dictionary<long, Tree>();
+                        foreach (var kvp in other)
+                        {
+                            var pageNumber = kvp.Key;
+                            var tree = kvp.Value;
+                            var page = lowLevelTransaction.GetPage(pageNumber).ToTreePage();
+                            if (page.IsBranch == false)
+                            {
+                                //TODO: this is an error
+                                throw new InvalidOperationException("Parent page was found that wasn't a branch, error at " + page.PageNumber);
+                            }
 
-                    //using (var tx = indexContext.OpenWriteTransaction())
-                    //{
-                    //    WriteLastMappedEtag(tx, collection, lastEtag);
+                            var parentPage = tree.GetParentPageOf(page);
+                            if (parentPage != -1)
+                                parentPagesToAggregate[parentPage] = tree;
 
-                    //    tx.Commit();
-                    //}
-
-                    _parent._mre.Set(); // might be more
+                            for (int i = 0; i < page.NumberOfEntries; i++)
+                            {
+                                var childPageNumber = page.GetNode(i)->PageNumber;
+                                var tvr = _table.ReadByKey(new Slice((byte*)&childPageNumber, sizeof(long)));
+                                if (tvr == null)
+                                {
+                                    //TODO: this is an error
+                                    throw new InvalidOperationException(
+                                        "Couldn't find pre-computed results for existing page " + childPageNumber);
+                                }
+                                int size;
+                                _aggregationBatch.Add(new BlittableJsonReaderObject(tvr.Read(1, out size), size,
+                                    indexContext));
+                            }
+                            AggregateBatchResults(pageNumber);
+                        }
+                    }
                 }
+
+                if (_count == 0)
+                    return;
+               
+                _parent._mre.Set(); // might be more
             }
 
             private long DoMap(string collection, long lastEtag)
@@ -219,7 +207,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             object result;
                             _parent._blittableTraverser.TryRead(document.Data, indexField.Name, out result);
                             // explicitly adding this even if the value isn't there, as a null
-                            mappedResult[indexField.Name] = result;
+                            switch (indexField.MapReduceOperation)
+                            {
+                                case FieldMapReduceOperation.Count:
+                                    mappedResult[indexField.Name] = 1;
+                                    break;
+                                case FieldMapReduceOperation.None:
+                                case FieldMapReduceOperation.Sum:
+                                    mappedResult[indexField.Name] = result;
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
                         }
                         foreach (var indexField in _parent.Definition.GroupByFields)
                         {
@@ -233,8 +232,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         ulong reduceHashKey;
                         using (var reduceKeyObject = indexContext.ReadObject(reduceKey, document.Key))
                         {
-                            reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer,
-                                reduceKeyObject.Size);
+                            reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer, reduceKeyObject.Size);
                         }
 
                         ReduceKeyState state;
@@ -247,8 +245,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
                         {
                             //TODO: use etags as the key?
-                            var pos = state.Tree.DirectAdd(new Slice(document.Key.Buffer, (ushort)document.Key.Size),
-                                mappedresult.Size);
+                            var pos = state.Tree.DirectAdd(new Slice(document.Key.Buffer, (ushort) document.Key.Size), mappedresult.Size);
                             mappedresult.CopyTo(pos);
                         }
 
@@ -266,13 +263,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 for (int i = 0; i < page.NumberOfEntries; i++)
                 {
                     var valueReader = TreeNodeHeader.Reader(lowLevelTransaction, page.GetNode(i));
-                    var reduceEntry = new BlittableJsonReaderObject(valueReader.Base,
-                        valueReader.Length, indexContext);
+                    var reduceEntry = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, indexContext);
                     _aggregationBatch.Add(reduceEntry);
                 }
 
                 AggregateBatchResults(modifiedPage);
-
             }
 
             private void AggregateBatchResults(long modifiedPage)
@@ -297,7 +292,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {resultObj.BasePointer, resultObj.Size}
                     });
                 }
-
             }
 
 
@@ -308,11 +302,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        protected override void DoIndexingWork(CancellationToken cancellationToken)
+        public override void DoIndexingWork(CancellationToken cancellationToken)
         {
             using (var instance = new ReducingExecuter(this, cancellationToken))
                 instance.Execute();
         }
-
     }
 }

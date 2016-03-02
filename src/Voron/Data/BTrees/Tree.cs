@@ -680,6 +680,8 @@ namespace Voron.Data.BTrees
             {
                 if (treeCursor.CurrentPage.PageNumber == page.PageNumber)
                 {
+                    if (treeCursor.PageCount == 1)
+                        return -1;// root page
                     return treeCursor.ParentPage.PageNumber;
                 }
                 treeCursor.Pop();

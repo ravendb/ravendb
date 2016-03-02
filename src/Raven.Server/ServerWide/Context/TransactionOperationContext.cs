@@ -1,4 +1,5 @@
-﻿using Raven.Server.Json;
+﻿using System;
+using Raven.Server.Json;
 
 using Voron;
 
@@ -37,6 +38,9 @@ namespace Raven.Server.ServerWide.Context
 
         public RavenTransaction OpenReadTransaction()
         {
+            if (Transaction != null)
+                throw new InvalidOperationException("Transaction is already opened");
+
             return Transaction = CreateReadTransaction();
         }
 
@@ -46,6 +50,8 @@ namespace Raven.Server.ServerWide.Context
 
         public virtual RavenTransaction OpenWriteTransaction()
         {
+            if (Transaction != null)
+                throw new InvalidOperationException("Transaction is already opened");
             return Transaction = CreateWriteTransaction();
         }
 
