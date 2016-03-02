@@ -27,20 +27,20 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
+                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database);
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
+                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database);
                 index.Execute(CancellationToken.None);
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
+                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database);
                     index.Execute(cts.Token);
 
                     cts.Cancel();
@@ -55,8 +55,8 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase(runInMemory: false))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String) })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.String) })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name1") })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name2") })));
             }
         }
 
@@ -66,8 +66,8 @@ namespace FastTests.Server.Documents.Indexing
             var path = NewDataPath(); 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String, true) })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.Float, false) })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name1") })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name2") })));
             }
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
@@ -104,7 +104,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database))
+                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database))
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {

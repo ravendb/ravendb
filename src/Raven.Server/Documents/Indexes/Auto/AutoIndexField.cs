@@ -2,17 +2,16 @@
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoIndexField : IndexField
+    public static class AutoIndexField 
     {
-        public AutoIndexField(string name, SortOptions? sortOption = null, bool highlighted = false)
+        public static IndexField CreateAutoIndexField(string name)
         {
-            Name = name;
-            SortOption = sortOption;
-            Highlighted = highlighted;
+            return new IndexField
+            {
+                Name = name,
+                Highlighted = false,
+                Storage = FieldStorage.No
+            };
         }
-
-        public override FieldStorage Storage => FieldStorage.No;
-
-        public override FieldIndexing Indexing => FieldIndexing.Default;
     }
 }

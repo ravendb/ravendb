@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
@@ -34,7 +33,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             var doc = create_doc(new DynamicJsonValue
@@ -54,7 +53,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             var doc = create_doc(new DynamicJsonValue
@@ -74,7 +73,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             var doc = create_doc(new DynamicJsonValue
@@ -92,7 +91,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             var docWithName = create_doc(new DynamicJsonValue
@@ -117,7 +116,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             var doc = create_doc(new DynamicJsonValue
@@ -137,7 +136,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             var doc1 = create_doc(new DynamicJsonValue
@@ -168,8 +167,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Weight", SortOptions.Double),
-                new AutoIndexField("Age", SortOptions.Int),
+                AutoIndexField.CreateAutoIndexField("Weight"),
+                AutoIndexField.CreateAutoIndexField("Age"),
             });
 
             var doc = create_doc(new DynamicJsonValue
@@ -198,7 +197,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Address.City"),
+                AutoIndexField.CreateAutoIndexField("Address.City"),
             });
 
             var doc = create_doc(new DynamicJsonValue
@@ -221,7 +220,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Friends,Name"),
+                AutoIndexField.CreateAutoIndexField("Friends,Name"),
             });
 
             var doc = create_doc(new DynamicJsonValue
@@ -257,7 +256,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             _sut = new LuceneDocumentConverter(new IndexField[]
             {
-                new AutoIndexField("Companies,Products,Name"),
+                AutoIndexField.CreateAutoIndexField("Companies,Products,Name"),
             });
 
             var doc = create_doc(new DynamicJsonValue

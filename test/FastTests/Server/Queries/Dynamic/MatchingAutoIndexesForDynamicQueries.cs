@@ -40,7 +40,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             add_index(definition);
@@ -57,7 +57,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             add_index(definition);
@@ -75,13 +75,13 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var usersByName = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             var usersByNameAndAge = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name"),
-                new AutoIndexField("Age")
+                AutoIndexField.CreateAutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Age")
             });
 
             add_index(usersByName);
@@ -100,7 +100,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var usersByName = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             add_index(usersByName);
@@ -118,9 +118,9 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name"),
-                new AutoIndexField("Address.Street"),
-                new AutoIndexField("Friends,Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Address.Street"),
+                AutoIndexField.CreateAutoIndexField("Friends,Name"),
             });
 
             add_index(definition);
@@ -138,7 +138,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name", SortOptions.String),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             add_index(definition);
@@ -160,7 +160,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Weight", SortOptions.Double),
+                AutoIndexField.CreateAutoIndexField("Weight"),
             });
 
             add_index(definition);
@@ -182,7 +182,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Name"),
+                AutoIndexField.CreateAutoIndexField("Name"),
             });
 
             add_index(definition);
@@ -205,7 +205,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var definition = new AutoIndexDefinition("Users", new[]
             {
-                new AutoIndexField("Age"),
+                AutoIndexField.CreateAutoIndexField("Age"),
             });
 
             add_index(definition);

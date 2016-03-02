@@ -27,9 +27,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public AutoIndexDefinition CreateAutoIndexDefinition()
         {
             return new AutoIndexDefinition(ForCollection, MapFields.Select(field =>
-                new AutoIndexField(name: field.From,
-                    sortOption: SortDescriptors.FirstOrDefault(x => field.To.Equals(x.Field))?.FieldType,
-                    highlighted: HighlightedFields.Any(x => field.To.Equals(x)))).ToArray());
+                AutoIndexField.CreateAutoIndexField(name: field.From)).ToArray());
         }
 
         public static DynamicQueryMapping Create(string entityName, IndexQuery query)

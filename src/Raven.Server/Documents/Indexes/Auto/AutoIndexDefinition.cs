@@ -11,10 +11,10 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
-        private readonly AutoIndexField[] _fields;
-        private readonly Dictionary<string, AutoIndexField> _fieldsByName;
+        private readonly IndexField[] _fields;
+        private readonly Dictionary<string, IndexField> _fieldsByName;
 
-        public AutoIndexDefinition(string collection, AutoIndexField[] fields)
+        public AutoIndexDefinition(string collection, IndexField[] fields)
             : base(FindIndexName(collection, fields), new[] { collection })
         {
             if (string.IsNullOrEmpty(collection))
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return _fieldsByName.ContainsKey(field);
         }
 
-        public AutoIndexField GetField(string field)
+        public IndexField GetField(string field)
         {
             if (field.EndsWith("_Range"))
                 field = field.Substring(0, field.Length - 6);
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return _fieldsByName[field];
         }
 
-        private static string FindIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
+        private static string FindIndexName(string collection, IReadOnlyCollection<IndexField> fields)
         {
             var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
@@ -142,21 +142,21 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                     reader.TryGet(nameof(MapFields), out jsonArray);
 
-                    var fields = new AutoIndexField[jsonArray.Length];
+                    var fields = new IndexField[jsonArray.Length];
                     for (var i = 0; i < jsonArray.Length; i++)
                     {
                         var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
                         string name;
-                        json.TryGet(nameof(AutoIndexField.Name), out name);
+                        json.TryGet(nameof(IndexField.Name), out name);
 
                         bool highlighted;
-                        json.TryGet(nameof(AutoIndexField.Highlighted), out highlighted);
+                        json.TryGet(nameof(IndexField.Highlighted), out highlighted);
 
                         int sortOptionAsInt;
-                        json.TryGet(nameof(AutoIndexField.SortOption), out sortOptionAsInt);
+                        json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
 
-                        var field = new AutoIndexField(name, (SortOptions)sortOptionAsInt, highlighted);
+                        var field = AutoIndexField.CreateAutoIndexField(name);
 
                         fields[i] = field;
                     }
