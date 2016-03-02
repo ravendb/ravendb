@@ -1,0 +1,12 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=4E0F8CB9_002D6919_002D48B8_002D8212_002DBCE75D04E0D9/@EntryIndexedValue">ExplicitlyExcluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7416F90D_002DFFD6_002D4E34_002D8638_002D5234C8B9EC39/@EntryIndexedValue">ExplicitlyExcluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=828188F9_002D26C2_002D4C93_002DA156_002DD9EA13D7E2FA/@EntryIndexedValue">ExplicitlyExcluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=95E29D40_002DDBEC_002D49E2_002D9CC5_002D26B88966DADE_002Fd_003AApp_005FPackages/@EntryIndexedValue">ExplicitlyExcluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=A9074D3E_002D3421_002D483D_002DAF98_002D4AAEEED11ECA/@EntryIndexedValue">ExplicitlyExcluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=B7C6EF21_002D0797_002D4B53_002DA917_002D1CFF8267CD67/@EntryIndexedValue">ExplicitlyExcluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=D08A63D0_002DF440_002D477C_002D9565_002D1264AE0879D0/@EntryIndexedValue">ExplicitlyExcluded</s:String>
+	<s:Boolean x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=6CDB58AC9EE41D4EA1C180BE5F7B7E2E/@KeyIndexDefined">True</s:Boolean>
+	<s:String x:Key="/Default/Environment/InjectedLayers/FileInjectedLayer/=6CDB58AC9EE41D4EA1C180BE5F7B7E2E/AbsolutePath/@EntryValue">C:\Work\Metrics.NET\Metrics.sln.DotSettings</s:String>
+	<s:Boolean x:Key="/Default/Environment/InjectedLayers/InjectedLayerCustomization/=File6CDB58AC9EE41D4EA1C180BE5F7B7E2E/@KeyIndexDefined">True</s:Boolean>
+	<s:Double x:Key="/Default/Environment/InjectedLayers/InjectedLayerCustomization/=File6CDB58AC9EE41D4EA1C180BE5F7B7E2E/RelativePriority/@EntryValue">1</s:Double></wpf:ResourceDictionary>

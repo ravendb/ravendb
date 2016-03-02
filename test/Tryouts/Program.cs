@@ -3,28 +3,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Blittable;
-using FastTests.Blittable.Benchmark;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
-using FastTests.Server.Documents.Indexing;
-using FastTests.Server.Documents.Notifications;
 using FastTests.Voron.Bugs;
-using FastTests.Voron.Trees;
 using Newtonsoft.Json;
-using Raven.Client.Document;
-using Raven.Server.Indexing.Corax;
-using Raven.Server.Indexing.Corax.Analyzers;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Tests.Core;
 using Tryouts.Corax;
-using Tryouts.Corax.Tests;
 using Voron;
 using Voron.Debugging;
 using Xunit;
@@ -33,20 +24,96 @@ namespace Tryouts
 {
     public class Program
     {
-        const string data = "{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/30\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":31}}Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/1\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":2}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/2\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":3}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/3\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":4}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/4\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":5}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/5\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":6}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/6\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":7}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/7\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":8}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/8\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":9}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/9\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":10}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/10\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":11}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/11\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":12}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/12\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":13}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/13\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":14}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/14\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":15}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/15\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":16}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/16\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":17}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/17\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":18}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/18\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":19}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/19\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":20}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/20\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":21}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/21\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":22}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/22\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":23}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/23\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":24}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/24\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":25}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/25\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":26}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/26\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":27}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/27\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":28}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/28\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":29}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/29\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":30}}{\"Type\":\"DocumentChangeNotification\",\"Value\":{\"Type\":1,\"Key\":\"users\\/30\",\"CollectionName\":\"Users\",\"TypeName\":null,\"Etag\":31}}";
-
         public static void Main(string[] args)
         {
+            //new DuplicatePageUsage().ShouldNotHappen();
+            //new MetricsTests().MetricsTest();
+        }
 
-            for (int i = 0; i < 1000; i++)
+        private static void Run()
+        {
+            ForceInit();
+
+            var sp = Stopwatch.StartNew();
+
+            CheckIndexer();
+
+            Console.WriteLine(sp.ElapsedMilliseconds);
+
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void CheckIndexer()
+        {
+            var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+            storageEnvironmentOptions.ManualFlushing = true;
+            using (var corax = new FullTextIndex(storageEnvironmentOptions))
             {
-                using (var x = new FreeSpaceTest())
+                for (int a = 0; a < 50; a++)
                 {
-                    Console.WriteLine(i);
-                    x.CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace();
+                    using (var indexer = corax.CreateIndexer())
+                    {
+                        int index = 0;
+                        foreach (var line in File.ReadLines(@"C:\Users\Ayende\Downloads\pr.txt"))
+                        {
+                            indexer.NewEntry(new DynamicJsonValue
+                            {
+                                ["Location"] = line,
+                                ["Active"] = "true",
+                                ["Age"] = (index % 120).ToString(),
+                                ["Name"] = line.Substring(0, Math.Min(15, line.Length))
+                            }, "users/" + (++index)).Wait();
+                        }
+                    }
+                }
+
+                //corax.Environment.FlushLogToDataFile();
+
+                //var environmentStats = corax.Environment.Stats();
+                //Console.WriteLine(JsonConvert.SerializeObject(environmentStats,Formatting.Indented));
+
+                //using (var searcher = corax.CreateSearcher())
+                //{
+                //    var ids = searcher.Query("Name", "Oren Eini");
+                //    Console.WriteLine(ids.Length);
+                //    //Assert.Equal(new[] { "users/1" }, ids);
+                //}
+
+                ////using (var indexer = corax.CreateIndexer())
+                ////{
+                ////   indexer.Delete("users/1");
+                ////}
+
+                //using (var searcher = corax.CreateSearcher())
+                //{
+                //    var ids = searcher.Query("Name", "Oren Eini");
+                //    Assert.Empty(ids);
+                //}
+            }
+        }
+
+        private static void ForceInit()
+        {
+            var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+            storageEnvironmentOptions.ManualFlushing = true;
+            using (var corax = new FullTextIndex(storageEnvironmentOptions))
+            {
+                using (var indexer = corax.CreateIndexer())
+                {
+                    for (int a = 0; a < 1; a++)
+                    {
+                        int index = 0;
+                        foreach (var line in File.ReadLines(@"C:\Users\Ayende\Downloads\places.txt"))
+                        {
+                            indexer.NewEntry(new DynamicJsonValue
+                            {
+                                ["Location"] = line
+                            }, "users/" + (++index)).Wait();
+
+                        }
+                    }
                 }
             }
-
         }
     }
 }

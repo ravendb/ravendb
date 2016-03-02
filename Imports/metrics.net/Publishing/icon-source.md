@@ -1,0 +1,1 @@
+https://openclipart.org/detail/195650/system-monitor-by-sixsixfive-195650
