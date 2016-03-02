@@ -50,7 +50,7 @@ class editIndex extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     indexAutoCompleter: indexAceAutoCompleteProvider;
     loadedIndexName = ko.observable<string>();
-
+    originalIndexName: string;
     // Scripted Index Part
     isScriptedIndexBundleActive = ko.observable<boolean>(false);
     scriptedIndex = ko.observable<scriptedIndexModel>(null);
@@ -206,6 +206,7 @@ class editIndex extends viewModelBase {
             .execute()
             .done((results: indexDefinitionContainerDto) => {
                 this.editedIndex(new indexDefinition(results.Index));
+                this.originalIndexName = this.editedIndex().name();
                 this.editMaxIndexOutputsPerDocument(results.Index.MaxIndexOutputsPerDocument ? results.Index.MaxIndexOutputsPerDocument > 0 ? true : false : false);
                 deferred.resolve();
             })
@@ -221,8 +222,9 @@ class editIndex extends viewModelBase {
     }
 
     save() {
-        var editedIndex = this.editedIndex();
-        if (editedIndex.lockMode === "LockedIgnore") {
+        var editedIndex = this.editedIndex();         
+        //if index name has changed it isn't the same index
+        if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
             messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
                                             "Any changes to the index will be ignored.");
             return;
