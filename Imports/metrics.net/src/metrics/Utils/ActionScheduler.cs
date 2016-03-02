@@ -31,6 +31,9 @@ namespace Metrics.Utils
         private int runs = 0;
         public ActionScheduler(int tickIntervalInNanoseconds)
         {
+            // TODO: Need to be an actual thread, and not a task
+            // TODO: we don't want to hold a thread pool thread hostage for 
+            // TODO: a never ending task
             _schedulerTask = Task.Run(() =>
             {
                 var sp = Stopwatch.StartNew();
@@ -55,10 +58,10 @@ namespace Metrics.Utils
                             scheduledAction.LastCalledInNanoSeconds = Clock.Nanoseconds;
                         }
                     }
-                    var ellapsed = sp.ElapsedTicks*Clock.FrequencyFactor;
-                    if (ellapsed < tickIntervalInNanoseconds)
+                    var elapsed = sp.ElapsedTicks*Clock.FrequencyFactor;
+                    if (elapsed < tickIntervalInNanoseconds)
                     {
-                        var millisecondsDelay = (int)(tickIntervalInNanoseconds - ellapsed) / Clock.NANOSECONDS_IN_MILISECOND;
+                        var millisecondsDelay = (int)(tickIntervalInNanoseconds - elapsed) / Clock.NANOSECONDS_IN_MILISECOND;
                         //await Task.Delay(millisecondsDelay);
                         Thread.Sleep(millisecondsDelay);
                     }
