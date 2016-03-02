@@ -7,7 +7,6 @@ using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
@@ -16,6 +15,9 @@ namespace Voron.Data.BTrees
     {
         private Dictionary<string, FixedSizeTree> _fixedSizeTrees;
         private readonly TreeMutableState _state;
+
+        public event Action<long> PageModified;
+        public event Action<long> PageFreed;
 
         private RecentlyFoundPages _recentlyFoundPages;
         public RecentlyFoundPages RecentlyFoundPages
@@ -280,9 +282,14 @@ namespace Voron.Data.BTrees
 
         public TreePage ModifyPage(long pageNumber)
         {
+
             var newPage = _llt.ModifyPage(pageNumber).ToTreePage();
             newPage.Dirty = true;
             RecentlyFoundPages.Reset(pageNumber);
+
+            var onPageModified = PageModified;
+            if (onPageModified != null)
+                onPageModified(pageNumber);
 
             return newPage;
         }
@@ -564,6 +571,9 @@ namespace Voron.Data.BTrees
 
         internal void FreePage(TreePage p)
         {
+            var onPageFreed = PageFreed;
+            if (onPageFreed != null)
+                onPageFreed(p.PageNumber);
             if (p.IsOverflow)
             {
                 var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
