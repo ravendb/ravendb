@@ -7,28 +7,28 @@ namespace Raven.Server.Documents.Indexes
     {
         protected static readonly Slice DefinitionSlice = "Definition";
 
-        protected IndexDefinitionBase(string name, string[] collections)
+        protected IndexDefinitionBase(string name, string[] collections, IndexField[] mapFields)
         {
             Name = name;
             Collections = collections;
+            MapFields = mapFields;
         }
 
-        public string Name { get; private set; }
+        public string Name { get; set; }
 
-        public string[] Collections { get; private set; }
+        public string[] Collections { get; set; }
 
-        public abstract IndexField[] MapFields { get; }
+        public IndexField[] MapFields { get; set; }
 
         public abstract void Persist(TransactionOperationContext context);
     }
 
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {
-        public AutoMapReduceIndexDefinition(string name, string[] collections) : base(name, collections)
+        public AutoMapReduceIndexDefinition(string name, string[] collections, IndexField[] mapFields) : base(name, collections,mapFields)
         {
         }
 
-        public override IndexField[] MapFields { get; }
         public override void Persist(TransactionOperationContext context)
         {
             throw new System.NotImplementedException();

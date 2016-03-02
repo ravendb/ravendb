@@ -11,29 +11,21 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
-        private readonly IndexField[] _fields;
         private readonly Dictionary<string, IndexField> _fieldsByName;
 
         public AutoIndexDefinition(string collection, IndexField[] fields)
-            : base(FindIndexName(collection, fields), new[] { collection })
+            : base(FindIndexName(collection, fields), new[] { collection },fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
 
-            if (fields == null)
-                throw new ArgumentNullException(nameof(fields));
-
             if (fields.Length == 0)
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
 
-            _fields = fields;
-
-            _fieldsByName = _fields.ToDictionary(x => x.Name, x => x);
+            _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x);
         }
 
-        public int CountOfMapFields => _fields.Length;
-
-        public override IndexField[] MapFields => _fields; // TODO arek
+        public int CountOfMapFields => MapFields.Length;
 
         public bool ContainsField(string field)
         {
@@ -89,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var field in _fields)
+                foreach (var field in MapFields)
                 {
                     if (first == false)
                         writer.WriteComma();
