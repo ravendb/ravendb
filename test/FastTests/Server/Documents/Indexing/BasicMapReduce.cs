@@ -14,7 +14,7 @@ namespace FastTests.Server.Documents.Indexing
 {
     public class BasicMapReduce : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "this is just a draft test right now")]
         public void CanUseSimpleReduction()
         {
             using (var db = LowLevel_CreateDocumentDatabase())
@@ -35,44 +35,46 @@ namespace FastTests.Server.Documents.Indexing
                         },
                     }), db);
 
-                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                using (mri)
                 {
-                    using (var tx = context.OpenWriteTransaction())
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                     {
-                        using (var doc = context.ReadObject(new DynamicJsonValue
+                        using (var tx = context.OpenWriteTransaction())
                         {
-                            ["Name"] = "Arek",
-                            ["Location"] = "Poland",
-                            [Constants.Metadata] = new DynamicJsonValue
+                            using (var doc = context.ReadObject(new DynamicJsonValue
                             {
-                                [Constants.RavenEntityName] = "Users"
+                                ["Name"] = "Arek",
+                                ["Location"] = "Poland",
+                                [Constants.Metadata] = new DynamicJsonValue
+                                {
+                                    [Constants.RavenEntityName] = "Users"
+                                }
+                            }, "users/1"))
+                            {
+                                db.DocumentsStorage.Put(context, "users/1", null, doc);
                             }
-                        }, "users/1"))
-                        {
-                            db.DocumentsStorage.Put(context, "users/1", null, doc);
+
+                            using (var doc = context.ReadObject(new DynamicJsonValue
+                            {
+                                ["Name"] = "Pawel",
+                                ["Location"] = "Poland",
+                                [Constants.Metadata] = new DynamicJsonValue
+                                {
+                                    [Constants.RavenEntityName] = "Users"
+                                }
+                            }, "users/2"))
+                            {
+                                db.DocumentsStorage.Put(context, "users/2", null, doc);
+                            }
+
+                            tx.Commit();
                         }
 
-                        using (var doc = context.ReadObject(new DynamicJsonValue
-                        {
-                            ["Name"] = "Pawel",
-                            ["Location"] = "Poland",
-                            [Constants.Metadata] = new DynamicJsonValue
-                            {
-                                [Constants.RavenEntityName] = "Users"
-                            }
-                        }, "users/2"))
-                        {
-                            db.DocumentsStorage.Put(context, "users/2", null, doc);
-                        }
+                        mri.DoIndexingWork(CancellationToken.None);
+                        //LowLevel_WaitForIndexMap(mri, 2);
 
-                        tx.Commit();
+
                     }
-
-                    mri.DoIndexingWork(CancellationToken.None);
-
-                    LowLevel_WaitForIndexMap(mri, 2);
-
-
                 }
             }
         }
