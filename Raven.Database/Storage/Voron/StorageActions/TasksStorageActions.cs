@@ -177,8 +177,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     var currentId = Etag.Parse(iterator.CurrentKey.ToString());
                     var indexId = value.ReadInt(TaskFields.IndexId);
-                    if (indexesToSkip.Contains(indexId))
+                    if (task.SeparateTasksByIndex == false && indexesToSkip.Contains(indexId))
                     {
+                        //need to check this only when not separating tasks by index
                         if (Logger.IsDebugEnabled)
                             Logger.Debug("Skipping task id: {0} for index id: {1}", currentId, indexId);
                         continue;
@@ -187,8 +188,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     if (alreadySeen.Add(currentId) == false)
                         continue;
 
-                    if (allIndexes.Contains(indexId) == false)
+                    if (task.SeparateTasksByIndex == false && allIndexes.Contains(indexId) == false)
                     {
+                        //need to check this only when not separating tasks by index
                         if (Logger.IsDebugEnabled)
                             Logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, indexId);
 
