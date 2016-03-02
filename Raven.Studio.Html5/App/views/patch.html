@@ -36,56 +36,50 @@
     <br />
     <div class="form-horizontal">
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isDocumentPatch()">
-            <div class="row">
-                <label for="documentToPatch" class="col-md-2 control-label">Document to Patch:</label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-6" data-bind="with: patchDocument">
-                            <input id="documentToPatch" accesskey="I" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }" />
-                        </div>
+            <label for="documentToPatch" class="col-md-2 control-label">Document to Patch:</label>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6" data-bind="with: patchDocument">
+                        <input id="documentToPatch" accesskey="I" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }" />
                     </div>
                 </div>
             </div>
         </div>
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isCollectionPatch()">
-            <div class="row">
-                <label for="collectionToPatch" class="col-md-2 control-label">Collection to Patch:</label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group" data-bind="with: patchDocument">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="text: selectedItem"></span>
-                                    <span class="caret" data-bind="visible: $root.collections().length > 1"></span>
-                                </button>
-                                <ul id="collectionToPatch" class="dropdown-menu" role="menu">
-                                    <!-- ko foreach: $root.collectionToSelect -->
-                                    <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
-                                    <!-- /ko -->
-                                </ul>
-                            </div>
+            <label for="collectionToPatch" class="col-md-2 control-label">Collection to Patch:</label>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="btn-group" data-bind="with: patchDocument">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: selectedItem"></span>
+                                <span class="caret" data-bind="visible: $root.collections().length > 1"></span>
+                            </button>
+                            <ul id="collectionToPatch" class="dropdown-menu" role="menu">
+                                <!-- ko foreach: $root.collectionToSelect -->
+                                <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
+                                <!-- /ko -->
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
-            <div class="row">
-                <label for="indexToPatch" class="col-md-2 control-label">Index to Patch:</label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group" data-bind="with: patchDocument">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="text: selectedItem"></span>
-                                    <span class="caret" data-bind="visible: $root.indexNames().length > 1"></span>
-                                </button>
-                                <ul id="indexToPatch" class="dropdown-menu" role="menu">
-                                    <!-- ko foreach: $root.indexNamesToSelect -->
-                                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
-                                    <!-- /ko -->
-                                </ul>
-                            </div>
+            <label for="indexToPatch" class="col-md-2 control-label">Index to Patch:</label>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="btn-group" data-bind="with: patchDocument">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: selectedItem"></span>
+                                <span class="caret" data-bind="visible: $root.indexNames().length > 1"></span>
+                            </button>
+                            <ul id="indexToPatch" class="dropdown-menu" role="menu">
+                                <!-- ko foreach: $root.indexNamesToSelect -->
+                                <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                                <!-- /ko -->
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -166,14 +160,12 @@
                 </div>
             </div>
         </div>
-        <div id="matchingDocumentsContainer" class="form-group" data-bind="visible: ((!!patchDocument()) && (patchDocument().isIndexPatch() || patchDocument().isCollectionPatch()))">
+        <div id="matchingDocumentsContainer" class="form-group" data-bind="if: showDocumentsPreview">
             <div class="col-md-12">
                 <div>
                     <label>Matching Documents</label>
                 </div>
-                <div>
-                    <div id="matchingDocumentsGrid" style="width: 100%; height: 300px;" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, dynamicHeightBottomMargin: -30, dynamicHeightTargetSelector: '#beforeAfterContainer', selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid', maxHeight: '300px' }"></div>
-                </div>
+                <div id="matchingDocumentsGrid" style="width: 100%; height: 300px" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, dynamicHeightBottomMargin: 0, dynamicHeightTargetSelector: '#beforeAfterContainer', selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
             </div>
         </div>
         <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">

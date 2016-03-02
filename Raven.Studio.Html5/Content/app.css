@@ -8494,10 +8494,10 @@ a.global_help_link:focus {
 .text-height-fix {
   line-height: 34px;
 }
-#matchingDocumentsGrid {
-  margin-bottom: -30px;
-}
 .alert-danger a {
   color: white;
   text-decoration: underline;
+}
+.no-outline {
+  outline-style: none;
 }
