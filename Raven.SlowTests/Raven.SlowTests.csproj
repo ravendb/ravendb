@@ -103,6 +103,7 @@
     <Compile Include="Bundles\Replication\Async\ReadStriping.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ReadStriping.cs" />
+    <Compile Include="CanTakeDumpUsingMiniDumper.cs" />
     <Compile Include="DiskIO\DiskIOTest.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="IncrementalBackupTest.cs" />
