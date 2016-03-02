@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }
         }
 
-        public IIndexWriteActions Write()
+        public IIndexWriteActions OpenIndexWriter()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index persistance for index '{_definition.Name} ({_indexId})' was already disposed.");
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 }
             }
 
-            public void Write(Document document)
+            public void IndexDocument(Document document)
             {
                 var luceneDoc = _persistance._converter.ConvertToCachedDocument(document);
 

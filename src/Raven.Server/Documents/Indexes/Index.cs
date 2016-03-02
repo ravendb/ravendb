@@ -405,7 +405,7 @@ namespace Raven.Server.Documents.Indexes
                     var lastEtag = lastTombstoneEtag;
                     var count = 0;
 
-                    using (var indexActions = IndexPersistance.Write())
+                    using (var indexActions = IndexPersistance.OpenIndexWriter())
                     {
                         using (databaseContext.OpenReadTransaction())
                         {
@@ -456,6 +456,7 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
+        //TODO: Move to map index
         private void ExecuteMap(CancellationToken cancellationToken)
         {
             DocumentsOperationContext databaseContext;
@@ -464,9 +465,6 @@ namespace Raven.Server.Documents.Indexes
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                if (IsStale(databaseContext, indexContext) == false)
-                    return;
-
                 var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
                 foreach (var collection in Collections)
@@ -480,7 +478,7 @@ namespace Raven.Server.Documents.Indexes
                     var lastEtag = lastMappedEtag;
                     var count = 0;
 
-                    using (var indexActions = IndexPersistance.Write())
+                    using (var indexWriter = IndexPersistance.OpenIndexWriter())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
@@ -496,12 +494,13 @@ namespace Raven.Server.Documents.Indexes
 
                                 try
                                 {
-                                    indexActions.Write(document);
+                                    indexWriter.IndexDocument(document);
                                 }
                                 catch (Exception e)
                                 {
                                     // TODO [ppekrol] log?
-                                    continue;
+                                    Console.WriteLine(e);
+                                    throw;
                                 }
 
                                 if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
