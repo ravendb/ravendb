@@ -32,8 +32,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 new IndexField
                 {
                     Name = field.From,
-                    Highlighted = false,
-                    Storage = FieldStorage.No
+                    Storage = FieldStorage.No,
+                    SortOption = SortDescriptors.FirstOrDefault(x => field.To.Equals(x.Field))?.FieldType,
+                    Highlighted = HighlightedFields.Any(x => field.To.Equals(x))
                 }).ToArray());
         }
 

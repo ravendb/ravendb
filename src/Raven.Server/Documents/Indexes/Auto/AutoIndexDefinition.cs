@@ -151,8 +151,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                         var field = new IndexField
                         {
                             Name = name,
-                            Highlighted = false,
-                            Storage = FieldStorage.No
+                            Highlighted = highlighted,
+                            Storage = FieldStorage.No,
+                            SortOption = (SortOptions?)sortOptionAsInt,
+                            Indexing = FieldIndexing.Default
                         };
 
                         fields[i] = field;

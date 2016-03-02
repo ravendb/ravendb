@@ -22,5 +22,10 @@ namespace Raven.Server.Documents.Indexes
             //TODO: This is probably expensive, we can do better
             return ReplaceInvalidCharacterForFields.Replace(field, "_");
         }
+
+        public IndexField()
+        {
+            Indexing = FieldIndexing.Default;
+        }
     }
 }

@@ -91,18 +91,22 @@ namespace FastTests.Server.Documents.Indexing
             var path = NewDataPath(); 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                var name1 = new IndexField
                 {
                     Name = "Name1",
-                    Highlighted = false,
-                    Storage = FieldStorage.No
-                } })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                    Highlighted = true,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.String
+                };
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name1 })));
+                var name2 = new IndexField
                 {
                     Name = "Name2",
                     Highlighted = false,
-                    Storage = FieldStorage.No
-                } })));
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.Float
+                };
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
             }
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
