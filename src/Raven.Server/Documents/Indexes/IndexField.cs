@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Indexes
 
         public bool Highlighted { get; set; }
 
+        public FieldMapReduceOperation MapReduceOperation { get; set; }
+
         public FieldStorage Storage { get; set; }
 
         public FieldIndexing Indexing { get; set; }

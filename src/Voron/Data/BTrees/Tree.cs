@@ -309,6 +309,11 @@ namespace Voron.Data.BTrees
 
             State.RecordNewPage(overflowPageStart, numberOfPages);
 
+
+            var onPageModified = PageModified;
+            if (onPageModified != null)
+                onPageModified(overflowPageStart.PageNumber);
+
             return overflowPageStart.PageNumber;
         }
 
@@ -555,6 +560,10 @@ namespace Voron.Data.BTrees
             var page = AllocateNewPage(_llt, flags, num);
             State.RecordNewPage(page, num);
 
+            var onPageModified = PageModified;
+            if (onPageModified != null)
+                onPageModified(page.PageNumber);
+
             return page;
         }
 
@@ -566,6 +575,7 @@ namespace Voron.Data.BTrees
             page.TreeFlags = flags;
             page.Upper = (ushort)page.PageSize;
             page.Dirty = true;
+
             return page;
         }
 
@@ -655,6 +665,26 @@ namespace Voron.Data.BTrees
                 return -1;
 
             return TreeNodeHeader.GetDataSize(_llt, node);
+        }
+
+        public long GetParentPageOf(TreePage page)
+        {
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
+            var p = FindPageFor(page.GetNodeKey(0), out node, out lazy);
+            if (p == null || p.LastMatch != 0)
+                return -1;
+
+            var treeCursor = lazy.Value;
+            while (treeCursor.PageCount > 0)
+            {
+                if (treeCursor.CurrentPage.PageNumber == page.PageNumber)
+                {
+                    return treeCursor.ParentPage.PageNumber;
+                }
+                treeCursor.Pop();
+            }
+            return -1;
         }
 
         public ushort ReadVersion(Slice key)

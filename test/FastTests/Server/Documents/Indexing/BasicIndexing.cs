@@ -36,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
-                Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
+                Assert.Throws<ObjectDisposedException>(() => index.Execute());
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
                 index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
@@ -45,7 +45,7 @@ namespace FastTests.Server.Documents.Indexing
                     Highlighted = false,
                     Storage = FieldStorage.No
                 } }), database);
-                index.Execute(CancellationToken.None);
+                index.Execute();
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
@@ -56,7 +56,7 @@ namespace FastTests.Server.Documents.Indexing
                         Highlighted = false,
                         Storage = FieldStorage.No
                     } }), database);
-                    index.Execute(cts.Token);
+                    index.Execute();
 
                     cts.Cancel();
 
@@ -181,7 +181,7 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        index.Execute(CancellationToken.None);
+                        index.Execute();
 
                         WaitForIndexMap(index, 2);
 

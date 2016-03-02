@@ -4,8 +4,11 @@ namespace Raven.Server.Documents.Indexes
 {
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {
-        public AutoMapReduceIndexDefinition(string name, string[] collections, IndexField[] mapFields) : base(name, collections,mapFields)
+        public IndexField[] GroupByFields;
+
+        public AutoMapReduceIndexDefinition(string name, string[] collections, IndexField[] mapFields, IndexField[] groupByFields) : base(name, collections,mapFields)
         {
+            GroupByFields = groupByFields;
         }
 
         public override void Persist(TransactionOperationContext context)
