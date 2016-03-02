@@ -27,20 +27,35 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database);
+                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } }), database);
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database);
+                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } }), database);
                 index.Execute(CancellationToken.None);
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database);
+                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                    {
+                        Name = "Name",
+                        Highlighted = false,
+                        Storage = FieldStorage.No
+                    } }), database);
                     index.Execute(cts.Token);
 
                     cts.Cancel();
@@ -55,8 +70,18 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase(runInMemory: false))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name1") })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name2") })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name2",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } })));
             }
         }
 
@@ -66,8 +91,18 @@ namespace FastTests.Server.Documents.Indexing
             var path = NewDataPath(); 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name1") })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name2") })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name2",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } })));
             }
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
@@ -104,7 +139,12 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { AutoIndexField.CreateAutoIndexField("Name") }), database))
+                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } }), database))
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {

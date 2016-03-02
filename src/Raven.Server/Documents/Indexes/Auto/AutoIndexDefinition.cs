@@ -156,7 +156,12 @@ namespace Raven.Server.Documents.Indexes.Auto
                         int sortOptionAsInt;
                         json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
 
-                        var field = AutoIndexField.CreateAutoIndexField(name);
+                        var field = new IndexField
+                        {
+                            Name = name,
+                            Highlighted = false,
+                            Storage = FieldStorage.No
+                        };
 
                         fields[i] = field;
                     }

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Sort;
@@ -27,7 +29,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public AutoIndexDefinition CreateAutoIndexDefinition()
         {
             return new AutoIndexDefinition(ForCollection, MapFields.Select(field =>
-                AutoIndexField.CreateAutoIndexField(name: field.From)).ToArray());
+                new IndexField
+                {
+                    Name = field.From,
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                }).ToArray());
         }
 
         public static DynamicQueryMapping Create(string entityName, IndexQuery query)

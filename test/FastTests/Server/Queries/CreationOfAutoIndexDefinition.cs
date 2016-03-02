@@ -17,7 +17,12 @@ namespace FastTests.Server.Queries
         [Fact]
         public void SpecifyingInvalidParametersWillResultInException()
         {
-            var fields = new[] { AutoIndexField.CreateAutoIndexField("test") };
+            var fields = new[] { new IndexField
+            {
+                Name = "test",
+                Highlighted = false,
+                Storage = FieldStorage.No
+            } };
 
             Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition(null, null));
             Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition("test", null));
