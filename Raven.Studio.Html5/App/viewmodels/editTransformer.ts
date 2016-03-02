@@ -109,6 +109,7 @@ class editTransformer extends viewModelBase {
             });
             dialog.show(saveTransformerWithNewNameViewModel);
         } else {
+            this.editedTransformer().name(this.editedTransformer().name().trim())
             new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
                 .execute()
                 .done(() => {

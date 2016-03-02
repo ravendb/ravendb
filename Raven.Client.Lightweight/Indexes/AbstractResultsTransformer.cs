@@ -254,7 +254,7 @@ namespace Raven.Client.Indexes
         {
             var transformerDefinition = new TransformerDefinition
             {
-                Name = TransformerName,
+                Name = TransformerName.Trim(),
                 TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TFrom, object>(
                     TransformResults, Conventions, "results", translateIdentityProperty: false),
             };
