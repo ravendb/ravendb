@@ -386,7 +386,7 @@ class patch extends viewModelBase {
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 index = "Raven/DocumentsByEntityName";
-                query = "Tag:" + this.patchDocument().selectedItem();
+                query = "Tag:" + queryUtil.escapeTerm(this.patchDocument().selectedItem());
                 break;
             case "Index":
                 index = this.patchDocument().selectedItem();
