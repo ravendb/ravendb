@@ -99,33 +99,14 @@ namespace Raven.Database.Indexing
         {
             try
             {
-                int retries = 5;
-                while (true)
+                var result = ExecuteTasksInternal();
+                if (result == false)
                 {
-                    bool result;
-                    try
-                    {
-                        result = ExecuteTasksInternal();
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        if (retries-- > 0)
-                        {
-                            continue;
-                        }
-
-                        Log.Warn("Got 5 consecutive concurrency exception when trying to execute task, giving up and will try again later");
-                        return true;
-                    }
-
-                    if (result == false)
-                    {
-                        //we can cleanup the tasks failure count if have no more tasks
-                        tasksFailureCount.Clear();
-                    }
-
-                    return result;
+                    //we can cleanup the tasks failure count if have no more tasks
+                    tasksFailureCount.Clear();
                 }
+
+                return result;
             }
             catch (Exception e)
             {
@@ -228,7 +209,7 @@ namespace Raven.Database.Indexing
                         Log.WarnException(string.Format("Index name: {0}, id: {1} is corrupted and needs to be reset", 
                             indexName, task.Index), e);
 
-                        //the index is corrupted, we couldn't write to index
+                        //the index is corrupted, we couldn't write to the index
                         //we can delete this task and issue an alert and set the index to errored
                         var index = context.IndexStorage.GetIndexInstance(task.Index);
                         if (index != null)
