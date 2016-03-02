@@ -232,7 +232,30 @@ namespace Raven.Server.Documents.Indexes
 
         protected HashSet<string> Collections;
 
-        protected abstract bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext);
+        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        {
+            using (databaseContext.OpenReadTransaction())
+            using (indexContext.OpenReadTransaction())
+            {
+                foreach (var collection in Collections)
+                {
+                    var lastCollectionEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                    var lastProcessedCollectionEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+
+                    if (lastCollectionEtag > lastProcessedCollectionEtag)
+                        return true;
+
+                    var lastCollectionTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
+                    var lastProcessedCollectionTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
+
+                    if (lastCollectionTombstoneEtag > lastProcessedCollectionTombstoneEtag)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
 
         /// <summary>
         /// This should only be used for testing purposes.
