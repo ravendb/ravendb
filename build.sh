@@ -30,6 +30,7 @@ OUT_FILE='/tmp/build.out'
 REPORT_FLAG=0
 REPORT_MAIL=""
 REPORT_ATTACH=()
+ATTACHMENTS=()
 
 function printWelcome () {
 	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.3) ${NC}\n"
@@ -430,6 +431,7 @@ then
                         then
 				filenameToSave="${OUT_FILE}.`date +"%d%m%Y_%H%M%S"`"
                                 echo "FAILED !! (output saved in ${filenameToSave})" >> ${REPORT_FILE}
+				ATTACHMENTS+=("${filenameToSave}")
                                 echo "`date +"%d/%m/%Y_%H:%M:%S"` ERRORS:" >> ${REPORT_FILE}
                                 grep '\[FAIL\]' ${OUT_FILE}.test >> ${REPORT_FILE}
 				cat ${OUT_FILE}.test | egrep "Total.*Errors.*Failed.*Skipped" >> ${REPORT_FILE}
@@ -463,17 +465,30 @@ function sendMail () {
 if [ ${OP_REPORT} == 1 ]
 then
 	printf "\n${PURPLE}Sending mail to ${REPORT_MAIL}${NC}\n"
-	echo -n "Subject: RavenDB Linux AutoBuild - " > /tmp/mailToSend.txt
+	subjectstr="RavenDB Linux AutoBuild - "
 	if [ ${REPORT_FLAG} == 0 ]
 	then
-		echo "Passed" >> /tmp/mailToSend.txt
+		subjectstr="${subjectstr}PASSED!"
+		echo "PASSED" > /tmp/mailToSend.txt
 	else
-		echo "FAILED!" >> /tmp/mailToSend.txt
+		subjectstr="${subjectstr}FAILED!"
+		if [ ${#ATTACHMENTS[@]} == 0 ]
+		then
+			echo "FAILED" > /tmp/mailToSend.txt
+		else
+			echo "FAILED (With Attachment Log)" > /tmp/mailToSend.txt
+		fi
 	fi
 	cat ${REPORT_FILE} >> /tmp/mailToSend.txt
 	echo " " >> /tmp/mailToSend.txt
 	echo "`date +"%d/%m/%Y_%H:%M:%S"` =========== BUILD FINISHED =============== " >> /tmp/mailToSend.txt
-	msmtp -a gmail "${REPORT_MAIL}" -t < /tmp/mailToSend.txt
+	# msmtp -a gmail "${REPORT_MAIL}" -t < /tmp/mailToSend.txt
+	if [ ${#ATTACHMENTS[@]} == 0 ]
+        then
+		mutt "${REPORT_MAIL}" -s "${subjectstr}" < /tmp/mailToSend.txt
+	else
+		mutt "${REPORT_MAIL}" -s "${subjectstr}" -a "${ATTACHMENTS[@]}" < /tmp/mailToSend.txt
+	fi
 	status=$?
 	if [ ${status} == 0 ]
 	then
