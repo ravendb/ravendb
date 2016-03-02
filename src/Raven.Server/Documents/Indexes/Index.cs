@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Indexes
                     switch (type)
                     {
                         case IndexType.Auto:
-                            return AutoIndex.Open(indexId, environment, documentDatabase);
+                            return AutoMapIndex.Open(indexId, environment, documentDatabase);
                         default:
                             throw new NotImplementedException();
                     }

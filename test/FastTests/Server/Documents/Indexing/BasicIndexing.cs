@@ -27,7 +27,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                    index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
                     {
                         Name = "Name",
                         Highlighted = false,
@@ -139,7 +139,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                using (var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
