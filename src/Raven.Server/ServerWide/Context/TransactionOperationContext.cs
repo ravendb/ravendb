@@ -38,7 +38,7 @@ namespace Raven.Server.ServerWide.Context
 
         public RavenTransaction OpenReadTransaction()
         {
-            if (Transaction != null)
+            if (Transaction != null && Transaction.Disposed == false)
                 throw new InvalidOperationException("Transaction is already opened");
 
             return Transaction = CreateReadTransaction();
@@ -50,8 +50,10 @@ namespace Raven.Server.ServerWide.Context
 
         public virtual RavenTransaction OpenWriteTransaction()
         {
-            if (Transaction != null)
+            if (Transaction != null && Transaction.Disposed == false)
+            {
                 throw new InvalidOperationException("Transaction is already opened");
+            }
             return Transaction = CreateWriteTransaction();
         }
 
