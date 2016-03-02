@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using Microsoft.Isam.Esent.Interop;
-using Raven.Abstractions;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Storage.Esent;
