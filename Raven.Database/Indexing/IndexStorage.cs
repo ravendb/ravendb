@@ -1673,7 +1673,13 @@ namespace Raven.Database.Indexing
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
         {
             var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
-
+            switch (indexToReplace.LockMode)
+            {
+                case IndexLockMode.LockedIgnore:
+                    return false;
+                case IndexLockMode.LockedError:
+                    throw new InvalidOperationException("An attempt to replace an index, locked with LockedError, by a side by side index was detected.");
+            }
             var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
             if (success == false)
                 return false;
