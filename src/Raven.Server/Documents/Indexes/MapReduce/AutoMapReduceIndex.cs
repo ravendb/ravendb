@@ -258,7 +258,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer, reduceKeyObject.Size);
                         }
-
+                        //TODO: generate etag values
+                        //TODO: associate doc id with the etag value
+                        //TODO: associate doc id with all the reduce keys
                         ReduceKeyState state;
                         if (stateByReduceKeyHash.TryGetValue(reduceHashKey, out state) == false)
                         {
