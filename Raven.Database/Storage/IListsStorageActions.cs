@@ -22,6 +22,7 @@ namespace Raven.Database.Storage
         void RemoveAllOlderThan(string name, DateTime dateTime);
 
         void Touch(string name, string key, UuidType uuidType, out Etag preTouchEtag, out Etag afterTouchEtag);
+        List<ListsInfo> GetListsStatsVerySlowly();
     }
 
     public class ListItem
