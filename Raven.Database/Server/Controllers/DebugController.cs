@@ -583,7 +583,7 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
-        [RavenRoute("debug/detailed-storage-breakdown")]
+        [RavenRoute("debug/sl0w-lists-breakd0wn")]
         [RavenRoute("databases/{databaseName}/debug/sl0w-lists-breakd0wn")]
         public HttpResponseMessage DetailedListsBreakdown()
         {
