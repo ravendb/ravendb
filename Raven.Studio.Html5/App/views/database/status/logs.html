@@ -73,7 +73,7 @@
                     </span>
                 </div>
             </div>
-            <div id="logRecords" class="form-group logRecords" style="white-space: nowrap" data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
+            <div id="logRecords" class="form-group logRecords" style="white-space: nowrap" data-bind="foreach: allLogs, delegatedHandler: 'click'">
                 <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
                     <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: Level"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: HumanizedTimestamp, attr: { title: TimeStampText }"></div>
