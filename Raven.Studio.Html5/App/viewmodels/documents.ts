@@ -36,8 +36,9 @@ class documents extends viewModelBase {
 
     displayName = "documents";
     collections = ko.observableArray<collection>();
+    collectionsExceptAllDocs: KnockoutComputed<collection[]>;
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
-    allDocumentsCollection: collection;
+    allDocumentsCollection = ko.observable<collection>();
     collectionToSelectName: string;
     currentCollectionPagedItems = ko.observable<pagedList>();
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
@@ -123,6 +124,14 @@ class documents extends viewModelBase {
             return "";
         });
         
+        this.collectionsExceptAllDocs = ko.computed(() => {
+            var allDocs = this.allDocumentsCollection();
+            if (!allDocs) {
+                return [];
+            }
+            var collections = this.collections();
+            return collections.filter(x => x !== allDocs);
+        });
     }
 
     activate(args) {
@@ -214,18 +223,18 @@ class documents extends viewModelBase {
 
     collectionsLoaded(collections: Array<collection>, db: database) {
         // Create the "All Documents" pseudo collection.
-        this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.documentCount = ko.computed(() => db.itemCount());
+        this.allDocumentsCollection(collection.createAllDocsCollection(db));
+        this.allDocumentsCollection().documentCount = ko.computed(() => db.itemCount());
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
 
         // All systems a-go. Load them into the UI and select the first one.
         var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
-        var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
+        var allCollections = [this.allDocumentsCollection()].concat(collectionsWithSysCollection);
         this.collections(allCollections);
 
-        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
+        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
         collectionToSelect.activate();
     }
 
@@ -270,7 +279,7 @@ class documents extends viewModelBase {
 
                     var selectedCollection: collection = this.selectedCollection();
                     if (collection.name == selectedCollection.name) {
-                        this.selectCollection(this.allDocumentsCollection);
+                        this.selectCollection(this.allDocumentsCollection());
                     }
                 } else {
                     this.selectNone();
@@ -293,7 +302,7 @@ class documents extends viewModelBase {
                         var docsGrid = this.getDocumentsGrid();
                         docsGrid.refreshCollectionData();
                     } else {
-                        var allDocumentsPagedList = this.allDocumentsCollection.getDocuments();
+                        var allDocumentsPagedList = this.allDocumentsCollection().getDocuments();
                         allDocumentsPagedList.invalidateCache();
                     }
                 } else {
@@ -325,7 +334,7 @@ class documents extends viewModelBase {
         //if the collection is deleted, go to the all documents collection
         var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
         if (!currentCollection || currentCollection.documentCount() == 0) {
-            this.selectCollection(this.allDocumentsCollection);
+            this.selectCollection(this.allDocumentsCollection());
         }
     }
 

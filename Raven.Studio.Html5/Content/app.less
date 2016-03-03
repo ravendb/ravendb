@@ -649,6 +649,11 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     
     li {
         outline: none;
+        padding-left: 15px;
+    }
+
+    li.all-docs-collection {
+        padding-left: 0;
     }
 
     .collection-color-strip {
@@ -671,11 +676,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
         max-width: 90%;
-    }
-
-    li:not(:first-child) {
-        // All collections except the first one ("All Documents") are indented.
-        padding-left: 15px;
     }
 }
 
