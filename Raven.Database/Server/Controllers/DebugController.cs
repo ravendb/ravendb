@@ -583,6 +583,20 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
+        [RavenRoute("debug/sl0w-lists-breakd0wn")]
+        [RavenRoute("databases/{databaseName}/debug/sl0w-lists-breakd0wn")]
+        public HttpResponseMessage DetailedListsBreakdown()
+        {
+            List<ListsInfo> stat = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                stat = accessor.Lists.GetListsStatsVerySlowly();
+            });
+
+            return GetMessageWithObject(stat);
+        }
+
+        [HttpGet]
         [RavenRoute("debug/user-info")]
         [RavenRoute("databases/{databaseName}/debug/user-info")]
         public HttpResponseMessage UserInfo()

@@ -180,6 +180,7 @@
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\ListsInfo.cs" />
     <Compile Include="Data\SideBySideIndexes.cs" />
     <Compile Include="Data\IndexToAdd.cs" />
     <Compile Include="Data\IOperationState.cs" />
