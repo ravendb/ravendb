@@ -261,7 +261,11 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
-            var table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
+            var collectionName = "@" + collection;
+            if(context.Transaction.InnerTransaction.ReadTree(collectionName)==null)
+                yield break;
+
+            var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))

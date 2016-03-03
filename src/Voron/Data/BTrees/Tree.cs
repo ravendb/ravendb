@@ -7,7 +7,6 @@ using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
@@ -16,6 +15,9 @@ namespace Voron.Data.BTrees
     {
         private Dictionary<string, FixedSizeTree> _fixedSizeTrees;
         private readonly TreeMutableState _state;
+
+        public event Action<long> PageModified;
+        public event Action<long> PageFreed;
 
         private RecentlyFoundPages _recentlyFoundPages;
         public RecentlyFoundPages RecentlyFoundPages
@@ -280,9 +282,14 @@ namespace Voron.Data.BTrees
 
         public TreePage ModifyPage(long pageNumber)
         {
+
             var newPage = _llt.ModifyPage(pageNumber).ToTreePage();
             newPage.Dirty = true;
             RecentlyFoundPages.Reset(pageNumber);
+
+            var onPageModified = PageModified;
+            if (onPageModified != null)
+                onPageModified(pageNumber);
 
             return newPage;
         }
@@ -301,6 +308,11 @@ namespace Voron.Data.BTrees
             dataPos = overflowPageStart.Base + Constants.TreePageHeaderSize;
 
             State.RecordNewPage(overflowPageStart, numberOfPages);
+
+
+            var onPageModified = PageModified;
+            if (onPageModified != null)
+                onPageModified(overflowPageStart.PageNumber);
 
             return overflowPageStart.PageNumber;
         }
@@ -548,6 +560,10 @@ namespace Voron.Data.BTrees
             var page = AllocateNewPage(_llt, flags, num);
             State.RecordNewPage(page, num);
 
+            var onPageModified = PageModified;
+            if (onPageModified != null)
+                onPageModified(page.PageNumber);
+
             return page;
         }
 
@@ -559,11 +575,15 @@ namespace Voron.Data.BTrees
             page.TreeFlags = flags;
             page.Upper = (ushort)page.PageSize;
             page.Dirty = true;
+
             return page;
         }
 
         internal void FreePage(TreePage p)
         {
+            var onPageFreed = PageFreed;
+            if (onPageFreed != null)
+                onPageFreed(p.PageNumber);
             if (p.IsOverflow)
             {
                 var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
@@ -645,6 +665,28 @@ namespace Voron.Data.BTrees
                 return -1;
 
             return TreeNodeHeader.GetDataSize(_llt, node);
+        }
+
+        public long GetParentPageOf(TreePage page)
+        {
+            Lazy<TreeCursor> lazy;
+            TreeNodeHeader* node;
+            var p = FindPageFor(page.GetNodeKey(0), out node, out lazy);
+            if (p == null || p.LastMatch != 0)
+                return -1;
+
+            var treeCursor = lazy.Value;
+            while (treeCursor.PageCount > 0)
+            {
+                if (treeCursor.CurrentPage.PageNumber == page.PageNumber)
+                {
+                    if (treeCursor.PageCount == 1)
+                        return -1;// root page
+                    return treeCursor.ParentPage.PageNumber;
+                }
+                treeCursor.Pop();
+            }
+            return -1;
         }
 
         public ushort ReadVersion(Slice key)

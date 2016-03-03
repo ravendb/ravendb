@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         {
             if (_context.Transaction != this)
                 throw new InvalidOperationException("There is a different transaction in context.");
-
+            
             _context.Transaction = null;
             base.Dispose();
         }

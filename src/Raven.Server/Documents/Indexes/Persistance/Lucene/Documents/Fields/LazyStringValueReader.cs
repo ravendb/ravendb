@@ -29,6 +29,9 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields
 
         public string GetStringFor(LazyStringValue value)
         {
+            if (value == null)
+                return null;
+
             _mmapStream.Set(value.Buffer, value.Size);
             _reader.DiscardBufferedData();
 
