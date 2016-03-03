@@ -7107,6 +7107,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 .document-collections li {
   outline: none;
+  padding-left: 15px;
+}
+.document-collections li.all-docs-collection {
+  padding-left: 0;
 }
 .document-collections .collection-color-strip {
   margin-right: 5px;
@@ -7126,9 +7130,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
   max-width: 90%;
-}
-.document-collections li:not(:first-child) {
-  padding-left: 15px;
 }
 #index-merge-suggestions .index-name {
   text-decoration: underline;
