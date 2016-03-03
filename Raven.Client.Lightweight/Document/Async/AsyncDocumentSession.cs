@@ -525,7 +525,10 @@ namespace Raven.Client.Document.Async
                 var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
                 Current = new StreamResult<T>
                 {
-                    Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
+                    Document = (T)parent.ConvertToEntity(typeof(T),
+                        document.Key, 
+                        document.DataAsJson, 
+                        document.Metadata, true),
                     Etag = document.Etag,
                     Key = document.Key,
                     Metadata = document.Metadata
