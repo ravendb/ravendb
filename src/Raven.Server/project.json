@@ -13,6 +13,10 @@
     "allowUnsafe": true
   },
 
+  "resource": [
+    "Documents/Patch/*.js"
+  ],
+
   "dependencies": {
     "Jint": "2.7.1",
     "Lucene.Net": "3.0.4-*",
@@ -38,7 +42,7 @@
         "Microsoft.AspNet.Server.Kestrel": "1.0.0-rc1-final",
         "Microsoft.Extensions.Configuration.FileProviderExtensions": "1.0.0-rc1-final",
         "Microsoft.Extensions.Configuration.Json": "1.0.0-rc1-final",
-        "Microsoft.AspNet.WebSockets.Server":  "1.0.0-rc1-final"
+        "Microsoft.AspNet.WebSockets.Server": "1.0.0-rc1-final"
       }
     }
   }

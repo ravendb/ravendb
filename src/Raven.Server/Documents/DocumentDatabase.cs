@@ -2,6 +2,7 @@
 
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
 
 using Voron;
@@ -11,6 +12,7 @@ namespace Raven.Server.Documents
     public class DocumentDatabase : IResourceStore
     {
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
+        public readonly PatchDocument Patch;
 
         public DocumentDatabase(string name, RavenConfiguration configuration)
         {
@@ -20,6 +22,7 @@ namespace Raven.Server.Documents
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
+            Patch = new PatchDocument(this);
         }
 
         public string Name { get; }

@@ -40,11 +40,11 @@ namespace Raven.Abstractions.Exceptions
         /// <summary>
         /// Expected Etag.
         /// </summary>
-        public long? ExpectedETag { get; set; }
+        public long ExpectedETag { get; set; }
 
         /// <summary>
         /// Actual Etag.
         /// </summary>
-        public long? ActualETag { get; set; }
+        public long ActualETag { get; set; }
     }
 }

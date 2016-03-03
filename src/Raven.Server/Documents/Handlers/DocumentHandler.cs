@@ -6,12 +6,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -251,13 +254,61 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/document", "PATCH", "/databases/{databaseName:string}/document?id={documentId:string}")]
+        [RavenAction("/databases/*/document", "PATCH", "/databases/{databaseName:string}/document?id={documentId:string}&test={isTestOnly:bool|optional(false)}")]
         public async Task Patch()
         {
-            MemoryOperationContext context;
+            var ids = HttpContext.Request.Query["id"];
+            if (ids.Count == 0)
+                throw new ArgumentException("The 'id' query string parameter is mandatory");
+
+            var documentId = ids[0];
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentException("The 'id' query string parameter must have a non empty value");
+
+            var isTestOnly = GetBoolValueQueryString("test", false);
+
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                // TODO: We should implement here ScriptedPatchRequest as the EVAL function in v3.5. We retire the v3.0 PATCH method.
+                context.OpenReadTransaction();
+
+                var document = Database.DocumentsStorage.Get(context, documentId);
+                if (Log.IsDebugEnabled)
+                    Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentId, document != null));
+
+                if (document == null)
+                {
+                    HttpContext.Response.StatusCode = 404;
+                    return;
+                }
+
+                var etag = GetLongFromHeaders("If-Match");
+                if (etag.HasValue && document.Etag != etag.Value)
+                {
+                    Debug.Assert(document.Etag > 0);
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug(() => $"Got concurrent exception while tried to patch the following document: {documentId}");
+                    throw new ConcurrencyException($"Could not patch document '{documentId}' because non current etag was used")
+                    {
+                        ActualETag = document.Etag,
+                        ExpectedETag = etag.Value,
+                    };
+                }
+
+                var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                var scriptedPatchRequest = new ScriptedPatchRequest();
+                string script;
+                if (request.TryGet("Script", out script) == false)
+                    throw new ArgumentException("The 'Script' field in the body request is mandatory");
+                scriptedPatchRequest.Script = script;
+                Dictionary<string, object> values;
+                if (request.TryGet("Values", out values))
+                    scriptedPatchRequest.Values = values;
+
+                Database.Patch.Apply(document, etag, scriptedPatchRequest, isTestOnly);
+                throw new NotImplementedException();
+
             }
         }
     }

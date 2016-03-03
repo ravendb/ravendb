@@ -28,11 +28,6 @@ namespace Raven.Abstractions.Data
             Values = new Dictionary<string, object>();
         }
 
-        public static ScriptedPatchRequest FromJson(RavenJObject patchRequestJson)
-        {
-            return patchRequestJson.JsonDeserialization<ScriptedPatchRequest>();
-        }
-
         protected bool Equals(ScriptedPatchRequest other)
         {
             if(other == null)
