@@ -117,7 +117,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
                 var parentPagesToAggregate = new Dictionary<long, Tree>();
 
-                using (var writer = _parent.IndexPersistance.OpenIndexWriter())
+                using (var indexWriteTx = indexContext.OpenWriteTransaction())
+                using (var writer = _parent.IndexPersistence.OpenIndexWriter(indexWriteTx.InnerTransaction))
                 {
                     foreach (var modifiedState in stateByReduceKeyHash.Values)
                     {
