@@ -348,6 +348,46 @@ namespace Raven.Database.Storage.Voron.StorageActions
             listsByNameAndKey.Add(writeBatch.Value, nameAndKeySlice, internalKey);
         }
 
+        public List<ListsInfo> GetListsStatsVerySlowly()
+        {
+            string currentName = null;
+            List<ListsInfo> res = new List<ListsInfo>();
+            ListsInfo currentListsInfo = null;
+            var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+            using (var iterator = listsByName.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (!iterator.Seek(Slice.BeforeAllKeys))
+                {
+                    return res;
+                }
+                do
+                {
+                    currentListsInfo = new ListsInfo() {Name = iterator.CurrentKey.ToString()};
+                    using (var internalIterator = listsByName.MultiRead(Snapshot, iterator.CurrentKey)) 
+                    {
+                        if (!internalIterator.Seek(Slice.BeforeAllKeys))
+                        {
+                            break;
+                        }
+                        do
+                        {                        
+                            var sizeOnDisk = iterator.GetCurrentDataSize();
+                            currentListsInfo.Count++;
+                            currentListsInfo.SizeOnDiskInBytes += sizeOnDisk;
+                            if (sizeOnDisk > currentListsInfo.MaxListItemSizeOnDiskInBytes)
+                                currentListsInfo.MaxListItemSizeOnDiskInBytes = sizeOnDisk;
+                            if (currentListsInfo.MinListItemSizeOnDiskInBytes == 0 || sizeOnDisk < currentListsInfo.MinListItemSizeOnDiskInBytes)
+                                currentListsInfo.MinListItemSizeOnDiskInBytes = sizeOnDisk;
+                        } while (internalIterator.MoveNext());
+                    }
+                    res.Add(currentListsInfo);
+                    currentListsInfo.AverageListItemSizeOnDiskInBytes = currentListsInfo.SizeOnDiskInBytes / currentListsInfo.Count;
+                } while (iterator.MoveNext());
+            }
+            res.Sort((a, b) => b.SizeOnDiskInBytes.CompareTo(a.SizeOnDiskInBytes));
+            return res;
+        }
+
         private ListItem ReadInternal(string id)
         {
             ushort version;
