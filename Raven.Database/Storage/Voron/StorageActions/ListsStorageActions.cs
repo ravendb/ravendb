@@ -367,7 +367,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     {
                         if (!internalIterator.Seek(Slice.BeforeAllKeys))
                         {
-                            break;
+                            continue;
                         }
                         do
                         {
