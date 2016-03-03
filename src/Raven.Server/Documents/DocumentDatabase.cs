@@ -1,5 +1,5 @@
 ﻿using System.Threading;
-
+using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
@@ -20,6 +20,7 @@ namespace Raven.Server.Documents
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
+            Metrics = new MetricsCountersManager();
         }
 
         public string Name { get; }
@@ -33,6 +34,8 @@ namespace Raven.Server.Documents
         public DocumentsStorage DocumentsStorage { get; }
 
         public DocumentsNotifications Notifications { get; }
+
+        public MetricsCountersManager Metrics { get; private set; }
 
         public IndexStore IndexStore { get; }
 

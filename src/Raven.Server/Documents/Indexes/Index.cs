@@ -445,7 +445,8 @@ namespace Raven.Server.Documents.Indexes
                     return;
 
                 var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
-
+                var documentsIndexed = 0;
+                
                 foreach (var collection in Collections)
                 {
                     long lastMappedEtag;
@@ -488,7 +489,7 @@ namespace Raven.Server.Documents.Indexes
                             }
                         }
                     }
-
+                    documentsIndexed += count;
                     if (count == 0)
                         return;
 
@@ -504,6 +505,8 @@ namespace Raven.Server.Documents.Indexes
 
                     _mre.Set(); // might be more
                 }
+
+                this.DocumentDatabase.Metrics.IndexedPerSecond.Mark(documentsIndexed);
             }
         }
 

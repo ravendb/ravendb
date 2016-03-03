@@ -8,6 +8,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -174,6 +175,18 @@ namespace Raven.Server.Web.System
                     writer.WriteString(context.GetLazyString($"Database {name} was deleted successfully"));
                 }
                 writer.WriteEndArray();
+            }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/rootMetrics", "GET")]
+        public Task GetRootStats()
+        {
+            MemoryOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, Server.Metrics.CreateMetricsStatsJsonValue());
             }
             return Task.CompletedTask;
         }
