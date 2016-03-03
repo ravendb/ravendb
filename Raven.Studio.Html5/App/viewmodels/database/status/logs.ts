@@ -39,19 +39,8 @@ class logs extends viewModelBase {
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
 
-        this.filteredAndSortedLogs = ko.computed<Array<logDto>>(() => {
-            var logs = this.allLogs();
-            var column = this.sortColumn();
-            var asc = this.sortAsc();
-
-            var sortFunc = (left, right) => {
-                if (left[column] === right[column]) { return 0; }
-                var test = asc ? ((l, r) => l < r) : ((l, r) => l > r);
-                return test(left[column], right[column]) ? 1 : -1;
-            }
-
-            return logs.sort(sortFunc);
-        });
+        this.sortColumn.subscribe(() => this.sortResults());
+        this.sortAsc.subscribe(() => this.sortResults());
     }
 
     activate(args) {
@@ -74,7 +63,7 @@ class logs extends viewModelBase {
                 $(".logRecords").toggleClass("logRecords-small");
         });
 
-        var logsRecordsContainerWidth = $("#logRecordsContainer").width();
+        $("#logRecordsContainer").width();
         var widthUnit = 0.08;
         this.columnWidths[0](100 * widthUnit);
         this.columnWidths[1](100 * widthUnit);
@@ -104,14 +93,47 @@ class logs extends viewModelBase {
         return null;
     }
 
+    createHumanReadableTime(item:any, chainDateTime: boolean = true): KnockoutComputed<string> {
+        if (item.TimeStamp) {
+            return ko.computed(() => {
+                var dateMoment = item.dateMoment;
+                var formattedDateTime = "";
+                var agoInMs = dateMoment.diff(this.now());
+                var humanized = moment.duration(agoInMs).humanize(true);
+                if (chainDateTime)
+                    formattedDateTime = dateMoment.format(" (MM/DD/YY, h:mma)");
+                return humanized + formattedDateTime;
+            });
+        }
+
+        return ko.computed(() => null);
+    }
+
     processLogResults(results: logDto[]) {
+        
         results.forEach(r => {
-            r['HumanizedTimestamp'] = this.createHumanReadableTime(r.TimeStamp,true,false);
-            r['TimeStampText'] = this.createHumanReadableTime(r.TimeStamp,true,true);
+            r['dateMoment'] = moment(r.TimeStamp);
+            r['HumanizedTimestamp'] = this.createHumanReadableTime(r, false);
+            r['TimeStampText'] = this.createHumanReadableTime(r, true);
             r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r) && !this.filteredLoggers.contains(r.LoggerName));
         });
 
         this.allLogs(results.reverse());
+
+        this.sortResults();
+    }
+
+    sortResults() {
+        var column = this.sortColumn();
+        var asc = this.sortAsc();
+        var test = asc ? ((l, r) => l < r) : ((l, r) => l > r);
+
+        var sortFunc = (left, right) => {
+            if (left[column] === right[column]) { return 0; }
+            return test(left[column], right[column]) ? 1 : -1;
+        }
+
+        this.allLogs.sort(sortFunc);
     }
 
     matchesFilterAndSearch(log: logDto) {
@@ -125,22 +147,7 @@ class logs extends viewModelBase {
         return matchesLogLevel && matchesSearchText;
     }
 
-    createHumanReadableTime(time: string, chainHumanized: boolean= true, chainDateTime:boolean=true): KnockoutComputed<string> {
-        if (time) {
-            return ko.computed(() => {
-                var dateMoment = moment(time);
-                var humanized = "", formattedDateTime = "";
-                var agoInMs = dateMoment.diff(this.now());
-                if (chainHumanized)
-                    humanized = moment.duration(agoInMs).humanize(true);
-                if (chainDateTime)
-                    formattedDateTime = dateMoment.format(" (MM/DD/YY, h:mma)");
-                return humanized + formattedDateTime;
-            });
-        }
-
-        return ko.computed(() => time);
-    }
+    
 
     selectLog(log: logDto) {
         this.selectedLog(log);
