@@ -306,8 +306,10 @@ class documents extends viewModelBase {
                 if (dto) {
                     this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
                     this.currentColumnsParams().customMode(true);
+                    selected.bindings(this.currentColumnsParams().getBindings());
                 } else {
                     // use default values!
+                    selected.bindings(undefined);
                     this.currentColumnsParams().columns.removeAll();
                     this.currentColumnsParams().customMode(false);
                 }
@@ -446,7 +448,9 @@ class documents extends viewModelBase {
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
+            this.currentCollection().bindings(this.currentColumnsParams().getBindings());
             var pagedList = this.currentCollection().getDocuments();
+            pagedList.invalidateCache();
             this.currentCollectionPagedItems(pagedList);
         });
     }

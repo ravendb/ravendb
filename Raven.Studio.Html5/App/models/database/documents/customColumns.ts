@@ -25,6 +25,13 @@ class customColumns {
         return copy;
     }
 
+    getBindings() {
+        if (!this.hasOverrides()) {
+            return undefined;
+        }
+        return this.columns().map(x => x.binding());
+    }
+
     hasOverrides() {
         return this.enabled() && this.customMode() && this.columns().length > 0;
     }

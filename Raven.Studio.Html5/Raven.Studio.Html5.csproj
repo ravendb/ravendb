@@ -33,6 +33,7 @@
     <TypeScriptCompile Include="App\commands\database\cluster\initializeNewClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\documents\getDocumentsPreviewCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
     <TypeScriptCompile Include="App\commands\database\index\startReducingCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\stopReducingCommand.ts" />
@@ -749,7 +750,6 @@
     <TypeScriptCompile Include="App\commands\database\documents\deleteDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\executeBulkDocsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\documents\getAllDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCountCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCustomColumnsCommand.ts" />
