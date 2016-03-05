@@ -101,7 +101,7 @@ namespace Raven.Database.Impl
                 if (stale)
                 {
                     if (options.StaleTimeout != null)
-                        throw new InvalidOperationException("Bulk operation cancelled because the index is stale and StaleTimout  of " + options.StaleTimeout + "passed");
+                        throw new InvalidOperationException("Bulk operation cancelled because the index is stale and StaleTimout  of " + options.StaleTimeout + " passed");
                     
                     throw new InvalidOperationException("Bulk operation cancelled because the index is stale and allowStale is false");
                 }

@@ -38,7 +38,8 @@ namespace Raven.Abstractions.Data
         public void MarkFaulted(string error = null, Exception exception = null)
         {
             VerifyState();
-            MarkProgress(error);
+            MarkProgress(null);
+            State["Error"] = error;
             Exception = exception;
             Completed = true;
             Faulted = true;
@@ -47,7 +48,8 @@ namespace Raven.Abstractions.Data
         public void MarkCanceled(string error = null)
         {
             VerifyState();
-            MarkProgress(error);
+            MarkProgress(null);
+            State["Error"] = error;
             Completed = true;
             Canceled = true;
         }
