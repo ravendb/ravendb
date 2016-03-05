@@ -8493,7 +8493,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   white-space: pre-line;
 }
 .scrollable-resource-menu {
-  max-height: 150px;
+  max-height: 250px;
   overflow-x: hidden;
 }
 #resources-page .resources-container .resource.fs a {
