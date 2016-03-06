@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Indexes;
 using Raven.Tests.Core;
 using Xunit;
 
@@ -11,29 +12,45 @@ namespace FastTests.Client.BulkInsert
         [Fact]
         public async Task SimpleBulkInsertShouldWork()
         {
-            var fooBars = new FooBar[]
+            var fooBars = new[]
             {
                 new FooBar { Name = "John Doe" },
                 new FooBar { Name = "Jane Doe" },
-                new FooBar { Name = "Mega Joe" }
+                new FooBar { Name = "Mega John" },
+                new FooBar { Name = "Mega Jane" }
             };
             using (var store = await GetDocumentStore())
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
                     await bulkInsert.StoreAsync(fooBars[0]);
-                    await bulkInsert.StoreAsync(fooBars[2]);
                     await bulkInsert.StoreAsync(fooBars[1]);
-                }								
+                    await bulkInsert.StoreAsync(fooBars[2]);
+                    await bulkInsert.StoreAsync(fooBars[3]);
+                }
 
-                //TODO : uncomment this when queries will work
-//				using (var session = store.OpenSession())
-//				{
-//					var fetchedFooBars = session.Query<FooBar>().ToList();
-//					Assert.Contains(fooBars[0], fetchedFooBars);
-//					Assert.Contains(fooBars[1], fetchedFooBars);
-//					Assert.Contains(fooBars[1], fetchedFooBars);
-//				}
+                var doc1 = store.DatabaseCommands.Get("FooBars/1");
+                var doc2 = store.DatabaseCommands.Get("FooBars/2");
+                var doc3 = store.DatabaseCommands.Get("FooBars/3");
+                var doc4 = store.DatabaseCommands.Get("FooBars/4");
+
+                Assert.NotNull(doc1);
+                Assert.NotNull(doc2);
+                Assert.NotNull(doc3);
+                Assert.NotNull(doc4);
+
+                Assert.Equal("John Doe", doc1.DataAsJson.Value<string>("Name"));
+                Assert.Equal("Jane Doe", doc2.DataAsJson.Value<string>("Name"));
+                Assert.Equal("Mega John", doc3.DataAsJson.Value<string>("Name"));
+                Assert.Equal("Mega Jane", doc4.DataAsJson.Value<string>("Name"));
+            }
+        }
+
+        public class FooBarIndex : AbstractIndexCreationTask<FooBar>
+        {
+            public FooBarIndex()
+            {
+                Map = foos => foos.Select(x => new { x.Name });
             }
         }
 

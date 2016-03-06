@@ -43,17 +43,30 @@ namespace Raven.Client.Document
         public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
         {
             await EnsureConnection().ConfigureAwait(false);
+            metadata[Constants.MetadataDocId] = id;
             data[Constants.Metadata] = metadata;
-            metadata["@id"] = id;
 
             buffer.SetLength(0);
             data.WriteTo(buffer);
 
             ArraySegment<byte> segment;
+            buffer.Position = 0;
             buffer.TryGetBuffer(out segment);
+
             await connection.SendAsync(segment, WebSocketMessageType.Text, false, cts.Token)
                             .ConfigureAwait(false);
+
+            buffer.Position = 0;
+            await ReceiveResponseAndThrowIfError(segment);
+
             ReportProgress($"Bulk-insert -> document sent to {url} (bytes count = {segment.Count})");
+        }
+
+        private async Task ReceiveResponseAndThrowIfError(ArraySegment<byte> segment)
+        {
+            await connection.ReceiveAsync(segment, cts.Token);
+            if(segment.Array[0] != 0)
+                throw new InvalidOperationException("Bulk-insert has thrown a server-side error. Check server logs for more details");
         }
 
         public void Dispose()
@@ -66,10 +79,13 @@ namespace Raven.Client.Document
             try
             {
                 if (connection != null && connection.State != WebSocketState.Closed)
-                    await connection.CloseAsync(WebSocketCloseStatus.NormalClosure, "Finished bulk-insert", cts.Token).ConfigureAwait(false);
+                {
+                    await connection.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Finished bulk-insert", cts.Token)
+                                    .ConfigureAwait(false);
+                }
                 connection?.Dispose();
                 return connection == null ? 1 : 0;
-            }
+            }	       
             finally
             {
                 connection = null;

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Text;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Http;
@@ -20,7 +21,8 @@ namespace Raven.Server
         {
             app.UseWebSockets(new WebSocketOptions
             {
-                KeepAliveInterval = TimeSpan.FromSeconds(30),
+                KeepAliveInterval = Debugger.IsAttached ? 
+                    TimeSpan.FromHours(24) : TimeSpan.FromSeconds(30),
                 ReceiveBufferSize = 4096,
             });
 
