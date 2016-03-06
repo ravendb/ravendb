@@ -14,38 +14,30 @@ using Raven.Server.Utils.Metrics;
 
 namespace Raven.Database.Util
 {
-    public class MetricsStats
-    {
-        public double DocsPerSecond { get; set; }
-        public double IndexedPerSecond { get; set; }
-        public HistogramData RequestDuationMetric { get; set; }
-        public MeterData RequestsMeter { get; set; }
-        public double RequestsPerSecondCounter { get; set; }
-        public Dictionary<string, double> Gauges { get; set; }
-    }
-
     public class MetricsCountersManager : IDisposable
     {
         public MeterMetric RequestsMeter { get; private set; }
-
         public MeterMetric RequestsPerSecondCounter { get; private set; }
         public MeterMetric DocPutsPerSecond { get; set; }
         public MeterMetric IndexedPerSecond { get; private set; }
+        public MeterMetric MapReduceMappedPerSecond { get; set; }
+        public MeterMetric MapReduceReducedPerSecond { get; set; }
 
         public long ConcurrentRequestsCount;
-        private readonly ActionScheduler _actionScheduler;
+        private readonly MetricsScheduler _metricsScheduler;
         
-        public MetricsCountersManager(ActionScheduler actionScheduler)
+        public MetricsCountersManager(MetricsScheduler metricsScheduler)
         {
-            _actionScheduler = actionScheduler;
-            RequestsMeter = new MeterMetric(_actionScheduler);
+            _metricsScheduler = metricsScheduler;
+            RequestsMeter = new MeterMetric(_metricsScheduler);
 
-            RequestsPerSecondCounter = new MeterMetric(_actionScheduler);
+            RequestsPerSecondCounter = new MeterMetric(_metricsScheduler);
 
-            DocPutsPerSecond = new MeterMetric(_actionScheduler);
+            DocPutsPerSecond = new MeterMetric(_metricsScheduler);
             
-            IndexedPerSecond = new MeterMetric(_actionScheduler);
-
+            IndexedPerSecond = new MeterMetric(_metricsScheduler);
+            MapReduceMappedPerSecond = new MeterMetric(_metricsScheduler);
+            MapReduceReducedPerSecond = new MeterMetric(_metricsScheduler);
         }
 
         public void Dispose()
@@ -68,8 +60,9 @@ namespace Raven.Database.Util
                 ["RequestDuationMetric"] = self.DocPutsPerSecond.CreateMeterDataJsonValue(),
                 ["RequestsMeter "] = self.RequestsMeter.CreateMeterDataJsonValue(),
                 ["RequestsPerSecondCounter"] = self.RequestsPerSecondCounter.CreateMeterDataJsonValue(),
-                ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount,
-
+                ["MapReduceMappedPerSecond"] = self.MapReduceMappedPerSecond.CreateMeterDataJsonValue(),
+                ["MapReduceReducedPerSecond"] = self.MapReduceReducedPerSecond.CreateMeterDataJsonValue(),
+                ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount
             };
             return metricsStatsJsonValue;
         }

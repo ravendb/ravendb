@@ -51,7 +51,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
         
         private IEnumerable<AbstractField> GetFields(Document document)
         {
-            yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+            if (document.Key != null)
+            {
+                yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+            }
             
             foreach (var indexField in _fields)
             {

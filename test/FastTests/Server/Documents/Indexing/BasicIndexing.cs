@@ -25,23 +25,38 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckDispose()
         {
-            using (var database = CreateDocumentDatabase())
+            using (var database = LowLevel_CreateDocumentDatabase())
             {
-                var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
+                var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } }), database);
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
-                Assert.Throws<ObjectDisposedException>(() => index.Execute(CancellationToken.None));
+                Assert.Throws<ObjectDisposedException>(() => index.Execute());
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
-                index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
-                index.Execute(CancellationToken.None);
+                index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } }), database);
+                index.Execute();
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database);
-                    index.Execute(cts.Token);
+                    index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                    {
+                        Name = "Name",
+                        Highlighted = false,
+                        Storage = FieldStorage.No
+                    } }), database);
+                    index.Execute();
 
                     cts.Cancel();
 
@@ -53,10 +68,20 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanDispose()
         {
-            using (var database = CreateDocumentDatabase(runInMemory: false))
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String) })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.String) })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name2",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } })));
             }
         }
 
@@ -64,13 +89,27 @@ namespace FastTests.Server.Documents.Indexing
         public void CanPersist()
         {
             var path = NewDataPath(); 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name1", SortOptions.String, true) })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name2", SortOptions.Float, false) })));
+                var name1 = new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = true,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.String
+                };
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name1 })));
+                var name2 = new IndexField
+                {
+                    Name = "Name2",
+                    Highlighted = false,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.Float
+                };
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(2) != null, TimeSpan.FromSeconds(15)));
 
@@ -102,9 +141,14 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void SimpleIndexing()
         {
-            using (var database = CreateDocumentDatabase())
+            using (var database = LowLevel_CreateDocumentDatabase())
             {
-                using (var index = AutoIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new AutoIndexField("Name", SortOptions.String) }), database))
+                using (var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                } }), database))
                 {
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                     {
@@ -137,9 +181,9 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        index.Execute(CancellationToken.None);
+                        index.Execute();
 
-                        WaitForIndexMap(index, 2);
+                        LowLevel_WaitForIndexMap(index, 2);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -158,7 +202,7 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        WaitForIndexMap(index, 3);
+                        LowLevel_WaitForIndexMap(index, 3);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -173,11 +217,6 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        private static void WaitForIndexMap(Index index, long etag)
-        {
-            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
-            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtags().Values.Min() == etag, timeout));
-        }
 
         private static void WaitForTombstone(Index index, long etag)
         {
@@ -190,24 +229,5 @@ namespace FastTests.Server.Documents.Indexing
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        private DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null)
-        {
-            var name = caller ?? Guid.NewGuid().ToString("N");
-
-            if (string.IsNullOrEmpty(dataDirectory) == false)
-                PathsToDelete.Add(dataDirectory);
-            else
-                dataDirectory = NewDataPath(name);
-
-            var configuration = new RavenConfiguration();
-            configuration.Initialize();
-            configuration.Core.RunInMemory = runInMemory;
-            configuration.Core.DataDirectory = dataDirectory;
-
-            var documentDatabase = new DocumentDatabase(name, configuration);
-            documentDatabase.Initialize();
-
-            return documentDatabase;
-        }
     }
 }
