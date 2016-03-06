@@ -27,7 +27,7 @@ namespace Raven.Database.Backup
 
         public const int MoveFileDelayUntilReboot = 0x4;
 
-        public event Action<string, string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
+        public event Action<string, Exception, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
         private readonly Dictionary<string, long> fileToSize = new Dictionary<string, long>();
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();

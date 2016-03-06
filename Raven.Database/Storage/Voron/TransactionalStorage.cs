@@ -405,16 +405,16 @@ namespace Raven.Storage.Voron
             return options;
         }
 
-        public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
-            DatabaseDocument documentDatabase)
+        public Task StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
+            DatabaseDocument documentDatabase, ResourceBackupState state, CancellationToken cancellationToken)
         {
             if (tableStorage == null) 
                 throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
             
             var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
-                backupDestinationDirectory, tableStorage.Environment, incrementalBackup, documentDatabase);
+                backupDestinationDirectory, tableStorage.Environment, incrementalBackup, documentDatabase, state, cancellationToken);
 
-            Task.Factory.StartNew(() =>
+            return Task.Factory.StartNew(() =>
             {
                 using(backupOperation)
                     backupOperation.Execute();

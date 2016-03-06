@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
-
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.MEF;
@@ -21,7 +22,8 @@ namespace Raven.Database.FileSystem.Storage
 
         string FriendlyName { get; }
 
-        void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument fileSystemDocument);
+        Task StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup,
+            FileSystemDocument fileSystemDocument, ResourceBackupState state, CancellationToken token);
 
         void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output);
 

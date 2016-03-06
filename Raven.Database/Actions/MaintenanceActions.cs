@@ -7,7 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -76,12 +77,14 @@ namespace Raven.Database.Actions
             }
         }
 
-        public void StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
+        public Task StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument, ResourceBackupState state, CancellationToken token = default(CancellationToken))
         {
+
             if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
             var document = Database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
             if (document != null)
             {
+                //TODO:  verify if we clean up status after cancalation token
                 var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
                 if (backupStatus.IsRunning)
                 {
@@ -109,13 +112,16 @@ namespace Raven.Database.Actions
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
             }), new RavenJObject(), null);
+
             Database.IndexStorage.FlushMapIndexes();
             Database.IndexStorage.FlushReduceIndexes();
 
             if (databaseDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
                 databaseDocument.Settings["Raven/StorageTypeName"] = TransactionalStorage.FriendlyName ?? TransactionalStorage.GetType().AssemblyQualifiedName;
 
-            TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument);
+            var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, Database.WorkContext.CancellationToken);
+            return TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument, state, linkedTokenSource.Token)
+                .ContinueWith(_ => linkedTokenSource.Dispose());
         }
 
         public void RemoveAllBefore(string listName,Etag etag)

@@ -740,7 +740,7 @@ namespace Raven.Client.Connection
         /// </param>
         /// <param name="incremental">indicates if backup is incremental</param>
         /// <param name="databaseName">name of a database that will be backed up</param>
-        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
+        Operation StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 
         /// <summary>
         ///     Begins a restore operation.

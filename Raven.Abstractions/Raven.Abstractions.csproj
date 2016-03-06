@@ -195,6 +195,7 @@
     <Compile Include="Data\IndexingStatus.cs" />
     <Compile Include="Data\ListsInfo.cs" />
     <Compile Include="Data\OperationStateBase.cs" />
+    <Compile Include="Data\ResourceBackupState.cs" />
     <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\SideBySideIndexes.cs" />
     <Compile Include="Data\IndexToAdd.cs" />

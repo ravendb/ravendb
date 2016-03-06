@@ -232,16 +232,16 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-        public void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup,
-            FileSystemDocument fileSystemDocument)
+        public Task StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup,
+            FileSystemDocument fileSystemDocument, ResourceBackupState state, CancellationToken token)
         {
             if (tableStorage == null)
                 throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
 
             var backupOperation = new BackupOperation(filesystem, systemDatabase.Configuration.DataDirectory,
-                backupDestinationDirectory, tableStorage.Environment, incrementalBackup, fileSystemDocument);
+                backupDestinationDirectory, tableStorage.Environment, incrementalBackup, fileSystemDocument, state, token);
 
-            Task.Factory.StartNew(() =>
+            return Task.Factory.StartNew(() =>
             {
                 using (backupOperation)
                 {

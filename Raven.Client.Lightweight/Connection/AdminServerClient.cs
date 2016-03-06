@@ -55,9 +55,9 @@ namespace Raven.Client.Connection
             AsyncHelpers.RunSync(() => asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks));
         }
 
-        public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
+        public Operation StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
         {
-            AsyncHelpers.RunSync(() => asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName));
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName));
         }
 
         public Operation StartRestore(DatabaseRestoreRequest restoreRequest)

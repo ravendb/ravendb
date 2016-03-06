@@ -27,8 +27,11 @@ namespace Raven.Database.Storage
         protected string backupDestinationDirectory;
         protected bool incrementalBackup;
         protected readonly DatabaseDocument databaseDocument;
+        protected readonly ResourceBackupState state;
+        protected readonly CancellationToken cancellationToken;
 
-        protected BaseBackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
+        protected BaseBackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, 
+            bool incrementalBackup, DatabaseDocument databaseDocument, ResourceBackupState state, CancellationToken cancellationToken)
         {
             if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
             if (database == null) throw new ArgumentNullException("database");
@@ -40,15 +43,17 @@ namespace Raven.Database.Storage
             this.backupDestinationDirectory = backupDestinationDirectory.ToFullPath();
             this.incrementalBackup = incrementalBackup;
             this.databaseDocument = databaseDocument;
+            this.state = state;
+            this.cancellationToken = cancellationToken;
         }
 
         protected abstract bool BackupAlreadyExists { get; }
 
         protected abstract void ExecuteBackup(string backupPath, bool isIncrementalBackup);
 
-        protected virtual void OperationFinished()
+        protected virtual void OperationFinishedSuccessfully()
         {
-             
+             state.MarkCompleted();
         }
 
         public void Execute()
@@ -58,7 +63,7 @@ namespace Raven.Database.Storage
                 log.Info("Starting backup of '{0}' to '{1}'", backupSourceDirectory, backupDestinationDirectory);
                 UpdateBackupStatus(
                     string.Format("Started backup process. Backing up data to directory = '{0}'",
-                                  backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
+                        backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
 
                 EnsureBackupDestinationExists();
 
@@ -70,7 +75,7 @@ namespace Raven.Database.Storage
                     {
                         var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
 
-                        if(state.ResourceId != database.TransactionalStorage.Id)
+                        if (state.ResourceId != database.TransactionalStorage.Id)
                             throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different database. Existing incremental data origins from '{0}' database.", state.ResourceName));
                     }
                     else
@@ -81,6 +86,7 @@ namespace Raven.Database.Storage
                             ResourceName = database.Name ?? Constants.SystemDatabase
                         };
 
+                        //TODO:  to rollback
                         File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
                     }
 
@@ -99,7 +105,7 @@ namespace Raven.Database.Storage
                     throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
                 }
 
-                UpdateBackupStatus(string.Format("Backing up indexes.."), null, BackupStatus.BackupMessageSeverity.Informational);
+                UpdateBackupStatus("Backing up indexes..", null, BackupStatus.BackupMessageSeverity.Informational);
 
                 // Make sure we have an Indexes folder in the backup location
                 if (!Directory.Exists(Path.Combine(backupDestinationDirectory, "Indexes")))
@@ -108,11 +114,11 @@ namespace Raven.Database.Storage
                 var directoryBackups = new List<DirectoryBackup>
                 {
                     new DirectoryBackup(Path.Combine(backupSourceDirectory, "IndexDefinitions"),
-                                        Path.Combine(backupDestinationDirectory, "IndexDefinitions"), 
-                                        Path.Combine(backupSourceDirectory, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
+                        Path.Combine(backupDestinationDirectory, "IndexDefinitions"),
+                        Path.Combine(backupSourceDirectory, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
                 };
 
-                database.IndexStorage.Backup(backupDestinationDirectory,null, UpdateBackupStatus);
+                database.IndexStorage.Backup(backupDestinationDirectory, null, UpdateBackupStatus);
 
                 var progressNotifier = new ProgressNotifier();
                 foreach (var directoryBackup in directoryBackups)
@@ -127,25 +133,30 @@ namespace Raven.Database.Storage
                     directoryBackup.Execute(progressNotifier);
                 }
 
-                UpdateBackupStatus(string.Format("Finished indexes backup. Executing data backup.."), null, BackupStatus.BackupMessageSeverity.Informational);
+                UpdateBackupStatus("Finished indexes backup. Executing data backup..", null, BackupStatus.BackupMessageSeverity.Informational);
 
                 ExecuteBackup(backupDestinationDirectory, incrementalBackup);
 
                 if (databaseDocument != null)
                     File.WriteAllText(Path.Combine(backupDestinationDirectory, Constants.DatabaseDocumentFilename), RavenJObject.FromObject(databaseDocument).ToString());
 
-                OperationFinished();
+                OperationFinishedSuccessfully();
+            }
+            catch (OperationCanceledException e)
+            {
+                //TODO:  handle rollback ?
+                state.MarkCanceled();
             }
             catch (AggregateException e)
             {
                 var ne = e.ExtractSingleInnerException();
-                log.ErrorException("Failed to complete backup", ne);
-                UpdateBackupStatus("Failed to complete backup because: " + ne.Message, ne.ExceptionToString(null), BackupStatus.BackupMessageSeverity.Error);
+                UpdateBackupStatus("Failed to complete backup because: " + ne.Message, ne, BackupStatus.BackupMessageSeverity.Error);
+                state.MarkFaulted("Failed to complete backup because:" + ne.Message, ne);
             }
             catch (Exception e)
             {
-                log.ErrorException("Failed to complete backup", e);
-                UpdateBackupStatus("Failed to complete backup because: " + e.Message, e.ExceptionToString(null), BackupStatus.BackupMessageSeverity.Error);
+                UpdateBackupStatus("Failed to complete backup because: " + e.Message, e, BackupStatus.BackupMessageSeverity.Error);
+                state.MarkFaulted("Failed to complete backup because: " + e.Message);
             }
             finally
             {
@@ -227,11 +238,19 @@ namespace Raven.Database.Storage
             }
         }
 
-        protected void UpdateBackupStatus(string newMsg, string details, BackupStatus.BackupMessageSeverity severity)
+        protected void UpdateBackupStatus(string newMsg, Exception exception, BackupStatus.BackupMessageSeverity severity)
         {
             try
             {
-                log.Info(newMsg);
+                if (exception != null)
+                {
+                    log.WarnException(newMsg, exception);
+                }
+                else
+                {
+                    log.Info(newMsg);
+                }
+                
                 var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
                 if (jsonDocument == null)
                     return;
@@ -241,11 +260,13 @@ namespace Raven.Database.Storage
                     Message = newMsg,
                     Timestamp = SystemTime.UtcNow,
                     Severity = severity,
-                    Details = details
+                    Details = exception?.ExceptionToString(null)
                 });
                 database.Documents.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus),
                              jsonDocument.Metadata,
                              null);
+
+                state.MarkProgress(newMsg);
             }
             catch (Exception e)
             {

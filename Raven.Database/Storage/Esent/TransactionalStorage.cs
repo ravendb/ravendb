@@ -209,13 +209,14 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase)
+        public Task StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase, ResourceBackupState state, CancellationToken cancellationToken)
         {
             if (new InstanceParameters(instance).Recovery == false)
                 throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
-            var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
-            Task.Factory.StartNew(backupOperation.Execute);
+            var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase, state, cancellationToken);
+            return Task.Factory
+                .StartNew(backupOperation.Execute);
         }
 
         public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output)

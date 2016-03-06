@@ -789,7 +789,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="incremental">indicates if backup is incremental</param>
         /// <param name="databaseName">name of a database that will be backed up</param>
         /// <param name="token">The cancellation token.</param>
-        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken));
+        Task<Operation> StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Begins a restore operation.

@@ -77,7 +77,7 @@ namespace Raven.Tests.Issues
 
                 autoIdexes.ForEach(x => db.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(x.Id, IndexingPriority.Idle)));
                 
-                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(db, true);
             }
             IOExtensions.DeleteDirectory(DataDir);

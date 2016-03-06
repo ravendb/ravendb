@@ -1695,7 +1695,7 @@ namespace Raven.Database.Indexing
             return currentlyIndexing.Values.ToArray();
         }
 
-        public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback)
+        public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, Exception, BackupStatus.BackupMessageSeverity> notifyCallback)
         {
             if (directory is RAMDirectory)
             {
@@ -1841,7 +1841,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static void LogErrorAndNotifyStudio(Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
+        private static void LogErrorAndNotifyStudio(Action<string, Exception, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
         {
             logIndexing.WarnException(failureMessage, e);
             if (notifyCallback != null)

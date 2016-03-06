@@ -98,7 +98,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken))
+        public async Task<Operation> StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken))
         {
             using (var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental))
             {
@@ -107,6 +107,10 @@ namespace Raven.Client.Connection.Async
                     BackupLocation = backupLocation,
                     DatabaseDocument = databaseDocument
                 })).WithCancellation(token).ConfigureAwait(false);
+
+                var jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+
+                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
             }
         }
 

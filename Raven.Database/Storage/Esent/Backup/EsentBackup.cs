@@ -15,7 +15,7 @@ namespace Raven.Storage.Esent.Backup
         private readonly JET_INSTANCE instance;
         private readonly string destination;
         private readonly BackupGrbit backupOptions;
-        public event Action<string, string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
+        public event Action<string, Exception, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
         public EsentBackup(JET_INSTANCE instance, string destination, BackupGrbit backupOptions)
         {
@@ -30,7 +30,6 @@ namespace Raven.Storage.Esent.Backup
             Api.JetBackupInstance(instance, destination,
                                   backupOptions,
                                   StatusCallback);
-
         }
 
         private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)

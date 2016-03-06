@@ -2,7 +2,7 @@ using Raven.Abstractions.Data;
 
 using System;
 using System.IO;
-
+using System.Threading;
 using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 
@@ -17,8 +17,8 @@ namespace Raven.Database.FileSystem.Storage.Voron.Backup
 
         public BackupOperation(RavenFileSystem filesystem, string backupSourceDirectory,
                                string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup,
-                               FileSystemDocument fileSystemDocument)
-            : base(filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument)
+                               FileSystemDocument fileSystemDocument, ResourceBackupState state, CancellationToken token)
+            : base(filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument, state, token)
         {
             if (env == null) throw new ArgumentNullException("env");
 

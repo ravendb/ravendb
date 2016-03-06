@@ -1646,7 +1646,7 @@ namespace Raven.Database.Indexing
             return GetIndexInstance(index).GetIndexingPerformance();
         }
 
-        public void Backup(string directory, string incrementalTag = null, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback = null)
+        public void Backup(string directory, string incrementalTag = null, Action<string, Exception, BackupStatus.BackupMessageSeverity> notifyCallback = null)
         {
             Parallel.ForEach(indexes.Values, index =>
                 index.Backup(directory, path, incrementalTag, notifyCallback));

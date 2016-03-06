@@ -6,10 +6,11 @@
 
 using System;
 using System.IO;
-
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Storage.Esent.Backup;
 
@@ -21,8 +22,8 @@ namespace Raven.Database.FileSystem.Storage.Esent.Backup
         private string backupConfigPath;
 
         public BackupOperation(RavenFileSystem filesystem, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup,
-                               FileSystemDocument filesystemDocument)
-            : base(filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, filesystemDocument)
+                               FileSystemDocument filesystemDocument, ResourceBackupState state, CancellationToken token)
+            : base(filesystem, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, filesystemDocument, state, token)
         {
             instance = ((TransactionalStorage)filesystem.Storage).Instance;
             backupConfigPath = Path.Combine(backupDestinationDirectory, "RavenDB.Backup");
@@ -44,9 +45,9 @@ namespace Raven.Database.FileSystem.Storage.Esent.Backup
             esentBackup.Execute();
         }
 
-        protected override void OperationFinished()
+        protected override void OperationFinishedSuccessfully()
         {
-            base.OperationFinished();
+            base.OperationFinishedSuccessfully();
 
             File.WriteAllText(backupConfigPath, "Backup completed " + SystemTime.UtcNow);
         }

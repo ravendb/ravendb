@@ -40,9 +40,8 @@ namespace Raven.Tests.Issues
                 store1
                     .DatabaseCommands
                     .GlobalAdmin
-                    .StartBackup(path, null, false, store1.DefaultDatabase);
-
-                WaitForBackup(store1.DatabaseCommands, false);
+                    .StartBackup(path, null, false, store1.DefaultDatabase)
+                    .WaitForCompletion();
 
                 store3
                     .DatabaseCommands

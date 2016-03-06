@@ -296,9 +296,26 @@ namespace Raven.Database.FileSystem.Controllers
             if (filesystemDocument.Settings.ContainsKey(Constants.FileSystem.Storage) == false)
                 filesystemDocument.Settings[Constants.FileSystem.Storage] = transactionalStorage.FriendlyName.ToLower() ?? transactionalStorage.GetType().AssemblyQualifiedName;
 
-            transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, filesystemDocument);
+            var cts = new CancellationTokenSource();
+            var state = new ResourceBackupState();
 
-            return GetEmptyMessage(HttpStatusCode.Created);
+            var task = transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, 
+                filesystemDocument, state, cts.Token);
+
+            task.ContinueWith(_ => cts.Dispose());
+
+            long id;
+            SystemDatabase.Tasks.AddTask(task, state, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.BackupFilesystem,
+                Description = "Backup to: " + backupRequest.BackupLocation
+            }, out id, cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
         }
 
         [HttpPost]

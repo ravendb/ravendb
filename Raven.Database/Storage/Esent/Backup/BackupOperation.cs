@@ -25,8 +25,8 @@ namespace Raven.Database.Storage.Esent.Backup
         private string backupConfigPath;
 
         public BackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup,
-                               DatabaseDocument databaseDocument)
-            : base(database, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, databaseDocument)
+                               DatabaseDocument databaseDocument, ResourceBackupState state, CancellationToken cancellationToken)
+            : base(database, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, databaseDocument, state, cancellationToken)
         {
             instance = ((TransactionalStorage) database.TransactionalStorage).Instance;
             backupConfigPath = Path.Combine(backupDestinationDirectory, "RavenDB.Backup");
@@ -48,9 +48,9 @@ namespace Raven.Database.Storage.Esent.Backup
             esentBackup.Execute();
         }
 
-        protected override void OperationFinished()
+        protected override void OperationFinishedSuccessfully()
         {
-            base.OperationFinished();
+            base.OperationFinishedSuccessfully();
 
             File.WriteAllText(backupConfigPath, "Backup completed " + SystemTime.UtcNow);
         }

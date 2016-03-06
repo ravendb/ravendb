@@ -30,8 +30,11 @@ namespace Raven.Database.FileSystem.Storage
         protected string backupDestinationDirectory;
         protected bool incrementalBackup;
         protected readonly FileSystemDocument filesystemDocument;
+        protected readonly ResourceBackupState state;
+        protected readonly CancellationToken token;
 
-        protected BaseBackupOperation(RavenFileSystem filesystem, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument filesystemDocument)
+        protected BaseBackupOperation(RavenFileSystem filesystem, string backupSourceDirectory, string backupDestinationDirectory, bool incrementalBackup, 
+            FileSystemDocument filesystemDocument, ResourceBackupState state, CancellationToken token)
         {
             if (filesystem == null) throw new ArgumentNullException("filesystem");
             if (filesystemDocument == null) throw new ArgumentNullException("filesystemDocument");
@@ -43,14 +46,17 @@ namespace Raven.Database.FileSystem.Storage
             this.backupDestinationDirectory = backupDestinationDirectory.ToFullPath();
             this.incrementalBackup = incrementalBackup;
             this.filesystemDocument = filesystemDocument;
+            this.state = state;
+            this.token = token;
         }
 
         protected abstract bool BackupAlreadyExists { get; }
 
         protected abstract void ExecuteBackup(string backupPath, bool isIncrementalBackup);
 
-        protected virtual void OperationFinished()
+        protected virtual void OperationFinishedSuccessfully()
         {
+            state.MarkCompleted();
         }
 
         public void Execute()
@@ -115,19 +121,19 @@ namespace Raven.Database.FileSystem.Storage
                 if (filesystemDocument != null)
                     File.WriteAllText(Path.Combine(backupDestinationDirectory, Constants.FilesystemDocumentFilename), RavenJObject.FromObject(filesystemDocument).ToString());
 
-                OperationFinished();
+                OperationFinishedSuccessfully();
 
             }
             catch (AggregateException e)
             {
                 var ne = e.ExtractSingleInnerException();
-                log.ErrorException("Failed to complete backup", ne);
-                UpdateBackupStatus("Failed to complete backup because: " + ne.Message, ne.ExceptionToString(null), BackupStatus.BackupMessageSeverity.Error);
+                UpdateBackupStatus("Failed to complete backup because: " + ne.Message, ne, BackupStatus.BackupMessageSeverity.Error);
+                state.MarkFaulted("Failed to complete backup because: " + ne.Message, ne);
             }
             catch (Exception e)
             {
-                log.ErrorException("Failed to complete backup", e);
-                UpdateBackupStatus("Failed to complete backup because: " + e.Message, e.ExceptionToString(null), BackupStatus.BackupMessageSeverity.Error);
+                UpdateBackupStatus("Failed to complete backup because: " + e.Message, e, BackupStatus.BackupMessageSeverity.Error);
+                state.MarkFaulted("Failed to complete backup because: " + e.Message, e);
             }
             finally
             {
@@ -230,11 +236,19 @@ namespace Raven.Database.FileSystem.Storage
             }
         }
 
-        protected void UpdateBackupStatus(string newMsg, string details, BackupStatus.BackupMessageSeverity severity)
+        protected void UpdateBackupStatus(string newMsg, Exception exception, BackupStatus.BackupMessageSeverity severity)
         {
             try
             {
-                log.Info(newMsg);
+                if (exception != null)
+                {
+                    log.WarnException(newMsg, exception);
+                }
+                else
+                {
+                    log.Info(newMsg);
+                }
+                
                 var backupStatus = GetBackupStatus();
                 if (backupStatus == null)
                     return;
@@ -244,9 +258,10 @@ namespace Raven.Database.FileSystem.Storage
                     Message = newMsg,
                     Timestamp = SystemTime.UtcNow,
                     Severity = severity,
-                    Details = details
+                    Details = exception?.ExceptionToString(null)
                 });
                 SetBackupStatus(backupStatus);
+                state.MarkProgress(newMsg);
             }
             catch (Exception e)
             {

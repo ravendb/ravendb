@@ -1,6 +1,7 @@
 using Raven.Abstractions.Data;
 using System;
 using System.IO;
+using System.Threading;
 using Voron;
 using Voron.Impl.Backup;
 
@@ -12,8 +13,8 @@ namespace Raven.Database.Storage.Voron.Backup
 
         public BackupOperation(DocumentDatabase database, string backupSourceDirectory,
                                string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup,
-                               DatabaseDocument databaseDocument)
-            : base(database, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, databaseDocument)
+                               DatabaseDocument databaseDocument, ResourceBackupState state, CancellationToken cancellationToken)
+            : base(database, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, databaseDocument, state, cancellationToken)
         {
             if (env == null) throw new ArgumentNullException("env");
 
@@ -47,3 +48,4 @@ namespace Raven.Database.Storage.Voron.Backup
         }
     }
 }
+

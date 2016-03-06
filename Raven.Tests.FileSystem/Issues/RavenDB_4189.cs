@@ -30,9 +30,9 @@ namespace Raven.Tests.FileSystem.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncFilesCommands.Admin.StartBackup(backupLocation,
+                var opId = await store.AsyncFilesCommands.Admin.StartBackup(backupLocation,
                     null, false, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                await WaitForOperationAsync(store.Url, opId);
 
                 FileSystemDocument document;
                 using (var file = File.OpenText(Path.Combine(backupLocation, Constants.FilesystemDocumentFilename)))
@@ -73,9 +73,9 @@ namespace Raven.Tests.FileSystem.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncFilesCommands.Admin.StartBackup(backupLocation,
+                var opId = await store.AsyncFilesCommands.Admin.StartBackup(backupLocation,
                     null, false, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                await WaitForOperationAsync(store.Url, opId);
 
                 FileSystemDocument document;
                 using (var file = File.OpenText(Path.Combine(backupLocation, Constants.FilesystemDocumentFilename)))
