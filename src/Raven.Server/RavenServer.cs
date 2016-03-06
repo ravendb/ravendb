@@ -8,6 +8,7 @@ using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server
 {
@@ -29,7 +30,7 @@ namespace Raven.Server
                 throw new InvalidOperationException("Configuration must be initialized");
 
             ServerStore = new ServerStore(Configuration);
-            Metrics = new MetricsCountersManager();
+            Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
         }
 
         public void Initialize()
@@ -90,6 +91,7 @@ namespace Raven.Server
 
         public void Dispose()
         {
+            Metrics.Dispose();
             _application?.Dispose();
             ServerStore?.Dispose();
         }

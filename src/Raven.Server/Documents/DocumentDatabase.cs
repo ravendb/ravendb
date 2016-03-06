@@ -3,7 +3,7 @@ using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
-
+using Raven.Server.Utils.Metrics;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -12,7 +12,7 @@ namespace Raven.Server.Documents
     {
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
-        public DocumentDatabase(string name, RavenConfiguration configuration)
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler=null)
         {
             Name = name;
             Configuration = configuration;
@@ -20,7 +20,8 @@ namespace Raven.Server.Documents
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
-            Metrics = new MetricsCountersManager();
+            
+            Metrics = new MetricsCountersManager(metricsScheduler??new MetricsScheduler());
         }
 
         public string Name { get; }

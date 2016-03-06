@@ -99,7 +99,7 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.DatabaseName, config);
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler);
                 documentDatabase.Initialize();
 
                 if (Log.IsInfoEnabled)

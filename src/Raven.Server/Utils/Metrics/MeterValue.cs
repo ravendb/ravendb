@@ -1,9 +1,9 @@
-﻿namespace Metrics.MetricData
+﻿namespace Raven.Server.Utils.Metrics
 {
     /// <summary>
     /// The value reported by a Meter Tickable
     /// </summary>
-    public class MeterValue
+    public struct MeterValue
     {
         public readonly long Count;
         public readonly double MeanRate;
@@ -21,12 +21,6 @@
             this.FiveMinuteRate = fiveMinuteRate;
             this.FifteenMinuteRate = fifteenMinuteRate;
             this.Name = name;
-        }
-
-
-        public void Dispose()
-        {
-            
         }
     }
 }

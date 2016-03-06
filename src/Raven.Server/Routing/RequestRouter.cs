@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Metrics.Utils;
 using Microsoft.AspNet.Http;
 using NetTopologySuite.Noding;
 using Raven.Database.Util;
@@ -65,7 +64,6 @@ namespace Raven.Server.Routing
                 return;
             }
             await handler(reqCtx);
-            metricsCountersManager.RequestDuationMetric.Update((Environment.TickCount - sp)/1000);
             Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
 
         }
