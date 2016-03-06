@@ -18,8 +18,10 @@ namespace Raven.Server.ServerWide
             InnerTransaction.Commit();
         }
 
+        public bool Disposed;
         public virtual void Dispose()
         {
+            Disposed = true;
             InnerTransaction?.Dispose();
         }
     }

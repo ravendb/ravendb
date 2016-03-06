@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
 
@@ -16,13 +17,18 @@ namespace FastTests.Server.Queries
         [Fact]
         public void SpecifyingInvalidParametersWillResultInException()
         {
-            var fields = new[] { new AutoIndexField("test", SortOptions.String, false) };
+            var fields = new[] { new IndexField
+            {
+                Name = "test",
+                Highlighted = false,
+                Storage = FieldStorage.No
+            } };
 
             Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition(null, null));
             Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition("test", null));
             Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition(null, fields));
 
-            Assert.Throws<ArgumentException>(() => new AutoIndexDefinition("test", new AutoIndexField[0]));
+            Assert.Throws<ArgumentException>(() => new AutoIndexDefinition("test", new IndexField[0]));
 
             new AutoIndexDefinition("test", fields);
         }

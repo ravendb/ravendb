@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -46,7 +45,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected DocumentDatabase DocumentDatabase;
 
-        private Task _indexingTask;
+        private Thread _indexingThread;
 
         private bool _initialized;
 
@@ -54,11 +53,11 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironment _environment;
 
-        private TransactionContextPool _contextPool;
+        protected TransactionContextPool _contextPool;
 
         private bool _disposed;
 
-        private readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
+        protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -92,7 +91,7 @@ namespace Raven.Server.Documents.Indexes
                     switch (type)
                     {
                         case IndexType.Auto:
-                            return AutoIndex.Open(indexId, environment, documentDatabase);
+                            return AutoMapIndex.Open(indexId, environment, documentDatabase);
                         default:
                             throw new NotImplementedException();
                     }
@@ -188,7 +187,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Execute(CancellationToken cancellationToken)
+        public void Execute()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -198,10 +197,16 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_locker)
             {
-                if (_indexingTask != null)
+                if (_indexingThread != null)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' is executing.");
 
-                _indexingTask = Task.Factory.StartNew(() => ExecuteIndexing(cancellationToken), TaskCreationOptions.LongRunning);
+                _indexingThread = new Thread(ExecuteIndexing)
+                {
+                    Name = "Indexing of " + Name,
+                    IsBackground = true
+                };
+
+                _indexingThread.Start();
             }
         }
 
@@ -216,8 +221,8 @@ namespace Raven.Server.Documents.Indexes
 
                 _cancellationTokenSource.Cancel();
 
-                _indexingTask?.Wait();
-                _indexingTask = null;
+                _indexingThread?.Join();
+                _indexingThread = null;
 
                 _environment?.Dispose();
                 _environment = null;
@@ -232,7 +237,30 @@ namespace Raven.Server.Documents.Indexes
 
         protected HashSet<string> Collections;
 
-        protected abstract bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext);
+        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        {
+            using (databaseContext.OpenReadTransaction())
+            using (indexContext.OpenReadTransaction())
+            {
+                foreach (var collection in Collections)
+                {
+                    var lastCollectionEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                    var lastProcessedCollectionEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+
+                    if (lastCollectionEtag > lastProcessedCollectionEtag)
+                        return true;
+
+                    var lastCollectionTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
+                    var lastProcessedCollectionTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
+
+                    if (lastCollectionTombstoneEtag > lastProcessedCollectionTombstoneEtag)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
 
         /// <summary>
         /// This should only be used for testing purposes.
@@ -297,12 +325,12 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        private static void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
+        protected static void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
             WriteLastEtag(tx, EtagsTombstone, collection, etag);
         }
 
-        private static void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
+        protected static void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
         {
             WriteLastEtag(tx, EtagsMap, collection, etag);
         }
@@ -313,9 +341,9 @@ namespace Raven.Server.Documents.Indexes
             statsTree.Add(collection, new Slice((byte*)&etag, sizeof(long)));
         }
 
-        private void ExecuteIndexing(CancellationToken cancellationToken)
+        protected void ExecuteIndexing()
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown, _cancellationTokenSource.Token))
             {
                 try
                 {
@@ -329,8 +357,7 @@ namespace Raven.Server.Documents.Indexes
 
                             cts.Token.ThrowIfCancellationRequested();
 
-                            ExecuteCleanup(cts.Token);
-                            ExecuteMap(cts.Token);
+                            DoIndexingWork(cts.Token);
 
                             _mre.Wait(cts.Token);
                         }
@@ -359,71 +386,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void ExecuteCleanup(CancellationToken token)
-        {
-            DocumentsOperationContext databaseContext;
-            TransactionOperationContext indexContext;
+        public abstract void DoIndexingWork(CancellationToken cancellationToken);
 
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-            using (_contextPool.AllocateOperationContext(out indexContext))
-            {
-                var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
-                foreach (var collection in Collections)
-                {
-                    long lastMappedEtag;
-                    long lastTombstoneEtag;
-                    using (indexContext.OpenReadTransaction())
-                    {
-                        lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
-                        lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
-                    }
-
-                    var lastEtag = lastTombstoneEtag;
-                    var count = 0;
-
-                    using (var indexActions = IndexPersistance.Write())
-                    {
-                        using (databaseContext.OpenReadTransaction())
-                        {
-                            var sw = Stopwatch.StartNew();
-                            foreach (var tombstone in DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
-                            {
-                                token.ThrowIfCancellationRequested();
-
-                                count++;
-                                lastEtag = tombstone.Etag;
-
-                                if (tombstone.DeletedEtag > lastMappedEtag)
-                                    continue; // no-op, we have not yet indexed this document
-
-                                indexActions.Delete(tombstone.Key);
-
-                                if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (count == 0)
-                        return;
-
-                    if (lastEtag <= lastTombstoneEtag)
-                        return;
-
-                    using (var tx = indexContext.OpenWriteTransaction())
-                    {
-                        WriteLastTombstoneEtag(tx, collection, lastEtag);
-
-                        tx.Commit();
-                    }
-
-                    _mre.Set(); // might be more
-                }
-            }
-        }
 
         private void HandleDocumentChange(DocumentChangeNotification notification)
         {
@@ -433,80 +398,7 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-        private void ExecuteMap(CancellationToken cancellationToken)
-        {
-            DocumentsOperationContext databaseContext;
-            TransactionOperationContext indexContext;
-
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-            using (_contextPool.AllocateOperationContext(out indexContext))
-            {
-                if (IsStale(databaseContext, indexContext) == false)
-                    return;
-
-                var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
-
-                foreach (var collection in Collections)
-                {
-                    long lastMappedEtag;
-                    using (indexContext.OpenReadTransaction())
-                    {
-                        lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
-                    }
-
-                    var lastEtag = lastMappedEtag;
-                    var count = 0;
-
-                    using (var indexActions = IndexPersistance.Write())
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        using (databaseContext.OpenReadTransaction())
-                        {
-                            var sw = Stopwatch.StartNew();
-                            foreach (var document in DocumentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-
-                                count++;
-                                lastEtag = document.Etag;
-
-                                try
-                                {
-                                    indexActions.Write(document);
-                                }
-                                catch (Exception e)
-                                {
-                                    // TODO [ppekrol] log?
-                                    continue;
-                                }
-
-                                if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (count == 0)
-                        return;
-
-                    if (lastEtag <= lastMappedEtag)
-                        return;
-
-                    using (var tx = indexContext.OpenWriteTransaction())
-                    {
-                        WriteLastMappedEtag(tx, collection, lastEtag);
-
-                        tx.Commit();
-                    }
-
-                    _mre.Set(); // might be more
-                }
-            }
-        }
-
+       
         public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext context, CancellationToken token)
         {
             if (_disposed)

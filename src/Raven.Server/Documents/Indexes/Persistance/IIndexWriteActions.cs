@@ -4,7 +4,7 @@ namespace Raven.Server.Documents.Indexes.Persistance
 {
     public interface IIndexWriteActions : IDisposable
     {
-        void Write(Document document);
+        void IndexDocument(Document document);
 
         void Delete(string key);
     }

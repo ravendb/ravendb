@@ -11,29 +11,21 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
-        private readonly AutoIndexField[] _fields;
-        private readonly Dictionary<string, AutoIndexField> _fieldsByName;
+        private readonly Dictionary<string, IndexField> _fieldsByName;
 
-        public AutoIndexDefinition(string collection, AutoIndexField[] fields)
-            : base(FindIndexName(collection, fields), new[] { collection })
+        public AutoIndexDefinition(string collection, IndexField[] fields)
+            : base(FindIndexName(collection, fields), new[] { collection },fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
 
-            if (fields == null)
-                throw new ArgumentNullException(nameof(fields));
-
             if (fields.Length == 0)
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
 
-            _fields = fields;
-
-            _fieldsByName = _fields.ToDictionary(x => x.Name, x => x);
+            _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x);
         }
 
-        public int CountOfMapFields => _fields.Length;
-
-        public override IndexField[] MapFields => _fields; // TODO arek
+        public int CountOfMapFields => MapFields.Length;
 
         public bool ContainsField(string field)
         {
@@ -43,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return _fieldsByName.ContainsKey(field);
         }
 
-        public AutoIndexField GetField(string field)
+        public IndexField GetField(string field)
         {
             if (field.EndsWith("_Range"))
                 field = field.Substring(0, field.Length - 6);
@@ -51,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return _fieldsByName[field];
         }
 
-        private static string FindIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
+        private static string FindIndexName(string collection, IReadOnlyCollection<IndexField> fields)
         {
             var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
@@ -89,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var field in _fields)
+                foreach (var field in MapFields)
                 {
                     if (first == false)
                         writer.WriteComma();
@@ -142,21 +134,28 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                     reader.TryGet(nameof(MapFields), out jsonArray);
 
-                    var fields = new AutoIndexField[jsonArray.Length];
+                    var fields = new IndexField[jsonArray.Length];
                     for (var i = 0; i < jsonArray.Length; i++)
                     {
                         var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
                         string name;
-                        json.TryGet(nameof(AutoIndexField.Name), out name);
+                        json.TryGet(nameof(IndexField.Name), out name);
 
                         bool highlighted;
-                        json.TryGet(nameof(AutoIndexField.Highlighted), out highlighted);
+                        json.TryGet(nameof(IndexField.Highlighted), out highlighted);
 
                         int sortOptionAsInt;
-                        json.TryGet(nameof(AutoIndexField.SortOption), out sortOptionAsInt);
+                        json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
 
-                        var field = new AutoIndexField(name, (SortOptions)sortOptionAsInt, highlighted);
+                        var field = new IndexField
+                        {
+                            Name = name,
+                            Highlighted = highlighted,
+                            Storage = FieldStorage.No,
+                            SortOption = (SortOptions?)sortOptionAsInt,
+                            Indexing = FieldIndexing.Default
+                        };
 
                         fields[i] = field;
                     }
