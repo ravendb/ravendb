@@ -358,7 +358,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
         /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, CancellationToken token = default(CancellationToken));
+        Task<RavenJObject> PatchAsync(string key, PatchRequest patch, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Sends a patch request for a specific document, ignoring the document's Etag
@@ -370,7 +370,7 @@ namespace Raven.Client.Connection.Async
         ///     DocumentDoesNotExistException
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, bool ignoreMissing, CancellationToken token = default(CancellationToken));
+        Task<RavenJObject> PatchAsync(string key, PatchRequest patch, bool ignoreMissing, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Sends a patch request for a specific document
@@ -379,7 +379,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="patch">The patch request to use (using JavaScript)</param>
         /// <param name="etag">Require specific long? [null to ignore]</param>
         /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, long? etag, CancellationToken token = default(CancellationToken));
+        Task<RavenJObject> PatchAsync(string key, PatchRequest patch, long? etag, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Sends a patch request for a specific document which may or may not currently exist
@@ -391,7 +391,7 @@ namespace Raven.Client.Connection.Async
         ///     missing
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, CancellationToken token = default(CancellationToken));
+        Task<RavenJObject> PatchAsync(string key, PatchRequest patchExisting, PatchRequest patchDefault, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Puts the document in the database with the specified key.
@@ -581,7 +581,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="patch">JavaScript patch that will be executed on query results</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
         /// <param name="token">The cancellation token.</param>
-        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Get the full URL for the given document key

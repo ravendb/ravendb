@@ -12,17 +12,17 @@ namespace Raven.Abstractions.Commands
     ///<summary>
     /// A single batch operation for a document EVAL (using a Javascript)
     ///</summary>
-    public class ScriptedPatchCommandData : ICommandData
+    public class PatchCommandData : ICommandData
     {
         /// <summary>
         /// ScriptedPatchRequest (using JavaScript) that is used to patch the document
         /// </summary>
-        public ScriptedPatchRequest Patch { get; set; }
+        public PatchRequest Patch { get; set; }
 
         /// <summary>
         /// ScriptedPatchRequest (using JavaScript) that is used to patch a default document if the document is missing
         /// </summary>
-        public ScriptedPatchRequest PatchIfMissing { get; set; }
+        public PatchRequest PatchIfMissing { get; set; }
 
         /// <summary>
         /// Key of a document to patch.

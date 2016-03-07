@@ -357,7 +357,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, options));
         }
 
-        public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch,
+        public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest patch,
             BulkOperationOptions options = null)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, options));
@@ -433,22 +433,22 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patch)
+        public RavenJObject Patch(string key, PatchRequest patch)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
+        public RavenJObject Patch(string key, PatchRequest patch, bool ignoreMissing)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, ignoreMissing));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patch, long? etag)
+        public RavenJObject Patch(string key, PatchRequest patch, long? etag)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, etag));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault)
+        public RavenJObject Patch(string key, PatchRequest patchExisting, PatchRequest patchDefault)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchExisting, patchDefault));
         }

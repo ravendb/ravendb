@@ -6,7 +6,7 @@ namespace Raven.Client.Data
     /// <summary>
     /// An advanced patch request for a specified document (using JavaScript)
     /// </summary>
-    public class ScriptedPatchRequest
+    public class PatchRequest
     {
         /// <summary>
         /// JavaScript function to use to patch a document
@@ -19,12 +19,12 @@ namespace Raven.Client.Data
         /// </summary>
         public Dictionary<string, object> Values { get; set; }
 
-        public ScriptedPatchRequest()
+        public PatchRequest()
         {
             Values = new Dictionary<string, object>();
         }
 
-        protected bool Equals(ScriptedPatchRequest other)
+        protected bool Equals(PatchRequest other)
         {
             if(other == null)
                 return false;
@@ -35,7 +35,7 @@ namespace Raven.Client.Data
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return Equals(obj as ScriptedPatchRequest);
+            return Equals(obj as PatchRequest);
         }
 
         public override int GetHashCode()
