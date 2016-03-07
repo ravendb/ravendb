@@ -7,12 +7,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
+using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
@@ -22,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BulkInsertHandler : DatabaseRequestHandler
     {
-        private readonly BlockingCollection<BlittableJsonReaderObject> _docs;
+        private readonly BlockingCollection<BlittableJsonReaderObject> _docs;		
 
         public enum ResponseMessageType
         {
@@ -46,10 +50,27 @@ namespace Raven.Server.Documents.Handlers
                     while (_docs.IsCompleted == false)
                     {
                         buffer.Clear();
-                        var doc = _docs.Take(Database.DatabaseShutdown);
-                        buffer.Add(doc);
-                        while (_docs.TryTake(out doc))
+                        BlittableJsonReaderObject doc;
+                        try
                         {
+                            doc = _docs.Take(Database.DatabaseShutdown);
+                        }
+                        catch (InvalidOperationException) // adding completed
+                        {
+                            break;
+                        }
+                        buffer.Add(doc);
+                        while (true)
+                        {
+                            try
+                            {
+                                if (_docs.TryTake(out doc) == false)
+                                    break;
+                            }
+                            catch (InvalidOperationException)//adding completed
+                            {
+                                break;// need to still process the current buffer
+                            }
                             buffer.Add(doc);
                         }
 
@@ -84,7 +105,6 @@ namespace Raven.Server.Documents.Handlers
         public async Task BulkInsert()
         {
             DocumentsOperationContext context;
-            var hasAlreadyThrown = false;
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             using (ContextPool.AllocateOperationContext(out context))
             {
@@ -93,11 +113,12 @@ namespace Raven.Server.Documents.Handlers
                 var task = Task.Factory.StartNew(InsertDocuments);
                 try
                 {
+                    int count = 0;
+                    var sp = Stopwatch.StartNew();
                     const string bulkInsertDebugTag = "bulk/insert";
                     using (var parser = new UnmanagedJsonParser(context, state, bulkInsertDebugTag))
                     {
                         var result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-                        await SendResponse(webSocket, ResponseMessageType.Ok);
                         parser.SetBuffer(new ArraySegment<byte>(buffer.Array, buffer.Offset,
                             result.Count));
 
@@ -108,78 +129,57 @@ namespace Raven.Server.Documents.Handlers
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk,
                                 bulkInsertDocumentDebugTag,
                                 parser, state);
-
                             doc.ReadObject();
                             while (doc.Read() == false) //received partial document
                             {
+                                if(webSocket.State != WebSocketState.Open)
+                                    break;
                                 result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-                                await SendResponse(webSocket, ResponseMessageType.Ok);
                                 parser.SetBuffer(new ArraySegment<byte>(buffer.Array, buffer.Offset,
                                     result.Count));
                             }
-                            doc.FinalizeDocument();
 
-                            var reader = doc.CreateReader();
-                            try
+                            if (webSocket.State == WebSocketState.Open)
                             {
-                                _docs.Add(reader);
-                            }
-                            catch (InvalidOperationException)
-                            {
-                                // error in actual insert, abort
-                                // actual handling is done below
-                                break;
+                                doc.FinalizeDocument();
+                                count++;
+                                var reader = doc.CreateReader();
+                                try
+                                {
+                                    _docs.Add(reader);
+                                }
+                                catch (InvalidOperationException)
+                                {
+                                    // error in actual insert, abort
+                                    // actual handling is done below
+                                    break;
+                                }
                             }
                             if (result.EndOfMessage)
                                 break;
                         }
                         _docs.CompleteAdding();
                     }
+                    await task;
+                    var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
+                    Log.Debug(msg);
+                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg, CancellationToken.None);
                 }
                 catch (Exception e)
                 {
                     _docs.CompleteAdding();
-                    await SendResponse(webSocket, ResponseMessageType.Error);
-                    hasAlreadyThrown = true;
-                    //TODO : add logging
-                    throw;
-                }
-                finally
-                {
-                    const string bulkinsertFinishedMessage = "BulkInsert Finished";
-                    await task;
-                    if(task.IsFaulted && !hasAlreadyThrown)
-                        await SendResponse(webSocket, ResponseMessageType.Error);
-                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, bulkinsertFinishedMessage, CancellationToken.None);
+                    try
+                    {
+                        await webSocket.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
+                            e.ToString(), Database.DatabaseShutdown);
+                    }
+                    catch (Exception)
+                    {
+                        // nothing to do further
+                    }
+                    Log.ErrorException("Failure in bulk insert",e);
                 }
             }
-        }
-
-        private static readonly ArraySegment<byte> _okResponse = new ArraySegment<byte>(new byte[] { 0 });
-        private static readonly ArraySegment<byte> _errorResponse = new ArraySegment<byte>(new byte[] { 1 });
-
-        private Task SendResponse(WebSocket webSocket, ResponseMessageType messageType)
-        {
-            return webSocket.SendAsync(
-                messageType == ResponseMessageType.Ok ? 
-                    _okResponse : _errorResponse, 
-                WebSocketMessageType.Binary, true,
-                Database.DatabaseShutdown);
-        }
-
-        public class BulkInsertStatus //TODO: implements operations state : IOperationState
-        {
-            public int Documents { get; set; }
-            public bool Completed { get; set; }
-
-            public bool Faulted { get; set; }
-
-            //TODO: report state
-            //public RavenJToken State { get; set; }
-
-            public bool IsTimedOut { get; set; }
-
-            public bool IsSerializationError { get; set; }
         }
     }
 }
