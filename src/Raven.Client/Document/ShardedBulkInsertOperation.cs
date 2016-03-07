@@ -15,7 +15,6 @@ namespace Raven.Client.Document
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
         private readonly ShardedDocumentStore shardedDocumentStore;
         private readonly IDictionary<string, IDocumentStore> shards;
-        private readonly BulkInsertOptions options;
         private readonly IShardResolutionStrategy shardResolutionStrategy;
         private readonly ShardStrategy shardStrategy;
         private readonly string database;
@@ -24,22 +23,16 @@ namespace Raven.Client.Document
         private IDictionary<string, BulkInsertOperation> Bulks { get; set; }
         private IAsyncDatabaseCommands DatabaseCommands { get; set; }
 
-        public ShardedBulkInsertOperation(string database, ShardedDocumentStore shardedDocumentStore, BulkInsertOptions options)
+        public ShardedBulkInsertOperation(string database, ShardedDocumentStore shardedDocumentStore)
         {
             this.database = database;
             this.shardedDocumentStore = shardedDocumentStore;
-            this.options = options;
             shards = shardedDocumentStore.ShardStrategy.Shards;
             Bulks = new Dictionary<string, BulkInsertOperation>();
             generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(shardedDocumentStore.Conventions,
                 entity => AsyncHelpers.RunSync(() => shardedDocumentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));
             shardResolutionStrategy = shardedDocumentStore.ShardStrategy.ShardResolutionStrategy;
             shardStrategy = this.shardedDocumentStore.ShardStrategy;
-        }
-
-        public bool IsAborted
-        {
-            get { return Bulks.Select(bulk => bulk.Value).Any(bulkOperation => bulkOperation.IsAborted); }
         }
 
         public void Abort()
@@ -58,7 +51,7 @@ namespace Raven.Client.Document
             if (Bulks.TryGetValue(shardId, out bulkInsertOperation) == false)
             {
                 var actualDatabaseName = database ?? ((DocumentStore)shard).DefaultDatabase ?? MultiDatabase.GetDatabaseName(shard.Url);
-                bulkInsertOperation = new BulkInsertOperation(actualDatabaseName, shard, shard.Listeners, options, shard.Changes());
+                bulkInsertOperation = new BulkInsertOperation(actualDatabaseName, shard, shard.Listeners);
                 Bulks.Add(shardId, bulkInsertOperation);
             }
 

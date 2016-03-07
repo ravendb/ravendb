@@ -32,7 +32,7 @@ using System.Text;
 namespace Raven.Client.Document
 {
     //TODO: delete this
-//    public class RemoteBulkInsertOperation : IBulkInsertOperation, IObserver<BulkInsertChangeNotification>
+//    public class RemoteBulkInsertOperation : WebSocketBulkInsertOperation, IObserver<BulkInsertChangeNotification>
 //    {
 //        private readonly BulkInsertOptions options;
 //        private readonly Task<int> previousTask;

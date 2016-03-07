@@ -296,10 +296,10 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetLicenseStatusAsync());
         }
 
-        public IBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+        public WebSocketBulkInsertOperation GetBulkInsertOperation()
         {			
 
-            return asyncServerClient.GetBulkInsertOperation(options, changes);
+            return asyncServerClient.GetBulkInsertOperation();
         }
 
         public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)

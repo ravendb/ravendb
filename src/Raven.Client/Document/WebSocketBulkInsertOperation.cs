@@ -4,38 +4,26 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
-using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
 {
-    public class WebSocketBulkInsertOperation : IBulkInsertOperation
+    public class WebSocketBulkInsertOperation 
     {
-        private readonly BulkInsertOptions options;
-        private readonly IDatabaseChanges changes;
         private readonly CancellationTokenSource cts;
         private ClientWebSocket connection;
         private readonly Task socketConnectionTask;
         private readonly MemoryStream buffer = new MemoryStream();
         private readonly string url;
-
         private readonly Task getServerResponseTask;
 
-        public Guid OperationId { get; }
-        public bool IsAborted { get; }
 
-        public WebSocketBulkInsertOperation(BulkInsertOptions options,
-            AsyncServerClient asyncServerClient,
-            IDatabaseChanges changes, CancellationTokenSource cts)
+        public WebSocketBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
-            this.options = options;
-            this.changes = changes;
             this.cts = cts ?? new CancellationTokenSource();
             connection = new ClientWebSocket();
             url = asyncServerClient.Url;

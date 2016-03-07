@@ -11,19 +11,15 @@ namespace Raven.Client.Document
 {
     public class BulkInsertOperation : IDisposable
     {
-        public Guid OperationId => Operation.OperationId;
-
         private readonly IDocumentStore documentStore;
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-        protected IBulkInsertOperation Operation { get; set; }
+        protected WebSocketBulkInsertOperation Operation { get; set; }
         public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
         private readonly EntityToJson entityToJson;
 
         public delegate void BeforeEntityInsert(string id, RavenJObject data, RavenJObject metadata);
 
         public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
-
-        public bool IsAborted => Operation.IsAborted;
 
         public void Abort()
         {
@@ -36,7 +32,7 @@ namespace Raven.Client.Document
             remove { Operation.Report -= value; }
         }
 
-        public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners, BulkInsertOptions options, IDatabaseChanges changes)
+        public BulkInsertOperation(string database, IDocumentStore documentStore, DocumentSessionListeners listeners)
         {
             this.documentStore = documentStore;
 
@@ -51,13 +47,13 @@ namespace Raven.Client.Document
                 AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));
 
             // ReSharper disable once VirtualMemberCallInContructor
-            Operation = GetBulkInsertOperation(options, DatabaseCommands, changes);
+            Operation = GetBulkInsertOperation(DatabaseCommands);
             entityToJson = new EntityToJson(documentStore, listeners);
         }
 
-        protected virtual IBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
+        protected virtual WebSocketBulkInsertOperation GetBulkInsertOperation(IAsyncDatabaseCommands commands)
         {			
-            return commands.GetBulkInsertOperation(options, changes);
+            return commands.GetBulkInsertOperation();
         }
 
         public async Task DisposeAsync()
@@ -79,9 +75,6 @@ namespace Raven.Client.Document
 
         public async Task StoreAsync(object entity, string id)
         {
-            if(Operation.IsAborted)
-                throw new InvalidOperationException("Bulk insert has been aborted or the operation was timed out");
-
             var metadata = new RavenJObject();
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)

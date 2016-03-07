@@ -2033,9 +2033,9 @@ namespace Raven.Client.Connection.Async
             return Url + "/document?id=" + documentKey;
         }
 
-        public IBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes, CancellationTokenSource cts = default(CancellationTokenSource))
+        public WebSocketBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource))
         {
-            return new WebSocketBulkInsertOperation(options, this, changes, cts);
+            return new WebSocketBulkInsertOperation(this, cts);
         }
 
         private async Task<JsonDocumentMetadata> DirectHeadAsync(OperationMetadata operationMetadata, string key, CancellationToken token = default(CancellationToken))
