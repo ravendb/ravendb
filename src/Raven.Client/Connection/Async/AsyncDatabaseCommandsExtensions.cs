@@ -44,17 +44,6 @@ namespace Raven.Client.Connection.Async
                 })
                 .Unwrap();
         }
-
-        /// <summary>
-        /// Sends a patch request for a specific document, ignoring the document's Etag
-        /// </summary>
-        /// <param name="key">Id of the document to patch</param>
-        /// <param name="patches">Array of patch requests</param>
-        /// <param name="commands">The low level database commands interface.</param>
-        public static Task PatchAsync(this IAsyncDatabaseCommands commands, string key, PatchRequest[] patches)
-        {
-            return commands.PatchAsync(key, patches, null);
-        }
     }
 
     public class NameAndCount
