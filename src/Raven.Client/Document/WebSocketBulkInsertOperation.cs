@@ -29,10 +29,10 @@ namespace Raven.Client.Document
 
         public Guid OperationId { get; }
         public bool IsAborted { get; }
-        
+
         public WebSocketBulkInsertOperation(BulkInsertOptions options,
-            AsyncServerClient asyncServerClient, 
-            IDatabaseChanges changes,CancellationTokenSource cts)
+            AsyncServerClient asyncServerClient,
+            IDatabaseChanges changes, CancellationTokenSource cts)
         {
             this.options = options;
             this.changes = changes;
@@ -41,16 +41,14 @@ namespace Raven.Client.Document
             url = asyncServerClient.Url;
 
             var serverUri = new Uri(url);
-            if(!serverUri.Scheme.Equals("http",StringComparison.OrdinalIgnoreCase) &&
+            if (!serverUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
                !serverUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Invalid server url scheme, expected only http or https, but got");
+                throw new InvalidOperationException("Invalid server url scheme, expected only http or https, but got "+ serverUri.Scheme);
 
-            var uriBuilder = new UriBuilder
+            var uriBuilder = new UriBuilder(serverUri)
             {
                 Scheme = serverUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ? "ws" : "wss",
-                Path = $"{serverUri.AbsolutePath}/bulkInsert",
-                Port = serverUri.Port,
-                Host = serverUri.Host				
+                Path = serverUri.AbsolutePath + "/bulkInsert",
             };
 
             socketConnectionTask = connection.ConnectAsync(uriBuilder.Uri, this.cts.Token);
@@ -67,8 +65,15 @@ namespace Raven.Client.Document
                 var msg = $"Received unexpected message from a server (expected only message about closing, and got message of type == {result.MessageType})";
                 ReportProgress(msg);
 
-                await connection.CloseOutputAsync(WebSocketCloseStatus.ProtocolError, "Aborting bulk-insert because receiving unexpected response from server -> protocol violation", cts.Token)
-                                .ConfigureAwait(false);
+                try
+                {
+                    await connection.CloseOutputAsync(WebSocketCloseStatus.ProtocolError, "Aborting bulk-insert because receiving unexpected response from server -> protocol violation", cts.Token)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    //ignoring any errors here
+                }
                 throw new BulkInsertProtocolViolationExeption(msg);
             }
             if (result.CloseStatus == WebSocketCloseStatus.InternalServerError)
@@ -77,25 +82,35 @@ namespace Raven.Client.Document
                 var msg =
                     $"Bulk insert aborted because of server-side exception. Exception information from server : {Environment.NewLine} {exceptionString}";
                 ReportProgress(msg);
-                await connection.CloseOutputAsync(WebSocketCloseStatus.InternalServerError, "Aborting bulk-insert because of server-side exception", cts.Token)
-                                .ConfigureAwait(false);
+                try
+                {
+                    await connection.CloseOutputAsync(WebSocketCloseStatus.InternalServerError, "Aborting bulk-insert because of server-side exception", cts.Token)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception )
+                {
+                    //ignoring any errors here
+                }
                 throw new BulkInsertAbortedExeption(msg);
             }
-            ReportProgress("Connection closed succesfully");
-        }	
+            ReportProgress("Connection closed successfully");
+        }
 
         public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
         {
+            cts.Token.ThrowIfCancellationRequested();
+
             await socketConnectionTask.ConfigureAwait(false);
 
             if (getServerResponseTask.IsFaulted || getServerResponseTask.IsCanceled)
             {
                 await getServerResponseTask;
-                return;
+                return;// we should never actually get here, the await will throw
             }
 
             if (getServerResponseTask.IsCompleted)
             {
+                // we can only get here if we closed the connection
                 throw new ObjectDisposedException(nameof(WebSocketBulkInsertOperation));
             }
 
@@ -121,16 +136,26 @@ namespace Raven.Client.Document
             AsyncHelpers.RunSync(DisposeAsync);
         }
 
-        public async Task<int> DisposeAsync()
+        public async Task DisposeAsync()
         {
+            if (connection == null)
+                return;
+
             try
             {
-                await connection.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Finished bulk-insert", cts.Token)
-                                .ConfigureAwait(false);
-                await getServerResponseTask;
-                connection?.Dispose();
-                return connection == null ? 1 : 0;
-            }	       
+                try
+                {
+                    await connection.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Finished bulk-insert", cts.Token)
+                        .ConfigureAwait(false);
+                    await getServerResponseTask;
+                }
+                catch (Exception )
+                {
+                    // those can throw, but we are shutting down anyway, so no point in 
+                    // doing anything here
+                }
+                connection.Dispose();
+            }
             finally
             {
                 connection = null;
@@ -144,8 +169,8 @@ namespace Raven.Client.Document
             ReportProgress($"Bulk-insert to {url} aborted");
             cts.Cancel();
         }
-        
-        protected virtual void ReportProgress(string msg)
+
+        protected void ReportProgress(string msg)
         {
             Report?.Invoke(msg);
         }

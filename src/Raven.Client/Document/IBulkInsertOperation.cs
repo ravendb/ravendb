@@ -12,7 +12,7 @@ namespace Raven.Client.Document
 
         Task WriteAsync(string id, RavenJObject metadata, RavenJObject data);
 
-        Task<int> DisposeAsync();
+        Task DisposeAsync();
 
         /// <summary>
         ///     Report on the progress of the operation
