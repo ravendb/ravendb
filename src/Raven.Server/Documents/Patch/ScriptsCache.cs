@@ -27,10 +27,10 @@ namespace Raven.Server.Documents.Patch
 
         private class ScriptedPatchRequestAndCustomFunctionsToken
         {
-            private readonly ScriptedPatchRequest request;
+            private readonly PatchRequest request;
             private readonly string customFunctions;
 
-            public ScriptedPatchRequestAndCustomFunctionsToken(ScriptedPatchRequest request, string customFunctions)
+            public ScriptedPatchRequestAndCustomFunctionsToken(PatchRequest request, string customFunctions)
             {
                 this.request = request;
                 this.customFunctions = customFunctions;
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public void CheckinScript(ScriptedPatchRequest request, Engine context, string customFunctions)
+        public void CheckinScript(PatchRequest request, Engine context, string customFunctions)
         {
             CachedResult cacheByCustomFunctions;
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Patch
             });
         }
 
-        public Engine CheckoutScript(Func<ScriptedPatchRequest, Engine> createEngine, ScriptedPatchRequest request, string customFunctions)
+        public Engine CheckoutScript(Func<PatchRequest, Engine> createEngine, PatchRequest request, string customFunctions)
         {
             CachedResult value;
             var patchRequestAndCustomFunctionsTuple = new ScriptedPatchRequestAndCustomFunctionsToken(request, customFunctions);
