@@ -14,6 +14,7 @@ using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data;
 
 namespace Raven.Client.Document
 {

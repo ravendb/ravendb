@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 
 namespace Raven.Client.Document.SessionOperations
 {

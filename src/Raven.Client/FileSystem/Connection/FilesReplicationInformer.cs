@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Data;
 
 namespace Raven.Client.FileSystem.Connection
 {

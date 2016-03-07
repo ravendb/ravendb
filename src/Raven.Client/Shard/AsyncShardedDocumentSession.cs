@@ -19,6 +19,7 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;

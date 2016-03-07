@@ -1,11 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// An advanced patch request for a specified document (using JavaScript)
