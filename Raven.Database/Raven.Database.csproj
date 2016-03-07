@@ -597,6 +597,7 @@
     <Compile Include="TimeSeries\AggregationRange.cs" />
     <Compile Include="TimeSeries\TimeSeriesServer.cs" />
     <Compile Include="TimeSeries\TimeSeriesStorage.cs" />
+    <Compile Include="Util\BindingsHelper.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />

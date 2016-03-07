@@ -459,6 +459,11 @@ interface indexResultsDto<T extends metadataAwareDto> {
     TotalResults: number;
 }
 
+interface documentPreviewDto {
+   Results: documentDto[];
+   TotalResults: number;
+}
+
 interface indexQueryResultsDto extends indexResultsDto<documentDto> {
     Error?: string;
 }
