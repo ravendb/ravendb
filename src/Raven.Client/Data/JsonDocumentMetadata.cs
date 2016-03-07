@@ -1,7 +1,7 @@
 using System;
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// A document representation:

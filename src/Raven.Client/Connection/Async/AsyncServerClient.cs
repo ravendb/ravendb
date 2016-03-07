@@ -41,6 +41,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Data;
 
 
 namespace Raven.Client.Connection.Async

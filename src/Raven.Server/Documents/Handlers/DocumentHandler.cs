@@ -6,9 +6,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
@@ -247,14 +249,65 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/document", "PATCH", "/databases/{databaseName:string}/document?id={documentId:string}")]
-        public async Task Patch()
+        [RavenAction("/databases/*/document", "PATCH", "/databases/{databaseName:string}/document?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
+        public Task Patch()
         {
-            MemoryOperationContext context;
+            var ids = HttpContext.Request.Query["id"];
+            if (ids.Count == 0)
+                throw new ArgumentException("The 'id' query string parameter is mandatory");
+
+            var documentId = ids[0];
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentException("The 'id' query string parameter must have a non empty value");
+
+            var etag = GetLongFromHeaders("If-Match");
+            var isTestOnly = GetBoolValueQueryString("test", false);
+
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                // TODO: We should implement here ScriptedPatchRequest as the EVAL function in v3.5. We retire the v3.0 PATCH method.
+                var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+
+                BlittableJsonReaderObject patchCmd, patchIsMissingCmd;
+                PatchRequest patch, patchIfMissing = null;
+
+                if (request.TryGet("Patch", out patchCmd) == false)
+                    throw new ArgumentException("The 'Patch' field in the body request is mandatory");
+                {
+                    patch = new PatchRequest();
+                    if (patchCmd.TryGet("Script", out patch.Script) == false)
+                        throw new ArgumentException("The 'Script' field in 'Patch' request is mandatory");
+                    request.TryGet("Values", out patch.Values);
             }
+
+                if (request.TryGet("PatchIfMissing", out patchIsMissingCmd))
+                {
+                    patchIfMissing = new PatchRequest();
+                    if (patchCmd.TryGet("Script", out patchIfMissing.Script) == false)
+                        throw new ArgumentException("The 'Script' field in 'PatchIfMissing' request is mandatory");
+                    request.TryGet("Values", out patchIfMissing.Values);
+        }
+
+                var patchResult = Database.Patch.Apply(context, documentId, etag, isTestOnly, patch, patchIfMissing);
+
+                Debug.Assert((patchResult.PatchResult == PatchResult.Patched) == (isTestOnly == false));
+                var result = new DynamicJsonValue
+                {
+                    ["Patched"] = isTestOnly == false,
+                    ["Debug"] = patchResult.ModifiedDocument,
+                };
+                if (isTestOnly)
+                {
+                    result["Document"] = patchResult.OriginalDocument;
+    }
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+            }
+
+
+            return Task.CompletedTask;
         }
     }
 }

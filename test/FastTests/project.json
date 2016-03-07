@@ -9,7 +9,8 @@
   },
   "resource": [
     "**/*.json",
-    "Voron/Bugs/Data/*.txt"
+    "Voron/Bugs/Data/*.txt",
+    "**/*.ravendump"
   ],
 
   "frameworks": {

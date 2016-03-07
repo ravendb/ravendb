@@ -3,12 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-using  Raven.Imports.Newtonsoft.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Data;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// A patch request for a specified document

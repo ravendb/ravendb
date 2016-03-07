@@ -1,4 +1,5 @@
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 
 namespace Raven.Client.Listeners
 {

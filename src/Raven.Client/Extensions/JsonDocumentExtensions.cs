@@ -1,3 +1,5 @@
+using Raven.Client.Data;
+
 namespace Raven.Abstractions.Extensions
 {
     using System.Linq;

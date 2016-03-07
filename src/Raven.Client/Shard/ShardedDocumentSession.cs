@@ -21,6 +21,7 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Json.Linq;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data;
 using Raven.Client.Document.Batches;
 
 namespace Raven.Client.Shard

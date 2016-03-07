@@ -15,6 +15,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;

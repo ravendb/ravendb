@@ -4,9 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.Json.Linq;
+using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 
-namespace Raven.Client.Data
+namespace Raven.Server.Documents.Patch
 {
     /// <summary>
     /// The result of a patch operation
@@ -51,11 +52,13 @@ namespace Raven.Client.Data
         /// <summary>
         /// Patched document.
         /// </summary>
-        public RavenJObject Document { get; set; }
+        public BlittableJsonReaderObject ModifiedDocument { get; set; }
+
+        public BlittableJsonReaderObject OriginalDocument { get; set; }
 
         /// <summary>
         /// Additional debugging information (if requested).
         /// </summary>
-        public RavenJObject DebugActions { get; set; }
+        public DynamicJsonValue DebugActions { get; set; }
     }
 }

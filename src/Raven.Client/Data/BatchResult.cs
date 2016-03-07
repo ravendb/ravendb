@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Raven.Client.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data

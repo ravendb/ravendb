@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Data;
 
 namespace Raven.Client.Connection.Async
 {
