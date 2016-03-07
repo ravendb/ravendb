@@ -475,7 +475,6 @@ more responsive application.
 
             if (noTracking == false)
             {
-                metadata = metadata.FilterHeadersToObject();
                 entitiesAndMetadata[entity] = new DocumentMetadata
                 {
                     OriginalValue = document,
@@ -913,7 +912,7 @@ more responsive application.
                 Document = json,
                 Etag = etag,
                 Key = documentMetadata.Key,
-                Metadata = (RavenJObject)documentMetadata.Metadata.CloneToken(),
+                Metadata = ((RavenJObject)documentMetadata.Metadata.CloneToken()).FilterHeadersToObject(),
             };
         }
 
