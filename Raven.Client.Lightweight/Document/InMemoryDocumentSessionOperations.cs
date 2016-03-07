@@ -475,6 +475,7 @@ more responsive application.
 
             if (noTracking == false)
             {
+                metadata = metadata.FilterHeadersToObject();
                 entitiesAndMetadata[entity] = new DocumentMetadata
                 {
                     OriginalValue = document,

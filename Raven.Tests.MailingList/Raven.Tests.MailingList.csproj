@@ -371,6 +371,7 @@
     <Compile Include="PhilJones\PhilJones.cs" />
     <Compile Include="PhilJones\PhilJones88.cs" />
     <Compile Include="PhilJones\Projections.cs" />
+    <Compile Include="QueryShouldNotAppendMetaData.cs" />
     <Compile Include="RavenArrayQueryInputTests.cs" />
     <Compile Include="RavenDB252.cs" />
     <Compile Include="RavenDB669.cs" />
