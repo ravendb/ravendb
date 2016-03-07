@@ -1361,7 +1361,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "value">The value.</param>
         public void WhereEndsWith(string fieldName, object value)
         {
-            // http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
+            // https://lucene.apache.org/core/2_9_4/queryparsersyntax.html#Wildcard%20Searches
             // You cannot use a * or ? symbol as the first character of a search
 
             // NOTE: doesn't fully match EndsWith semantics
