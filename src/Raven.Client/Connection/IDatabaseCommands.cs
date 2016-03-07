@@ -142,7 +142,7 @@ namespace Raven.Client.Connection
         /// <summary>
         ///     Get the low level bulk insert operation
         /// </summary>
-        ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
+        IBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 
         /// <summary>
         ///     Retrieves multiple documents.

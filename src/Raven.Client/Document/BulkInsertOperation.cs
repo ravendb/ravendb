@@ -11,17 +11,11 @@ namespace Raven.Client.Document
 {
     public class BulkInsertOperation : IDisposable
     {
-        public Guid OperationId
-        {
-            get
-            {
-                return Operation.OperationId;
-            }
-        }
+        public Guid OperationId => Operation.OperationId;
 
         private readonly IDocumentStore documentStore;
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-        protected ILowLevelBulkInsertOperation Operation { get; set; }
+        protected IBulkInsertOperation Operation { get; set; }
         public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
         private readonly EntityToJson entityToJson;
 
@@ -29,10 +23,7 @@ namespace Raven.Client.Document
 
         public event BeforeEntityInsert OnBeforeEntityInsert = delegate { };
 
-        public bool IsAborted
-        {
-            get { return Operation.IsAborted; }
-        }
+        public bool IsAborted => Operation.IsAborted;
 
         public void Abort()
         {
@@ -59,18 +50,19 @@ namespace Raven.Client.Document
             generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, entity =>
                 AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));
 
+            // ReSharper disable once VirtualMemberCallInContructor
             Operation = GetBulkInsertOperation(options, DatabaseCommands, changes);
             entityToJson = new EntityToJson(documentStore, listeners);
         }
 
-        protected virtual ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
-        {
+        protected virtual IBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes)
+        {			
             return commands.GetBulkInsertOperation(options, changes);
         }
 
-        public Task DisposeAsync()
+        public async Task DisposeAsync()
         {
-            return Operation.DisposeAsync();
+            await Operation.DisposeAsync().ConfigureAwait(false);
         }
 
         public void Dispose()
@@ -78,36 +70,27 @@ namespace Raven.Client.Document
             Operation.Dispose();
         }
 
-        public string Store(object entity)
+        public async Task<string> StoreAsync(object entity)
         {
             var id = GetId(entity);
-            Store(entity, id);
+            await StoreAsync(entity, id).ConfigureAwait(false);
             return id;
         }
 
-        public void Store(object entity, string id)
+        public async Task StoreAsync(object entity, string id)
         {
             if(Operation.IsAborted)
                 throw new InvalidOperationException("Bulk insert has been aborted or the operation was timed out");
 
             var metadata = new RavenJObject();
-
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)
                 metadata.Add(Constants.RavenEntityName, tag);
 
             var data = entityToJson.ConvertEntityToJson(id, entity, metadata);
-
             OnBeforeEntityInsert(id, data, metadata);
 
-            Operation.Write(id, metadata, data);
-        }
-
-        public void Store(RavenJObject document, RavenJObject metadata, string id, int? dataSize = null)
-        {
-            OnBeforeEntityInsert(id, document, metadata);
-
-            Operation.Write(id, metadata, document, dataSize);
+            await Operation.WriteAsync(id, metadata, data).ConfigureAwait(false);
         }
 
         private string GetId(object entity)
@@ -116,6 +99,7 @@ namespace Raven.Client.Document
             if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
             {
                 id = generateEntityIdOnTheClient.GenerateDocumentKeyForStorage(entity);
+                generateEntityIdOnTheClient.TrySetIdentity(entity,id); //set Id property if it was null
             }
             return id;
         }
