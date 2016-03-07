@@ -73,7 +73,9 @@ namespace Raven.Server.Documents.Handlers
                             }
                             buffer.Add(doc);
                         }
-
+                        if(Log.IsDebugEnabled)
+                            Log.Debug($"Starting bulk insert batch with {buffer.Count} documents");
+                        var sp = Stopwatch.StartNew();
                         using (var tx = context.OpenWriteTransaction())
                         {
                             foreach (var reader in buffer)
@@ -91,6 +93,9 @@ namespace Raven.Server.Documents.Handlers
                             }
                             tx.Commit();
                         }
+                        if (Log.IsDebugEnabled)
+                            Log.Debug($"Completed bulk insert batch with {buffer.Count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
+
                     }
                 }
             }
@@ -108,6 +113,7 @@ namespace Raven.Server.Documents.Handlers
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             using (ContextPool.AllocateOperationContext(out context))
             {
+                Log.Debug("Starting bulk insert operation");
                 var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
                 var state = new JsonParserState();
                 var task = Task.Factory.StartNew(InsertDocuments);
