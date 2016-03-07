@@ -49,11 +49,9 @@ namespace Raven.Client.Util
 
         internal void Cleanup(object state)
         {
-            foreach (var key in cache.Keys)
+            foreach (var kvp in cache)
             {
-                ConcurrentStack<Tuple<long, HttpClient>> stack;
-                if (cache.TryGetValue(key, out stack) == false)
-                    continue;
+                ConcurrentStack<Tuple<long, HttpClient>> stack = kvp.Value;
 
                 if (stack.Count == 0)
                     continue;
@@ -61,7 +59,11 @@ namespace Raven.Client.Util
                 if (stack.Any(item => IsClientTooOld(item.Item1)) == false)
                     continue;
 
-                var clients = new List<Tuple<long, HttpClient>>();
+                var newStack = new ConcurrentStack<Tuple<long, HttpClient>>();
+                if(cache.TryUpdate(kvp.Key, newStack, stack) == false)
+                    continue;
+
+                var tmpStack = new Stack<Tuple<long, HttpClient>>();
                 Tuple<long, HttpClient> client;
                 while (stack.TryPop(out client))
                 {
@@ -76,11 +78,14 @@ namespace Raven.Client.Util
                         }
                     }
                     else
-                        clients.Insert(0, client);
+                    {
+                        tmpStack.Push(client);
+                    }
                 }
-
-                var s = new ConcurrentStack<Tuple<long, HttpClient>>(clients);
-                cache.AddOrUpdate(key, s, (_, __) => s);
+                while (tmpStack.Count > 0)
+                {
+                    newStack.Push(tmpStack.Pop());
+                }
             }
         }
 
