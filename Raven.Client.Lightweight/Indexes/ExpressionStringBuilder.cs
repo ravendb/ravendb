@@ -212,7 +212,8 @@ namespace Raven.Client.Indexes
 
         private void OutMember(Expression instance, MemberInfo member, Type exprType)
         {
-            var name = GetPropertyName(member.Name, exprType);
+            bool isJsonProperty;
+            var name = GetPropertyName(member.Name, exprType,out isJsonProperty);
             if (TranslateToDocumentId(instance, member, exprType))
             {
                 name = Constants.DocumentIdFieldName;
@@ -224,7 +225,7 @@ namespace Raven.Client.Indexes
                 Visit(instance);
                 if (ShouldParantesisMemberExpression(instance))
                     Out(")");
-                Out("." + name);
+                Out(isJsonProperty?"[\"" + name +"\"]": "." + name);
             }
             else
             {
@@ -296,8 +297,9 @@ namespace Raven.Client.Indexes
 
         }
 
-        private string GetPropertyName(string name, Type exprType)
+        private string GetPropertyName(string name, Type exprType,out bool isJsonProperty)
         {
+            isJsonProperty = false;
             var memberInfo = (MemberInfo)exprType.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly) ??
                 exprType.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
@@ -319,6 +321,7 @@ namespace Raven.Client.Indexes
                     {
                         case "JsonPropertyAttribute":
                             propName = ((dynamic)customAttribute).PropertyName;
+                            isJsonProperty = true;
                             break;
                         case "DataMemberAttribute":
                             propName = ((dynamic)customAttribute).Name;
