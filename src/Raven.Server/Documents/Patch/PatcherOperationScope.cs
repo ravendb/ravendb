@@ -78,27 +78,27 @@ namespace Raven.Server.Documents.Patch
 
         public JsValue ToJsValue(Engine engine, object value, BlittableJsonToken token, string propertyKey = null)
         {
-            switch (token)
-            {
-                case BlittableJsonToken.StartObject:
-                    return ToJsObject(engine, (BlittableJsonReaderObject) value, propertyKey);
-                case BlittableJsonToken.StartArray:
-                    return ToJsArray(engine, (BlittableJsonReaderArray) value, propertyKey);
-                case BlittableJsonToken.Integer:
-                    return new JsValue((long) value);
-                case BlittableJsonToken.Float:
-                    return new JsValue((double) (LazyDoubleValue) value);
-                case BlittableJsonToken.String:
-                    return new JsValue(((LazyStringValue) value).ToString());
-                case BlittableJsonToken.CompressedString:
-                    return new JsValue(((LazyCompressedStringValue) value).ToString());
-                case BlittableJsonToken.Boolean:
-                    return new JsValue((bool) value);
-                case BlittableJsonToken.Null:
-                    return JsValue.Null;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            // TODO: Fix a bug here with bit comparison
+            if (token.HasFlag(BlittableJsonToken.Null))
+                return JsValue.Null;
+            if (token.HasFlag(BlittableJsonToken.Boolean))
+                return new JsValue((bool)value);
+            
+            if (token.HasFlag(BlittableJsonToken.Integer))
+                return new JsValue((long) value);
+            if (token.HasFlag(BlittableJsonToken.Float))
+                return new JsValue((double) (LazyDoubleValue) value);
+            if (token.HasFlag(BlittableJsonToken.String))
+                return new JsValue(((LazyStringValue) value).ToString());
+            if (token.HasFlag(BlittableJsonToken.CompressedString))
+                return new JsValue(((LazyCompressedStringValue) value).ToString());
+
+            if (token.HasFlag(BlittableJsonToken.StartObject))
+                return ToJsObject(engine, (BlittableJsonReaderObject)value, propertyKey);
+            if ((token & BlittableJsonToken.StartArray) == BlittableJsonToken.StartArray)
+                return ToJsArray(engine, (BlittableJsonReaderArray)value, propertyKey);
+
+            throw new ArgumentOutOfRangeException();
         }
 
         private static string CreatePropertyKey(string key, string property)
