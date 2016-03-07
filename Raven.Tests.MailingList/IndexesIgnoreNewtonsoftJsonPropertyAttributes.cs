@@ -34,6 +34,9 @@ namespace RavenTestConsole.RavenTests
         
             [Raven.Imports.Newtonsoft.Json.JsonProperty("ZipCode")]
             public string Postcode { get; set; }
+
+            [Raven.Imports.Newtonsoft.Json.JsonProperty("~i'm@Ivalid#")]
+            public string InvalidProperty { get; set; }
         }
 
         private class StudentDtos_ByEmailDomain : AbstractIndexCreationTask<StudentDto, StudentDtos_ByEmailDomain.Result>
@@ -42,6 +45,7 @@ namespace RavenTestConsole.RavenTests
             {
                 public string Email { get; set; }
                 public string Postcode { get; set; }
+                public string InvalidProperty { get; set; }
             }
 
             public StudentDtos_ByEmailDomain()
@@ -50,7 +54,8 @@ namespace RavenTestConsole.RavenTests
                                   select new Result
                                   {
                                       Email = studentDto.Email,
-                                      Postcode = studentDto.Postcode
+                                      Postcode = studentDto.Postcode,
+                                      InvalidProperty = studentDto.InvalidProperty
                                   };
             }
         }
@@ -74,12 +79,14 @@ namespace RavenTestConsole.RavenTests
 
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,
-    Postcode = studentDto[""ZipCode""]
+    Postcode = studentDto.ZipCode,
+    InvalidProperty = studentDto[""~i'm@Ivalid#""]
 })", definition.Map);
 
                 Assert.NotEqual(@"docs.StudentDtos.Select(studentDto => new {
-    Email = studentDto[""EmailAddress""],
-    Postcode = studentDto[""ZipCode""]
+    Email = studentDto.EmailAddress,
+    Postcode = studentDto.ZipCode,
+    InvalidProperty = studentDto[""~i'm@Ivalid#""]
 })", definition.Map);
             }
         }
