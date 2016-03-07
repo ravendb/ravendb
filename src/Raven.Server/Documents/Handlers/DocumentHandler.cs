@@ -268,26 +268,22 @@ namespace Raven.Server.Documents.Handlers
                 var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
 
                 BlittableJsonReaderObject patchCmd, patchIsMissingCmd;
-                PatchRequest patch, patchIfMissing = null;
-
                 if (request.TryGet("Patch", out patchCmd) == false)
                     throw new ArgumentException("The 'Patch' field in the body request is mandatory");
-                {
-                    patch = new PatchRequest();
-                    if (patchCmd.TryGet("Script", out patch.Script) == false)
-                        throw new ArgumentException("The 'Script' field in 'Patch' request is mandatory");
-                    request.TryGet("Values", out patch.Values);
-                }
+                var patch = PatchRequest.Parse(patchCmd);
 
+                PatchRequest patchIfMissing = null;
                 if (request.TryGet("PatchIfMissing", out patchIsMissingCmd))
                 {
-                    patchIfMissing = new PatchRequest();
-                    if (patchCmd.TryGet("Script", out patchIfMissing.Script) == false)
-                        throw new ArgumentException("The 'Script' field in 'PatchIfMissing' request is mandatory");
-                    request.TryGet("Values", out patchIfMissing.Values);
+                    patchIfMissing = PatchRequest.Parse(patchCmd);
                 }
 
-                var patchResult = Database.Patch.Apply(context, documentId, etag, isTestOnly, patch, patchIfMissing);
+                PatchResultData patchResult;
+                using (context.OpenWriteTransaction())
+                {
+                    patchResult = Database.Patch.Apply(context, documentId, etag, patch, patchIfMissing, isTestOnly);
+                    context.Transaction.Commit();
+                }
 
                 Debug.Assert((patchResult.PatchResult == PatchResult.Patched) == (isTestOnly == false));
                 var result = new DynamicJsonValue

@@ -46,40 +46,59 @@ namespace Raven.Server.Documents.Patch
             DebugMode = debugMode;
         }
 
-        public JsValue ToJsInstance(Engine engine, object value, string propertyKey = null)
+        public JsValue ToJsArray(Engine engine, BlittableJsonReaderArray json, string propertyKey)
         {
-            if (value == null)
-                return JsValue.Null;
-
-            var str = value as LazyStringValue;
-            if (str != null)
+            var elements = new JsValue[json.Length];
+            for (var i = 0; i < json.Length; i++)
             {
-                return new JsValue(str.ToString());
+                var value = json.GetValueTokenTupleByIndex(i);
+                elements[i] = ToJsValue(engine, value.Item1, value.Item2, propertyKey + "[" + i + "]");
             }
 
-            var obj = value as BlittableJsonReaderObject;
-            if (obj != null)
-            {
-                return ToJsObject(engine, obj, propertyKey);
-            }
-
-            throw new NotImplementedException();
+            var result = engine.Array.Construct(Arguments.Empty);
+            engine.Array.PrototypeObject.Push(result, elements);
+            return result;
         }
 
         public JsValue ToJsObject(Engine engine, BlittableJsonReaderObject json, string propertyName = null)
         {
             var jsObject = engine.Object.Construct(Arguments.Empty);
-            foreach (var name in json.GetPropertyNames())
+            for (int i = 0; i < json.Count; i++)
             {
+                var property = json.GetPropertyByIndex(i);
+                var name = property.Item1.ToString();
                 var propertyKey = CreatePropertyKey(name, propertyName);
-                var value = json[name];
-                var jsValue = ToJsInstance(engine, value, propertyKey);
-
+                var value = property.Item2;
+                JsValue jsValue = ToJsValue(engine, value, property.Item3, propertyKey);
                 _propertiesByValue[propertyKey] = new KeyValuePair<object, JsValue>(value, jsValue);
-
                 jsObject.Put(name, jsValue, true);
             }
             return jsObject;
+        }
+
+        public JsValue ToJsValue(Engine engine, object value, BlittableJsonToken token, string propertyKey = null)
+        {
+            switch (token)
+            {
+                case BlittableJsonToken.StartObject:
+                    return ToJsObject(engine, (BlittableJsonReaderObject) value, propertyKey);
+                case BlittableJsonToken.StartArray:
+                    return ToJsArray(engine, (BlittableJsonReaderArray) value, propertyKey);
+                case BlittableJsonToken.Integer:
+                    return new JsValue((long) value);
+                case BlittableJsonToken.Float:
+                    return new JsValue((double) (LazyDoubleValue) value);
+                case BlittableJsonToken.String:
+                    return new JsValue(((LazyStringValue) value).ToString());
+                case BlittableJsonToken.CompressedString:
+                    return new JsValue(((LazyCompressedStringValue) value).ToString());
+                case BlittableJsonToken.Boolean:
+                    return new JsValue((bool) value);
+                case BlittableJsonToken.Null:
+                    return JsValue.Null;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         private static string CreatePropertyKey(string key, string property)
@@ -149,8 +168,7 @@ namespace Raven.Server.Documents.Patch
                 if (_propertiesByValue.TryGetValue(propertyKey, out property))
                 {
                     var originalValue = property.Key;
-                    if (originalValue is float ||
-                        originalValue is int)
+                    if (originalValue is float || originalValue is int)
                     {
                         // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
                         // which will convert a Int64 to jsFloat.
@@ -159,15 +177,15 @@ namespace Raven.Server.Documents.Patch
                             return originalValue;
 
                         if (originalValue is int)
-                            return (long)num;
-                        return num;//float
+                            return (long) num;
+                        return num; //float
                     }
                 }
 
                 // If we don't have the type, assume that if the number ending with ".0" it actually an integer.
                 var integer = Math.Truncate(num);
                 if (Math.Abs(num - integer) < double.Epsilon)
-                    return (long)integer;
+                    return (long) integer;
                 return num;
             }
             if (v.IsNull())
@@ -213,7 +231,6 @@ namespace Raven.Server.Documents.Patch
 
         public void Dispose()
         {
-            
         }
 
         private readonly Dictionary<string, Document> _documentKeyContext = new Dictionary<string, Document>();

@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Patch
         private int totalScriptSteps;
 
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
-        public readonly List<string> Debug = new List<string>();
+        private readonly List<string> Debug = new List<string>();
 
         private readonly DocumentDatabase _database;
 
@@ -45,123 +45,101 @@ namespace Raven.Server.Documents.Patch
         public unsafe PatchResultData Apply(DocumentsOperationContext context,
             string documentId,
             long? etag,
-            bool isTestOnly,
             PatchRequest patch,
             PatchRequest patchIfMissing,
+            bool isTestOnly = false,
             bool skipPatchIfEtagMismatch = false)
         {
-            int retries = 128;
-            Random rand = null;
+            var document = _database.DocumentsStorage.Get(context, documentId);
+            if (Log.IsDebugEnabled)
+                Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentId, document != null));
 
-            while (true)
+            if (etag.HasValue && document != null && document.Etag != etag.Value)
             {
-                using (context.OpenWriteTransaction())
+                System.Diagnostics.Debug.Assert(document.Etag > 0);
+
+                if (skipPatchIfEtagMismatch)
                 {
-                    var document = _database.DocumentsStorage.Get(context, documentId);
-                    if (Log.IsDebugEnabled)
-                        Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentId, document != null));
-
-                    if (etag.HasValue && document != null && document.Etag != etag.Value)
+                    return new PatchResultData
                     {
-                        System.Diagnostics.Debug.Assert(document.Etag > 0);
+                        PatchResult = PatchResult.Skipped
+                    };
+                }
 
-                        if (skipPatchIfEtagMismatch)
-                        {
-                            return new PatchResultData
-                            {
-                                PatchResult = PatchResult.Skipped
-                            };
-                        }
+                if (Log.IsDebugEnabled)
+                    Log.Debug(() => $"Got concurrent exception while tried to patch the following document: {documentId}");
+                throw new ConcurrencyException($"Could not patch document '{documentId}' because non current etag was used")
+                {
+                    ActualETag = document.Etag,
+                    ExpectedETag = etag.Value,
+                };
+            }
 
-                        if (Log.IsDebugEnabled)
-                            Log.Debug(() => $"Got concurrent exception while tried to patch the following document: {documentId}");
-                        throw new ConcurrencyException($"Could not patch document '{documentId}' because non current etag was used")
-                        {
-                            ActualETag = document.Etag,
-                            ExpectedETag = etag.Value,
-                        };
-                    }
+            var patchRequest = document != null ? patch : patchIfMissing;
+            var scope = ApplyInternal(context, document, etag, isTestOnly, patchRequest);
+            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject),
+                documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    var patchRequest = document != null ? patch : patchIfMissing;
-                    var scope = ApplyInternal(context, document, etag, isTestOnly, patchRequest);
-                    var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject),
-                        documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            if (modifiedDocument == null)
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug(() => $"Preparing to apply patch on ({documentId}). DocumentDoesNotExists.");
+                return new PatchResultData
+                {
+                    PatchResult = PatchResult.DocumentDoesNotExists
+                };
+            }
 
-                    if (modifiedDocument == null)
-                    {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug(() => $"Preparing to apply patch on ({documentId}). DocumentDoesNotExists.");
-                        return new PatchResultData
-                        {
-                            PatchResult = PatchResult.DocumentDoesNotExists
-                        };
-                    }
+            if (isTestOnly)
+            {
+                return new PatchResultData
+                {
+                    PatchResult = PatchResult.Tested,
+                    ModifiedDocument = modifiedDocument,
+                    OriginalDocument = document?.Data,
+                    DebugActions = scope.DebugActions,
+                };
+            }
 
-                    if (isTestOnly)
-                    {
-                        return new PatchResultData
-                        {
-                            PatchResult = PatchResult.Tested,
-                            ModifiedDocument = modifiedDocument,
-                            OriginalDocument = document?.Data,
-                            DebugActions = scope.DebugActions,
-                        };
-                    }
+            var result = new PatchResultData
+            {
+                PatchResult = PatchResult.NotModified,
+                ModifiedDocument = modifiedDocument,
+                OriginalDocument = document?.Data,
+            };
 
-                    try
-                    {
-                        var result = new PatchResultData
-                        {
-                            PatchResult = PatchResult.NotModified,
-                            ModifiedDocument = modifiedDocument,
-                            OriginalDocument = document?.Data,
-                        };
+            if (document == null)
+            {
+                _database.DocumentsStorage.Put(context, documentId, null, modifiedDocument);
+            }
+            else
+            {
+                var isModified = document.Data.Size != modifiedDocument.Size;
+                if (isModified == false) // optimization, if size different, no need to compute hash to check
+                {
+                    var originHash = Hashing.XXHash64.Calculate(document.Data.BasePointer, document.Data.Size);
+                    var modifiedHash = Hashing.XXHash64.Calculate(modifiedDocument.BasePointer, modifiedDocument.Size);
+                    isModified = originHash != modifiedHash;
+                }
 
-                        if (document == null)
-                        {
-                            _database.DocumentsStorage.Put(context, documentId, null, modifiedDocument);
-                        }
-                        else
-                        {
-                            var isModified = document.Data.Size != modifiedDocument.Size;
-                            if (isModified == false) // optimization, if size different, no need to compute hash to check
-                            {
-                                var originHash = Hashing.XXHash64.Calculate(document.Data.BasePointer, document.Data.Size);
-                                var modifiedHash = Hashing.XXHash64.Calculate(modifiedDocument.BasePointer, modifiedDocument.Size);
-                                isModified = originHash != modifiedHash;
-                            }
-
-                            if (isModified)
-                            {
-                                _database.DocumentsStorage.Put(context, document.Key, document.Etag, modifiedDocument);
-                                result.PatchResult = PatchResult.Patched;
-                            }
-                        }
-
-                        /*var docsCreatedInPatch = scope.GetPutOperations();
-                        if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
-                        {
-                            foreach (var docFromPatch in docsCreatedInPatch)
-                            {
-                                Database.Documents.Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
-                                    docFromPatch.Metadata, transactionInformation, participatingIds);
-                            }
-                        }*/
-
-                        context.Transaction.Commit();
-                        return result;
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        if (retries-- <= 0)
-                            throw;
-
-                        if (rand == null)
-                            rand = new Random();
-                        Thread.Sleep(rand.Next(5, Math.Max(retries*2, 10)));
-                    }
+                if (isModified)
+                {
+                    _database.DocumentsStorage.Put(context, document.Key, document.Etag, modifiedDocument);
+                    result.PatchResult = PatchResult.Patched;
                 }
             }
+
+            /* TODO: var docsCreatedInPatch = scope.GetPutOperations();
+                if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
+                {
+                    foreach (var docFromPatch in docsCreatedInPatch)
+                    {
+                        Database.Documents.Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
+                            docFromPatch.Metadata, transactionInformation, participatingIds);
+                    }
+                }*/
+
+            return result;
         }
 
         private bool IsModified(DynamicJsonValue modifiedDocument, DynamicJsonValue document)
@@ -248,8 +226,8 @@ namespace Raven.Server.Documents.Patch
         {
             if (patch.Values != null)
             {
-                foreach (var kvp in patch.Values)
-                    jintEngine.Global.Delete(kvp.Key, true);
+                foreach (var name in patch.Values.GetPropertyNames())
+                    jintEngine.Global.Delete(name, true);
             }
 
             jintEngine.Global.Delete("__document_id", true);
@@ -288,9 +266,10 @@ namespace Raven.Server.Documents.Patch
 
             if (patch.Values != null)
             {
-                foreach (var kvp in patch.Values)
+                for (int i = 0; i < patch.Values.Count; i++)
                 {
-                    jintEngine.SetValue(kvp.Key, scope.ToJsInstance(jintEngine, kvp.Value));
+                    var property = patch.Values.GetPropertyByIndex(i);
+                    jintEngine.SetValue(property.Item1, scope.ToJsValue(jintEngine, property.Item2, property.Item3));
                 }
             }
             

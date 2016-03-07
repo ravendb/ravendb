@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -17,13 +19,13 @@ namespace Raven.Server.Documents.Patch
         /// <summary>
         /// Additional arguments passed to JavaScript function from Script.
         /// </summary>
-        public Dictionary<string, object> Values;
+        public BlittableJsonReaderObject Values;
 
         protected bool Equals(PatchRequest other)
         {
             if(other == null)
                 return false;
-            return string.Equals(Script, other.Script) && (Values?.Keys.SequenceEqual(other.Values.Keys) ?? true);
+            return string.Equals(Script, other.Script);
         }
 
         public override bool Equals(object obj)
@@ -35,12 +37,20 @@ namespace Raven.Server.Documents.Patch
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                if (Values == null)
-                    return Script.GetHashCode();
-                return Values.Keys.Aggregate(Script.GetHashCode()*397, (i, s) => i*397 ^ s.GetHashCode());
-            }
+            return Script.GetHashCode();
+        }
+
+        public static PatchRequest Parse(BlittableJsonReaderObject input)
+        {
+            var patch = new PatchRequest();
+            if (input.TryGet("Script", out patch.Script) == false)
+                throw new InvalidDataException("Missing 'Script' property on 'Patch'");
+
+            BlittableJsonReaderObject values;
+            if (input.TryGet("Values", out values))
+                patch.Values = values;
+
+            return patch;
         }
     }
 }
