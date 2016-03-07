@@ -74,13 +74,33 @@ namespace RavenTestConsole.RavenTests
 
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,
-    Postcode = studentDto.ZipCode
+    Postcode = studentDto[""ZipCode""]
 })", definition.Map);
 
                 Assert.NotEqual(@"docs.StudentDtos.Select(studentDto => new {
-    Email = studentDto.EmailAddress,
-    Postcode = studentDto.ZipCode
+    Email = studentDto[""EmailAddress""],
+    Postcode = studentDto[""ZipCode""]
 })", definition.Map);
+            }
+        }
+
+        /// <summary>
+        /// Checks that the index definitions actually compiles and run as expected on the server
+        /// </summary>
+        [Fact]
+        public void WillGenerateIndexDefinitions()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new StudentDtos_ByEmailDomain().Execute(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new StudentDto { Email = "a@b.c", Postcode = "30900" });
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var res = session.Query<StudentDto>().Single(x => x.Postcode.Equals("30900"));
+                    Assert.Equal(res.Postcode, "30900");
+                }
             }
         }
     }
