@@ -25,10 +25,8 @@ namespace Raven.Server.Documents.Patch
         private readonly int maxSteps;
         private readonly int additionalStepsPerSize;
         private readonly bool allowScriptsToAdjustNumberOfSteps;
-        private int totalScriptSteps;
 
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
-        private readonly List<string> Debug = new List<string>();
 
         private readonly DocumentDatabase _database;
 
@@ -91,33 +89,28 @@ namespace Raven.Server.Documents.Patch
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject),
                 documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-            if (modifiedDocument == null)
-            {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"After applying patch, modifiedDocument is null and document is null? {document == null}");
-                return new PatchResultData
-                {
-                    PatchResult = PatchResult.Skipped
-                };
-            }
-
-            if (isTestOnly)
-            {
-                return new PatchResultData
-                {
-                    PatchResult = PatchResult.Tested,
-                    ModifiedDocument = modifiedDocument,
-                    OriginalDocument = document?.Data,
-                    DebugActions = scope.DebugActions,
-                };
-            }
-
             var result = new PatchResultData
             {
                 PatchResult = PatchResult.NotModified,
                 ModifiedDocument = modifiedDocument,
                 OriginalDocument = document?.Data,
+                DebugActions = scope.DebugActions,
+                DebugInfo = scope.DebugInfo,
             };
+
+            if (modifiedDocument == null)
+            {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"After applying patch, modifiedDocument is null and document is null? {document == null}");
+                result.PatchResult = PatchResult.Skipped;
+                return result;
+            }
+
+            if (isTestOnly)
+            {
+                result.PatchResult = PatchResult.Tested;
+                return result;
+            }
 
             if (document == null)
             {
@@ -193,9 +186,9 @@ namespace Raven.Server.Documents.Patch
 
                 CleanupEngine(patch, jintEngine, scope);
 
-                OutputLog(jintEngine);
+                OutputLog(jintEngine, scope);
                 if (scope.DebugMode)
-                    Debug.Add(string.Format("Statements executed: {0}", jintEngine.StatementsCount));
+                    scope.DebugInfo.Add(string.Format("Statements executed: {0}", jintEngine.StatementsCount));
 
                 ScriptsCache.CheckinScript(patch, jintEngine, scope.CustomFunctions);
 
@@ -209,14 +202,14 @@ namespace Raven.Server.Documents.Patch
             {
                 jintEngine.ResetStatementsCount();
 
-                OutputLog(jintEngine);
+                OutputLog(jintEngine, scope);
                 var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script + Environment.NewLine;
                 var error = errorEx as JavaScriptException;
                 if (error != null)
                     errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
-                if (Debug.Count != 0)
+                if (scope.DebugInfo.Count != 0)
                     errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
-                                string.Join(Environment.NewLine, Debug);
+                                string.Join(Environment.NewLine, scope.DebugInfo);
 
                 if (error != null)
                     errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
@@ -247,6 +240,7 @@ namespace Raven.Server.Documents.Patch
 
         private void PrepareEngine(PatchRequest patch, Document document, PatcherOperationScope scope, Engine jintEngine)
         {
+            int totalScriptSteps = 0;
             if (document.Data.Size != 0)
             {
                 totalScriptSteps = maxSteps + (document.Data.Size * additionalStepsPerSize);
@@ -271,7 +265,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("Cannot use 'IncreaseNumberOfAllowedStepsBy' method, because `Raven/AllowScriptsToAdjustNumberOfSteps` is set to false.");
 
                 scope.MaxSteps += number;
-                totalScriptSteps += number; // TODO: Review this line, this is a change from v3.5
+                totalScriptSteps += number;
                 jintEngine.Options.MaxStatements(totalScriptSteps);
             }));
 
@@ -336,7 +330,7 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        private void OutputLog(Engine engine)
+        private void OutputLog(Engine engine, PatcherOperationScope scope)
         {
             var arr = engine.GetValue("debug_outputs");
             if (arr == JsValue.Null || arr.IsArray() == false)
@@ -371,7 +365,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 if (output != null)
-                    Debug.Add(output);
+                    scope.DebugInfo.Add(output);
             }
 
             engine.Invoke("clear_debug_outputs");

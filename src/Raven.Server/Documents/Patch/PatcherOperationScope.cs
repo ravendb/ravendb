@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Patch
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, KeyValuePair<object, JsValue>> _propertiesByValue = new Dictionary<string, KeyValuePair<object, JsValue>>();
 
+        public readonly List<string> DebugInfo = new List<string>(); 
+
         private static readonly List<string> InheritedProperties = new List<string>
         {
             "length",

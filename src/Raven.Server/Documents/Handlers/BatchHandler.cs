@@ -1,16 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.AspNet.WebSockets.Protocol;
-
 using Raven.Abstractions.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Handlers
@@ -139,12 +135,21 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             case "PATCH":
                                 var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null, cmd.IsDebugMode);
+                                var additionalData = new DynamicJsonValue
+                                {
+                                    ["Debug"] = patchResult.DebugInfo,
+                                };
+                                if (cmd.IsDebugMode)
+                                {
+                                    additionalData["Document"] = patchResult.ModifiedDocument;
+                                    additionalData["Actions"] = patchResult.DebugActions;
+                                }
                                 reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = cmd.Key,
                                     ["Etag"] = cmd.Etag,
                                     ["Method"] = "PATCH",
-                                    ["AdditionalData"] = cmd.AdditionalData,
+                                    ["AdditionalData"] = additionalData,
                                     ["PatchResult"] = patchResult.PatchResult.ToString(),
                                 });
                                 break;
