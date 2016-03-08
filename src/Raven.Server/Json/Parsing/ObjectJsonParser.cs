@@ -235,6 +235,7 @@ namespace Raven.Server.Json.Parsing
                     continue;
 
                 }
+
                 var lsv = current as LazyStringValue;
                 if (lsv != null)
                 {
@@ -255,6 +256,18 @@ namespace Raven.Server.Json.Parsing
                     ReadEscapePositions(lcsv.Buffer, lcsv.CompressedSize);
                     return;
                 }
+
+                var ldv = current as LazyDoubleValue;
+                if (ldv != null)
+                {
+                    _state.StringBuffer = ldv.Inner.Buffer;
+                    _state.StringSize = ldv.Inner.Size;
+                    _state.CompressedSize = -1;// don't even try
+                    _state.CurrentTokenType = JsonParserToken.Float;
+                    ReadEscapePositions(ldv.Inner.Buffer, ldv.Inner.Size);
+                    return;
+                }
+
                 var str = current as string;
                 if (str != null)
                 {
@@ -262,6 +275,7 @@ namespace Raven.Server.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.String;
                     return;
                 }
+
                 if (current is int)
                 {
                     _state.Long = (int)current;
