@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using Lucene.Net.Store;
+using Raven.Abstractions.Extensions;
 using Voron;
 using Voron.Impl;
 
@@ -11,7 +13,7 @@ namespace Raven.Server.Indexing
     {
         private readonly StorageEnvironment _environment;
 
-        public ThreadLocal<Transaction> CurrentTransaction = new ThreadLocal<Transaction>();
+        private ThreadLocal<Transaction> _currentTransaction = new ThreadLocal<Transaction>();
 
         public LuceneVoronDirectory(StorageEnvironment environment)
         {
@@ -26,14 +28,14 @@ namespace Raven.Server.Indexing
 
         public override bool FileExists(string name)
         {
-            var filesTree = CurrentTransaction.Value.ReadTree("Files");
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
             return filesTree.ReadVersion(name) != 0;
         }
 
         public override string[] ListAll()
         {
             var files = new List<string>();
-            var filesTree = CurrentTransaction.Value.ReadTree("Files");
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
             using (var it = filesTree.Iterate())
             {
                 if (it.Seek(Slice.BeforeAllKeys))
@@ -49,7 +51,7 @@ namespace Raven.Server.Indexing
 
         public override long FileModified(string name)
         {
-            var filesTree = CurrentTransaction.Value.ReadTree("Files");
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
             var readResult = filesTree.Read(name);
             if(readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
@@ -58,7 +60,7 @@ namespace Raven.Server.Indexing
 
         public override unsafe void TouchFile(string name)
         {
-            var filesTree = CurrentTransaction.Value.ReadTree("Files");
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
             Slice key = name;
             var readResult = filesTree.Read(key);
             if (readResult == null)
@@ -68,7 +70,7 @@ namespace Raven.Server.Indexing
 
         public override long FileLength(string name)
         {
-            var filesTree = CurrentTransaction.Value.ReadTree("Files");
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
             Slice key = name;
             var readResult = filesTree.Read(key);
             if (readResult == null)
@@ -80,7 +82,7 @@ namespace Raven.Server.Indexing
 
         public override void DeleteFile(string name)
         {
-            var filesTree = CurrentTransaction.Value.ReadTree("Files");
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
             Slice key = name;
             var readResult = filesTree.Read(key);
             if (readResult == null)
@@ -90,7 +92,7 @@ namespace Raven.Server.Indexing
 
         public override unsafe IndexInput OpenInput(string name)
         {
-            var filesTree = CurrentTransaction.Value.ReadTree("Files");
+            var filesTree = _currentTransaction.Value.ReadTree("Files");
             Slice key = name;
             var readResult = filesTree.Read(key);
             if (readResult == null)
@@ -102,7 +104,14 @@ namespace Raven.Server.Indexing
         public override IndexOutput CreateOutput(string name)
         {
             //TODO: _environment.Options.TempPath
-            return new VoronIndexOutput(Path.GetTempPath(),name, CurrentTransaction.Value);
+            return new VoronIndexOutput(Path.GetTempPath(),name, _currentTransaction.Value);
+        }
+
+        public IDisposable SetTransaction(Transaction tx)
+        {
+            _currentTransaction.Value = tx;
+
+            return new DisposableAction(() => _currentTransaction.Value = null);
         }
 
         protected override void Dispose(bool disposing)

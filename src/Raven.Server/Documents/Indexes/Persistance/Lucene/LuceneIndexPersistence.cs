@@ -73,12 +73,11 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
                 using (var tx = environment.WriteTransaction())
                 {
-                    _directory.CurrentTransaction.Value = tx;
-
-                    CreateIndexStructure();
-                    RecreateSearcher();
-
-                    _directory.CurrentTransaction.Value = null;
+                    using (_directory.SetTransaction(tx))
+                    {
+                        CreateIndexStructure();
+                        RecreateSearcher();
+                    }
 
                     tx.Commit();
                 }
@@ -123,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             return new LuceneIndexWriteActions(this, writeTransaction);
         }
 
-        public IIndexReadActions Read(Transaction readTransaction)
+        public IIndexReadActions OpenIndexReader(Transaction readTransaction)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index persistance for index '{_definition.Name} ({_indexId})' was already disposed.");
@@ -131,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
 
-            return new LuceneIndexReadAction(this, readTransaction);
+            return new LuceneIndexReadActions(this, readTransaction);
         }
 
         private void Flush()
@@ -208,6 +207,8 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
             private readonly Lock _locker;
 
+            private readonly IDisposable _releaseWriteTransaction;
+
             public LuceneIndexWriteActions(LuceneIndexPersistence persistence, Transaction writeTransaction)
             {
                 _persistence = persistence;
@@ -216,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
                 _analyzer = new LowerCaseKeywordAnalyzer();
 
-                persistence._directory.CurrentTransaction.Value = writeTransaction;
+                _releaseWriteTransaction = persistence._directory.SetTransaction(writeTransaction);
 
                 _persistence.EnsureIndexWriter();
 
@@ -224,7 +225,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
                 if (_locker.Obtain() == false)
                     throw new InvalidOperationException();
-
             }
 
             public void Dispose()
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
                     _persistence.RecreateSearcher();
 
-                    _persistence._directory.CurrentTransaction.Value = null;
+                    _releaseWriteTransaction?.Dispose();
                 }
                 finally
                 {
@@ -252,15 +252,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 var luceneDoc = _persistence._converter.ConvertToCachedDocument(document);
 
                 _persistence._indexWriter.AddDocument(luceneDoc, _analyzer);
-
-                // TODO arek - pretty sure we should not dispose that, it is an instance of LazyStringReader._reader which is going to be reused multiple times
-                //foreach (var fieldable in luceneDoc.GetFields())
-                //{
-                    
-                //    using (fieldable.ReaderValue) // dispose all the readers
-                //    {
-                //    }
-                //}
             }
 
             public void Delete(string key)
@@ -269,25 +260,26 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }
         }
 
-        private class LuceneIndexReadAction : IIndexReadActions
+        private class LuceneIndexReadActions : IIndexReadActions
         {
             private const string _Range = "_Range";
 
-            private static readonly ILog Log = LogManager.GetLogger(typeof(LuceneIndexReadAction).FullName);
+            private static readonly ILog Log = LogManager.GetLogger(typeof(LuceneIndexReadActions).FullName);
             private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
             private readonly string _indexName;
             private readonly IndexSearcher _searcher;
             private readonly LowerCaseKeywordAnalyzer _analyzer;
-            private IDisposable _releaseSearcher;
+            private readonly IDisposable _releaseSearcher;
             private LuceneVoronDirectory _directory;
+            private readonly IDisposable _releaseReadTransaction;
 
-            public LuceneIndexReadAction(LuceneIndexPersistence persistence, Transaction readTransaction)
+            public LuceneIndexReadActions(LuceneIndexPersistence persistence, Transaction readTransaction)
             {
                 _analyzer = new LowerCaseKeywordAnalyzer();
                 _indexName = persistence._definition.Name;
                 _directory = persistence._directory;
-                _directory.CurrentTransaction.Value = readTransaction;
+                _releaseReadTransaction = _directory.SetTransaction(readTransaction);
                 _releaseSearcher = persistence.GetSearcher(out _searcher);
             }
 
@@ -448,7 +440,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             {
                 _analyzer?.Dispose();
                 _releaseSearcher?.Dispose();
-                _directory.CurrentTransaction.Value = null;
+               _releaseReadTransaction?.Dispose();
             }
         }
     }

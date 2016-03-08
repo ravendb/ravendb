@@ -26,8 +26,15 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            var basicIndexing = new FastTests.Server.Documents.Indexing.BasicIndexing();
-            basicIndexing.SimpleIndexing();
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+                using (var basicIndexing = new FastTests.Server.Documents.Indexing.BasicIndexing())
+                {
+                    basicIndexing.SimpleIndexing();
+                }
+            }
+            
         }
        
     }

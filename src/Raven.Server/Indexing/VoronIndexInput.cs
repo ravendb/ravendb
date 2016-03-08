@@ -1,23 +1,99 @@
 using System;
-using System.ComponentModel;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
-using Microsoft.Win32.SafeHandles;
 using Raven.Abstractions.Extensions;
 using Sparrow;
-using Voron.Platform.Win32;
+using Voron.Impl;
 
 namespace Raven.Server.Indexing
 {
     public unsafe class VoronIndexInput : IndexInput
     {
         private readonly int _size;
-        private Stream _stream;
         private readonly byte* _basePtr;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+
+        private Stream _stream;
+        private bool _isOriginal = true;
+
+        public VoronIndexInput(byte* basePtr, int size)
+        {
+            _basePtr = basePtr;
+            _size = size;
+            _stream = new MmapStream(_basePtr, _size);
+        }
+
+        public override object Clone()
+        {
+            AssertNotDisposed();
+
+            var clone = (VoronIndexInput)base.Clone();
+            GC.SuppressFinalize(clone);
+            clone._isOriginal = false;
+            clone._stream = new MmapStream(_basePtr, _size)
+            {
+                Position = _stream.Position
+            };
+            return clone;
+        }
+
+        public override byte ReadByte()
+        {
+            AssertNotDisposed();
+
+            var readByte = _stream.ReadByte();
+            if (readByte == -1)
+                throw new EndOfStreamException();
+            return (byte)readByte;
+        }
+
+        public override void ReadBytes(byte[] b, int offset, int len)
+        {
+            AssertNotDisposed();
+
+            _stream.ReadEntireBlock(b, offset, len);
+        }
+
+        public override void Seek(long pos)
+        {
+            AssertNotDisposed();
+
+            _stream.Seek(pos, SeekOrigin.Begin);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            GC.SuppressFinalize(this);
+
+            if (_isOriginal == false)
+                return;
+
+            _cts.Cancel();
+        }
+
+        public override long Length()
+        {
+            return _stream.Length;
+        }
+
+        public override long FilePointer
+        {
+            get
+            {
+                AssertNotDisposed();
+
+                return _stream.Position;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AssertNotDisposed()
+        {
+            if (_cts.IsCancellationRequested)
+                throw new ObjectDisposedException("VoronIndexInput");
+        }
 
         private class MmapStream : Stream
         {
@@ -105,71 +181,6 @@ namespace Raven.Server.Indexing
                 get { return len; }
             }
             public override long Position { get { return pos; } set { pos = value; } }
-        }
-
-        public VoronIndexInput(byte* basePtr, int size)
-        {
-            _basePtr = basePtr;
-            _size = size;
-            _stream = new MmapStream(_basePtr, _size);
-        }
-
-        public override object Clone()
-        {
-            if (_cts.IsCancellationRequested)
-                throw new ObjectDisposedException("CodecIndexInput");
-
-            var clone = (VoronIndexInput)base.Clone();
-            GC.SuppressFinalize(clone);
-            clone._stream = new MmapStream(_basePtr, _size)
-            {
-                Position = _stream.Position
-            };
-            return clone;
-        }
-
-        public override byte ReadByte()
-        {
-            if (_cts.IsCancellationRequested)
-                throw new ObjectDisposedException("CodecIndexInput");
-            var readByte = _stream.ReadByte();
-            if (readByte == -1)
-                throw new EndOfStreamException();
-            return (byte)readByte;
-        }
-
-        public override void ReadBytes(byte[] b, int offset, int len)
-        {
-            if (_cts.IsCancellationRequested)
-                throw new ObjectDisposedException("CodecIndexInput");
-            _stream.ReadEntireBlock(b, offset, len);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-
-        }
-
-        public override void Seek(long pos)
-        {
-            if (_cts.IsCancellationRequested)
-                throw new ObjectDisposedException("CodecIndexInput");
-            _stream.Seek(pos, SeekOrigin.Begin);
-        }
-
-        public override long Length()
-        {
-            return _stream.Length;
-        }
-
-        public override long FilePointer
-        {
-            get
-            {
-                if (_cts.IsCancellationRequested)
-                    throw new ObjectDisposedException("CodecIndexInput");
-                return _stream.Position;
-            }
         }
     }
 }

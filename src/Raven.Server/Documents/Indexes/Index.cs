@@ -418,7 +418,7 @@ namespace Raven.Server.Documents.Indexes
                     Reference<int> totalResults = new Reference<int>();
                     List<string> documentIds;
 
-                    using (var indexRead = IndexPersistence.Read(tx.InnerTransaction))
+                    using (var indexRead = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                     {
                         documentIds = indexRead.Query(query, token, totalResults).ToList();
                     }
