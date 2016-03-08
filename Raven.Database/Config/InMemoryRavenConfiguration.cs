@@ -125,6 +125,8 @@ namespace Raven.Database.Config
 
             MaxPrecomputedBatchSizeForNewIndex = ravenSettings.MaxPrecomputedBatchSizeForNewIndex.Value;
 
+            MaxPrecomputedBatchTotalDocumentSizeInBytes = ravenSettings.MaxPrecomputedBatchTotalDocumentSizeInBytes.Value;
+
             MaxClauseCount = ravenSettings.MaxClauseCount.Value;
 
             AllowScriptsToAdjustNumberOfSteps = ravenSettings.AllowScriptsToAdjustNumberOfSteps.Value;
@@ -407,7 +409,9 @@ namespace Raven.Database.Config
             return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
         }
 
-        public int MaxPrecomputedBatchSizeForNewIndex { get; private set; }
+        public int MaxPrecomputedBatchSizeForNewIndex { get; set; }
+
+        public int MaxPrecomputedBatchTotalDocumentSizeInBytes { get; set; }
 
         public TimeSpan ConcurrentResourceLoadTimeout { get; private set; }
 

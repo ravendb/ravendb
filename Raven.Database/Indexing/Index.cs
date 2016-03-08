@@ -2033,6 +2033,20 @@ namespace Raven.Database.Indexing
             }
         }
 
+        public void AddIndexCorruptError(Exception e)
+        {
+            var msg = string.Format("Index '{0}' is corrupted. The index priority was set to Error. Exception: {1}", PublicName, e);
+            var title = string.Format("Index '{0}' marked as errored due to corruption", PublicName);
+            AddIndexError(msg, title);
+        }
+
+        public void AddIndexFailedFlushError(Exception e)
+        {
+            var msg = string.Format("Failed to flush index '{0}'. The index priority was set to Error. Exception: {1}", PublicName, e);
+            var title = string.Format("Index '{0}' marked as errored due to failure to flush index", PublicName);
+            AddIndexError(msg, title);
+        }
+
         private void ResetWriteErrors()
         {
             writeErrors = Interlocked.Exchange(ref writeErrors, 0);

@@ -554,6 +554,8 @@
     <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From52To53.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From51To52.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />

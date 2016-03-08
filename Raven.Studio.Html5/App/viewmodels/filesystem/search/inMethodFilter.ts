@@ -1,15 +1,19 @@
 import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
 
+class inMethodFilterElement {
+    value = ko.observable('');
+    focus = ko.observable<boolean>(false);
+}
+
 class inMethodFilter extends searchDialogViewModel {
     
     public applyFilterTask = $.Deferred();
-    label = "";
-    elements = ko.observableArray<KnockoutObservable<string>>();
+    elements = ko.observableArray<inMethodFilterElement>();
+    deleteEnabled = ko.computed(() => this.elements().length > 1);
 
-    constructor(label: string) {        
+    constructor(private label: string) {        
         super([ko.observable("")]);
-        this.label = label;
-        this.addElement("");
+        this.newElement();
     }
 
     applyFilter() {
@@ -22,21 +26,18 @@ class inMethodFilter extends searchDialogViewModel {
         return true;
     }
 
-    removeElement(index: number) {
-        this.elements.splice(index, 1);
+    newElement() {
+        var element = new inMethodFilterElement();
+        this.elements.push(element);
+        element.focus(true);
     }
 
-    addElement(element: string) {
-        var newElement = ko.observable<string>(element);
-        this.elements.push(newElement);
-    }
-
-    isLastElement(index: number): boolean {
-        return index === this.elements.length - 1;
+    private removeElement(element: inMethodFilterElement) {
+        this.elements.remove(element);
     }
 
     projectElementsToStringArray(): string[] {
-        return this.elements().map((element: KnockoutObservable<string>) => element());
+        return this.elements().map(x => x.value());
     }
 }
 

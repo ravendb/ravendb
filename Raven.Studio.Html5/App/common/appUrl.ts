@@ -1101,7 +1101,9 @@ class appUrl {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
 
-            if (instruction.fragment == "has-api-key") {
+            if (instruction.fragment === "has-api-key" || instruction.fragment.indexOf("api-key") === 0) {
+
+                // reload page to reinitialize shell and properly consume/provide OAuth token
                 location.reload();
             } else {
                 messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
@@ -51,12 +52,16 @@ namespace Raven.Bundles.Replication.Triggers
 
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
         {
+            var now = DateTime.UtcNow;
             var metadata = new RavenJObject
             {
                 {Constants.RavenDeleteMarker, true},
                 {Constants.RavenReplicationHistory, deletedHistory.Value},
                 {Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-                {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)}
+                {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)},
+                {Constants.LastModified,now},
+                {Constants.RavenLastModified,now }
+
             };
             deletedHistory.Value = null;
 

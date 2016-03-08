@@ -8,8 +8,19 @@
         <!-- /ko -->
     <!-- /ko -->
 
-    <div id="documents-page-container" class="col-md-2 col-resizable-target" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0; position: relative">
-        <ul class="nav nav-pills nav-stacked document-collections has-show-all-items" data-bind="foreach: { data: collections, afterAdd: showCollectionElement, beforeRemove: hideCollectionElement }">
+    <div id="documents-page-container" class="col-md-2 col-resizable-target">
+        
+        <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
+            <li class="all-docs-collection" data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
+                <a href="javascript:void(0)">
+                    <div class="collection-name">
+                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
+                        <span class="collection-text pull-left collection-name-part" data-bind="text: prettyLabel(name), attr: {title: name}"></span>
+                    </div>
+                </a>
+            </li>
+        </ul>
+        <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collectionsExceptAllDocs, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
             <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                 <a href="javascript:void(0)">
                     <div class="collection-name">

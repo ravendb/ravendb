@@ -220,21 +220,24 @@ namespace Raven.Database.Prefetching
             foreach (FutureIndexBatch source in futureIndexBatches.Values.Where(x => etag.CompareTo(x.StartingEtag) > 0))
             {
                 ObserveDiscardedTask(source);
-                var cts = source.CancellationTokenSource;
-                if (cts != null)
-                {
-                    try
-                    {
-                        cts.Cancel();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // this is expected with a race against the prefetching queue
-                        
-                    }
-                }
+                DisposeCancellationToken(source.CancellationTokenSource);
                 FutureIndexBatch batch;
                 futureIndexBatches.TryRemove(source.StartingEtag, out batch);
+            }
+        }
+
+        private static void DisposeCancellationToken(CancellationTokenSource cts)
+        {
+            if (cts != null)
+            {
+                try
+                {
+                    cts.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // this is an expected race with the actual task, this is fine
+                }
             }
         }
 
@@ -313,7 +316,8 @@ namespace Raven.Database.Prefetching
                 var nextEtagToIndex = GetNextDocEtag(etag);
                 var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
-                if (nextEtagToIndex != firstEtagInQueue)
+                if (firstEtagInQueue == null || 
+                   (firstEtagInQueue != nextEtagToIndex && prefetchingQueue.DocumentExists(nextEtagToIndex) == false))
                 {
                     // if we have no results, and there is a future batch for it, we would wait for the results
                     // if there are no other results that have been read.
@@ -340,6 +344,12 @@ namespace Raven.Database.Prefetching
                         if (log.IsDebugEnabled)
                             log.Debug("Didn't load any documents from previous batches. Loading documents directly from disk.");
 
+                        if (firstEtagInQueue == null || firstEtagInQueue.CompareTo(etag) <= 0)
+                        {
+                            //if the first etag in queue is smaller than the already requested one,
+                            //we can look for the next etag in the future batches
+                            firstEtagInQueue = GetMinimumEtagFromFutureBatches(Abstractions.Util.EtagUtil.Increment(etag, 1));
+                        }
                         // if there has been no results, AND no future batch that we can wait for, then we just load directly from disk
                         LoadDocumentsFromDisk(etag, firstEtagInQueue); // here we _intentionally_ use the current etag, not the next one
                     }
@@ -854,6 +864,15 @@ namespace Raven.Database.Prefetching
             Etag highestLoadedEtag = GetHighestEtag(past);
             Etag nextEtag = GetNextDocumentEtagFromDisk(highestLoadedEtag);
 
+            if (IsDefault && prefetchingQueue.DocumentExists(nextEtag))
+            {
+                //checking only for the default prefetcher:
+                //1) this case can rarely happen for the other prefetchers
+                //2) DocumentExists is o(log n)
+                log.Info("Skipping background prefetching because we already have a document with {0} etag in the queue.", nextEtag);
+                return;
+            }
+
             if (nextEtag == highestLoadedEtag)
             {
                 log.Info("Skipping background prefetching because we got no documents to fetch. last etag: {0}", nextEtag);
@@ -955,6 +974,30 @@ namespace Raven.Database.Prefetching
                     nextEtag = accessor.Documents.GetBestNextDocumentEtag(lastEtagInBatch);
                 }
             });
+        }
+
+        /// <summary>
+        /// Gets the minimum etag from the future batches that is bigger than the startEtag
+        /// </summary>
+        /// <param name="startEtag">The minimum etag we start to look from</param>
+        /// <returns></returns>
+        private Etag GetMinimumEtagFromFutureBatches(Etag startEtag)
+        {
+            Etag minEtag = null;
+
+            foreach (var futureIndexBatch in futureIndexBatches.Values)
+            {
+                if (startEtag.CompareTo(futureIndexBatch.StartingEtag) < 0 &&
+                    (minEtag == null || futureIndexBatch.StartingEtag.CompareTo(minEtag) < 0))
+                {
+                    minEtag = futureIndexBatch.StartingEtag;
+                }
+            }
+
+            if (minEtag != null && minEtag != Etag.Empty)
+                minEtag = Abstractions.Util.EtagUtil.Increment(minEtag, -1);
+
+            return minEtag;
         }
 
         private FutureIndexBatch GetCompletedFutureBatchWithMaxStartingEtag()
@@ -1204,8 +1247,7 @@ namespace Raven.Database.Prefetching
             foreach (FutureIndexBatch source in futureIndexBatches.Values.Where(x => (indexingAge - x.Age) > numberOfIndexingGenerationsAllowed).ToList())
             {
                 ObserveDiscardedTask(source);
-                if (source.CancellationTokenSource != null)
-                    source.CancellationTokenSource.Cancel();
+                DisposeCancellationToken(source.CancellationTokenSource);
                 FutureIndexBatch batch;
                 futureIndexBatches.TryRemove(source.StartingEtag, out batch);
             }
@@ -1424,18 +1466,7 @@ namespace Raven.Database.Prefetching
             //cancel any running future batches and prevent the creation of new ones
             foreach (var futureIndexBatch in futureIndexBatches)
             {
-                var cancellationTokenSource = futureIndexBatch.Value.CancellationTokenSource;
-                if (cancellationTokenSource != null)
-                {
-                    try
-                    {
-                        cancellationTokenSource.Cancel();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // race with the actual task, this is fine
-                    }
-                }
+                DisposeCancellationToken(futureIndexBatch.Value.CancellationTokenSource);
             }
 
             futureIndexBatches.Clear();

@@ -8,25 +8,29 @@
             <h4 class="modal-title">Add in method filter </h4>
         </div>
         <div class="modal-body">
-
-            <div class="form-group" data-bind="foreach: elements">
-                <div class="col-sm-9">
-                    <input type="text" class="form-control" data-bind="value: $rawData, valueUpdate: 'afterkeydown', hasFocus: $parent.isLastElement.bind($parent, $index)" required />
-                </div>
-                <label class="control-label col-sm-3" style="margin-top: 5px">
-                    <a href="#" type="button" data-bind="click: $parent.removeElement.bind($parent, $index), visible: $parent.elements().length > 1">
-                        x
-                    </a>
-                </label>
-            </div>
-
-            <div class="clearfix"></div>
-
-            <div class="form-group form-horizontal col-sm-12 center-block">
-                <a href="#" data-bind="click: $root.addElement.bind($root,'')"><i class="fa fa-plus"> Add Search Value</i></a>
-                <!--<button class="btn btn-default" type="button"></button>-->
-            </div>
-            
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <td>Value</td>
+                        <td width="20%"></td>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: elements">
+                    <tr>
+                        <td>
+                            <input type="text" class="form-control" data-bind="value: value, hasFocus: focus" />
+                        </td>
+                        <td>
+                            <button type="button" class="close" data-bind="click: $parent.removeElement.bind($parent, $data), visible: $parent.deleteEnabled" title="Remove this value">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" class="btn btn-default" data-bind="click: newElement" title="Add a parameter">
+                <i class="fa fa-plus"></i> Add Search Value
+            </button>
         </div>
 
         <div class="modal-footer">

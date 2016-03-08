@@ -1021,6 +1021,15 @@ interface taskMetadataDto {
     Type: string;
 }
 
+interface taskMetadataSummaryDto {
+    Type: string;
+    IndexId: number;
+    IndexName: string;
+    Count: number;
+    MinDate: string;
+    MaxDate: string;
+}
+
 interface requestTracingDto {
     Uri: string;
     Method: string;

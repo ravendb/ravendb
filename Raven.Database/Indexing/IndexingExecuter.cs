@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -31,8 +32,7 @@ namespace Raven.Database.Indexing
         private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
         private readonly Prefetcher prefetcher;
         private readonly PrefetchingBehavior defaultPrefetchingBehavior;
-        private IComparable maxTaskId = null;
-        private bool executeTasksOneByOne = false;
+        private readonly Dictionary<IComparable, int> tasksFailureCount = new Dictionary<IComparable, int>();
 
         public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
             : base(context, indexReplacer)
@@ -99,16 +99,20 @@ namespace Raven.Database.Indexing
 
         protected override bool ExecuteTasks()
         {
-            if (executeTasksOneByOne == false)
-                maxTaskId = null;
-
             try
             {
-                return ExecuteTasksInternal();
-        }
+                var result = ExecuteTasksInternal();
+                if (result == false)
+                {
+                    //we can cleanup the tasks failure count if have no more tasks
+                    tasksFailureCount.Clear();
+                }
+
+                return result;
+            }
             catch (Exception e)
             {
-                executeTasksOneByOne = true;
+                Log.WarnException("Failed to execute tasks", e);
                 throw;
             }
         }
@@ -117,18 +121,17 @@ namespace Raven.Database.Indexing
         {
             // we want to drain all of the pending tasks before the next run
             // but we don't want to halt indexing completely
-            var runs = 32;
             var sp = Stopwatch.StartNew();
             var count = 0;
             var indexIds = new HashSet<int>();
             var totalProcessedKeys = 0;
-            var foundWorkLocal = new Reference<bool>();
 
+            var alreadySeen = new HashSet<IComparable>();
             transactionalStorage.Batch(actions =>
             {
-                while (context.RunIndexing && runs-- > 0)
+                while (context.RunIndexing && sp.Elapsed.TotalMinutes < 1)
                 {
-                    var processedKeys = ExecuteTask(indexIds, foundWorkLocal);
+                    var processedKeys = ExecuteTask(indexIds, alreadySeen);
                     if (processedKeys == 0)
                         break;
 
@@ -140,46 +143,41 @@ namespace Raven.Database.Indexing
                             // if we need to PulseTransaction, we are going to delete
                             // all the completed tasks, so we need to flush 
                             // all the changes made to the indexes to disk before that
-                            context.IndexStorage.FlushIndexes(indexIds);
+                            context.IndexStorage.FlushIndexes(indexIds, onlyAddIndexError: true);
+                            actions.Tasks.DeleteTasks(alreadySeen);
                             indexIds.Clear();
+                            alreadySeen.Clear();
                         });
 
                     count++;
-
-                    if (executeTasksOneByOne)
-                        break;
                 }
 
                 // need to flush all the changes
-                context.IndexStorage.FlushIndexes(indexIds);
+                context.IndexStorage.FlushIndexes(indexIds, onlyAddIndexError: true);
+                actions.Tasks.DeleteTasks(alreadySeen);
             });
 
-            if (count == 0)
-            {
-                return foundWorkLocal.Value;
-            }
-                
             if (Log.IsDebugEnabled)
             {
-                Log.Debug("Executed {0} tasks, processed documents: {1}, took {2}ms",
+                Log.Debug("Executed {0} tasks, processed documents: {1:#,#;;0}, took {2:#,#;;0}ms",
                     count, totalProcessedKeys, sp.ElapsedMilliseconds);
             }
 
-            return true;
+            return count != 0;
         }
 
-        private int ExecuteTask(HashSet<int> indexIds, Reference<bool> foundWorkLocal)
+        private int ExecuteTask(HashSet<int> indexIds, HashSet<IComparable> alreadySeen)
         {
             var processedKeys = 0;
 
             transactionalStorage.Batch(actions =>
             {
-                var task = GetApplicableTask(actions, foundWorkLocal);
+                var task = GetApplicableTask(actions, alreadySeen);
                 if (task == null)
                 {
-                    // no tasks were found or we reached the max task id after a failure,
-                    // the next execution will try to merge tasks
-                    executeTasksOneByOne = false;
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("No tasks to execute were found!");
+
                     return;
                 }
                 
@@ -188,8 +186,8 @@ namespace Raven.Database.Indexing
                 var indexName = GetIndexName(task.Index);
                 if (Log.IsDebugEnabled)
                 {
-                    Log.Debug("Executing task for index: {0} (id: {1}), details: {2}",
-                        indexName, task.Index, task);
+                    Log.Debug("Executing {0} for index: {1} (id: {2}, task id: {3}), details: {4}",
+                        task.GetType().Name, indexName, task.Index, task.Id, task);
                 }
 
                 processedKeys = task.NumberOfKeys;
@@ -205,71 +203,75 @@ namespace Raven.Database.Indexing
                 catch (Exception e)
                 {
                     Log.WarnException(
-                        string.Format("Task for index: {0} (id: {1}) has failed, details: {2}",
-                            indexName, task.Index, task), e);
+                        string.Format("{0} for index: {1} (index id: {2}, task id: {3}) has failed, details: {4}",
+                            task.GetType().Name, indexName, task.Index, task.Id, task), e);
+                    
+                    if (e is CorruptIndexException)
+                    {
+                        Log.WarnException(string.Format("Index name: {0}, id: {1} is corrupted and needs to be reset", 
+                            indexName, task.Index), e);
+
+                        //the index is corrupted, we couldn't write to the index
+                        //we can delete this task and issue an alert and set the index to errored
+                        var index = context.IndexStorage.GetIndexInstance(task.Index);
+                        if (index != null)
+                            index.AddIndexCorruptError(e);
+
+                        return;
+                    }
+
+                    int failureCount = 0;
+                    tasksFailureCount.TryGetValue(task.Id, out failureCount);
+                    failureCount++;
+                    tasksFailureCount[task.Id] = failureCount;
+                    if (failureCount >= 3)
+                    {
+                        //if we failed to execute the task for more than 3 times,
+                        //we can issue an alert and delete the task
+                        context.Database.AddAlert(new Alert
+                        {
+                            AlertLevel = AlertLevel.Error,
+                            CreatedAt = SystemTime.UtcNow,
+                            Message = string.Format("For index: {0} (index id: {1}, task id: {2}), details: {3}, exception: {4}",
+                                indexName, task.Index, task.Id, task, e),
+                            Title = string.Format("{0} failed to execute for {1} times", task.GetType().Name, failureCount),
+                            UniqueKey = string.Format("Task failed for index: {0} (index id: {1}, task id: {2}) has failed ({3} times)",
+                                indexName, task.Index, task.Id, failureCount),
+                        });
+
+                        return;
+                    }
+
                     throw;
                 }
 
                 if (Log.IsDebugEnabled)
                 {
-                    Log.Debug("Task for index: {0} (id: {1}) has finished, took {2}ms",
-                        indexName, task.Index, sp.ElapsedMilliseconds);
+                    Log.Debug("Task for index: {0} (id: {1}, task id: {2}) has finished, took {3:#,#;;0}ms",
+                        indexName, task.Index, task.Id, sp.ElapsedMilliseconds);
                 }
             });
 
             return processedKeys;
         }
 
-        private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, Reference<bool> foundWork)
+        private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, HashSet<IComparable> alreadySeen)
         {
             var disabledIndexIds = context.IndexStorage.GetDisabledIndexIds();
 
             var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                MaxIdStatus, UpdateMaxTaskId, foundWork, disabledIndexIds);
+                disabledIndexIds, context.IndexStorage.Indexes, alreadySeen);
             if (removeFromIndexTasks != null)
                 return removeFromIndexTasks;
 
             return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(
-                MaxIdStatus, UpdateMaxTaskId, foundWork, disabledIndexIds);
-        }
-
-        private MaxTaskIdStatus MaxIdStatus(IComparable currentTaskId)
-        {
-            var canUpdateMaxId = CanUpdateMaxId(currentTaskId);
-            if (executeTasksOneByOne && canUpdateMaxId)
-            {
-                // merge is disabled and we've reached the maximum task id
-                // that was set after the failure to execute a batch of tasks.
-                return MaxTaskIdStatus.ReachedMaxTaskId;
-            }
-
-            if (executeTasksOneByOne)
-            {
-                // no need to merge tasks
-                return MaxTaskIdStatus.MergeDisabled;
-            }
-
-            if (canUpdateMaxId)
-                maxTaskId = currentTaskId;
-
-            return MaxTaskIdStatus.Updated;
-        }
-
-        private bool CanUpdateMaxId(IComparable currentTaskId)
-        {
-            return maxTaskId == null || currentTaskId.CompareTo(maxTaskId) > 0;
-        }
-
-        private void UpdateMaxTaskId(IComparable currentTaskId)
-        {
-            if (CanUpdateMaxId(currentTaskId))
-                maxTaskId = currentTaskId;
+                disabledIndexIds, context.IndexStorage.Indexes, alreadySeen);
         }
 
         private string GetIndexName(int indexId)
         {
             var index = context.IndexStorage.GetIndexInstance(indexId);
-            return index == null ? indexId.ToString() : index.PublicName;
+            return index == null ? string.Format("N/A, index id: {0}", indexId) : index.PublicName;
         }
 
         protected override void FlushAllIndexes()

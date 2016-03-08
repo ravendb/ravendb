@@ -5,22 +5,25 @@ import database = require("models/resources/database");
 class queryUtil {
 
     /**
-     * Escapes lucene query
+     * Escapes lucene single term
+     * 
+     * Note: Do not use this method for escaping entire query unless you want to end up with: query\:value\ AND\ a\:b
      * @param query query to escape
      */
-    public static escape(query: string) {
+    public static escapeTerm(term: string) {
         var output = "";
 
-        for (var i = 0; i < query.length; i++) {
-            var c = query.charAt(i);
+        for (var i = 0; i < term.length; i++) {
+            var c = term.charAt(i);
             if (c === '\\' || c === '+' || c === '-' || c === '!' || c === '(' || c === ')'
                 || c === ':' || c === '^' || c === '[' || c === ']' || c === '\"'
                 || c === '{' || c === '}' || c === '~' || c === '*' || c === '?'
-                || c === '|' || c === '&') {
+                || c === '|' || c === '&' || c === ' ') {
                 output += "\\";
             }
             output += c;
         }
+
         return output;
     }
 

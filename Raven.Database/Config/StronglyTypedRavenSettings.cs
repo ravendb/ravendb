@@ -62,8 +62,11 @@ namespace Raven.Database.Config
 
         public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
         { 
-            const int maxPrecomputedBatchSize = 32 * 1024;
-            MaxPrecomputedBatchSizeForNewIndex = new IntegerSetting(settings["Raven/MaxPrecomputedBatchSizeForNewIndex"], maxPrecomputedBatchSize);
+            const int defaultPrecomputedBatchSize = 32 * 1024;
+            MaxPrecomputedBatchSizeForNewIndex = new IntegerSetting(settings["Raven/MaxPrecomputedBatchSizeForNewIndex"], defaultPrecomputedBatchSize);
+
+            const int defaultPrecomputedBatchTotalDocumentSizeInBytes = 1024*1024*250;  //250 mb
+            MaxPrecomputedBatchTotalDocumentSizeInBytes = new IntegerSetting(settings["Raven/MaxPrecomputedBatchTotalDocumentSizeInBytes"], defaultPrecomputedBatchTotalDocumentSizeInBytes);
 
             //1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
             MaxClauseCount = new IntegerSetting(settings[Constants.MaxClauseCount], 1024);
@@ -354,8 +357,10 @@ namespace Raven.Database.Config
             return val;
         }
 
+        public IntegerSetting MaxPrecomputedBatchTotalDocumentSizeInBytes { get; private set; }
+
         public IntegerSetting MaxPrecomputedBatchSizeForNewIndex { get; private set; }
-    
+
         public BooleanSetting CacheDocumentsInMemory { get; set; }
 
         public IntegerSetting MaxConcurrentResourceLoads { get; private set; }

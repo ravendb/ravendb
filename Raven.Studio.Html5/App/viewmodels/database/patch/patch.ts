@@ -38,6 +38,7 @@ class patch extends viewModelBase {
 
     currentCollectionPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
+    showDocumentsPreview: KnockoutObservable<boolean>;
 
     patchDocument = ko.observable<patchDocument>();
 
@@ -130,6 +131,15 @@ class patch extends viewModelBase {
                 return [];
 
             return collections.filter((x: collection) => x.name !== patchDocument.selectedItem());
+        });
+
+        this.showDocumentsPreview = ko.computed(() => {
+            if (!this.patchDocument()) {
+                return false;
+    }
+            var indexPath = this.patchDocument().isIndexPatch();
+            var collectionPath = this.patchDocument().isCollectionPatch();
+            return indexPath || collectionPath;
         });
     }
 
@@ -485,7 +495,7 @@ class patch extends viewModelBase {
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 index = "Raven/DocumentsByEntityName";
-                query = "Tag:" + queryUtil.escape(this.patchDocument().selectedItem());
+                query = "Tag:" + queryUtil.escapeTerm(this.patchDocument().selectedItem());
                 break;
             case "Index":
                 index = this.patchDocument().selectedItem();

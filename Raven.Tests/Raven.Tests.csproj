@@ -247,6 +247,7 @@
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\Caching\CachingOfPostQueries.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
+    <Compile Include="Bugs\ExcludesWebServerHttpHeadersWhenDeserializing.cs" />
     <Compile Include="Bugs\CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata.cs" />
     <Compile Include="Bugs\CannotChangeId.cs" />
     <Compile Include="Bugs\CanUseLuceneCodecDirectory.cs" />

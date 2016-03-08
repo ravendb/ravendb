@@ -2,6 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import queryUtil = require("common/queryUtil");
+import queryUtil = require("common/queryUtil");
 
 class getCollectionsCountCommand extends commandBase {
 
@@ -23,7 +24,7 @@ class getCollectionsCountCommand extends commandBase {
             return {
                 Url: "/indexes/Raven/DocumentsByEntityName",
                 Headers: {},
-                Query: "?&query=Tag:" + queryUtil.escape(collection.name) + "&pageSize=0" 
+                Query: "?&query=Tag:" + queryUtil.escapeTerm(collection.name) + "&pageSize=0"
             }
         });
 

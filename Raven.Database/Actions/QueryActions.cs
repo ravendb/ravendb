@@ -285,7 +285,7 @@ namespace Raven.Database.Actions
                 using (new CurrentTransformationScope(database, docRetriever))
                 {
                     foreach (var result in results)
-                    {
+                    {						
                         cancellationToken.ThrowIfCancellationRequested();
                         database.WorkContext.UpdateFoundWork();
 
@@ -368,7 +368,7 @@ namespace Raven.Database.Actions
             }
 
             IndexingFunc transformFunc = null;
-
+            
             // Check an explicitly declared one first
             if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
             {
@@ -389,6 +389,12 @@ namespace Raven.Database.Actions
                     {
                         ravenJObject[Constants.DocumentIdFieldName] = x.Key;
                     }
+                    var metadata = ravenJObject.Value<RavenJObject>(Constants.Metadata);
+                    if (metadata == null) //precaution, should not happen
+                        ravenJObject.Add(Constants.Metadata, RavenJToken.FromObject(new {x.SerializedSizeOnDisk}));
+                    else
+                        metadata[Constants.SerializedSizeOnDisk] = x.SerializedSizeOnDisk;
+
                     return ravenJObject;
                 });
                 return showTimings ? new TimedEnumerable<RavenJObject>(resultsWithoutTransformer, loadingDocumentsFinish) : resultsWithoutTransformer;

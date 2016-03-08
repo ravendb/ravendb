@@ -145,8 +145,10 @@
     <Compile Include="RavenDB_3744.cs" />
     <Compile Include="RavenDB_4147.cs" />
     <Compile Include="RavenDB_4091.cs" />
+    <Compile Include="NewIndexOptimizationIssue.cs" />
     <Compile Include="RavenDB-4196.cs" />
     <Compile Include="RavenDB-4300.cs" />
+    <Compile Include="RavenDB-4379.cs" />
     <Compile Include="RavenDB_3928.cs" />
     <Compile Include="RavenDB-4227.cs" />
     <Compile Include="RavenDB_4053.cs" />
@@ -519,6 +521,7 @@
     <Compile Include="RavenDB_4241.cs" />
     <Compile Include="RavenDB_425.cs" />
     <Compile Include="RavenDB_4269.cs" />
+    <Compile Include="RavenDB_4388.cs" />
     <Compile Include="RavenDB_478.cs" />
     <Compile Include="RavenDB_483.cs" />
     <Compile Include="RavenDB_505.cs" />

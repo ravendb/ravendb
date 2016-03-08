@@ -666,6 +666,11 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     li {
         outline: none;
+        padding-left: 15px;
+    }
+
+    li.all-docs-collection {
+        padding-left: 0;
     }
 
     .collection-color-strip {
@@ -689,12 +694,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         text-overflow: ellipsis;
         max-width: 90%;
     }
-
-    &.has-show-all-items li:not(:first-child) {
-        // All collections except the first one ("All Documents") are indented.
-        padding-left: 15px;
     }
-}
 
 #index-merge-suggestions {
     .index-name {
@@ -2395,10 +2395,6 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     line-height: 34px;
 }
 
-#matchingDocumentsGrid {
-    margin-bottom: -30px;
-}
-
 .alert-danger a {
     color: white;
     text-decoration: underline;
@@ -2489,4 +2485,8 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     100% { transform: rotate(360deg); }
 }
 
-        
+        }
+
+.no-outline {
+    outline-style: none;
+}

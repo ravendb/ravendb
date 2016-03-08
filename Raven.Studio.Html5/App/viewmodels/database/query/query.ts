@@ -776,18 +776,18 @@ class query extends viewModelBase {
             .done((input: string, option: string) => {
             if (this.queryText().length !== 0) {
                 this.queryText(this.queryText() + " AND ");
-}
+                }
             if (option === "Starts with") {
-                this.queryText(this.queryText() + this.searchField() + ":" + this.escapeQueryString(input) + "*");
+                this.queryText(this.queryText() + this.searchField() + ":" + queryUtil.escapeTerm(input) + "*");
             }
             else if (option === "Ends with") {
-                this.queryText(this.queryText() + this.searchField() + ":" + "*" + this.escapeQueryString(input) );
+                this.queryText(this.queryText() + this.searchField() + ":" + "*" + queryUtil.escapeTerm(input) );
             }
             else if (option === "Contains") {
-                this.queryText(this.queryText() + this.searchField() + ":" + "*" + this.escapeQueryString(input) + "*");
+                this.queryText(this.queryText() + this.searchField() + ":" + "*" + queryUtil.escapeTerm(input) + "*");
             }
             else if (option === "Exact") {
-                this.queryText(this.queryText() + this.searchField() + ":" + this.escapeQueryString(input));
+                this.queryText(this.queryText() + this.searchField() + ":" + queryUtil.escapeTerm(input));
             }
         });
         app.showDialog(fieldStartsWithViewModel);
@@ -834,15 +834,11 @@ class query extends viewModelBase {
                 if (this.queryText().length !== 0) {
                     this.queryText(this.queryText() + " AND ");
                 }
-                var escapedStrings = inputs.map((s: string) => this.escapeQueryString(s)).join();
+                var escapedStrings = inputs.map((s: string) => queryUtil.escapeTerm(s)).join();
                 this.queryText(this.queryText() + "@in<" + this.searchField() + ">:(" + escapedStrings + ")");
             });
         app.showDialog(inMethodFilterViewModel);        
     }
-
-    private escapeQueryString(query: string): string {
-        return query.replace(/([ \-\_\.])/g, '\\$1');
     }
-}
 
 export = query;
