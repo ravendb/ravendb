@@ -52,6 +52,11 @@ namespace Raven.Database.Actions
                 throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);
             }
 
+            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, Constants.BackupFailureMarker)))
+            {
+                throw new InvalidOperationException("Backup failure marker was detected. Unable to restore from given directory.");
+            }
+
             var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
             var databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
 
@@ -79,17 +84,20 @@ namespace Raven.Database.Actions
 
         public Task StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument, ResourceBackupState state, CancellationToken token = default(CancellationToken))
         {
-
             if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
             var document = Database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
             if (document != null)
             {
-                //TODO:  verify if we clean up status after cancalation token
                 var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
                 if (backupStatus.IsRunning)
                 {
                     throw new InvalidOperationException("Backup is already running");
                 }
+            }
+
+            if (File.Exists(Path.Combine(backupDestinationDirectory, Constants.BackupFailureMarker)))
+            {
+                throw new InvalidOperationException("Backup failure marker was detected. In order to proceed remove old backup files or supply different backup directory.");
             }
 
             bool enableIncrementalBackup;

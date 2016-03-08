@@ -34,13 +34,13 @@ namespace Raven.Database.FileSystem.Storage.Esent.Backup
             get { return Directory.Exists(backupDestinationDirectory) && File.Exists(backupConfigPath); }
         }
 
-        protected override void ExecuteBackup(string backupPath, bool isIncrementalBackup)
+        protected override void ExecuteBackup(string backupPath, bool isIncrementalBackup, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(backupPath)) throw new ArgumentNullException("backupPath");
 
             // It doesn't seem to be possible to get the % complete from an esent backup, but any status msgs 
             // that is does give us are displayed live during the backup.
-            var esentBackup = new EsentBackup(instance, backupPath, isIncrementalBackup ? BackupGrbit.Incremental : BackupGrbit.Atomic);
+            var esentBackup = new EsentBackup(instance, backupPath, isIncrementalBackup ? BackupGrbit.Incremental : BackupGrbit.Atomic, token);
             esentBackup.Notify += UpdateBackupStatus;
             esentBackup.Execute();
         }

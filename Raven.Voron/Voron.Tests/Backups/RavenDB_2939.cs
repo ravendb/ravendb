@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Threading;
 using Voron.Impl.Backup;
 using Voron.Impl.Paging;
 using Xunit;
@@ -46,7 +47,7 @@ namespace Voron.Tests.Backups
 
             Env.Options.IncrementalBackupEnabled = true;
 
-            var exception = Assert.Throws<InvalidOperationException>(() => BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0)));
+            var exception = Assert.Throws<InvalidOperationException>(() => BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0), CancellationToken.None));
 
             Assert.Equal("The first incremental backup creation failed because the first journal file " + StorageEnvironmentOptions.JournalName(0) + " was not found. Did you turn on the incremental backup feature after initializing the storage? In order to create backups incrementally the storage must be created with IncrementalBackupEnabled option set to 'true'.", exception.Message);
         }

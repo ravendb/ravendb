@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.IO.Packaging;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Voron.Impl.Backup;
 using Voron.Impl.Paging;
 using Xunit;
@@ -102,7 +103,7 @@ namespace Voron.Tests.Backups
                     tx.Commit();
                 }
 
-                new FullBackup().ToFile(envToSnapshot, Path.Combine(_tempDir, "full.backup"));
+                new FullBackup().ToFile(envToSnapshot, Path.Combine(_tempDir, "full.backup"), CancellationToken.None);
 
                 using (var tx = envToSnapshot.NewTransaction(TransactionFlags.ReadWrite))
                 {
@@ -246,7 +247,7 @@ namespace Voron.Tests.Backups
                 envToSnapshot.HeaderAccessor.Modify(ptr => ptr->IncrementalBackup = incrementalBackupInfo);
 
                 var incBackup = new IncrementalBackup();
-                incBackup.ToFile(envToSnapshot, Path.Combine(_tempDir, "2.snapshot"));
+                incBackup.ToFile(envToSnapshot, Path.Combine(_tempDir, "2.snapshot"), CancellationToken.None);
 
                 var incLen = new FileInfo(Path.Combine(_tempDir, "2.snapshot")).Length;
                 var minInLen = new FileInfo(Path.Combine(_tempDir, "1.snapshot")).Length;

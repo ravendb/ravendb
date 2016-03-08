@@ -26,15 +26,15 @@ namespace Raven.Database.Storage.Voron.Backup
             get { return Directory.Exists(backupDestinationDirectory) && File.Exists(Path.Combine(backupDestinationDirectory.Trim(), BackupMethods.Filename)); }
         }
 
-        protected override void ExecuteBackup(string backupPath, bool isIncrementalBackup)
+        protected override void ExecuteBackup(string backupPath, bool isIncrementalBackup, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(backupPath)) throw new ArgumentNullException("backupPath");
 
             if (isIncrementalBackup)
-                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename), token,
                     infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
             else
-                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename), token, 
                     infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
         }
 

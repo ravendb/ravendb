@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Threading;
 using Voron.Impl.Backup;
 using Voron.Impl.Paging;
 using Xunit;
@@ -58,7 +59,7 @@ namespace Voron.Tests.Backups
                     }
                 }
 
-                BackupMethods.Incremental.ToFile(env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
+                BackupMethods.Incremental.ToFile(env, IncrementalBackupTestUtils.IncrementalBackupFile(0), CancellationToken.None);
             }
 
             // restart

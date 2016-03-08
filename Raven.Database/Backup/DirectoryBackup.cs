@@ -86,7 +86,7 @@ namespace Raven.Database.Backup
         /// b) copy the hard links to the destination directory
         /// c) delete the temp directory
         /// </summary>
-        public void Execute(ProgressNotifier progressNotifier)
+        public void Execute(ProgressNotifier progressNotifier, CancellationToken token)
         {
             if (allowOverwrite) // clean destination folder; we want to do this as close as possible to the actual backup operation
             {
@@ -97,9 +97,11 @@ namespace Raven.Database.Backup
 
             foreach (var file in Directory.EnumerateFiles(tempPath))
             {
+                token.ThrowIfCancellationRequested();
+
                 Notify("Copying " + Path.GetFileName(file), null, BackupStatus.BackupMessageSeverity.Informational);
                 var fullName = new FileInfo(file).FullName;
-                FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName], progressNotifier);
+                FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName], progressNotifier, token);
                 Notify("Copied " + Path.GetFileName(file), null, BackupStatus.BackupMessageSeverity.Informational);
             }
 
@@ -119,7 +121,7 @@ namespace Raven.Database.Backup
             }
         }
 
-        private void FileCopy(string src, string dest, long size, ProgressNotifier notifier)
+        private void FileCopy(string src, string dest, long size, ProgressNotifier notifier, CancellationToken token)
         {
             var buffer = new byte[16 * 1024];
             using (var srcStream = File.Open(src,FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
@@ -130,6 +132,7 @@ namespace Raven.Database.Backup
                 {
                     while (true)
                     {
+                        token.ThrowIfCancellationRequested();
                         var read = srcStream.Read(buffer, 0, (int)Math.Min(buffer.Length, size));
                         notifier.UpdateProgress(read, Notify);
                         if (read == 0)

@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Platform.Win32;
@@ -31,7 +32,9 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
+        public long ToFile(StorageEnvironment env, string backupPath, 
+            CancellationToken token,
+            CompressionLevel compression = CompressionLevel.Optimal,
             Action<string> infoNotify = null,
             Action backupStarted = null)
         {
@@ -84,6 +87,8 @@ namespace Voron.Impl.Backup
 
                             for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
                             {
+                                token.ThrowIfCancellationRequested();
+
                                 var num = journalNum;
 
                                 var journalFile = GetJournalFile(env, journalNum, backupInfo);
@@ -111,7 +116,7 @@ namespace Voron.Impl.Backup
 
                                 using (var stream = part.Open())
                                 {
-                                    copier.ToStream(journalFile, startBackupAt, pagesToCopy, stream);
+                                    copier.ToStream(journalFile, startBackupAt, pagesToCopy, stream, token);
                                     infoNotify(string.Format("Voron Incr copy journal number {0}", num));
 
                                 }

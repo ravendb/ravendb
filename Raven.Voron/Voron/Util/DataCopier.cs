@@ -7,6 +7,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -22,19 +23,21 @@ namespace Voron.Util
             _buffer = new byte[bufferSize];
         }
 
-        public void ToStream(byte* ptr, long count, Stream output)
+        public void ToStream(byte* ptr, long count, Stream output, CancellationToken token)
         {
             using (var stream = new UnmanagedMemoryStream(ptr, count))
             {
                 while (stream.Position < stream.Length)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var read = stream.Read(_buffer, 0, _buffer.Length);
                     output.Write(_buffer, 0, read);
                 }
             }
         }
 
-        public void ToStream(JournalFile journal, long startPage, long pagesToCopy, Stream output)
+        public void ToStream(JournalFile journal, long startPage, long pagesToCopy, Stream output, CancellationToken token)
         {
             var maxNumOfPagesToCopyAtOnce = _buffer.Length/AbstractPager.PageSize;
             var page = startPage;
@@ -43,6 +46,8 @@ namespace Voron.Util
             {
                 while (pagesToCopy > 0)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var pageCount = Math.Min(maxNumOfPagesToCopyAtOnce, pagesToCopy);
                     var bytesCount = (int) (pageCount*AbstractPager.PageSize);
 
