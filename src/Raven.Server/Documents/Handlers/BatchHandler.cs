@@ -138,8 +138,15 @@ namespace Raven.Server.Documents.Handlers
                                 });
                                 break;
                             case "PATCH":
-                                var re = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null, cmd.IsDebugMode);
-                                throw new NotImplementedException("Handler reply");
+                                var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null, cmd.IsDebugMode);
+                                reply.Add(new DynamicJsonValue
+                                {
+                                    ["Key"] = cmd.Key,
+                                    ["Etag"] = cmd.Etag,
+                                    ["Method"] = "PATCH",
+                                    ["AdditionalData"] = cmd.AdditionalData,
+                                    ["PatchResult"] = patchResult.PatchResult.ToString(),
+                                });
                                 break;
                             case "DELETE":
                                 var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
