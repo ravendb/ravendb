@@ -273,7 +273,7 @@ class documents extends viewModelBase {
     collectionsLoaded(collections: Array<collection>, db: database) {
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection(collection.createAllDocsCollection(db));
-        this.allDocumentsCollection().documentCount = ko.computed(() => db.itemCount());
+        this.allDocumentsCollection().documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
