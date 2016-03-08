@@ -422,7 +422,11 @@ namespace Raven.Database.Raft
             {
                 var response = await request.ExecuteAsync().ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
+                {
+                    if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
+                        throw new UnauthorizedAccessException($"unable to reach {nodeConnectionInfo.Uri} make sure you have admin privileges on the <system> database");
                     throw new InvalidOperationException("Unable to fetch database statictics for: " + nodeConnectionInfo.Uri);
+                }
 
                 using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
                 {
