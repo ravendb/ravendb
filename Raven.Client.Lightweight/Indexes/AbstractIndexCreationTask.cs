@@ -237,7 +237,7 @@ namespace Raven.Client.Indexes
             //check if side by side index exists
             var sideBySideDef = databaseCommands.GetIndex(replaceIndexName);
             if (sideBySideDef != null)
-            {                
+            {
                 if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, sideBySideDef, indexDefinition))
                     return;
 
@@ -249,16 +249,17 @@ namespace Raven.Client.Indexes
             var serverDef = databaseCommands.GetIndex(IndexName);
             if (serverDef != null)
             {
+                if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+                    return;
+
                 switch (serverDef.LockMode)
                 {
                     //Nothing to do we just ignore this index
                     case IndexLockMode.LockedIgnore:
                         return;
                     case IndexLockMode.LockedError:
-                        throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to:LockedError", serverDef.IndexId));
+                        throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to: LockedError", serverDef.IndexId));
                 }
-                if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
-                    return;
 
                 UpdateSideBySideIndex(databaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, replaceIndexName, indexDefinition, documentConvention);
             }
@@ -436,16 +437,17 @@ namespace Raven.Client.Indexes
             var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token).ConfigureAwait(false);
             if (serverDef != null)
             {
+                if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+                    return;
+
                 switch (serverDef.LockMode)
                 {
                     //Nothing to do we just ignore this index
                     case IndexLockMode.LockedIgnore:
                         return;
                     case IndexLockMode.LockedError:
-                        throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to:LockedError", serverDef.IndexId));
+                        throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to: LockedError", serverDef.IndexId));
                 }
-                if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
-                    return;
 
                 await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention).ConfigureAwait(false);
             }
