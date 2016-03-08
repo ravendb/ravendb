@@ -4,18 +4,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Web.UI;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -1998,6 +1995,11 @@ namespace Raven.Database.Indexing
             if (indexCorrupted == false || (Priority & IndexingPriority.Error) == IndexingPriority.Error)
                 return;
 
+            AddIndexError(e, errorMessage, string.Format("Index '{0}' marked as errored due to corruption", PublicName));
+        }
+
+        private void AddIndexError(Exception e, string msg, string title)
+        {
             using (context.TransactionalStorage.DisableBatchNesting())
             {
                 try
@@ -2011,18 +2013,19 @@ namespace Raven.Database.Indexing
                         Type = IndexChangeTypes.IndexMarkedAsErrored
                     });
 
-                    if (string.IsNullOrEmpty(errorMessage))
+                    if (string.IsNullOrEmpty(msg))
                         throw new ArgumentException("Error message has to be set");
 
-                    logIndexing.WarnException(errorMessage, e);
-                    context.AddError(indexId, PublicName, null, e, errorMessage);
+                    logIndexing.WarnException(msg, e);
+
+                    context.AddError(indexId, PublicName, null, msg);
 
                     context.Database.AddAlert(new Alert
                     {
                         AlertLevel = AlertLevel.Error,
                         CreatedAt = SystemTime.UtcNow,
-                        Message = errorMessage,
-                        Title = string.Format("Index '{0}' marked as errored due to corruption", PublicName),
+                        Message = msg,
+                        Title = title,
                         UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
                     });
                 }
@@ -2037,14 +2040,14 @@ namespace Raven.Database.Indexing
         {
             var msg = string.Format("Index '{0}' is corrupted. The index priority was set to Error. Exception: {1}", PublicName, e);
             var title = string.Format("Index '{0}' marked as errored due to corruption", PublicName);
-            AddIndexError(msg, title);
+            AddIndexError(e, msg, title);
         }
 
         public void AddIndexFailedFlushError(Exception e)
         {
             var msg = string.Format("Failed to flush index '{0}'. The index priority was set to Error. Exception: {1}", PublicName, e);
             var title = string.Format("Index '{0}' marked as errored due to failure to flush index", PublicName);
-            AddIndexError(msg, title);
+            AddIndexError(e, msg, title);
         }
 
         private void ResetWriteErrors()

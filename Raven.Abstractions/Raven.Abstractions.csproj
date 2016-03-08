@@ -193,7 +193,6 @@
     <Compile Include="Data\IndexingPerformanceStatistics.cs" />
     <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\IndexingStatus.cs" />
-    <Compile Include="Data\ListsInfo.cs" />
     <Compile Include="Data\OperationStateBase.cs" />
     <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\ListsInfo.cs" />

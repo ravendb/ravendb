@@ -10,6 +10,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+
+using Lucene.Net.Index;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;

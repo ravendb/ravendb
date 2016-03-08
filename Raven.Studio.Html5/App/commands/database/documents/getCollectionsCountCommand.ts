@@ -2,7 +2,6 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import collection = require("models/database/documents/collection");
 import queryUtil = require("common/queryUtil");
-import queryUtil = require("common/queryUtil");
 
 class getCollectionsCountCommand extends commandBase {
 

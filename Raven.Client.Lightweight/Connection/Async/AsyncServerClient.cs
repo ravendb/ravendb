@@ -295,7 +295,7 @@ namespace Raven.Client.Connection.Async
 
         public Task<Tuple<string,Operation>> PutIndexAsyncWithOperation(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken))
         {
-            return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsyncWitOperation(name, indexDef, overwrite, operationMetadata, token), token);
+            return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexAsyncWitOperation(name, indexDef, overwrite, operationMetadata, token), token);
         }
 
 

@@ -282,7 +282,7 @@ class documents extends viewModelBase {
             if (regularCollections.length === 0)
                 return 0;
             var sum = regularCollections.map((c: collection) => c.documentCount()).reduce((a, b) => a + b);
-            return this.allDocumentsCollection.documentCount() - sum;
+            return this.allDocumentsCollection().documentCount() - sum;
         });
 
         // All systems a-go. Load them into the UI and select the first one.
@@ -292,7 +292,7 @@ class documents extends viewModelBase {
 
         
 
-        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
+        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
         collectionToSelect.activate();
     }
 
