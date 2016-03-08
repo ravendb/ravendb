@@ -211,35 +211,21 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
                 numericField = cached.Field;
             }
 
-            var sortOption = field.SortOption;
+            // TODO arek var sortOption = field.SortOption;
 
             if (value is LazyDoubleValue)
             {
                 var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner)); // TODO arek - 
 
-                if (sortOption == SortOptions.Float)
-                    yield return numericField.SetFloatValue(Convert.ToSingle(doubleValue));
-                else if (sortOption == SortOptions.Int)
-                    yield return numericField.SetIntValue(Convert.ToInt32(doubleValue));
-                else if (sortOption == SortOptions.Long)
-                    yield return numericField.SetLongValue(Convert.ToInt64(doubleValue));
-                else
-                    yield return numericField.SetDoubleValue(doubleValue);
+                yield return numericField.SetDoubleValue(doubleValue);
             }
             else if (value is long)
             {
-                if (sortOption == SortOptions.Double)
-                    yield return numericField.SetDoubleValue((long)value);
-                else if (sortOption == SortOptions.Float)
-                    yield return numericField.SetFloatValue((long)value);
-                else if (sortOption == SortOptions.Int)
-                    yield return numericField.SetIntValue(Convert.ToInt32((long)value));
-                else
-                    yield return numericField.SetLongValue((long)value);
+                yield return numericField.SetLongValue((long) value);
             }
             else
             {
-                throw new NotImplementedException($"Could not create numeric field from type: {value.GetType().FullName}");
+                throw new InvalidOperationException($"Could not create numeric field for the value '{value}' of the given type: {value.GetType().FullName}");
             }
         }
 
