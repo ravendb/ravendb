@@ -230,7 +230,7 @@ namespace Raven.Client
             return LastEtagHolder.GetLastWrittenEtag();
         }
 
-        public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
+        public abstract BulkInsertOperation BulkInsert(string database = null);
 
         public IAsyncReliableSubscriptions AsyncSubscriptions { get; private set; }
         public IReliableSubscriptions Subscriptions { get; private set; }

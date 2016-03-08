@@ -4,9 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
+using NetTopologySuite.Noding;
+using Raven.Database.Util;
 using Raven.Server.Web;
 
 namespace Raven.Server.Routing
@@ -47,14 +52,20 @@ namespace Raven.Server.Routing
             };
 
             var handler = await tryMatch.Value.CreateHandler(reqCtx);
+            var metricsCountersManager = reqCtx.Database?.Metrics ?? reqCtx.RavenServer.Metrics;
+            metricsCountersManager.RequestsMeter.Mark();
+            metricsCountersManager.RequestsPerSecondCounter.Mark();
+            Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
+            var sp = Environment.TickCount;
             if (handler == null)
             {
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsync("There is no handler for {context.Request.Method} {context.Request.Path}");
                 return;
             }
-
             await handler(reqCtx);
+            Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
+
         }
     }
 }

@@ -158,9 +158,9 @@ namespace Raven.Client.Connection.Async
         Task<LoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default (CancellationToken));
 
         /// <summary>
-        ///     Get the low level bulk insert operation
+        ///     Get the bulk insert operation
         /// </summary>
-        ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
+        WebSocketBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource));
 
         /// <summary>
         ///     Retrieves multiple documents.

@@ -228,6 +228,7 @@ namespace Raven.Server.Documents.Handlers
                 PutResult putResult;
                 using (context.OpenWriteTransaction())
                 {
+                    Database.Metrics.DocPutsPerSecond.Mark();
                     putResult = Database.DocumentsStorage.Put(context, id, etag, doc);
                     context.Transaction.Commit();
                     // we want to release the transaction before we write to the network

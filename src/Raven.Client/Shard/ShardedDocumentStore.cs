@@ -290,14 +290,14 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("This isn't a single last written etag when sharding");
         }
 
-        public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
+        public override BulkInsertOperation BulkInsert(string database = null)
         {
             throw new NotSupportedException("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead");
         }
 
-        public ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null, BulkInsertOptions options = null)
+        public ShardedBulkInsertOperation ShardedBulkInsert(string database = null, ShardedDocumentStore store = null)
         {
-            return new ShardedBulkInsertOperation(database, this, options ?? new BulkInsertOptions());
+            return new ShardedBulkInsertOperation(database, this);
         }
 
         public override void InitializeProfiling()

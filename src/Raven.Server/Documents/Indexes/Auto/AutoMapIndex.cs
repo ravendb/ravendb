@@ -141,6 +141,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                                 try
                                 {
                                     indexWriter.IndexDocument(document);
+                                    this.DocumentDatabase.Metrics.IndexedPerSecond.Mark();
                                 }
                                 catch (Exception e)
                                 {

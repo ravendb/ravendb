@@ -23,21 +23,9 @@ namespace Raven.Abstractions.Data
             this.stateOverride = stateOverride;
         }
 
-        public bool Completed
-        {
-            get
-            {
-                return task.IsCompleted;
-            }
-        }
+        public bool Completed => task.IsCompleted;
 
-        public bool Faulted
-        {
-            get
-            {
-                return task.IsFaulted;
-            }
-        }
+        public bool Faulted => task.IsFaulted;
 
         public RavenJToken State
         {

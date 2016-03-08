@@ -145,6 +145,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                     });
                                 }
                             }
+                            this._parent.DocumentDatabase.Metrics.MapReduceReducedPerSecond.Mark();
+
                         }
 
                         long tmp = 0;
@@ -274,11 +276,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             var pos = state.Tree.DirectAdd(new Slice(document.Key.Buffer, (ushort)document.Key.Size), mappedresult.Size);
                             mappedresult.CopyTo(pos);
                         }
-
+                        this._parent.DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
                         if (sw.Elapsed > _docProcessingTimeout)
                         {
                             break;
                         }
+                        
+                        
                     }
                 }
                 return lastEtag;

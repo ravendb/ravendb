@@ -71,6 +71,9 @@ namespace Raven.Server.Json
 
         public bool Read()
         {
+            if (_continuationState.Count == 0)
+                return false; //nothing to do
+
             var currentState = _continuationState.Pop();
             while (true)
             {

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-
+using Raven.Database.Util;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
@@ -50,6 +50,19 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
             }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/metrics", "GET")]
+        public Task Metrics()
+        {
+            MemoryOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, Database.Metrics.CreateMetricsStatsJsonValue());
+            }
+            
             return Task.CompletedTask;
         }
     }
