@@ -6,9 +6,9 @@
                     Resolve all conflicts <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href="#" data-bind="click: resolveToLocal">Resolve to local</a></li>
-                    <li><a href="#" data-bind="click: resolveToNewestRemote">Resolve to newest remote</a></li>
-                    <li><a href="#" data-bind="click: resolveToLatest">Resolve to latest</a></li>
+                    <li><a href="#" data-bind="click: resolveToLocal">Resolve to local <span data-bind="visible: serverConflictResolution() === 'ResolveToLocal'">(default)</span></a></li>
+                    <li><a href="#" data-bind="click: resolveToNewestRemote">Resolve to newest remote <span data-bind="visible: serverConflictResolution() === 'ResolveToRemote'">(default)</span></li>
+                    <li><a href="#" data-bind="click: resolveToLatest">Resolve to latest <span data-bind="visible: serverConflictResolution() === 'ResolveToLatest'">(default)</span></a></li>
                 </ul>
             </div>
         </div>
