@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Extensions;
@@ -52,7 +50,7 @@ namespace Raven.Server.Documents.Patch
         {
             var document = _database.DocumentsStorage.Get(context, documentId);
             if (Log.IsDebugEnabled)
-                Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentId, document != null));
+                Log.Debug(string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentId, document != null));
 
             if (etag.HasValue && document != null && document.Etag != etag.Value)
             {
@@ -67,7 +65,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 if (Log.IsDebugEnabled)
-                    Log.Debug(() => $"Got concurrent exception while tried to patch the following document: {documentId}");
+                    Log.Debug($"Got concurrent exception while tried to patch the following document: {documentId}");
                 throw new ConcurrencyException($"Could not patch document '{documentId}' because non current etag was used")
                 {
                     ActualETag = document.Etag,
@@ -75,7 +73,20 @@ namespace Raven.Server.Documents.Patch
                 };
             }
 
-            var patchRequest = document != null ? patch : patchIfMissing;
+            var patchRequest = patch;
+            if (document == null)
+            {
+                if (patchIfMissing == null)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Tried to patch a not exists document and patchIfMissing is null");
+                    return new PatchResultData
+                    {
+                        PatchResult = PatchResult.DocumentDoesNotExists
+                    };
+                }
+                patchRequest = patchIfMissing;
+            }
             var scope = ApplyInternal(context, document, etag, isTestOnly, patchRequest);
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject),
                 documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -83,10 +94,10 @@ namespace Raven.Server.Documents.Patch
             if (modifiedDocument == null)
             {
                 if (Log.IsDebugEnabled)
-                    Log.Debug(() => $"Preparing to apply patch on ({documentId}). DocumentDoesNotExists.");
+                    Log.Debug($"After applying patch, modifiedDocument is null and document is null? {document == null}");
                 return new PatchResultData
                 {
-                    PatchResult = PatchResult.DocumentDoesNotExists
+                    PatchResult = PatchResult.Skipped
                 };
             }
 
