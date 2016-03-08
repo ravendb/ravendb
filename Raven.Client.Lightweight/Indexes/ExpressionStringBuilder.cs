@@ -224,7 +224,7 @@ namespace Raven.Client.Indexes
                 Visit(instance);
                 if (ShouldParantesisMemberExpression(instance))
                     Out(")");
-                Out(isJsonProperty ? "[\"" + name + "\"]" : "." + name);
+                Out(isJsonProperty && !name.IsValidIdentifier() ? "[\"" + name + "\"]" : "." + name);
             }
             else
             {
