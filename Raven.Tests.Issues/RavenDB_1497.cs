@@ -79,7 +79,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
 
                 Thread.Sleep(1000); // incremental tag has seconds precision
@@ -92,7 +92,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
 
                 Thread.Sleep(1000); // incremental tag has seconds precision
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
 
                 var output = new StringBuilder();

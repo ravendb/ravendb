@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.IO;
-
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -46,7 +46,7 @@ namespace Raven.SlowTests
                 if (!Directory.Exists(indexDefinitionsFolder))
                     Directory.CreateDirectory(indexDefinitionsFolder);
 
-                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));			    
+                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState()));			    
                 WaitForBackup(store.SystemDatabase, true);
 
                 using (var session = store.OpenSession())
@@ -55,7 +55,7 @@ namespace Raven.SlowTests
                     session.SaveChanges();
                 }
 
-                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
+                Assert.DoesNotThrow(() => store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState()));
                 WaitForBackup(store.SystemDatabase, true);
             }
         }

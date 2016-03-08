@@ -216,9 +216,24 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
 
-            Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
+            var cts = new CancellationTokenSource();
+            var state = new ResourceBackupState();
 
-            return GetEmptyMessage(HttpStatusCode.Created);
+            var task = Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument, state, cts.Token);
+            task.ContinueWith(_ => cts.Dispose());
+
+            long id;
+            DatabasesLandlord.SystemDatabase.Tasks.AddTask(task, state, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.BackupDatabase,
+                Description = "Backup to: " + backupRequest.BackupLocation
+            }, out id, cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
         }
 
         protected override WindowsBuiltInRole[] AdditionalSupportedRoles

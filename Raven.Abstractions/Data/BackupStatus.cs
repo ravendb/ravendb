@@ -40,6 +40,11 @@ namespace Raven.Abstractions.Data
         public bool IsRunning { get; set; }
 
         /// <summary>
+        /// Indicated if backup finished successfully
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
         /// List of backup messages.
         /// </summary>
         public List<BackupMessage> Messages { get; set; }

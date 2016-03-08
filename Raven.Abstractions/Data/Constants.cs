@@ -287,6 +287,8 @@ namespace Raven.Abstractions.Data
 
         public const string IncrementalBackupState = "IncrementalBackupState.Document";
 
+        public const string BackupFailureMarker = "Backup.Failure";
+
         // Queries
         public const string MaxClauseCount = "Raven/MaxClauseCount";
 

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Threading;
 using Voron.Impl.FileHeaders;
 using Voron.Util;
 
@@ -21,7 +22,7 @@ namespace Voron.Impl.Backup
 
                 using (var headerStream = headerPart.Open())
                 {
-                    copier.ToStream((byte*)header, sizeof(FileHeader), headerStream);
+                    copier.ToStream((byte*)header, sizeof(FileHeader), headerStream, CancellationToken.None);
                 }
             }
         }

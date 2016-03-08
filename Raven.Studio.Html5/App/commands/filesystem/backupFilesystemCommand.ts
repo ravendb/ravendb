@@ -38,7 +38,13 @@ class backupFilesystemCommand extends commandBase {
                 if (backupStatus.IsRunning) {
                     setTimeout(() => this.getBackupStatus(result), 1000);
                 } else {
-                    this.reportSuccess("Filesystem backup was successfully created!");
+                    if (backupStatus.Success) {
+                        this.reportSuccess("Filesystem backup was successfully created!");
+                    } else {
+                        var cause = backupStatus.Messages.last(x => x.Severity === 'Error');
+                        this.reportError("Failed to backup filesystem: " + cause.Message);
+                    }
+                    
                     result.resolve();
                 }
             });

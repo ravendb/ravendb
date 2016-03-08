@@ -651,6 +651,7 @@ interface backupRequestDto {
 interface backupStatusDto {
     Started: string;
     Completed?: string;
+    Success?: string;
     IsRunning: boolean;
     Messages: backupMessageDto[];
 }

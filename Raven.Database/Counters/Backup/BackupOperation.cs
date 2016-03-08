@@ -54,13 +54,15 @@ namespace Raven.Database.Counters.Backup
                     var backupDestinationIncrementalDirectory = DirectoryForIncrementalBackup();
                     EnsureBackupDestinationExists(backupDestinationIncrementalDirectory);
 
-                    BackupMethods.Incremental.ToFile(env, Path.Combine(backupDestinationIncrementalDirectory, backupFilename),
+                    // TODO: cancelation tokens in counters backups are not supported for now
+                    BackupMethods.Incremental.ToFile(env, Path.Combine(backupDestinationIncrementalDirectory, backupFilename), CancellationToken.None,
                         infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
                 }
                 else
                 {
+                    // TODO: cancelation tokens in counters backups are not supported for now
                     EnsureBackupDestinationExists();
-                    BackupMethods.Full.ToFile(env, Path.Combine(backupDestinationDirectory, backupFilename),
+                    BackupMethods.Full.ToFile(env, Path.Combine(backupDestinationDirectory, backupFilename), CancellationToken.None, 
                         infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
                 }
             }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Packaging;
+using System.Threading;
 using Voron.Impl;
 using Voron.Impl.Backup;
 using Voron.Impl.Paging;
@@ -66,7 +67,7 @@ namespace Voron.Tests.Backups
 
             Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
 
-            BackupMethods.Full.ToFile(Env, _backupFile);
+            BackupMethods.Full.ToFile(Env, _backupFile, CancellationToken.None);
 
             BackupMethods.Full.Restore(_backupFile, _recoveredStoragePath);
 
@@ -124,7 +125,7 @@ namespace Voron.Tests.Backups
 
             Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
 
-            BackupMethods.Full.ToFile(Env, _backupFile);
+            BackupMethods.Full.ToFile(Env, _backupFile, CancellationToken.None);
 
             BackupMethods.Full.Restore(_backupFile, _recoveredStoragePath);
 

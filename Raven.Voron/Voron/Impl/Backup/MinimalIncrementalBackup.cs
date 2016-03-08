@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Util;
@@ -190,7 +191,7 @@ namespace Voron.Impl.Backup
                             nextJournalNum++;
                             using (var stream = entry.Open())
                             {
-                                copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream);
+                                copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * AbstractPager.PageSize, stream, CancellationToken.None);
                             }
                         }
 

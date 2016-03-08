@@ -58,14 +58,14 @@ namespace Raven.Tests.Issues
                 WaitForIndexing(db);
 
                 var databaseDocument = new DatabaseDocument();
-                db.Maintenance.StartBackup(BackupDir, false, databaseDocument);
+                db.Maintenance.StartBackup(BackupDir, false, databaseDocument, new ResourceBackupState());
                 WaitForBackup(db, true);
 
                 db.Documents.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
                 WaitForIndexing(db);
 
-                db.Maintenance.StartBackup(BackupDir, true, databaseDocument);
+                db.Maintenance.StartBackup(BackupDir, true, databaseDocument, new ResourceBackupState());
                 WaitForBackup(db, true);
 
             }
@@ -138,7 +138,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(db);
 
-                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(db, true);
             }
             IOExtensions.DeleteDirectory(DataDir);

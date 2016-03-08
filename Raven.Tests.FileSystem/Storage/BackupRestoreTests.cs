@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
 using Raven.Tests.FileSystem.Synchronization.IO;
@@ -56,8 +57,8 @@ namespace Raven.Tests.FileSystem.Storage
                 var md5Sums = FetchMd5Sums(store.AsyncFilesCommands);
 
                 // create backup
-                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, false, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                var opId = await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, false, store.DefaultFileSystem);
+                await WaitForOperationAsync(store.Url, opId);
 
                 // restore newly created backup
                 await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
@@ -91,8 +92,8 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 await CreateSampleData(store);
                 // create backup
-                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                var opId = await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
+                await WaitForOperationAsync(store.Url, opId);
 
                 await CreateSampleData(store, 3, 5);
                 
@@ -100,8 +101,8 @@ namespace Raven.Tests.FileSystem.Storage
                 var md5Sums = FetchMd5Sums(store.AsyncFilesCommands, 7);
 
                 // create second backup
-                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                var opId2 = await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
+                await WaitForOperationAsync(store.Url, opId2);
 
                 // restore newly created backup
                 await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
@@ -136,13 +137,13 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 await CreateSampleData(store);
                 
-                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                var opId1 = await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
+                await WaitForOperationAsync(store.Url, opId1);
 
                 await CreateSampleData(store, 3, 5);
 
-                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                var opId2 = await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);
+                await WaitForOperationAsync(store.Url, opId2);
             }
 
             using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
@@ -152,16 +153,12 @@ namespace Raven.Tests.FileSystem.Storage
                 config.Storage.Voron.AllowIncrementalBackups = true;
             }, fileSystemName: "RavenDB_2824_two"))
             {
-                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);  // use the same BackupDir on purpose
-                WaitForBackup(store.AsyncFilesCommands, false);
+                var opId = await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);  // use the same BackupDir on purpose
 
-                var backupStatus = await store.AsyncFilesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey);
+                var ex = Assert.Throws<AggregateException>( () => WaitForOperationAsync(store.Url, opId).Wait());
+                var innerEx = ex.ExtractSingleInnerException();
 
-                var errorMessage = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
-
-                Assert.NotNull(errorMessage);
-
-                Assert.Contains("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different file system. Existing incremental data origins from 'RavenDB_2824_one' file system.", errorMessage.Message);
+                Assert.Contains("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different file system. Existing incremental data origins from 'RavenDB_2824_one' file system.", innerEx.Message);
             }
         }
 
@@ -181,8 +178,8 @@ namespace Raven.Tests.FileSystem.Storage
                 var md5Sums = FetchMd5Sums(store.AsyncFilesCommands);
 
                 // create backup
-                await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, false, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+                var opId = await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, false, store.DefaultFileSystem);
+                await WaitForOperationAsync(store.Url, opId);
 
                 // restore newly created backup
                 await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest

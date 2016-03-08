@@ -27,9 +27,10 @@ namespace Raven.Tests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncFilesCommands.Admin.StartBackup(backupLocation,
+                var opId = await store.AsyncFilesCommands.Admin.StartBackup(backupLocation,
                     null, false, store.DefaultFileSystem);
-                WaitForBackup(store.AsyncFilesCommands, true);
+
+                await WaitForOperationAsync(store.Url, opId).ConfigureAwait(false);
             }
         }
 

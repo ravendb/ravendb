@@ -22,7 +22,7 @@ namespace Voron.Impl.Backup
     public unsafe class FullBackup
     {
 
-        public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal,
+        public void ToFile(StorageEnvironment env, string backupPath, CancellationToken token, CompressionLevel compression = CompressionLevel.Optimal,
             Action<string> infoNotify = null,
             Action backupStarted = null)
         {
@@ -61,6 +61,8 @@ namespace Voron.Impl.Backup
                             JournalInfo journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
                             for (var journalNum = journalInfo.CurrentJournal - journalInfo.JournalFilesCount + 1; journalNum <= journalInfo.CurrentJournal; journalNum++)
                             {
+                                token.ThrowIfCancellationRequested();
+
                                 var journalFile = files.FirstOrDefault(x => x.Number == journalNum); // first check journal files currently being in use
                                 if (journalFile == null)
                                 {
@@ -100,7 +102,7 @@ namespace Voron.Impl.Backup
                                 // now can copy everything else
                                 var firstDataPage = dataPager.Read(0);
 
-                                copier.ToStream(firstDataPage.Base, AbstractPager.PageSize * allocatedPages, dataStream);
+                                copier.ToStream(firstDataPage.Base, AbstractPager.PageSize * allocatedPages, dataStream, token);
                             }
                         }
 
@@ -118,7 +120,7 @@ namespace Voron.Impl.Backup
 
                                 using (var stream = journalPart.Open())
                                 {
-                                    copier.ToStream(journalFile, 0, pagesToCopy, stream);
+                                    copier.ToStream(journalFile, 0, pagesToCopy, stream, token);
                                     infoNotify(string.Format("Voron copy journal file {0} ", journalFile));
                                 }
 

@@ -134,10 +134,10 @@ namespace Raven.Tests.Core.Commands
                 {
                     Settings = new Dictionary<string, string>()
                     {
-                        { Constants.RunInMemory, "false" }
+                        {Constants.RunInMemory, "false"}
                     }
-                }, false, store.DefaultDatabase);
-                WaitForBackup(store.DatabaseCommands, true);
+                }, false, store.DefaultDatabase)
+                    .WaitForCompletion();
             }
 
             Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()

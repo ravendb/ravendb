@@ -1692,8 +1692,10 @@ namespace Raven.Database.Indexing
             return currentlyIndexing.Values.ToArray();
         }
 
-        public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback)
+        public void Backup(string backupDirectory, string path, string incrementalTag, Action<string, Exception, BackupStatus.BackupMessageSeverity> notifyCallback, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
+
             if (directory is RAMDirectory)
             {
                 //if the index is memory-only, force writing index data to disk
@@ -1723,6 +1725,8 @@ namespace Raven.Database.Indexing
                     }
                 }
 
+                token.ThrowIfCancellationRequested();
+
                 var neededFilePath = Path.Combine(saveToFolder, "index-files.required-for-index-restore");
                 using (var allFilesWriter = File.Exists(allFilesPath) ? File.AppendText(allFilesPath) : File.CreateText(allFilesPath))
                 using (var neededFilesWriter = File.CreateText(neededFilePath))
@@ -1737,6 +1741,7 @@ namespace Raven.Database.Indexing
                             // sure that we get the _at the time_ of the write. 
                             foreach (var fileName in new[] { "segments.gen", IndexStorage.IndexVersionFileName(indexDefinition) })
                             {
+                                token.ThrowIfCancellationRequested();
                                 var fullPath = Path.Combine(path, indexId.ToString(), fileName);
                                 File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
                                 allFilesWriter.WriteLine(fileName);
@@ -1768,6 +1773,8 @@ namespace Raven.Database.Indexing
                     {
                         foreach (var fileName in commit.FileNames)
                         {
+                            token.ThrowIfCancellationRequested();
+
                             var fullPath = Path.Combine(path, indexId.ToString(), fileName);
 
                             if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
@@ -1838,7 +1845,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static void LogErrorAndNotifyStudio(Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
+        private static void LogErrorAndNotifyStudio(Action<string, Exception, BackupStatus.BackupMessageSeverity> notifyCallback, string failureMessage, Exception e)
         {
             logIndexing.WarnException(failureMessage, e);
             if (notifyCallback != null)

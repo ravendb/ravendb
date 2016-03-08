@@ -23,6 +23,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
+using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -642,7 +643,7 @@ namespace Raven.Database.FileSystem.Search
             }
         }
 
-        public void Backup(string backupDirectory)
+        public void Backup(string backupDirectory, CancellationToken token)
         {
             
             if (configuration.RunInMemory)
@@ -651,6 +652,8 @@ namespace Raven.Database.FileSystem.Search
                 if(ramDirectory != null)
                     MakeRAMDirectoryPhysical(ramDirectory, indexDirectory);
             }
+
+            token.ThrowIfCancellationRequested();
 
             bool hasSnapshot = false;
             bool throwOnFinallyException = true;
@@ -689,6 +692,8 @@ namespace Raven.Database.FileSystem.Search
                     hasSnapshot = true;
                     foreach (var fileName in commit.FileNames)
                     {
+                        token.ThrowIfCancellationRequested();
+
                         var fullPath = Path.Combine(indexDirectory, fileName);
 
                         if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))

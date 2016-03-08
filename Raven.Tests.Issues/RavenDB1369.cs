@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
                     sesion.SaveChanges();
                 }
 
-                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
             }
 
@@ -117,7 +117,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
             }
 
@@ -173,8 +173,7 @@ namespace Raven.Tests.Issues
                     sesion.SaveChanges();
                 }
 
-                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
-                WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1").WaitForCompletion();
 
                 store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
@@ -223,8 +222,7 @@ namespace Raven.Tests.Issues
                         sesion.SaveChanges();
                     }
 
-                    store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), true, "DB1");
-                    WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                    store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), true, "DB1").WaitForCompletion();
                     
                     Thread.Sleep(1000); // incremental tag has seconds precision
                 }
@@ -276,8 +274,7 @@ namespace Raven.Tests.Issues
 
                 new User_ByName().Execute(store.DatabaseCommands.ForDatabase("DB1"), store.Conventions);
 
-                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
-                WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1").WaitForCompletion();
 
                 store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
@@ -286,9 +283,8 @@ namespace Raven.Tests.Issues
                     IndexesLocation = indexesDir,
                     JournalsLocation = jouranlDir,
                     DatabaseName = "DB2"
-                });
+                }).WaitForCompletion();
 
-                WaitForRestore(store.DatabaseCommands);
                 Assert.NotNull(store.DatabaseCommands.ForDatabase("DB2").GetIndex("User/ByName"));
             }
         }

@@ -211,6 +211,7 @@ namespace Raven.Database.TimeSeries
             var fullBackup = new FullBackup();
             fullBackup.ToFile(_storageEnvironment,
                 Path.Combine(_storageEnvironment.Options.BasePath, string.Format("Full-{0:D19}-{1:D19}.Snapshot", index, term)),
+                CancellationToken.None,
                 infoNotify: Console.WriteLine,
                 backupStarted: allowFurtherModifications.Set
                 );

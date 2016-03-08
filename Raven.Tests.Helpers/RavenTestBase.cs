@@ -665,11 +665,6 @@ namespace Raven.Tests.Helpers
             WaitForBackup(key => db.Documents.Get(key, null), checkError);
         }
 
-        protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
-        {
-            WaitForBackup(commands.Get, checkError);
-        }
-
         private void WaitForBackup(Func<string, JsonDocument> getDocument, bool checkError)
         {
             var done = SpinWait.SpinUntil(() =>

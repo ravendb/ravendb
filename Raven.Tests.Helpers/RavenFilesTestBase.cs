@@ -465,7 +465,7 @@ namespace Raven.Tests.Helpers
             if (!done) throw new Exception("WaitForDocument failed");
         }
 
-        protected async Task WaitForRestoreAsync(string url, long operationId)
+        protected async Task WaitForOperationAsync(string url, long operationId)
         {
             using (var sysDbStore = new DocumentStore
             {
@@ -474,31 +474,6 @@ namespace Raven.Tests.Helpers
             {
                 await new Operation((AsyncServerClient) sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
             }
-        }
-
-        protected void WaitForBackup(IAsyncFilesCommands filesCommands, bool checkError)
-        {
-            var done = SpinWait.SpinUntil(() =>
-            {
-                var backupStatus = AsyncHelpers.RunSync(() => filesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey));
-                if (backupStatus == null)
-                    return true;
-
-                if (backupStatus.IsRunning == false)
-                {
-                    if (checkError)
-                    {
-                        var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
-                        if (firstOrDefault != null)
-                            Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
-                    }
-
-                    return true;
-                }
-                return false;
-            }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            
-            Assert.True(done);
         }
 
         public async static Task<T> ThrowsAsync<T>(Func<Task> testCode) where T : Exception

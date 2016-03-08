@@ -1526,7 +1526,7 @@ namespace Raven.Client.FileSystem
                 }
             }
 
-            public async Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName)
+            public async Task<long> StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName)
             {
                 var requestUrlString = string.Format("{0}/fs/{1}/admin/backup?incremental={2}", client.ServerUrl, fileSystemName, incremental);
 
@@ -1539,6 +1539,9 @@ namespace Raven.Client.FileSystem
                             BackupLocation = backupLocation,
                             FileSystemDocument = fileSystemDocument
                         }).ConfigureAwait(false);
+
+                        var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                        return response.Value<long>("OperationId");
                     }
                     catch (Exception e)
                     {

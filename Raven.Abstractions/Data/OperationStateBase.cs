@@ -23,7 +23,7 @@ namespace Raven.Abstractions.Data
             State = new RavenJObject();
         }
 
-        public void MarkProgress(string progress)
+        public virtual void MarkProgress(string progress)
         {
             State["Progress"] = progress;
         }

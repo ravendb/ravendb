@@ -1,6 +1,7 @@
 using Raven.Abstractions.Data;
 using System;
 using System.IO;
+using System.Threading;
 using Voron;
 using Voron.Impl.Backup;
 
@@ -12,8 +13,8 @@ namespace Raven.Database.Storage.Voron.Backup
 
         public BackupOperation(DocumentDatabase database, string backupSourceDirectory,
                                string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup,
-                               DatabaseDocument databaseDocument)
-            : base(database, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, databaseDocument)
+                               DatabaseDocument databaseDocument, ResourceBackupState state, CancellationToken cancellationToken)
+            : base(database, backupSourceDirectory, backupDestinationDirectory, incrementalBackup, databaseDocument, state, cancellationToken)
         {
             if (env == null) throw new ArgumentNullException("env");
 
@@ -25,15 +26,15 @@ namespace Raven.Database.Storage.Voron.Backup
             get { return Directory.Exists(backupDestinationDirectory) && File.Exists(Path.Combine(backupDestinationDirectory.Trim(), BackupMethods.Filename)); }
         }
 
-        protected override void ExecuteBackup(string backupPath, bool isIncrementalBackup)
+        protected override void ExecuteBackup(string backupPath, bool isIncrementalBackup, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(backupPath)) throw new ArgumentNullException("backupPath");
 
             if (isIncrementalBackup)
-                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+                BackupMethods.Incremental.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename), token,
                     infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
             else
-                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename),
+                BackupMethods.Full.ToFile(env, Path.Combine(backupPath, BackupMethods.Filename), token, 
                     infoNotify: s => UpdateBackupStatus(s, null, BackupStatus.BackupMessageSeverity.Informational));
         }
 
@@ -47,3 +48,4 @@ namespace Raven.Database.Storage.Voron.Backup
         }
     }
 }
+

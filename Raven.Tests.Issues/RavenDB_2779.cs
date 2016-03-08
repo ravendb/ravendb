@@ -68,10 +68,9 @@ namespace Raven.Tests.Issues
                     sesion.SaveChanges();
                 }
 
-                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
-                WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1").WaitForCompletion();
 
-                var operation = store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
+                var restoreOpertion = store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                                                                                 {
                                                                                     BackupLocation = backupDir,
                                                                                     DatabaseLocation = dataDir,
@@ -80,9 +79,7 @@ namespace Raven.Tests.Issues
                                                                                     DatabaseName = "DB2"
                                                                                 });
 
-                AssertTimeDifferenceLessThan(TimeSpan.FromSeconds(5), 
-                    () => operation.WaitForCompletion(),
-                    () => WaitForBackup(store.DatabaseCommands, true));
+                restoreOpertion.WaitForCompletion();
 
                 using (var sesion = store.OpenSession("DB2"))
                 {
@@ -115,8 +112,7 @@ namespace Raven.Tests.Issues
                     sesion.SaveChanges();
                 }
 
-                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
-                WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1").WaitForCompletion();
 
                 var operation = store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
@@ -132,33 +128,6 @@ namespace Raven.Tests.Issues
 
                 Assert.Throws<InvalidOperationException>(() => operation.WaitForCompletion());
             }
-
-
-        }
-
-        private void AssertTimeDifferenceLessThan(TimeSpan maxDiff, params Action[] actions)
-        {
-            var stopWatchs = Enumerable.Range(0, actions.Length).Select(i => new Stopwatch()).ToArray();
-
-            var tasks = stopWatchs.Select((sw, index) => Task.Factory.StartNew(() =>
-            {
-                sw.Start();
-                try
-                {
-                    actions[index]();
-                }
-                finally
-                {
-                    sw.Stop();
-                }
-            })).ToArray();
-
-            Task.WaitAll(tasks);
-
-            var minTime = stopWatchs.Min(sw => sw.Elapsed);
-            var maxTime = stopWatchs.Max(sw => sw.Elapsed);
-            var timeExtent = maxTime - minTime;
-            Assert.True(timeExtent < maxDiff, string.Format("Min time: {0}, Max time: {1}", minTime, maxTime));
         }
     }
 }

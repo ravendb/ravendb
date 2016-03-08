@@ -509,13 +509,15 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
-        public void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument fileSystemDocument)
+        public Task StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, 
+            FileSystemDocument fileSystemDocument, ResourceBackupState state, CancellationToken token)
         {
             if (new InstanceParameters(instance).Recovery == false)
                 throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
-            var backupOperation = new BackupOperation(filesystem, systemDatabase.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument);
-            Task.Factory.StartNew(backupOperation.Execute);
+            var backupOperation = new BackupOperation(filesystem, systemDatabase.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, 
+                fileSystemDocument, state, token);
+            return Task.Factory.StartNew(backupOperation.Execute);
         }
 
         public void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output)

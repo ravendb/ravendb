@@ -817,6 +817,7 @@
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
+    <Compile Include="Storage\BackupRestoreCancelation.cs" />
     <Compile Include="Storage\Batches.cs" />
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
     <Compile Include="Storage\DocRefsDump.cs" />

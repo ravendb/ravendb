@@ -122,9 +122,7 @@ namespace Raven.Tests.Smuggler
                 var commands = store.DatabaseCommands.ForDatabase("N1");
                 var oldDatabaseId = store.DatabaseCommands.GetStatistics().DatabaseId;
 
-                commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1");
-
-                WaitForBackup(commands, true);
+                commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1").WaitForCompletion();
 
                 var operation = commands
                     .GlobalAdmin
@@ -169,9 +167,7 @@ namespace Raven.Tests.Smuggler
                 var commands = store.DatabaseCommands.ForDatabase("N1");
                 var oldDatabaseId = commands.GetStatistics().DatabaseId;
 
-                commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1");
-
-                WaitForBackup(commands, true);
+                commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1").WaitForCompletion();
 
                 var operation = commands
                     .GlobalAdmin
