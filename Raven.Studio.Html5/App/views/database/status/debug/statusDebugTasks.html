@@ -4,38 +4,32 @@
             <h4 class="page-header text-info">No Tasks debug info to display!</h4>
         </div>
 
-        <!-- ko foreach: data -->
-        <div class="form-group">
-            <label class="col-md-4 control-label">Id</label>
-            <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: Id"></p>
-            </div>
+        <div data-bind="if: data() && data().length > 0">
+            <a class="btn btn-default" target="_blank" href="#" data-bind="attr: { href: detailsUrl }"><i class="fa fa-download"></i> Download raw data</a>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Index Id</th>
+                        <th>Index Name</th>
+                        <th>Task Count</th>
+                        <th>Min Date</th>
+                        <th>Max Date</th>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: data">
+                    <tr>
+                        <td data-bind="text: Type"></td>
+                        <td data-bind="text: IndexId"></td>
+                        <td data-bind="text: IndexName"></td>
+                        <td data-bind="text: Count"></td>
+                        <td data-bind="text: MinDate"></td>
+                        <td data-bind="text: MaxDate"></td>
+                    </tr>
+                </tbody>
+            </table>    
         </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">Index Id</label>
-            <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: IndexId"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">Index name</label>
-            <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: IndexName"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">Added time</label>
-            <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: AddedTime"></p>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-md-4 control-label">Type</label>
-            <div class="col-md-8">
-                <p class="form-control-static" data-bind="text: Type"></p>
-            </div>
-        </div>
-        <hr />
-        <!-- /ko -->
+        
     </form>
 </section>

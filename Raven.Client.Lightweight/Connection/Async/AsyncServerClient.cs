@@ -293,6 +293,12 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata, token), token);
         }
 
+        public Task<Tuple<string,Operation>> PutIndexAsyncWithOperation(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken))
+        {
+            return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexAsyncWitOperation(name, indexDef, overwrite, operationMetadata, token), token);
+        }
+
+
         public Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Put, operationMetadata => DirectPutIndexesAsync(indexesToAdd, operationMetadata, token), token);
@@ -310,7 +316,12 @@ namespace Raven.Client.Connection.Async
 
         public async Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
         {
-            var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
+            return (await DirectPutIndexAsyncWitOperation(name, indexDef, overwrite, operationMetadata, token).ConfigureAwait(false)).Item1;
+        }
+
+        public async Task<Tuple<string,Operation>> DirectPutIndexAsyncWitOperation(string name, IndexDefinition indexDef, bool overwrite, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+        {
+            var requestUri = operationMetadata.Url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes&includePrecomputeOperation=yes";
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
             {
                 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
@@ -337,7 +348,12 @@ namespace Raven.Client.Connection.Async
                 {
                     await request.WriteAsync(serializeObject).ConfigureAwait(false);
                     var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                    return result.Value<string>("Index");
+                    var resultObject = result as RavenJObject;
+                    if (resultObject == null || !resultObject.ContainsKey("OperationId"))
+                        return Tuple.Create(result.Value<string>("Index"), (Operation)null);
+
+                    var operationId = result.Value<long>("OperationId");
+                    return Tuple.Create(result.Value<string>("Index"), operationId != -1 ? new Operation(this,operationId) : null);
                 }
                 catch (ErrorResponseException e)
                 {

@@ -320,7 +320,7 @@ namespace Raven.Abstractions.Data
 
         public static implicit operator Etag(string s)
         {
-            return Parse(s);
+            return string.IsNullOrWhiteSpace(s) ? null : Parse(s);
         }
 
         public static implicit operator Etag(Guid g)

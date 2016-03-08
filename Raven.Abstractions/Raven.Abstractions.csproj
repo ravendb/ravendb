@@ -193,9 +193,9 @@
     <Compile Include="Data\IndexingPerformanceStatistics.cs" />
     <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\IndexingStatus.cs" />
-    <Compile Include="Data\ListsInfo.cs" />
     <Compile Include="Data\OperationStateBase.cs" />
     <Compile Include="Data\SimulateSqlReplicationResult.cs" />
+    <Compile Include="Data\ListsInfo.cs" />
     <Compile Include="Data\SideBySideIndexes.cs" />
     <Compile Include="Data\IndexToAdd.cs" />
     <Compile Include="Data\IOperationState.cs" />
@@ -277,6 +277,7 @@
     <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionException.cs" />
+    <Compile Include="Exceptions\TotalDataSizeExceededException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />

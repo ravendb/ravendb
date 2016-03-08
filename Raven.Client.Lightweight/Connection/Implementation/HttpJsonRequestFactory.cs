@@ -162,7 +162,7 @@ namespace Raven.Client.Connection
 #else
                 return Volatile.Read(ref numberOfCacheResets);
 #endif
-        }
+            }
         }
 
         /// <summary>
@@ -237,7 +237,7 @@ namespace Raven.Client.Connection
 #else
                 aggressiveCacheDuration.Value = value;
 #endif
-        }
+            }
         }
 
 #if DNXCORE50
@@ -256,7 +256,7 @@ namespace Raven.Client.Connection
 #else
                 return requestTimeout.Value;
 #endif
-        }
+            }
             set
             {
 #if !DNXCORE50
@@ -280,7 +280,7 @@ namespace Raven.Client.Connection
             {
 #if !DNXCORE50
                 var value = CallContext.LogicalGetData("Raven/Client/DisableHttpCaching");
-                if (value == null) 
+                if (value == null)
                     return false;
 
                 return (bool)value;
@@ -295,7 +295,7 @@ namespace Raven.Client.Connection
 #else
                 disableHttpCaching.Value = value;
 #endif
-        }
+            }
         }
 
         /// <summary>

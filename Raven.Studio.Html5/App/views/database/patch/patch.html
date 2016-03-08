@@ -191,16 +191,14 @@
                 </div>
             </div>
         </div>
-        <div id="matchingDocumentsContainer" class="form-group" data-bind="visible: ((!!patchDocument()) && (patchDocument().isIndexPatch() || patchDocument().isCollectionPatch()))">
+        <div id="matchingDocumentsContainer" class="form-group" data-bind="if: showDocumentsPreview">
             <div class="col-md-12">
                 <div>
                     <label>Matching Documents</label>
                 </div>
-                <div>
-                    <div id="matchingDocumentsGrid" style="width: 100%; height: 300px;" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, dynamicHeightBottomMargin: -30, dynamicHeightTargetSelector: '#beforeAfterContainer', selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid', maxHeight: '300px' }"></div>
+                <div id="matchingDocumentsGrid" style="width: 100%; height: 300px" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, dynamicHeightBottomMargin: 0, dynamicHeightTargetSelector: '#beforeAfterContainer', selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
                 </div>
             </div>
-        </div>
         <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">
             <div class="col-md-6">
                 <div>

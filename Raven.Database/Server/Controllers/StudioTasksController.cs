@@ -565,7 +565,11 @@ for(var customFunction in customFunctions) {{
 
                     var totalCount = 0;
                     var batch = new List<RavenJObject>();
-                    var columns = headers.Where(x => x.StartsWith("@") == false).ToArray();
+
+                    var validColumnIndexes = headers.Select((h, i) => new { Header = h, Index = i })
+                        .Where(x => x.Header.StartsWith("@") == false)
+                        .Select(s=> s.Index)
+                        .ToArray();
 
                     batch.Clear();
                     while (csvReader.EndOfData == false)
@@ -574,33 +578,35 @@ for(var customFunction in customFunctions) {{
                         var document = new RavenJObject();
                         string id = null;
                         RavenJObject metadata = null;
-                        for (int index = 0; index < columns.Length; index++)
+                        foreach (var index in validColumnIndexes)
                         {
-                            var column = columns[index];
+                            var column = headers[index];
                             if (string.IsNullOrEmpty(column))
                                 continue;
+                            var value = record[index];
 
-                            if (string.Equals("@id", column, StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
                             {
-                                id = record[index];
+                                id = value;
                             }
                             else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
                             {
                                 metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenEntityName] = record[index];
-                                id = id ?? record[index] + "/";
+                                metadata[Constants.RavenEntityName] = value;
+                                id = id ?? value + "/";
                             }
                             else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
                             {
                                 metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenClrType] = record[index];
-                                id = id ?? record[index] + "/";
+                                metadata[Constants.RavenClrType] = value;
+                                id = id ?? value + "/";
                             }
                             else
                             {
-                                document[column] = SetValueInDocument(record[index]);
+                                document[column] = SetValueInDocument(value);
                             }
                         }
+
 
                         metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
                         document.Add("@metadata", metadata);

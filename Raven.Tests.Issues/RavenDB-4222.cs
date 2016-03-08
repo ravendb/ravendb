@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Tasks;
 using Raven.Tests.Common;
@@ -28,17 +27,12 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(accessor =>
                 {
-                    var foundWork = new Reference<bool>();
                     var idsToSkip = new List<int>()
                     {
                         101
                     };
 
-                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        idsToSkip);
+                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, new[] {101}, new HashSet<IComparable>());
                     Assert.Null(task);
                 });
 
@@ -62,32 +56,23 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(accessor =>
                 {
-                    var foundWork = new Reference<bool>();
                     var idsToSkip = new List<int>()
                     {
                         102
                     };
-                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        idsToSkip);
+                    var allIndexes = new[] {101, 102, 103};
+                    var alreadySeen = new HashSet<IComparable>();
+                    var task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes, alreadySeen);
                     Assert.NotNull(task);
                     Assert.Equal(101, task.Index);
+                    accessor.Tasks.DeleteTasks(alreadySeen);
 
-                    task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        idsToSkip);
+                    task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes, alreadySeen);
                     Assert.NotNull(task);
                     Assert.Equal(103, task.Index);
+                    accessor.Tasks.DeleteTasks(alreadySeen);
 
-                    task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                        x => MaxTaskIdStatus.Updated,
-                        x => { },
-                        foundWork,
-                        idsToSkip);
+                    task = accessor.Tasks.GetMergedTask<RemoveFromIndexTask>(idsToSkip, allIndexes, alreadySeen);
                     Assert.Null(task);
                 });
 
@@ -96,8 +81,8 @@ namespace Raven.Tests.Issues
                     Assert.True(accessor.Tasks.HasTasks);
                     Assert.Equal(1, accessor.Tasks.ApproximateTaskCount);
 
-                    var tasks = accessor.Tasks.GetPendingTasksForDebug();
-                    Assert.Equal(1, tasks.Count());
+                    var tasks = accessor.Tasks.GetPendingTasksForDebug().ToList();
+                    Assert.Equal(1, tasks.Count);
                     Assert.Equal(102, tasks.First().IndexId);
                 });
             }

@@ -13,7 +13,7 @@ class getDocumentsByEntityNameCommand extends commandBase {
 
     execute(): JQueryPromise<pagedResultSet> {
         var args = {
-            query: "Tag:" + queryUtil.escape(this.collection.name), 
+            query: "Tag:" + queryUtil.escapeTerm(this.collection.name),
             start: this.skip,
             pageSize: this.take,
             sort: "-LastModifiedTicks"

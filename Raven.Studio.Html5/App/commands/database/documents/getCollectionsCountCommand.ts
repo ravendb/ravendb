@@ -23,7 +23,7 @@ class getCollectionsCountCommand extends commandBase {
             return {
                 Url: "/indexes/Raven/DocumentsByEntityName",
                 Headers: {},
-                Query: "?&query=Tag:" + queryUtil.escape(collection.name) + "&pageSize=0" 
+                Query: "?&query=Tag:" + queryUtil.escapeTerm(collection.name) + "&pageSize=0"
             }
         });
 

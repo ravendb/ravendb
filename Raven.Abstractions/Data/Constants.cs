@@ -24,6 +24,7 @@ namespace Raven.Abstractions.Data
         
         
         public const string LastModified = "Last-Modified";
+        public const string SerializedSizeOnDisk = "SerializedSizeOnDisk";
 
         public const string CreationDate = "Creation-Date";
 

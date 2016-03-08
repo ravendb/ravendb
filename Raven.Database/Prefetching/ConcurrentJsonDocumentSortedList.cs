@@ -179,5 +179,23 @@ namespace Raven.Database.Prefetching
                 slim.ExitWriteLock();
             }
         }
+
+        public bool DocumentExists(Etag etag)
+        {
+            try
+            {
+                slim.EnterReadLock();
+
+                if (innerList.Count == 0)
+                    return false;
+
+                JsonDocument _;
+                return innerList.TryGetValue(etag, out _); //o(log n)
+            }
+            finally
+            {
+                slim.ExitReadLock();
+            }
+        }
     }
 }

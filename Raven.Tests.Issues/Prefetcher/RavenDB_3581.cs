@@ -524,14 +524,18 @@ namespace Raven.Tests.Issues.Prefetcher
             var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(prefetcher.Configuration.InitialNumberOfItemsToProcessInSingleBatch, documents.Count);
 
+            //let the future batches complete
+            Thread.Sleep(1000);
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 768;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(768, documents.Count);
 
+            Thread.Sleep(1000);
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(1024, documents.Count);
 
+            Thread.Sleep(1000);
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024 * 64;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(2048, documents.Count);

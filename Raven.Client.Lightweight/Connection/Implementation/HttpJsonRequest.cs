@@ -83,6 +83,7 @@ namespace Raven.Client.Connection.Implementation
 
         public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
         private string url;
+        private bool criticalError;
 
         /// <summary>
         /// Gets or sets the response headers.
@@ -301,6 +302,19 @@ namespace Raven.Client.Connection.Implementation
                         throw;
 
                     responseException = e;
+                }
+                catch (IndexCompilationException)
+                {
+                    throw;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception)
+                {
+                    criticalError = true;
+                    throw;
                 }
 
                 if (ResponseStatusCode == HttpStatusCode.Forbidden)
@@ -964,7 +978,11 @@ namespace Raven.Client.Connection.Implementation
 
             if (httpClient != null)
             {
+                if (criticalError == false)
                 factory.httpClientCache.ReleaseClient(httpClient, _credentials);
+                else
+                    httpClient.Dispose();
+
                 httpClient = null;
             }
         }

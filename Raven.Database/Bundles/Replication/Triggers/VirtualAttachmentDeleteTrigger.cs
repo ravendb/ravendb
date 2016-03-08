@@ -53,12 +53,15 @@ namespace Raven.Bundles.Replication.Triggers
 
         public override void AfterDelete(string key)
         {
+            var now = DateTime.UtcNow;
             var metadata = new RavenJObject
             {
                 {Constants.RavenDeleteMarker, true},
                 {Constants.RavenReplicationHistory, deletedHistory.Value},
                 {Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-                {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)}
+                {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)},
+                {Constants.LastModified,now},
+                {Constants.RavenLastModified,now }
             };
             deletedHistory.Value = null;
             Database.TransactionalStorage.Batch(accessor =>
