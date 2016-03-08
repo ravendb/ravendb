@@ -181,9 +181,8 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        index.Execute();
-
-                        LowLevel_WaitForIndexMap(index, 2);
+                        index.DoIndexingWork(CancellationToken.None);
+                        Assert.Equal(2, index.GetLastMappedEtags().Values.Min());
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -202,7 +201,8 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        LowLevel_WaitForIndexMap(index, 3);
+                        index.DoIndexingWork(CancellationToken.None);
+                        Assert.Equal(3, index.GetLastMappedEtags().Values.Min());
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -211,17 +211,12 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        WaitForTombstone(index, 4);
+                        index.DoIndexingWork(CancellationToken.None);
+
+                        Assert.Equal(4, index.GetLastTombstoneEtags().Values.Min());
                     }
                 }
             }
-        }
-
-
-        private static void WaitForTombstone(Index index, long etag)
-        {
-            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
-            Assert.True(SpinWait.SpinUntil(() => index.GetLastTombstoneEtags().Values.Min() == etag, timeout));
         }
 
         private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
