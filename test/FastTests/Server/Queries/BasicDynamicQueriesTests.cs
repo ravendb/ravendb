@@ -90,5 +90,36 @@ namespace FastTests.Server.Queries
                 }
             }
         }
+
+        [Fact]
+        public async Task Dynamic_query_with_sorting_by_strings()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "David" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Adam" }, "users/2");
+                    await session.StoreAsync(new User { Name = "John" }, "users/3");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Name).ToList();
+
+                    Assert.Equal("users/2", users[0].Id);
+                    Assert.Equal("users/1", users[1].Id);
+                    Assert.Equal("users/3", users[2].Id);
+
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).OrderByDescending(x => x.Name).ToList();
+
+                    Assert.Equal("users/3", users[0].Id);
+                    Assert.Equal("users/1", users[1].Id);
+                    Assert.Equal("users/2", users[2].Id);
+                }
+            }
+        }
     }
 }
