@@ -427,7 +427,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/license/connectivity")]
         public HttpResponseMessage CheckConnectivityToLicenseServer()
         {
-            var request = (HttpWebRequest)WebRequest.Create("http://licensing.ravendb.net/Subscriptions.svc");
+            var request = (HttpWebRequest)WebRequest.Create("https://licensing.ravendb.net/Subscriptions.svc");
             try
             {
                 request.Timeout = 5000;
