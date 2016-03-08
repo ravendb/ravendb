@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database.Indexing;
@@ -41,7 +43,7 @@ namespace Raven.Tests.MailingList
         {
             var perFieldAnalyzerComparer = new RavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();
             Assert.Equal(perFieldAnalyzerComparer.GetHashCode("Name"), perFieldAnalyzerComparer.GetHashCode("@in<Name>"));
-            Assert.True(perFieldAnalyzerComparer.Equals("Name","@in<Name>"));
+            Assert.True(perFieldAnalyzerComparer.Equals("Name", "@in<Name>"));
         }
 
         [Fact]
@@ -87,6 +89,27 @@ namespace Raven.Tests.MailingList
                     Assert.Equal(2, query.ToList().Count());
                 }
             }
+        }
+
+        [Fact]
+        public void Where_In_Values_With_Space_And_AND_Operator()
+        {
+            using (IDocumentStore documentStore = NewDocumentStore())
+            {
+                string[] names = { "Person One", "PersonTwo" };
+                StoreObjects(new List<Person>
+                {
+                    new Person {Name = names[0]},
+                    new Person {Name = names[1]}
+                }, documentStore);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var query = session.Advanced.DocumentQuery<Person>().UsingDefaultOperator(QueryOperator.And).WhereIn(p => p.Name, names);
+                    Assert.Equal(2, query.ToList().Count());
+                }
+            }
+
         }
 
         [Fact]
