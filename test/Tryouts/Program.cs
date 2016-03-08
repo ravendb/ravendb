@@ -26,8 +26,8 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //new DuplicatePageUsage().ShouldNotHappen();
-            //new MetricsTests().MetricsTest();
+            var basicIndexing = new FastTests.Server.Documents.Indexing.BasicIndexing();
+            basicIndexing.SimpleIndexing();
         }
        
     }
