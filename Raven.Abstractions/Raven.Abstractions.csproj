@@ -271,6 +271,7 @@
     <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CharExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
+    <Compile Include="Extensions\CSharpIdentifierExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\Buffers.cs" />
