@@ -69,7 +69,10 @@ namespace Raven.Server.Documents.Indexes
         {
             var indexId = _indexes.GetNextIndexId();
 
-            _indexes.Add(AutoMapIndex.CreateNew(indexId, definition, _documentDatabase));
+            var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
+            index.Execute();
+
+            _indexes.Add(index);
 
             return indexId;
         }
