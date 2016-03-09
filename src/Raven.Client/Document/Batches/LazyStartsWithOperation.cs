@@ -3,6 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Raven.Client.Data;
+
 namespace Raven.Client.Document.Batches
 {
     using System;

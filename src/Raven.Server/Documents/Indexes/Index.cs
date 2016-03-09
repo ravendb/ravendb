@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly Slice TypeSlice = "Type";
 
-        protected readonly LuceneIndexPersistance IndexPersistance;
+        protected readonly LuceneIndexPersistence IndexPersistence;
 
         private readonly object _locker = new object();
 
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes
             IndexId = indexId;
             Type = type;
             Definition = definition;
-            IndexPersistance = new LuceneIndexPersistance(indexId, definition);
+            IndexPersistence = new LuceneIndexPersistence(indexId, definition);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes
                         tx.Commit();
                     }
 
-                    IndexPersistance.Initialize(DocumentDatabase.Configuration.Indexing);
+                    IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
                     _initialized = true;
                 }
@@ -240,7 +240,6 @@ namespace Raven.Server.Documents.Indexes
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             using (databaseContext.OpenReadTransaction())
-            using (indexContext.OpenReadTransaction())
             {
                 foreach (var collection in Collections)
                 {
@@ -412,28 +411,32 @@ namespace Raven.Server.Documents.Indexes
 
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                result.IsStale = IsStale(context, indexContext);
+                using (var tx = indexContext.OpenReadTransaction())
+                {
+                    result.IsStale = IsStale(context, indexContext); 
+
+                    Reference<int> totalResults = new Reference<int>();
+                    List<string> documentIds;
+
+                    using (var indexRead = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                    {
+                        documentIds = indexRead.Query(query, token, totalResults).ToList();
+                    }
+
+                    result.TotalResults = totalResults.Value;
+
+                    context.OpenReadTransaction();
+
+                    foreach (var id in documentIds)
+                    {
+                        var document = DocumentDatabase.DocumentsStorage.Get(context, id);
+
+                        result.Results.Add(document);
+                    }
+
+                    return result;
+                }
             }
-
-            Reference<int> totalResults = new Reference<int>();
-            List<string> documentIds;
-            using (var indexRead = IndexPersistance.Read())
-            {
-                documentIds = indexRead.Query(query, token, totalResults).ToList();
-            }
-
-            result.TotalResults = totalResults.Value;
-
-            context.OpenReadTransaction();
-
-            foreach (var id in documentIds)
-            {
-                var document = DocumentDatabase.DocumentsStorage.Get(context, id);
-
-                result.Results.Add(document);
-            }
-
-            return result;
         }
     }
 }

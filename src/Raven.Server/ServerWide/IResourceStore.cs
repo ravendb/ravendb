@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Database.Util;
 using Raven.Server.Config;
 
 namespace Raven.Server.ServerWide
@@ -10,5 +11,7 @@ namespace Raven.Server.ServerWide
         string ResourceName { get; }
 
         RavenConfiguration Configuration { get; }
+
+        MetricsCountersManager Metrics { get; }
     }
 }

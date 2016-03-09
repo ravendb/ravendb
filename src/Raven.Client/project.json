@@ -10,7 +10,7 @@
     "Sparrow": "4.0.0-*"
   },
   "compilationOptions": {"allowUnsafe": true},
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs" ],
+  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs"],
   "compileExclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ],
 
 

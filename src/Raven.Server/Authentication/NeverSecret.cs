@@ -14,7 +14,7 @@ namespace Raven.Server.Authentication
                 "/silverlight/Raven.Studio.xap",
                 "/favicon.ico",
                 "/clientaccesspolicy.xml",
-                // "/build/version",
+                "/build/version",
                 "/oauth/api-key",
                 "/OAuth/Cookie",
             };

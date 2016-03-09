@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Commands

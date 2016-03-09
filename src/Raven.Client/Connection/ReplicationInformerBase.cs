@@ -23,6 +23,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
+using Raven.Client.Data;
 
 namespace Raven.Client.Connection
 {

@@ -41,6 +41,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Data;
 
 
 namespace Raven.Client.Connection.Async
@@ -75,23 +76,11 @@ namespace Raven.Client.Connection.Async
 
         private NameValueCollection operationsHeaders = new NameValueCollection();
 
-        public string Url
-        {
-            get { return primaryUrl; }
-        }
+        public string Url => primaryUrl;
 
-        public IRequestExecuter RequestExecuter
-        {
-            get { return requestExecuter; }
-        }
+        public IRequestExecuter RequestExecuter => requestExecuter;
 
-        public OperationCredentials PrimaryCredentials
-        {
-            get
-            {
-                return credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
-            }
-        }
+        public OperationCredentials PrimaryCredentials => credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication;
 
         public ClusterBehavior ClusterBehavior { get; private set; }
 
@@ -693,9 +682,9 @@ namespace Raven.Client.Connection.Async
             set { operationsHeaders = value; }
         }
 
-        public IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get { return new AsyncAdminServerClient(this); } }
+        public IAsyncGlobalAdminDatabaseCommands GlobalAdmin => new AsyncAdminServerClient(this);
 
-        public IAsyncAdminDatabaseCommands Admin { get { return new AsyncAdminServerClient(this); } }
+        public IAsyncAdminDatabaseCommands Admin => new AsyncAdminServerClient(this);
 
         public Task<JsonDocument> GetAsync(string key, CancellationToken token = default(CancellationToken))
         {
@@ -1626,10 +1615,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public ProfilingInformation ProfilingInformation
-        {
-            get { return profilingInformation; }
-        }
+        public ProfilingInformation ProfilingInformation => profilingInformation;
 
         public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
         {
@@ -2048,17 +2034,13 @@ namespace Raven.Client.Connection.Async
             return Url + "/document?id=" + documentKey;
         }
 
-        public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+        public WebSocketBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource))
         {
-            if (options.ChunkedBulkInsertOptions != null)
-                return new ChunkedRemoteBulkInsertOperation(options, this, changes);
-            return new RemoteBulkInsertOperation(options, this, changes);
+            return new WebSocketBulkInsertOperation(this, cts);
         }
 
         private async Task<JsonDocumentMetadata> DirectHeadAsync(OperationMetadata operationMetadata, string key, CancellationToken token = default(CancellationToken))
         {
-            var metadata = new RavenJObject();
-
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/document?id=" + key, HttpMethod.Head, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
                 try
@@ -2329,10 +2311,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public IAsyncInfoDatabaseCommands Info
-        {
-            get { return this; }
-        }
+        public IAsyncInfoDatabaseCommands Info => this;
 
         async Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync(CancellationToken token)
         {

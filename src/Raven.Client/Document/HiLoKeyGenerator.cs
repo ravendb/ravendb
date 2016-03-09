@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 

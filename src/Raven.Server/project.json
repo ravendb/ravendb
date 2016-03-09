@@ -6,14 +6,19 @@
   "projectUrl": "https://ravendb.net",
 
 
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/metrics.net/Src/Metrics/**/*.cs" ],
 
   "compilationOptions": {
     "emitEntryPoint": true,
     "allowUnsafe": true
   },
 
+  "resource": [
+    "Documents/Patch/*.js"
+  ],
+
   "dependencies": {
+    "Jint": "2.7.1",
     "Lucene.Net": "3.0.4-*",
     "Lucene.Net.Contrib.Spatial.NTS": "3.0.4-*",
     "Raven.Client": "4.0.0-*",
@@ -29,6 +34,7 @@
     "dnxcore50": {
       "dependencies": {
         "Microsoft.CSharp": "4.0.1-beta-23516",
+        "System.Net.Http": "4.0.1-beta-23516",
         "System.Collections": "4.0.11-beta-23516",
         "System.Console": "4.0.0-beta-23516",
         "System.Linq": "4.0.1-beta-23516",
@@ -37,7 +43,9 @@
         "Microsoft.AspNet.Server.Kestrel": "1.0.0-rc1-final",
         "Microsoft.Extensions.Configuration.FileProviderExtensions": "1.0.0-rc1-final",
         "Microsoft.Extensions.Configuration.Json": "1.0.0-rc1-final",
-        "Microsoft.AspNet.WebSockets.Server":  "1.0.0-rc1-final"
+        "Microsoft.AspNet.WebSockets.Server": "1.0.0-rc1-final"
+        
+          
       }
     }
   }

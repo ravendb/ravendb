@@ -3,9 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// The result of a patch operation

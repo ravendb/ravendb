@@ -82,6 +82,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return result;
                 }
 
+                _context.Reset(); // dispose already open read transactions - TODO arek
                 Thread.Sleep(100);
             }
         }

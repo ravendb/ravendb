@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 throw;
             }
 
-            RecreateIfNecessary(force: false);
+            RecreateIfNecessary(force: true); // TODO arek - temp solution for AccessViolationException problem when reading VoronIndexInput after the original transaction was already disposed
         }
 
         private void ForceCommitDataStore()

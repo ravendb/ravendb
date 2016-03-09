@@ -20,6 +20,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -142,7 +143,7 @@ namespace Raven.Client.Connection
         /// <summary>
         ///     Get the low level bulk insert operation
         /// </summary>
-        ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
+        WebSocketBulkInsertOperation GetBulkInsertOperation();
 
         /// <summary>
         ///     Retrieves multiple documents.

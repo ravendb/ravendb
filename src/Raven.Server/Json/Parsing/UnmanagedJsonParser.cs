@@ -34,6 +34,7 @@ namespace Raven.Server.Json.Parsing
         private bool _isDouble;
         private bool _isExponent;
         private bool _escapeMode;
+        private int _initialPos;
 
         public UnmanagedJsonParser(MemoryOperationContext ctx, JsonParserState state, string debugTag)
         {
@@ -46,12 +47,14 @@ namespace Raven.Server.Json.Parsing
             _inputBuffer = inputBuffer;
             _bufSize = size;
             _pos = 0;
+            _initialPos = 0;
         }
 
         public void SetBuffer(ArraySegment<byte> segment)
         {
             _inputBuffer = segment.Array;
             _bufSize = segment.Count;
+            _initialPos = segment.Offset;
             _pos = segment.Offset;
         }
 
@@ -108,12 +111,13 @@ namespace Raven.Server.Json.Parsing
                 default:
                     throw CreateException("Somehow got continuation for single byte token " + _state.Continuation);
             }
+
             _state.Continuation = JsonParserTokenContinuation.None;
             if (_line == 0)
             {
                 // first time, need to check preamble
                 _line++;
-                if (_pos >= _bufSize)
+                if (_pos >= _initialPos + _bufSize)
                 {
                     return false;
                 }
@@ -133,7 +137,7 @@ namespace Raven.Server.Json.Parsing
 
             while (true)
             {
-                if (_pos >= _bufSize)
+                if (_pos >= _initialPos + _bufSize)
                     return false;
 
                 var b = _inputBuffer[_pos++];
@@ -351,7 +355,6 @@ namespace Raven.Server.Json.Parsing
 
             }
         }
-
 
         public bool EnsureRestOfToken()
         {

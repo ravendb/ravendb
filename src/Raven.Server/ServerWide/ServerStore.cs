@@ -8,7 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
-
+using Raven.Server.Utils.Metrics;
 using Voron;
 using Voron.Data;
 
@@ -33,10 +33,12 @@ namespace Raven.Server.ServerWide
 
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         public readonly RavenConfiguration Configuration;
+        public readonly MetricsScheduler MetricsScheduler;
 
         public ServerStore(RavenConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
+            MetricsScheduler = new MetricsScheduler();
             Configuration = configuration;
 
             DatabasesLandlord = new DatabasesLandlord(this);
@@ -150,6 +152,7 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
+            
             shutdownNotification.Cancel();
 
             ContextPool?.Dispose();
@@ -157,6 +160,7 @@ namespace Raven.Server.ServerWide
             toDispose.Add(_pool);
             toDispose.Add(_env);
             toDispose.Add(DatabasesLandlord);
+            toDispose.Add(MetricsScheduler);
 
             var errors = new List<Exception>();
             foreach (var disposable in toDispose)

@@ -14,7 +14,7 @@ using Raven.Server.Authentication;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide;
+using System.Threading;
 using Raven.Server.Web;
 
 namespace Raven.Server.Routing
@@ -55,6 +55,11 @@ namespace Raven.Server.Routing
             };
 
             var handler = await tryMatch.Value.CreateHandler(reqCtx);
+            var metricsCountersManager = reqCtx.Database?.Metrics ?? reqCtx.RavenServer.Metrics;
+            metricsCountersManager.RequestsMeter.Mark();
+            metricsCountersManager.RequestsPerSecondCounter.Mark();
+            Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
+            var sp = Environment.TickCount;
             if (handler == null)
             {
                 context.Response.StatusCode = 400;
@@ -74,6 +79,8 @@ namespace Raven.Server.Routing
             }
 
             await handler(reqCtx);
+            Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
+
         }
 
         private bool TryAuthorize(HttpContext context, RavenConfiguration configuration, DocumentDatabase database, bool ignoreDbAccess,
