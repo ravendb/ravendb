@@ -44,10 +44,12 @@ namespace Raven.Client.Connection
 
         public HttpJsonRequest DeleteDatabase(string databaseName, bool hardDelete)
         {
-            var deleteUrl = "/admin/databases/" + Uri.EscapeDataString(databaseName);
+            var deleteUrl = "/admin/databases?name=" + Uri.EscapeDataString(databaseName);
 
             if(hardDelete)
-                deleteUrl += "?hard-delete=true";
+                deleteUrl += "&hard-delete=true";
+            else
+                deleteUrl += "&hard-delete=false";
 
             return createRequestForSystemDatabase(deleteUrl, HttpMethods.Delete);
         }

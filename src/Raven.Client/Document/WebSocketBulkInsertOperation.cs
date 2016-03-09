@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
@@ -135,14 +136,28 @@ namespace Raven.Client.Document
                 {
                     await connection.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Finished bulk-insert", cts.Token)
                         .ConfigureAwait(false);
-                    await getServerResponseTask;
+
+                    //Make sure that if the server goes down 
+                    //in the last moment, we do not get stuck here.
+                    //In general, 1 minute should be more than enough for the 
+                    //server to finish its stuff and get back to client
+                    var timeoutTask = Task.Delay(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
+                    var res = await Task.WhenAny(timeoutTask, getServerResponseTask);
+                    if(timeoutTask == res)
+                        throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
                 }
-                catch (Exception )
+                catch (Exception e)
                 {
+                    if (e is TimeoutException)
+                        throw;
+
                     // those can throw, but we are shutting down anyway, so no point in 
                     // doing anything here
                 }
-                connection.Dispose();
+                finally
+                {
+                    connection.Dispose();
+                }
             }
             finally
             {
