@@ -259,7 +259,7 @@ namespace Raven.Tests.Core
         protected static void LowLevel_WaitForIndexMap(Index index, long etag)
         {
             var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
-            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtags().Values.Min() == etag, timeout));
+            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
         }
 
         protected DocumentDatabase LowLevel_CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null)

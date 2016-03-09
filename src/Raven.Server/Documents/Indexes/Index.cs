@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private CancellationTokenSource _cancellationTokenSource;
 
         protected DocumentDatabase DocumentDatabase;
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes
 
                     switch (type)
                     {
-                        case IndexType.Auto:
+                        case IndexType.AutoMap:
                             return AutoMapIndex.Open(indexId, environment, documentDatabase);
                         default:
                             throw new NotImplementedException();
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name => Definition?.Name;
 
-        public bool ShouldRun { get; private set; } = true;
+        public bool IsRunning => _indexingThread != null;
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Execute()
+        public void Start()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -200,6 +200,11 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread != null)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' is executing.");
 
+                if (DocumentDatabase.Configuration.Indexing.Disabled)
+                    return;
+
+                _cancellationTokenSource = new CancellationTokenSource();
+
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
                     Name = "Indexing of " + Name,
@@ -207,6 +212,27 @@ namespace Raven.Server.Documents.Indexes
                 };
 
                 _indexingThread.Start();
+            }
+        }
+
+        public void Stop()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (_initialized == false)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' was not initialized.");
+
+            lock (_locker)
+            {
+                if (_indexingThread == null)
+                    return;
+
+                _cancellationTokenSource.Cancel();
+
+                var indexingThread = _indexingThread;
+                _indexingThread = null;
+                indexingThread.Join();
             }
         }
 
@@ -260,11 +286,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastMappedEtags()
+        internal Dictionary<string, long> GetLastMappedEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -285,7 +310,7 @@ namespace Raven.Server.Documents.Indexes
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastTombstoneEtags()
+        internal Dictionary<string, long> GetLastTombstoneEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -348,7 +373,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
 
-                    while (ShouldRun)
+                    while (true)
                     {
                         try
                         {
@@ -387,8 +412,6 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract void DoIndexingWork(CancellationToken cancellationToken);
 
-
-
         private void HandleDocumentChange(DocumentChangeNotification notification)
         {
             if (Collections.Contains(notification.CollectionName) == false)
@@ -397,7 +420,6 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-       
         public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext context, CancellationToken token)
         {
             if (_disposed)
@@ -413,7 +435,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (var tx = indexContext.OpenReadTransaction())
                 {
-                    result.IsStale = IsStale(context, indexContext); 
+                    result.IsStale = IsStale(context, indexContext);
 
                     Reference<int> totalResults = new Reference<int>();
                     List<string> documentIds;

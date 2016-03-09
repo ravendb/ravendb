@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
-            : base(indexId, IndexType.Auto, definition)
+            : base(indexId, IndexType.AutoMap, definition)
         {
         }
 

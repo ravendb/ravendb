@@ -202,7 +202,7 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethods.Reset, async operationMetadata =>
             {
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + name, HttpMethods.Reset, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Indexes(name), HttpMethods.Reset, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);

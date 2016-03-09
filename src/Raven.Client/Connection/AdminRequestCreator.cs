@@ -56,14 +56,15 @@ namespace Raven.Client.Connection
 
         public HttpJsonRequest StopIndexing(string serverUrl)
         {
-            return createReplicationAwareRequest(serverUrl, "/admin/StopIndexing", HttpMethods.Post);
+            return createReplicationAwareRequest(serverUrl, "/indexes/stop", HttpMethods.Post);
         }
 
         public HttpJsonRequest StartIndexing(string serverUrl, int? maxNumberOfParallelIndexTasks)
         {
-            var url = "/admin/StartIndexing";
+            var url = "/indexes/start";
             if (maxNumberOfParallelIndexTasks.HasValue)
             {
+                throw new NotImplementedException();
                 url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
             }
 
@@ -90,9 +91,9 @@ namespace Raven.Client.Connection
             return createRequestForSystemDatabase("/admin/restore", HttpMethods.Post);
         }
 
-        public HttpJsonRequest IndexingStatus(string serverUrl)
+        public HttpJsonRequest IndexesStatus(string serverUrl)
         {
-            return createReplicationAwareRequest(serverUrl, "/admin/IndexingStatus", HttpMethods.Get);
+            return createReplicationAwareRequest(serverUrl, "/indexes/status", HttpMethods.Get);
         }
 
         public HttpJsonRequest CompactDatabase(string databaseName)

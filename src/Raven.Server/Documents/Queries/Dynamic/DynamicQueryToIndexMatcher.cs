@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             return new DynamicQueryMatchResult(indexName, currentBestState)
             {
-                LastMappedEtag = index.GetLastMappedEtags()[definition.Collections[0]], // TODO arek how to handle this?
+                LastMappedEtag = index.GetLastMappedEtagsForDebug()[definition.Collections[0]], // TODO arek how to handle this?
                 NumberOfMappedFields = definition.CountOfMapFields
             };
         }
