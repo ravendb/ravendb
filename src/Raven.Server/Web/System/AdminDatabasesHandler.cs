@@ -126,7 +126,7 @@ namespace Raven.Server.Web.System
         public Task Delete()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var isHardDelete = GetBoolValueQueryString("isHardDelete");
+            var isHardDelete = GetBoolValueQueryString("isHardDelete", false);
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
