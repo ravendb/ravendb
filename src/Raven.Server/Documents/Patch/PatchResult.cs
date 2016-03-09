@@ -62,6 +62,6 @@ namespace Raven.Server.Documents.Patch
         /// </summary>
         public DynamicJsonValue DebugActions { get; set; }
 
-        public List<string> DebugInfo { get; set; }
+        public DynamicJsonArray DebugInfo { get; set; }
     }
 }

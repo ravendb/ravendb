@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.Patch
                 var error = errorEx as JavaScriptException;
                 if (error != null)
                     errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
-                if (scope.DebugInfo.Count != 0)
+                if (scope.DebugInfo.Items.Count != 0)
                     errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
                                 string.Join(Environment.NewLine, scope.DebugInfo);
 
