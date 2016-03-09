@@ -137,17 +137,17 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void CanRemove()
+        public void CanDelete()
         {
             using (var database = LowLevel_CreateDocumentDatabase())
-                CanRemove(database);
+                CanDelete(database);
 
             var path = NewDataPath();
             using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
-                CanRemove(database);
+                CanDelete(database);
         }
 
-        private static void CanRemove(DocumentDatabase database)
+        private static void CanDelete(DocumentDatabase database)
         {
             var index1 =
                 database.IndexStore.CreateIndex(
@@ -167,7 +167,7 @@ namespace FastTests.Server.Documents.Indexing
 
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
-            database.IndexStore.RemoveIndex(index1);
+            database.IndexStore.DeleteIndex(index1);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
 
@@ -176,7 +176,7 @@ namespace FastTests.Server.Documents.Indexing
             Assert.Equal(1, indexes.Count);
             Assert.Equal(index2, indexes[0].IndexId);
 
-            database.IndexStore.RemoveIndex(index2);
+            database.IndexStore.DeleteIndex(index2);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
 
