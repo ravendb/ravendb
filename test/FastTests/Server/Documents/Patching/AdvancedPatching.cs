@@ -458,12 +458,10 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         {
             using (var store = await GetDocumentStore())
             {
-                var result = await store.AsyncDatabaseCommands.PatchAsync("products/1", new PatchRequest
+                await store.AsyncDatabaseCommands.PatchAsync("products/1", new PatchRequest
                 {
                     Script = "this.Test = 'a';",
                 });
-
-                Assert.Equal("Missing", result.Value<string>("PatchResult"));
             }
         }
 
@@ -610,7 +608,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                var exception = await Assert.ThrowsAsync<ConcurrencyException>(async () =>
+                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
                 {
                     await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
                     {
@@ -620,7 +618,6 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
  {}, 123456789 );",
                     });
                 });
-
                 Assert.Contains("PUT attempted on document 'Items/1' using a non current etag", exception.Message);
             }
         }
