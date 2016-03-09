@@ -21,51 +21,38 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            var users = new List<User>(numOfItems);
-            Console.Write("Creating test data...");
-            for(int i = 0; i < numOfItems; i++)
-                users.Add(new User
-                {
-                    FirstName = $"First Name - {i}",
-                    LastName = $"Last Name - {i}"
-                });
-            Console.WriteLine("done");
-
             using (var store = new DocumentStore
             {
-                Url = "http://localhost.fiddler:8080",
-                DefaultDatabase = "FooBar123"				
+                Url = "http://localhost:8080",
+                DefaultDatabase = "test2"				
             })
             {
                 store.Initialize();
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123",true);
-                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-                {
-                    Id = "FooBar123",
-                    Settings =
-                    {
-                        { "Raven/DataDir", "~\\FooBar123" }
-                    }
-                });
-
-                var sw = Stopwatch.StartNew();
-                AsyncHelpers.RunSync(() => BulkInsert(store,users));
-                Console.WriteLine($"Elapsed : {sw.ElapsedMilliseconds} ms");
+              
+                BulkInsert(store).Wait();
             }
         }
 
-        public static async Task BulkInsert(DocumentStore store, List<User> users)
+        public static async Task BulkInsert(DocumentStore store)
         {
-            Console.Write("Opening bulk-insert...");
             using (var bulkInsert = store.BulkInsert())
             {
-                Console.WriteLine("done");
-                int id = 1;
-                foreach (var user in users)
-                    await bulkInsert.StoreAsync(user, $"users/{id++}");
-                Console.Write("Closing bulk-insert...");
+                for (int i = 0; i < 10; i++)
+                {
+                    await bulkInsert.StoreAsync(new User { FirstName = "foo", LastName = "bar" });
+                }
             }
-            Console.WriteLine("done");
+            Console.Write("Opening bulk-insert...");
+            var sw = Stopwatch.StartNew();
+            using (var bulkInsert = store.BulkInsert())
+            {
+                for (int i = 0; i < 100*1000; i++)
+                {
+                    await bulkInsert.StoreAsync(new User {FirstName = "foo", LastName = "bar"});
+                }
+            }
+            Console.WriteLine($"Elapsed : {sw.ElapsedMilliseconds} ms");
+
         }
     }
 }
