@@ -17,6 +17,7 @@ using  Raven.Imports.Newtonsoft.Json.Bson;
 using  Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 using System.Collections.Generic;
+using Raven.Client.Linq;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -27,7 +28,7 @@ namespace Raven.Abstractions.Extensions
     {
         public static RavenJObject ToJObject(object result)
         {
-            var dynamicJsonObject = result as Linq.IDynamicJsonObject;
+            var dynamicJsonObject = result as IDynamicJsonObject;
             if (dynamicJsonObject != null)
                 return dynamicJsonObject.Inner;
             if (result is string || result is ValueType)

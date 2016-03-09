@@ -11,6 +11,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document.SessionOperations

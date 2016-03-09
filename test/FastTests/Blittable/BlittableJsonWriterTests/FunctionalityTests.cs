@@ -3,12 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Abstractions.Linq;
+using Raven.Client.Linq;
 using Raven.Json.Linq;
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Voron.Util;
