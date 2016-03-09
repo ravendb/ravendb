@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -11,7 +10,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
@@ -86,15 +84,13 @@ namespace Raven.Server.Documents.Patch
                 patchRequest = patchIfMissing;
             }
             var scope = ApplyInternal(context, document, etag, isTestOnly, patchRequest);
-            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject),
+            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()),
                 documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             var result = new PatchResultData
             {
                 PatchResult = PatchResult.NotModified,
-                ModifiedDocument = modifiedDocument,
                 OriginalDocument = document?.Data,
-                DebugActions = scope.DebugActions,
                 DebugInfo = scope.DebugInfo,
             };
 
@@ -108,8 +104,14 @@ namespace Raven.Server.Documents.Patch
 
             if (isTestOnly)
             {
-                result.PatchResult = PatchResult.Tested;
-                return result;
+                return new PatchResultData
+                {
+                    PatchResult = PatchResult.Tested,
+                    OriginalDocument = document?.Data,
+                    ModifiedDocument = modifiedDocument,
+                    DebugActions = scope.DebugActions.GetDebugActions(),
+                    DebugInfo = scope.DebugInfo,
+                };
             }
 
             if (document == null)
@@ -133,22 +135,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            /* TODO: var docsCreatedInPatch = scope.GetPutOperations();
-                if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
-                {
-                    foreach (var docFromPatch in docsCreatedInPatch)
-                    {
-                        Database.Documents.Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
-                            docFromPatch.Metadata, transactionInformation, participatingIds);
-                    }
-                }*/
-
             return result;
-        }
-
-        private bool IsModified(DynamicJsonValue modifiedDocument, DynamicJsonValue document)
-        {
-            throw new NotImplementedException();
         }
 
         private PatcherOperationScope ApplyInternal(DocumentsOperationContext context, Document document, long? etag, bool isTestOnly, PatchRequest patch)
@@ -254,7 +241,7 @@ namespace Raven.Server.Documents.Patch
 
             CustomizeEngine(jintEngine, scope);
 
-            jintEngine.SetValue("PutDocument", (Func<string, object, object, string>)((key, data, metadata) => scope.PutDocument(key, data, metadata, jintEngine)));
+            jintEngine.SetValue("PutDocument", (Func<string, JsValue, JsValue, long?, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, jintEngine)));
             jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
             jintEngine.SetValue("DeleteDocument", (Action<string>)scope.DeleteDocument);
             jintEngine.SetValue("__document_id", document.Key);

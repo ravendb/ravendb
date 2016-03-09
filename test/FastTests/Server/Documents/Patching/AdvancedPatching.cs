@@ -551,7 +551,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         }
 
         [Fact]
-        public async Task CreateDocumentWillAssignKeyAndEtagIfNotProvided()
+        public async Task CreateDocumentWillThrowIfEmptyKeyProvided()
         {
             using (var store = await GetDocumentStore())
             {
@@ -561,21 +561,25 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
                 {
-                    Script = @"PutDocument(null, { 'Property': 'Value'});",
+                    await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                    {
+                        Script = @"PutDocument(null, { 'Property': 'Value'});",
+                    });
                 });
+                Assert.Contains("Document key cannot be null or whitespace", exception.InnerException.Message);
 
-                var resultDocs = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
-                Assert.Equal(2, resultDocs.Length);
-
-                var docs = await store.AsyncDatabaseCommands.GetAsync(new[] {"Comments/1", "Comments/2", "Comments/3"}, null);
-                Assert.Equal("one", docs.Results[0].Value<string>("Comment"));
-                Assert.Equal("two", docs.Results[1].Value<string>("Comment"));
-                Assert.Equal("three", docs.Results[2].Value<string>("Comment"));
+                exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                {
+                    await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                    {
+                        Script = @"PutDocument('    ', { 'Property': 'Value'});",
+                    });
+                });
+                Assert.Contains("Document key cannot be null or whitespace", exception.InnerException.Message);
             }
         }
-
 
         [Fact]
         public async Task CreateDocumentShouldThrowInvalidEtagException()
@@ -584,16 +588,14 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
                 {
                     await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
                     {
-                        Script = @"PutDocument('Items/1', { Property: 1}, {'@etag': 'invalid-etag' });",
+                        Script = @"PutDocument('Items/1', { Property: 1}, null, 'invalid-etag');",
                     });
                 });
-
                 Assert.Contains("Invalid ETag value 'invalid-etag' for document 'Items/1'", exception.InnerException.Message);
-
             }
         }
 
@@ -615,7 +617,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                         Script = @"PutDocument(
  'Items/1', 
  { 'Property':'Value'},
- {'@etag': '123456789'} );",
+ {}, 123456789 );",
                     });
                 });
 

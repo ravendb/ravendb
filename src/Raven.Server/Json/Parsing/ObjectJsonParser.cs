@@ -31,8 +31,6 @@ namespace Raven.Server.Json.Parsing
             _source = source;
         }
 
-
-
         public void Remove(string property)
         {
             if (_source == null)

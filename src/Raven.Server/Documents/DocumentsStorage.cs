@@ -575,7 +575,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document)
         {
             if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentException("Argument is null or whitespace", nameof(key));
+                throw new ArgumentException("Document key cannot be null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
