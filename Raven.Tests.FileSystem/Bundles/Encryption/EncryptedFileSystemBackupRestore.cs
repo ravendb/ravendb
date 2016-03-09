@@ -59,7 +59,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
 
                 // create backup
                 var opId = await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
-                await WaitForOperationAsync(client.UrlFor(), opId);
+                await WaitForOperationAsync(server.SystemDatabase.ServerUrl, opId);
 
                 // restore newly created backup
                 await client.Admin.StartRestore(new FilesystemRestoreRequest
