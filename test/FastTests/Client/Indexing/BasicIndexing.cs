@@ -51,5 +51,39 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(0, indexes.Count);
             }
         }
+
+        [Fact]
+        public async Task CanStopAndStart()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                var database = await Server.ServerStore.DatabasesLandlord.GetResourceInternal(store.DefaultDatabase).ConfigureAwait(false);
+
+                database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+
+                var statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+
+                Assert.Equal(2, statuses.Length);
+                Assert.Equal("Running", statuses[0].Status);
+                Assert.Equal("Running", statuses[1].Status);
+
+                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync().ConfigureAwait(false);
+
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+
+                Assert.Equal(2, statuses.Length);
+                Assert.Equal("Paused", statuses[0].Status);
+                Assert.Equal("Paused", statuses[1].Status);
+
+                await store.AsyncDatabaseCommands.Admin.StartIndexingAsync().ConfigureAwait(false);
+
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+
+                Assert.Equal(2, statuses.Length);
+                Assert.Equal("Running", statuses[0].Status);
+                Assert.Equal("Running", statuses[1].Status);
+            }
+        }
     }
 }

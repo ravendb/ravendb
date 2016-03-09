@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Server.Documents.Indexes.Auto;
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.Indexes
             var indexId = _indexes.GetNextIndexId();
 
             var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
-            index.Execute();
+            index.Start();
 
             _indexes.Add(index);
 
@@ -130,6 +131,52 @@ namespace Raven.Server.Documents.Indexes
             Task.Factory.StartNew(() => IOExtensions.DeleteDirectory(path));
         }
 
+        public void StartIndexing()
+        {
+            StartIndexing(_indexes);
+        }
+
+        public void StartMapIndexes()
+        {
+            StartIndexing(_indexes.Where(x => x.Type == IndexType.AutoMap || x.Type == IndexType.Map));
+        }
+
+        public void StartMapReduceIndexes()
+        {
+            StartIndexing(_indexes.Where(x => x.Type == IndexType.MapReduce));
+        }
+
+        private void StartIndexing(IEnumerable<Index> indexes)
+        {
+            if (_documentDatabase.Configuration.Indexing.Disabled)
+                return;
+
+            Parallel.ForEach(indexes, index => index.Start());
+        }
+
+        public void StopIndexing()
+        {
+            StopIndexing(_indexes);
+        }
+
+        public void StopMapIndexes()
+        {
+            StopIndexing(_indexes.Where(x => x.Type == IndexType.AutoMap || x.Type == IndexType.Map));
+        }
+
+        public void StopMapReduceIndexes()
+        {
+            StopIndexing(_indexes.Where(x => x.Type == IndexType.MapReduce));
+        }
+
+        private void StopIndexing(IEnumerable<Index> indexes)
+        {
+            if (_documentDatabase.Configuration.Indexing.Disabled)
+                return;
+
+            Parallel.ForEach(indexes, index => index.Stop());
+        }
+
         public void Dispose()
         {
             //FlushMapIndexes();
@@ -180,6 +227,11 @@ namespace Raven.Server.Documents.Indexes
         public IEnumerable<Index> GetIndexesForCollection(string collection)
         {
             return _indexes.GetForCollection(collection);
+        }
+
+        public IEnumerable<Index> GetIndexes()
+        {
+            return _indexes;
         }
     }
 }

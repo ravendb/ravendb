@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents.Indexing
                 index.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => index.Dispose());
-                Assert.Throws<ObjectDisposedException>(() => index.Execute());
+                Assert.Throws<ObjectDisposedException>(() => index.Start());
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
                 index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
@@ -43,7 +43,7 @@ namespace FastTests.Server.Documents.Indexing
                     Highlighted = false,
                     Storage = FieldStorage.No
                 } }), database);
-                index.Execute();
+                index.Start();
                 index.Dispose();
 
                 using (var cts = new CancellationTokenSource())
@@ -54,7 +54,7 @@ namespace FastTests.Server.Documents.Indexing
                         Highlighted = false,
                         Storage = FieldStorage.No
                     } }), database);
-                    index.Execute();
+                    index.Start();
 
                     cts.Cancel();
 
@@ -287,7 +287,7 @@ namespace FastTests.Server.Documents.Indexing
                         }
 
                         index.DoIndexingWork(CancellationToken.None);
-                        Assert.Equal(2, index.GetLastMappedEtags().Values.Min());
+                        Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -307,7 +307,7 @@ namespace FastTests.Server.Documents.Indexing
                         }
 
                         index.DoIndexingWork(CancellationToken.None);
-                        Assert.Equal(3, index.GetLastMappedEtags().Values.Min());
+                        Assert.Equal(3, index.GetLastMappedEtagsForDebug().Values.Min());
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -318,7 +318,7 @@ namespace FastTests.Server.Documents.Indexing
 
                         index.DoIndexingWork(CancellationToken.None);
 
-                        Assert.Equal(4, index.GetLastTombstoneEtags().Values.Min());
+                        Assert.Equal(4, index.GetLastTombstoneEtagsForDebug().Values.Min());
                     }
                 }
             }

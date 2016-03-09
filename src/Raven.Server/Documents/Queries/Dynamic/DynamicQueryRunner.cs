@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(autoIndexDef);
                 index = _indexStore.GetIndex(id);
 
-                index.Execute(); // TODO arek
+                index.Start(); // TODO arek
 
                 newAutoIndex = true;
             }
