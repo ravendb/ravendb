@@ -106,23 +106,33 @@ namespace Raven.Client.Document
             metadata[Constants.MetadataDocId] = id;
             data[Constants.Metadata] = metadata;
 
-            buffer.SetLength(0);
+
             data.WriteTo(buffer);
 
+            if (buffer.Length > 32*1024)
+            {
+                await FlushBufferAsync();
+            }
+
+        }
+
+        private async Task FlushBufferAsync()
+        {
             ArraySegment<byte> segment;
             buffer.Position = 0;
             buffer.TryGetBuffer(out segment);
 
             await connection.SendAsync(segment, WebSocketMessageType.Text, false, cts.Token)
-                            .ConfigureAwait(false);
+                .ConfigureAwait(false);
+            ReportProgress($"Batch sent to {url} (bytes count = {segment.Count})");
 
-            ReportProgress($"document {id} sent to {url} (bytes count = {segment.Count})");
+            buffer.SetLength(0);
         }
 
 
         public void Dispose()
         {
-            AsyncHelpers.RunSync(DisposeAsync);
+            DisposeAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         public async Task DisposeAsync()
@@ -134,6 +144,8 @@ namespace Raven.Client.Document
             {
                 try
                 {
+                    await FlushBufferAsync();
+
                     await connection.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Finished bulk-insert", cts.Token)
                         .ConfigureAwait(false);
 
