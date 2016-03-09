@@ -17,8 +17,9 @@ namespace Raven.Client.Extensions
                 return; // already setup by the user
 
             var basicAuthenticator = new BasicAuthenticator(requestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
-            var securedAuthenticator = new SecuredAuthenticator();
+            var securedAuthenticator = new SecuredAuthenticator(autoRefreshToken: true);
 
+            requestFactory.OnDispose += (sender, args) => securedAuthenticator.Dispose();
             requestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
             requestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
 

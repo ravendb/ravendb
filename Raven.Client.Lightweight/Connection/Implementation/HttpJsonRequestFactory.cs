@@ -32,6 +32,8 @@ namespace Raven.Client.Connection
         /// </summary>
         public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
 
+        public event EventHandler OnDispose = delegate { }; 
+
         /// <summary>
         /// Occurs when a json request is completed
         /// </summary>
@@ -415,6 +417,7 @@ namespace Raven.Client.Connection
             disposed = true;
             cache.Dispose();
             httpClientCache.Dispose();
+            OnDispose(this, EventArgs.Empty);
         }
 
         internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)
