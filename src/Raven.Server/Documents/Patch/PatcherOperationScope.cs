@@ -196,9 +196,7 @@ namespace Raven.Server.Documents.Patch
                     return (long) integer;
                 return num;
             }
-            if (v.IsNull())
-                return null;
-            if (v.IsUndefined())
+            if (v.IsNull() || v.IsUndefined())
                 return null;
             if (v.IsArray())
             {
@@ -271,7 +269,7 @@ namespace Raven.Server.Documents.Patch
             {
                 etag = (long) etagJs.AsNumber();
             }
-            else if(etagJs.IsNull() == false && etagJs.IsUndefined() == false)
+            else if(etagJs.IsNull() == false && etagJs.IsUndefined() == false && etagJs.ToString() != "None")
             {
                 throw new InvalidOperationException($"Invalid ETag value for document '{key}'");
             }

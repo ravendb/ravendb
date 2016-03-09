@@ -335,7 +335,7 @@ problem", invalidOperationException.Message);
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
                 {
                     await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
                     {
@@ -344,9 +344,7 @@ problem", invalidOperationException.Message);
                 });
 
                 Assert.Contains("Unable to execute JavaScript", exception.Message);
-                var inner = exception.InnerException as StatementsCountOverflowException;
-                Assert.NotNull(inner);
-                Assert.Equal("The maximum number of statements executed have been reached.", inner.Message);
+                Assert.Contains("The maximum number of statements executed have been reached.", exception.Message);
             }
         }
 
@@ -566,7 +564,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                         Script = @"PutDocument(null, { 'Property': 'Value'});",
                     });
                 });
-                Assert.Contains("Document key cannot be null or whitespace", exception.InnerException.Message);
+                Assert.Contains("Document key cannot be null or whitespace", exception.Message);
 
                 exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
                 {
@@ -575,7 +573,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                         Script = @"PutDocument('    ', { 'Property': 'Value'});",
                     });
                 });
-                Assert.Contains("Document key cannot be null or whitespace", exception.InnerException.Message);
+                Assert.Contains("Document key cannot be null or whitespace", exception.Message);
             }
         }
 
@@ -593,7 +591,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                         Script = @"PutDocument('Items/1', { Property: 1}, null, 'invalid-etag');",
                     });
                 });
-                Assert.Contains("Invalid ETag value for document 'Items/1'", exception.InnerException.Message);
+                Assert.Contains("Invalid ETag value for document 'Items/1'", exception.Message);
             }
         }
 
@@ -618,7 +616,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
  {}, 123456789 );",
                     });
                 });
-                Assert.Contains("PUT attempted on document 'Items/1' using a non current etag", exception.Message);
+                Assert.Contains("Document CustomTypes/1 does not exists, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 
@@ -650,23 +648,14 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
 
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
                 {
                     await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
                     {
                         Script = @"PutDocument('Items/1', null);",
                     });
                 });
-                Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", exception.InnerException.Message);
-
-                exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                {
-                    await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
-                    {
-                        Script = @"PutDocument('Items/1', null, null);",
-                    });
-                });
-                Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", exception.InnerException.Message);
+                Assert.Contains("Created document must be a valid object which is not null or empty. Document key: 'Items/1'", exception.Message);
             }
         }
 
