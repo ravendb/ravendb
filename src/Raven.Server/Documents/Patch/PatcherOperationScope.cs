@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using Jint;
 using Jint.Native;
+using Jint.Native.Object;
 using Jint.Runtime;
 using Raven.Abstractions.Data;
-using Raven.Json.Linq;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Patch
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, KeyValuePair<object, JsValue>> _propertiesByValue = new Dictionary<string, KeyValuePair<object, JsValue>>();
 
+        public readonly DynamicJsonArray DebugInfo = new DynamicJsonArray();
+
         private static readonly List<string> InheritedProperties = new List<string>
         {
             "length",
@@ -29,7 +31,7 @@ namespace Raven.Server.Documents.Patch
 
         public bool DebugMode { get; }
 
-        public DynamicJsonValue DebugActions { get; set; }
+        public readonly PatchDebugActions DebugActions;
 
         public string CustomFunctions { get; set; }
 
@@ -44,42 +46,68 @@ namespace Raven.Server.Documents.Patch
             _database = database;
             _context = context;
             DebugMode = debugMode;
+            if (DebugMode)
+            {
+                DebugActions = new PatchDebugActions();
+            }
         }
 
-        public JsValue ToJsInstance(Engine engine, object value, string propertyKey = null)
+        public JsValue ToJsArray(Engine engine, BlittableJsonReaderArray json, string propertyKey)
         {
-            if (value == null)
-                return JsValue.Null;
-
-            var str = value as LazyStringValue;
-            if (str != null)
+            var elements = new JsValue[json.Length];
+            for (var i = 0; i < json.Length; i++)
             {
-                return new JsValue(str.ToString());
+                var value = json.GetValueTokenTupleByIndex(i);
+                elements[i] = ToJsValue(engine, value.Item1, value.Item2, propertyKey + "[" + i + "]");
             }
 
-            var obj = value as BlittableJsonReaderObject;
-            if (obj != null)
-            {
-                return ToJsObject(engine, obj, propertyKey);
-            }
-
-            throw new NotImplementedException();
+            var result = engine.Array.Construct(Arguments.Empty);
+            engine.Array.PrototypeObject.Push(result, elements);
+            return result;
         }
 
-        public JsValue ToJsObject(Engine engine, BlittableJsonReaderObject json, string propertyName = null)
+        public ObjectInstance ToJsObject(Engine engine, BlittableJsonReaderObject json, string propertyName = null)
         {
             var jsObject = engine.Object.Construct(Arguments.Empty);
-            foreach (var name in json.GetPropertyNames())
+            for (int i = 0; i < json.Count; i++)
             {
+                var property = json.GetPropertyByIndex(i);
+                var name = property.Item1.ToString();
                 var propertyKey = CreatePropertyKey(name, propertyName);
-                var value = json[name];
-                var jsValue = ToJsInstance(engine, value, propertyKey);
-
+                var value = property.Item2;
+                JsValue jsValue = ToJsValue(engine, value, property.Item3, propertyKey);
                 _propertiesByValue[propertyKey] = new KeyValuePair<object, JsValue>(value, jsValue);
-
                 jsObject.Put(name, jsValue, true);
             }
             return jsObject;
+        }
+
+        public JsValue ToJsValue(Engine engine, object value, BlittableJsonToken token, string propertyKey = null)
+        {
+            switch (token & BlittableJsonReaderBase.TypesMask)
+            {
+                case BlittableJsonToken.Null:
+                    return JsValue.Null;
+                case BlittableJsonToken.Boolean:
+                    return new JsValue((bool) value);
+
+                case BlittableJsonToken.Integer:
+                    return new JsValue((long) value);
+                case BlittableJsonToken.Float:
+                    return new JsValue((double) (LazyDoubleValue) value);
+                case BlittableJsonToken.String:
+                    return new JsValue(((LazyStringValue) value).ToString());
+                case BlittableJsonToken.CompressedString:
+                    return new JsValue(((LazyCompressedStringValue) value).ToString());
+
+                case BlittableJsonToken.StartObject:
+                    return ToJsObject(engine, (BlittableJsonReaderObject) value, propertyKey);
+                case BlittableJsonToken.StartArray:
+                    return ToJsArray(engine, (BlittableJsonReaderArray) value, propertyKey);
+
+                default:
+                    throw new ArgumentOutOfRangeException(token.ToString());
+            }
         }
 
         private static string CreatePropertyKey(string key, string property)
@@ -90,10 +118,9 @@ namespace Raven.Server.Documents.Patch
             return property + "." + key;
         }
 
-        public DynamicJsonValue ToBlittable(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
+        public DynamicJsonValue ToBlittable(ObjectInstance jsObject, string propertyKey = null, bool recursiveCall = false)
         {
-            var objectInstance = jsObject.AsObject();
-            if (objectInstance.Class == "Function")
+            if (jsObject.Class == "Function")
             {
                 // getting a Function instance here,
                 // means that we couldn't evaluate it using Jint
@@ -101,7 +128,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             var obj = new DynamicJsonValue();
-            foreach (var property in objectInstance.GetOwnProperties())
+            foreach (var property in jsObject.GetOwnProperties())
             {
                 if (property.Key == Constants.ReduceKeyFieldName || property.Key == Constants.DocumentIdFieldName)
                     continue;
@@ -117,12 +144,12 @@ namespace Raven.Server.Documents.Patch
                 if (recursiveCall && recursive)
                     obj[property.Key] = null;
                 else
-                    obj[property.Key] = ToBlittableInstance(value.Value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                    obj[property.Key] = ToBlittableValue(value.Value, CreatePropertyKey(property.Key, propertyKey), recursive);
             }
             return obj;
         }
 
-        private object ToBlittableInstance(JsValue v, string propertyKey, bool recursiveCall)
+        private object ToBlittableValue(JsValue v, string propertyKey, bool recursiveCall)
         {
             if (v.IsBoolean())
                 return v.AsBoolean();
@@ -149,8 +176,7 @@ namespace Raven.Server.Documents.Patch
                 if (_propertiesByValue.TryGetValue(propertyKey, out property))
                 {
                     var originalValue = property.Key;
-                    if (originalValue is float ||
-                        originalValue is int)
+                    if (originalValue is float || originalValue is int)
                     {
                         // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
                         // which will convert a Int64 to jsFloat.
@@ -159,20 +185,18 @@ namespace Raven.Server.Documents.Patch
                             return originalValue;
 
                         if (originalValue is int)
-                            return (long)num;
-                        return num;//float
+                            return (long) num;
+                        return num; //float
                     }
                 }
 
                 // If we don't have the type, assume that if the number ending with ".0" it actually an integer.
                 var integer = Math.Truncate(num);
                 if (Math.Abs(num - integer) < double.Epsilon)
-                    return (long)integer;
+                    return (long) integer;
                 return num;
             }
-            if (v.IsNull())
-                return null;
-            if (v.IsUndefined())
+            if (v.IsNull() || v.IsUndefined())
                 return null;
             if (v.IsArray())
             {
@@ -188,7 +212,7 @@ namespace Raven.Server.Documents.Patch
                     if (!jsInstance.HasValue)
                         continue;
 
-                    var ravenJToken = ToBlittableInstance(jsInstance.Value, propertyKey + "[" + property.Key + "]", recursiveCall);
+                    var ravenJToken = ToBlittableValue(jsInstance.Value, propertyKey + "[" + property.Key + "]", recursiveCall);
                     if (ravenJToken == null)
                         continue;
 
@@ -203,7 +227,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsObject())
             {
-                return ToBlittable(v, propertyKey, recursiveCall);
+                return ToBlittable(v.AsObject(), propertyKey, recursiveCall);
             }
             if (v.IsRegExp())
                 return null;
@@ -213,27 +237,14 @@ namespace Raven.Server.Documents.Patch
 
         public void Dispose()
         {
-            
-        }
-
-        private readonly Dictionary<string, Document> _documentKeyContext = new Dictionary<string, Document>();
-        private readonly List<Document> _incompleteDocumentKeyContext = new List<Document>();
-
-        protected void RecordActionForDebug(string actionName, string documentKey, Document document)
-        {
-            if (DebugMode == false)
-                return;
-
-            throw new NotImplementedException();
         }
 
         public virtual JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements)
         {
-            Document document;
-            if (_documentKeyContext.TryGetValue(documentKey, out document) == false)
-                document = _database.DocumentsStorage.Get(_context, documentKey);
+            var document = _database.DocumentsStorage.Get(_context, documentKey);
 
-            RecordActionForDebug("LoadDocument", documentKey, document);
+            if (DebugMode)
+                DebugActions.LoadDocument.Add(documentKey);
 
             if (document == null)
                 return JsValue.Null;
@@ -245,47 +256,49 @@ namespace Raven.Server.Documents.Patch
             return ToJsObject(engine, document.Data);
         }
 
-        public virtual string PutDocument(string key, object documentAsObject, object metadataAsObject, Engine engine)
+        public virtual string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
         {
-            throw new NotImplementedException();
+            if (document.IsObject() == false)
+            {
+                throw new InvalidOperationException(
+                    $"Created document must be a valid object which is not null or empty. Document key: '{key}'.");
+            }
+
+            long? etag = null;
+            if (etagJs.IsNumber())
+            {
+                etag = (long) etagJs.AsNumber();
+            }
+            else if(etagJs.IsNull() == false && etagJs.IsUndefined() == false && etagJs.ToString() != "None")
+            {
+                throw new InvalidOperationException($"Invalid ETag value for document '{key}'");
+            }
+
+            var data = ToBlittable(document.AsObject());
+            if (metadata.IsObject())
+            {
+                data["@metadata"] = ToBlittable(metadata.AsObject());
+            }
+
+            if (DebugMode)
+            {
+                DebugActions.PutDocument.Add(new DynamicJsonValue
+                {
+                    ["Key"] = key,
+                    ["Etag"] = etag,
+                    ["Data"] = data,
+                });
+            }
+
+            var dataReader = _context.ReadObject(data, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            var put = _database.DocumentsStorage.Put(_context, key, etag, dataReader);
+
+            return put.Key;
         }
 
         public virtual void DeleteDocument(string documentKey)
         {
             throw new NotSupportedException("Deleting documents is not supported.");
         }
-
-        protected void AddToContext(string key, Document document)
-        {
-            if (string.IsNullOrEmpty(key) || key.EndsWith("/"))
-                _incompleteDocumentKeyContext.Add(document);
-            else
-                _documentKeyContext[key] = document;
-        }
-
-        protected void DeleteFromContext(string key)
-        {
-            _documentKeyContext[key] = null;
-        }
-
-        /*public IEnumerable<ScriptedJsonPatcher.Operation> GetOperations()
-        {
-            return _documentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
-            {
-                Type = x.Value != null ? ScriptedJsonPatcher.OperationType.Put : ScriptedJsonPatcher.OperationType.Delete,
-                DocumentKey = x.Key,
-                Document = x.Value
-            }).Union(_incompleteDocumentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
-            {
-                Type = ScriptedJsonPatcher.OperationType.Put,
-                DocumentKey = x.Key,
-                Document = x
-            }));
-        }
-
-        public IEnumerable<Document> GetPutOperations()
-        {
-            return GetOperations().Where(x => x.Type == ScriptedJsonPatcher.OperationType.Put).Select(x => x.Document);
-        }*/
     }
 }

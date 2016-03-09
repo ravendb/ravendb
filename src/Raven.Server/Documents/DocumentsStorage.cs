@@ -7,7 +7,6 @@ using System.Text;
 
 using Raven.Abstractions.Data;
 using Constants = Raven.Abstractions.Data.Constants;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -18,6 +17,7 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
+using Voron.Exceptions;
 using Voron.Impl;
 
 namespace Raven.Server.Documents
@@ -575,7 +575,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document)
         {
             if (string.IsNullOrWhiteSpace(key))
-                throw new ArgumentException("Argument is null or whitespace", nameof(key));
+                throw new ArgumentException("Document key cannot be null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));

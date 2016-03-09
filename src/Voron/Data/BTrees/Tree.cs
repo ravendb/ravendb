@@ -788,14 +788,22 @@ namespace Voron.Data.BTrees
         private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
         {
             if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-                throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name));
+                throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name))
+                {
+                    ActualETag = nodeVersion,
+                    ExpectedETag = expectedVersion.Value,
+                };
         }
 
 
         private void CheckConcurrency(Slice key, Slice value, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
         {
             if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-                throw new ConcurrencyException(string.Format("Cannot {0} value '{5}' to key '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name, value));
+                throw new ConcurrencyException(string.Format("Cannot {0} value '{5}' to key '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name, value))
+                {
+                    ActualETag = nodeVersion,
+                    ExpectedETag = expectedVersion.Value,
+                };
         }
 
         private enum TreeActionType

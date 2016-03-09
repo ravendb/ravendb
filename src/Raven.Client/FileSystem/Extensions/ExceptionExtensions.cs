@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.FileSystem.Extensions

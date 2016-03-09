@@ -1,4 +1,5 @@
 using Raven.Abstractions.Exceptions;
+using Raven.Client.Exceptions;
 
 namespace Raven.Client.FileSystem
 {

@@ -23,6 +23,7 @@ using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.Linq;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;

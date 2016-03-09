@@ -333,29 +333,11 @@ namespace Raven.Client.Connection
         long NextIdentityFor(string name);
 
         /// <summary>
-        ///     Sends a patch request for a specific document, ignoring the document's long? and if the document is missing
-        /// </summary>
-        /// <param name="key">Id of the document to patch</param>
-        /// <param name="patches">Array of patch requests</param>
-        RavenJObject Patch(string key, PatchRequest[] patches);
-
-        /// <summary>
-        ///     Sends a patch request for a specific document, ignoring the document's Etag
-        /// </summary>
-        /// <param name="key">Id of the document to patch</param>
-        /// <param name="patches">Array of patch requests</param>
-        /// <param name="ignoreMissing">
-        ///     true if the patch request should ignore a missing document, false to throw
-        ///     DocumentDoesNotExistException
-        /// </param>
-        RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing);
-
-        /// <summary>
         ///     Sends a patch request for a specific document, ignoring the document's long? and  if the document is missing
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
-        RavenJObject Patch(string key, ScriptedPatchRequest patch);
+        RavenJObject Patch(string key, PatchRequest patch);
 
         /// <summary>
         ///     Sends a patch request for a specific document, ignoring the document's Etag
@@ -366,24 +348,15 @@ namespace Raven.Client.Connection
         ///     true if the patch request should ignore a missing document, false to throw
         ///     DocumentDoesNotExistException
         /// </param>
-        RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing);
+        RavenJObject Patch(string key, PatchRequest patch, bool ignoreMissing);
 
-        /// <summary>
-        ///     Sends a patch request for a specific document
-        /// </summary>
-        /// <param name="key">Id of the document to patch</param>
-        /// <param name="patches">Array of patch requests</param>
-        /// <param name="etag">Require specific long? [null to ignore]</param>
-        RavenJObject Patch(string key, PatchRequest[] patches, long? etag);
-
-        
         /// <summary>
         ///     Sends a patch request for a specific document
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
         /// <param name="etag">Require specific long? [null to ignore]</param>
-        RavenJObject Patch(string key, ScriptedPatchRequest patch, long? etag);
+        RavenJObject Patch(string key, PatchRequest patch, long? etag);
 
         /// <summary>
         ///     Puts the document in the database with the specified key.
@@ -556,18 +529,9 @@ namespace Raven.Client.Connection
         /// </summary>
         /// <param name="indexName">name of an index to perform a query on</param>
         /// <param name="queryToUpdate">query that will be performed</param>
-        /// <param name="patchRequests">array of patches that will be executed on a query results</param>
-        /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
-
-        /// <summary>
-        ///     Perform a set based update using the specified index
-        /// </summary>
-        /// <param name="indexName">name of an index to perform a query on</param>
-        /// <param name="queryToUpdate">query that will be performed</param>
         /// <param name="patch">JavaScript patch that will be executed on query results</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
+        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest patch, BulkOperationOptions options = null);
 
         /// <summary>
         ///     Get the full URL for the given document key

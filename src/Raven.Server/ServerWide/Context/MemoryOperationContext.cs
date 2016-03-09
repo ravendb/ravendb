@@ -608,6 +608,17 @@ namespace Raven.Server.ServerWide.Context
                     writer.WriteBool(true);
                     break;
                 case JsonParserToken.String:
+                    if (state.CompressedSize.HasValue)
+                    {
+                        var lazyCompressedStringValue = new LazyCompressedStringValue(null, state.StringBuffer, 
+                            state.StringSize, state.CompressedSize.Value, this);
+                        writer.WriteString(lazyCompressedStringValue);
+                    }
+                    else
+                    {
+                        writer.WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                    }
+                    break;
                 case JsonParserToken.Float:
                     writer.WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
                     break;

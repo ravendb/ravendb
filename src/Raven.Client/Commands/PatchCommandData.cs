@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Json.Linq;
@@ -11,27 +10,19 @@ using Raven.Json.Linq;
 namespace Raven.Abstractions.Commands
 {
     ///<summary>
-    /// A single batch operation for a document PATCH
+    /// A single batch operation for a document EVAL (using a Javascript)
     ///</summary>
     public class PatchCommandData : ICommandData
     {
         /// <summary>
-        /// Array of patches that will be applied to the document
+        /// ScriptedPatchRequest (using JavaScript) that is used to patch the document
         /// </summary>
-        public PatchRequest[] Patches { get; set; }
+        public PatchRequest Patch { get; set; }
 
         /// <summary>
-        /// Array of patches to apply to a default document if the document is missing
+        /// ScriptedPatchRequest (using JavaScript) that is used to patch a default document if the document is missing
         /// </summary>
-        public PatchRequest[] PatchesIfMissing { get; set; }
-
-        /// <summary>
-        /// <para>If set to true, _and_ the long? is specified then the behavior</para>
-        /// <para>of the patch in the case of etag mismatch is different. Instead of throwing,</para>
-        /// <para>the patch operation wouldn't complete, and the Skipped status would be returned </para>
-        /// <para>to the user for this operation</para>
-        /// </summary>
-        public bool SkipPatchIfEtagMismatch { get; set; }
+        public PatchRequest PatchIfMissing { get; set; }
 
         /// <summary>
         /// Key of a document to patch.
@@ -39,7 +30,7 @@ namespace Raven.Abstractions.Commands
         public string Key { get; set; }
 
         /// <summary>
-        /// Returns operation method. In this case PATCH.
+        /// Returns operation method. In this case EVAL.
         /// </summary>
         public string Method
         {
@@ -50,6 +41,11 @@ namespace Raven.Abstractions.Commands
         /// Current document etag, used for concurrency checks (null to skip check)
         /// </summary>
         public long? Etag { get; set; }
+
+        /// <summary>
+        /// Indicates in the operation should be run in debug mode. If set to true, then server will return additional information in response.
+        /// </summary>
+        public bool DebugMode { get; set; }
 
         /// <summary>
         /// Additional command data. For internal use only.
@@ -66,14 +62,24 @@ namespace Raven.Abstractions.Commands
                     {
                         {"Key", Key},
                         {"Method", Method},
-                        {"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))},
+                        {"Patch", new RavenJObject
+                        {
+                            { "Script", Patch.Script },
+                            { "Values", RavenJObject.FromObject(Patch.Values)}
+                        }},
+                        {"DebugMode", DebugMode},
                         {"AdditionalData", AdditionalData},
-                        {"SkipPatchIfEtagMismatch", SkipPatchIfEtagMismatch}
                     };
             if (Etag != null)
                 ret.Add("Etag", Etag.ToString());
-            if (PatchesIfMissing != null && PatchesIfMissing.Length > 0)
-                ret.Add("PatchesIfMissing", new RavenJArray(PatchesIfMissing.Select(x => x.ToJson())));
+            if (PatchIfMissing != null)
+            {
+                ret.Add("PatchIfMissing", new RavenJObject
+                        {
+                            { "Script", PatchIfMissing.Script },
+                            { "Values", RavenJObject.FromObject(PatchIfMissing.Values)}
+                        });
+            }
             return ret;
         }
     }
