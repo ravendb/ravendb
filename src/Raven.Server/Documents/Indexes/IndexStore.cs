@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -75,6 +76,45 @@ namespace Raven.Server.Documents.Indexes
             _indexes.Add(index);
 
             return indexId;
+        }
+
+        public int ResetIndex(int id)
+        {
+            var index = GetIndex(id);
+            if (index == null)
+                throw new InvalidOperationException("There is no index with id: " + id);
+
+            RemoveIndex(id);
+
+            switch (index.Type)
+            {
+                case IndexType.AutoMap:
+                    var autoMapIndex = (AutoMapIndex)index;
+                    var autoMapIndexDefinition = autoMapIndex.Definition;
+                    return CreateIndex(autoMapIndexDefinition);
+                default:
+                    throw new NotSupportedException(index.Type.ToString());
+            }
+        }
+
+        public void RemoveIndex(int id)
+        {
+            Index index;
+            if (_indexes.TryRemoveById(id, out index) == false)
+                throw new InvalidOperationException("There is no index with id: " + id);
+
+            try
+            {
+                index.Dispose();
+            }
+            catch (Exception)
+            {
+                //TODO [ppekrol] log
+            }
+
+            var path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath, id.ToString());
+
+            Task.Factory.StartNew(() => IOExtensions.DeleteDirectory(path));
         }
 
         public void Dispose()

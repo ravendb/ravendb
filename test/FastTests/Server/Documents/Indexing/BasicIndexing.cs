@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -88,7 +86,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanPersist()
         {
-            var path = NewDataPath(); 
+            var path = NewDataPath();
             using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var name1 = new IndexField
@@ -136,6 +134,113 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(SortOptions.Float, indexes[1].Definition.MapFields[0].SortOption);
                 Assert.False(indexes[1].Definition.MapFields[0].Highlighted);
             }
+        }
+
+        [Fact]
+        public void CanRemove()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+                CanRemove(database);
+
+            var path = NewDataPath();
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+                CanRemove(database);
+        }
+
+        private static void CanRemove(DocumentDatabase database)
+        {
+            var index1 =
+                database.IndexStore.CreateIndex(
+                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+            var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
+
+            if (database.Configuration.Core.RunInMemory == false)
+                Assert.True(Directory.Exists(path1));
+
+            var index2 =
+                database.IndexStore.CreateIndex(
+                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+            var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
+
+            if (database.Configuration.Core.RunInMemory == false)
+                Assert.True(Directory.Exists(path2));
+
+            Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
+
+            database.IndexStore.RemoveIndex(index1);
+
+            Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
+
+            var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
+
+            Assert.Equal(1, indexes.Count);
+            Assert.Equal(index2, indexes[0].IndexId);
+
+            database.IndexStore.RemoveIndex(index2);
+
+            Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
+
+            indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
+
+            Assert.Equal(0, indexes.Count);
+        }
+
+        [Fact]
+        public void CanReset()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+                CanReset(database);
+
+            var path = NewDataPath();
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+                CanReset(database);
+        }
+
+        private static void CanReset(DocumentDatabase database)
+        {
+            var index1 =
+                database.IndexStore.CreateIndex(
+                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+            var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
+
+            if (database.Configuration.Core.RunInMemory == false)
+                Assert.True(Directory.Exists(path1));
+
+            var index2 =
+                database.IndexStore.CreateIndex(
+                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+            var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
+
+            if (database.Configuration.Core.RunInMemory == false)
+                Assert.True(Directory.Exists(path2));
+
+            Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
+
+            var index3 = database.IndexStore.ResetIndex(index1);
+            var path3 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index3.ToString());
+
+            Assert.NotEqual(index3, index1);
+            if (database.Configuration.Core.RunInMemory == false)
+                Assert.True(Directory.Exists(path3));
+
+            Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
+
+            var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
+
+            Assert.Equal(2, indexes.Count);
+
+            var index4 = database.IndexStore.ResetIndex(index2);
+            var path4 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index4.ToString());
+
+            Assert.NotEqual(index4, index2);
+            if (database.Configuration.Core.RunInMemory == false)
+                Assert.True(Directory.Exists(path4));
+
+            Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
+
+            indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
+
+            Assert.Equal(2, indexes.Count);
         }
 
         [Fact]
