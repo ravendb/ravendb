@@ -44,9 +44,10 @@
         "Microsoft.Extensions.Configuration.FileProviderExtensions": "1.0.0-rc1-final",
         "Microsoft.Extensions.Configuration.Json": "1.0.0-rc1-final",
         "Microsoft.AspNet.WebSockets.Server": "1.0.0-rc1-final"
-        
-          
+
+
       }
     }
-  }
+  },
+  "userSecretsId": "aspnet5-Raven.Server-20160308043041"
 }
