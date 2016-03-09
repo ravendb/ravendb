@@ -5,7 +5,10 @@
   "tags": [ "database", "nosql", "doc db" ],
   "projectUrl": "https://ravendb.net",
 
-  "dependencies": { "Sparrow": "4.0.0-*" },
+  "dependencies": {
+    "Microsoft.Win32.Primitives": "4.0.0",
+    "Sparrow": "4.0.0-*"
+  },
   "compilationOptions": {"allowUnsafe": true},
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs" ],
   "compileExclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ],
@@ -31,9 +34,10 @@
         "System.Net.NameResolution": "4.0.0-beta-23516",
         "System.Reflection.TypeExtensions": "4.1.0-beta-23516",
         "System.Runtime": "4.0.21-beta-23516",
-        "System.Security.Cryptography.Algorithms": "4.0.0-beta-23516",
+        "System.Security.Cryptography.Csp": "4.0.0-rc3-23727",
+        "System.Security.Cryptography.Algorithms": "4.0.0-rc3-23727",
+        "System.Security.Cryptography.Primitives": "4.0.0-rc3-23727",
         "System.Security.Cryptography.Cng": "4.0.0-beta-23516",
-        "System.Security.Cryptography.Primitives": "4.0.0-beta-23516",
         "System.ServiceModel.Primitives": "4.1.0-beta-23516",
         "System.Text.Encoding": "4.0.11-beta-23516",
         "System.Text.Encoding.Extensions": "4.0.11-beta-23516",
@@ -42,7 +46,8 @@
         "System.Xml.XDocument": "4.0.11-beta-23516",
         "System.AppContext": "4.0.1-beta-23516",
         "System.Net.WebSockets.Client": "4.0.0-beta-23516"
-      }
+      },
+      "imports": "portable-net45+win8"
     }
   }
 }

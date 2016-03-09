@@ -9,6 +9,7 @@ namespace Raven.Abstractions.Data
         public string UserId { get; set; }
         public List<ResourceAccess> AuthorizedDatabases { get; set; }
         public double Issued { get; set; }
+        public bool IsServerAdminAuthorized { get; set; }
 
         public bool IsExpired()
         {
@@ -30,9 +31,11 @@ namespace Raven.Abstractions.Data
             }
 
             ResourceAccess db;
-            if (string.Equals(tenantId, "<system>") || string.IsNullOrWhiteSpace(tenantId))
+            if (string.Equals(tenantId, "<system>") || string.IsNullOrWhiteSpace(tenantId)) // TODO (OAuth): we do not have <system> anymore ..
             {
-                db = AuthorizedDatabases.FirstOrDefault(access => string.Equals(access.TenantId, "<system>"));
+                // db = AuthorizedDatabases.FirstOrDefault(access => string.Equals(access.TenantId, "<system>"));
+
+                return IsServerAdminAuthorized;
             }
             else
             {
@@ -44,10 +47,13 @@ namespace Raven.Abstractions.Data
             if (db == null)
                 return false;
 
-            if (db.Admin)
+            if (db.AccessMode.Equals("Admin", StringComparison.OrdinalIgnoreCase))
                 return true;
 
-            if (writeAccess && db.ReadOnly)
+            if (db.AccessMode.Equals("Read", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (db.AccessMode.Equals("ReadWrite", StringComparison.OrdinalIgnoreCase) == false) // must be Admin, Read or ReadWrite
                 return false;
 
             return true;

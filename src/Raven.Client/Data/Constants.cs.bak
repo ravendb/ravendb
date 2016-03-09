@@ -70,8 +70,6 @@ namespace Raven.Abstractions.Data
 
         public const string Metadata = "@metadata";
 
-        public const string MetadataDocId = "@id";
-
         public const string NotForReplication = "Raven-Not-For-Replication";
 
         public const string RavenDeleteMarker = "Raven-Delete-Marker";

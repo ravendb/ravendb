@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.WebSockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Server.Documents;
@@ -328,6 +330,37 @@ namespace Raven.Server.ServerWide.Context
                     writer.Dispose();
                     throw;
                 }
+            }
+        }
+
+        public async Task<BlittableJsonReaderObject> ReadFromWebSocket(WebSocket webSocket, string debugTag, CancellationToken cancellationToken)
+        {
+            var jsonParserState = new JsonParserState();
+            using (var parser = new UnmanagedJsonParser(this, jsonParserState, debugTag))
+            {
+                var buffer = new ArraySegment<byte>(GetManagedBuffer());
+
+                var writer = new BlittableJsonDocumentBuilder(this,
+                    BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);
+
+                writer.ReadObject();
+                var result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    // TODO (OAuth): there's a problem here (timeout)
+                    // await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed in server by the client", CancellationToken.None);
+                    return null;
+                }
+
+                parser.SetBuffer(buffer.Array, result.Count);
+                while (writer.Read() == false)
+                {
+                    result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+                    parser.SetBuffer(buffer.Array, result.Count);
+                }
+                writer.FinalizeDocument();
+                return writer.CreateReader();
             }
         }
 

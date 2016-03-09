@@ -78,6 +78,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/ServerName")]
         public string Name { get; set; }
 
+        [Description("OAuth Token Certificate - Modulus")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/OAuthTokenCertificateModulus")]
+        public string OAuthTokenCertificateModulus { get; set; }
+
+        [Description("OAuth Token Certificate - Exponent")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/OAuthTokenCertificateExponent")]
+        public string OAuthTokenCertificateExponent { get; set; }
+
+        [Description("AnonymousUserAccessMode")]
+        [DefaultValue(AnonymousUserAccessModeValues.Admin)]
+        [ConfigurationEntry("Raven/AnonymousAccess")]
+        public AnonymousUserAccessModeValues AnonymousUserAccessMode { get; internal set; }
 
         public override void Initialize(IConfigurationRoot settings)
         {
