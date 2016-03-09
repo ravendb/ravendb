@@ -662,9 +662,9 @@ namespace Raven.Client.Document
 
         public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
-        public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
+        public override BulkInsertOperation BulkInsert(string database = null)
         {
-            return new BulkInsertOperation(database ?? DefaultDatabase, this, Listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
+            return new BulkInsertOperation(database ?? DefaultDatabase, this, Listeners);
         }
 
         protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)

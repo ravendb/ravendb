@@ -21,6 +21,7 @@ using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
 using System.Dynamic;
+using Raven.Client.Data;
 
 namespace Raven.Client.Document.Async
 {

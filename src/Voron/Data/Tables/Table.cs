@@ -484,13 +484,16 @@ namespace Voron.Data.Tables
             public IEnumerable<TableValueReader> Results;
         }
 
-        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
+        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith = false)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate())
             {
                 if (it.Seek(value) == false)
                     yield break;
+
+                if (startsWith)
+                    it.RequiredPrefix = value;
 
                 do
                 {

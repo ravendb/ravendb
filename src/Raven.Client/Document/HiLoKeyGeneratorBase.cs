@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 
 namespace Raven.Client.Document
 {

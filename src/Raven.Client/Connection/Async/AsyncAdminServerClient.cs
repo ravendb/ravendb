@@ -31,7 +31,7 @@ namespace Raven.Client.Connection.Async
                                         (currentServerUrl, requestUrl, method) => innerAsyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method));
         }
 
-        public async Task CreateDatabaseAsync(DatabaseDocument databaseDocument, CancellationToken token = default (CancellationToken))
+        public async Task CreateDatabaseAsync(DatabaseDocument databaseDocument, CancellationToken token = default(CancellationToken))
         {
             RavenJObject doc;
             using (var req = adminRequest.CreateDatabase(databaseDocument, out doc))
@@ -40,7 +40,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false, CancellationToken token = default (CancellationToken))
+        public async Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
         {
             using (var req = adminRequest.DeleteDatabase(databaseName, hardDelete))
             {
@@ -48,7 +48,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task<Operation> CompactDatabaseAsync(string databaseName, CancellationToken token = default (CancellationToken))
+        public async Task<Operation> CompactDatabaseAsync(string databaseName, CancellationToken token = default(CancellationToken))
         {
             using (var req = adminRequest.CompactDatabase(databaseName))
             {
@@ -57,7 +57,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public Task StopIndexingAsync(CancellationToken token = default (CancellationToken))
+        public Task StopIndexingAsync(CancellationToken token = default(CancellationToken))
         {
             return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
             {
@@ -68,7 +68,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null, CancellationToken token = default (CancellationToken))
+        public Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null, CancellationToken token = default(CancellationToken))
         {
             return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
             {
@@ -79,17 +79,17 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default (CancellationToken))
+        public Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default(CancellationToken))
         {
             return innerAsyncServerClient.GetBuildNumberAsync(token);
         }
 
-        public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken))
+        public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default(CancellationToken))
         {
             return adminRequest.GetDatabaseNamesAsync(pageSize, start, token);
         }
 
-        public async Task<AdminStatistics> GetStatisticsAsync(CancellationToken token = default (CancellationToken))
+        public async Task<AdminStatistics> GetStatisticsAsync(CancellationToken token = default(CancellationToken))
         {
             using (var req = adminRequest.AdminStats())
             {
@@ -98,7 +98,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken))
+        public async Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default(CancellationToken))
         {
             using (var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental))
             {
@@ -110,7 +110,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest, CancellationToken token = default (CancellationToken))
+        public async Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest, CancellationToken token = default(CancellationToken))
         {
             using (var request = adminRequest.CreateRestoreRequest())
             {
@@ -122,19 +122,22 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken))
+        public Task<IndexStatus[]> GetIndexesStatus(CancellationToken token = default(CancellationToken))
         {
-            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async operationMetadata =>
-            {
-                using (var request = adminRequest.IndexingStatus(operationMetadata.Url))
+            return innerAsyncServerClient.ExecuteWithReplication(
+                HttpMethods.Get,
+                async operationMetadata =>
                 {
-                    var result = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    return result.Deserialize<IndexingStatus>(innerAsyncServerClient.convention);
-                }
-            }, token);
+                    using (var request = adminRequest.IndexesStatus(operationMetadata.Url))
+                    {
+                        var result = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        return result.Deserialize<IndexStatus[]>(innerAsyncServerClient.convention);
+                    }
+                },
+                token);
         }
 
-        public Task<RavenJObject> GetDatabaseConfigurationAsync(CancellationToken token = default (CancellationToken))
+        public Task<RavenJObject> GetDatabaseConfigurationAsync(CancellationToken token = default(CancellationToken))
         {
             return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async operationMetadata =>
             {

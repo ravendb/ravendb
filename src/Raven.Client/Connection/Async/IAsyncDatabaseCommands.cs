@@ -24,6 +24,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -157,9 +158,9 @@ namespace Raven.Client.Connection.Async
         Task<LoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default (CancellationToken));
 
         /// <summary>
-        ///     Get the low level bulk insert operation
+        ///     Get the bulk insert operation
         /// </summary>
-        ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
+        WebSocketBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource));
 
         /// <summary>
         ///     Retrieves multiple documents.
@@ -706,7 +707,7 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         ///     Get the indexing status
         /// </summary>
-        Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
+        Task<IndexStatus[]> GetIndexesStatus(CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Enables indexing.

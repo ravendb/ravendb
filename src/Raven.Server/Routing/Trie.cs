@@ -86,6 +86,17 @@ namespace Raven.Server.Routing
                             Match.CaptureLength = i - Match.CaptureStart;
                             i--;
                         }
+                        else
+                        {
+                            maybe = current.Children['$'];
+                            if (maybe != null)
+                            {
+                                CurrentIndex = 0;
+                                Match.MatchLength = i;
+                                Value = maybe.Value;
+                                return maybe;
+                            }
+                        }
                     }
                     current = maybe;
                     CurrentIndex = 1;
@@ -254,10 +265,15 @@ namespace Raven.Server.Routing
         private static bool CharEqualsAt(string x, int xIndex, string y, int yIndex)
         {
             if (x[xIndex] == y[yIndex])
-                return true;
-            if (x[xIndex] > 'Z')
-                return (x[xIndex] - 'A' + 'a') == y[yIndex];
-            return x[xIndex] == (y[yIndex] - 'A' + 'a');
+                return true;			
+
+            if (x[xIndex] > 'Z' && y[yIndex] <= 'Z')
+                return y[yIndex] - 'A' + 'a' == x[xIndex];
+            if (x[xIndex] <= 'Z' && y[yIndex] > 'Z')
+                return x[xIndex] - 'A' + 'a' == y[yIndex];
+
+            return y[yIndex] - 'A' + 'a' == x[xIndex] - 'A' + 'a';
+
         }
     }
 }

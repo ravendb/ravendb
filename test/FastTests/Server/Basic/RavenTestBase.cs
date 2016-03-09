@@ -12,9 +12,12 @@ using Raven.Client.Extensions;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Xunit;
 
 namespace Raven.Tests.Core
 {
@@ -251,5 +254,33 @@ namespace Raven.Tests.Core
                 }
             }
         }
+
+
+        protected static void LowLevel_WaitForIndexMap(Index index, long etag)
+        {
+            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
+            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
+        }
+
+        protected DocumentDatabase LowLevel_CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null)
+        {
+            var name = caller ?? Guid.NewGuid().ToString("N");
+
+            if (string.IsNullOrEmpty(dataDirectory) == false)
+                PathsToDelete.Add(dataDirectory);
+            else
+                dataDirectory = NewDataPath(name);
+
+            var configuration = new RavenConfiguration();
+            configuration.Initialize();
+            configuration.Core.RunInMemory = runInMemory;
+            configuration.Core.DataDirectory = dataDirectory;
+
+            var documentDatabase = new DocumentDatabase(name, configuration);
+            documentDatabase.Initialize();
+
+            return documentDatabase;
+        }
+
     }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection

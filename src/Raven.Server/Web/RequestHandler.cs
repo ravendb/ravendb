@@ -85,6 +85,11 @@ namespace Raven.Server.Web
             return gZipStream;
         }
 
+        protected bool IsWebsocketRequest()
+        {
+            return HttpContext.WebSockets.IsWebSocketRequest;
+        }
+
         private bool CanAcceptGzip()
         {
             if (_context.AllowResponseCompression == false)

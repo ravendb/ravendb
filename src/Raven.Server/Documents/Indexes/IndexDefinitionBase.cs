@@ -7,17 +7,18 @@ namespace Raven.Server.Documents.Indexes
     {
         protected static readonly Slice DefinitionSlice = "Definition";
 
-        protected IndexDefinitionBase(string name, string[] collections)
+        protected IndexDefinitionBase(string name, string[] collections, IndexField[] mapFields)
         {
             Name = name;
             Collections = collections;
+            MapFields = mapFields;
         }
 
-        public string Name { get; private set; }
+        public string Name { get; set; }
 
-        public string[] Collections { get; private set; }
+        public string[] Collections { get; set; }
 
-        public abstract IndexField[] MapFields { get; }
+        public IndexField[] MapFields { get; set; }
 
         public abstract void Persist(TransactionOperationContext context);
     }

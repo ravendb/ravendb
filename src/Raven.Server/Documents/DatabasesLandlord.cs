@@ -4,14 +4,12 @@ using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -99,7 +97,7 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.DatabaseName, config);
+                var documentDatabase = new DocumentDatabase(config.DatabaseName, config,ServerStore.MetricsScheduler);
                 documentDatabase.Initialize();
 
                 if (Log.IsInfoEnabled)
@@ -202,8 +200,10 @@ namespace Raven.Server.Documents
 
                 var document = JsonDeserialization.DatabaseDocument(jsonReaderObject);
 
-                if (document.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] == null)
-                    throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.Core.DataDirectory));
+                var dataDirectoryKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                string dataDirectory;
+                if (document.Settings.TryGetValue(dataDirectoryKey,out dataDirectory) == false || dataDirectory == null)
+                    throw new InvalidOperationException($"Could not find {dataDirectoryKey}");
 
                 if (document.Disabled && !ignoreDisabledDatabase)
                     throw new InvalidOperationException("The database has been disabled.");

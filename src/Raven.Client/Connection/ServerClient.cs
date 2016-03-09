@@ -27,8 +27,10 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -49,28 +51,13 @@ namespace Raven.Client.Connection
             this.asyncServerClient = asyncServerClient;
         }
 
-        public IInfoDatabaseCommands Info
-        {
-            get
-            {
-                return this;
-            }
-        }
+        public IInfoDatabaseCommands Info => this;
 
-        public OperationCredentials PrimaryCredentials
-        {
-            get { return asyncServerClient.PrimaryCredentials; }
-        }
+        public OperationCredentials PrimaryCredentials => asyncServerClient.PrimaryCredentials;
 
-        public DocumentConvention Convention
-        {
-            get { return asyncServerClient.convention; }
-        }
+        public DocumentConvention Convention => asyncServerClient.convention;
 
-        public IRequestExecuter RequestExecuter
-        {
-            get { return asyncServerClient.RequestExecuter; }
-        }
+        public IRequestExecuter RequestExecuter => asyncServerClient.RequestExecuter;
 
         #region IDatabaseCommands Members
 
@@ -85,10 +72,8 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key));
         }
 
-        public IGlobalAdminDatabaseCommands GlobalAdmin
-        {
-            get { return new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient)); }
-        }
+        public IGlobalAdminDatabaseCommands GlobalAdmin => 
+            new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient));
 
         public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
                                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
@@ -312,9 +297,10 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetLicenseStatusAsync());
         }
 
-        public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
-        {
-            return asyncServerClient.GetBulkInsertOperation(options, changes);
+        public WebSocketBulkInsertOperation GetBulkInsertOperation()
+        {			
+
+            return asyncServerClient.GetBulkInsertOperation();
         }
 
         public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
