@@ -144,11 +144,6 @@ namespace FastTests.Server.Queries
                 {
                     new SortedField("Age_Range"), 
                 },
-                SortHints = new Dictionary<string, SortOptions>()
-                {
-                    { "SortHint-Name", SortOptions.String },
-                    { "SortHint-Age", SortOptions.Int }
-                }
             });
 
             var definition = _sut.CreateAutoIndexDefinition();
@@ -157,11 +152,11 @@ namespace FastTests.Server.Queries
             Assert.Equal("Users", definition.Collections[0]);
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Age"));
-            Assert.Equal("Auto/Users/ByAgeAndNameSortByAgeName", definition.Name);
+            Assert.Equal("Auto/Users/ByAgeAndNameSortByAge", definition.Name);
             var nameField = definition.GetField("Name");
-            Assert.Equal(SortOptions.String, nameField.SortOption);
+            Assert.Null(nameField.SortOption);
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.Int, ageField.SortOption);
+            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
         }
 
         private void create_dynamic_mapping_for_users_collection(string query)

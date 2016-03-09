@@ -133,22 +133,5 @@ namespace Raven.Server.Documents.Queries.Handlers
 
             return result;
         }
-
-        private Dictionary<string, SortOptions> GetSortHints(string sortHintPrefix) // TODO arek: RavenDB-4371
-        {
-            var result = new Dictionary<string, SortOptions>();
-
-            foreach (var pair in HttpContext.Request.Query.Where(pair => pair.Key.StartsWith(sortHintPrefix, StringComparison.OrdinalIgnoreCase)))
-            {
-                var key = pair.Key;
-                var value = Uri.UnescapeDataString(pair.Value);
-
-                SortOptions sort;
-                Enum.TryParse(value, true, out sort);
-                result[Uri.UnescapeDataString(key)] = sort;
-            }
-
-            return result;
-        }
     }
 }

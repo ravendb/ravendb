@@ -197,7 +197,6 @@ namespace FastTests.Server.Queries.Dynamic
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery {
                 Query = "Name:Arek",
                 SortedFields = new[] { new SortedField("Name") },
-                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Name", SortOptions.String } }
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -224,8 +223,7 @@ namespace FastTests.Server.Queries.Dynamic
             var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
             {
                 Query = "Weight:70",
-                SortedFields = new[] { new SortedField("Weight") },
-                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Weight", SortOptions.Int } }
+                SortedFields = new[] { new SortedField("Weight_Range") },
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -252,7 +250,6 @@ namespace FastTests.Server.Queries.Dynamic
             {
                 Query = "Name:Arek",
                 SortedFields = new[] { new SortedField("Weight") },
-                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Weight", SortOptions.Int } }
             });
 
             var result = _sut.Match(dynamicQuery);
@@ -270,7 +267,8 @@ namespace FastTests.Server.Queries.Dynamic
                 {
                     Name = "Age",
                     Highlighted = false,
-                    Storage = FieldStorage.No
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.NumericDefault
                 },
             });
 
@@ -280,7 +278,6 @@ namespace FastTests.Server.Queries.Dynamic
             {
                 Query = "Age_Range:{Ix9 TO NULL}",
                 SortedFields = new[] { new SortedField("Age_Range") },
-                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Age_Range", SortOptions.String } }
             });
 
             var result = _sut.Match(dynamicQueryWithStringSorting);
@@ -292,7 +289,6 @@ namespace FastTests.Server.Queries.Dynamic
             {
                 Query = "Age_Range:31",
                 SortedFields = new[] { new SortedField("Age_Range") },
-                SortHints = new Dictionary<string, SortOptions> { { "SortHint-Age_Range", SortOptions.None } }
             });
 
             result = _sut.Match(dynamicQueryWithNoneSorting);

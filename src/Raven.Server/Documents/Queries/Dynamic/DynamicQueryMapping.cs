@@ -116,21 +116,29 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public static DynamicSortInfo[] GetSortInfo(Action<string> addField, IndexQuery indexQuery)
         {
             var sortInfo = new List<DynamicSortInfo>();
-            if (indexQuery.SortHints == null)
+            if (indexQuery.SortedFields == null)
                 return new DynamicSortInfo[0];
 
-            foreach (var sortOptions in indexQuery.SortHints)
+            foreach (var sortOptions in indexQuery.SortedFields)
             {
-                var key = sortOptions.Key;
-                var fieldName =
-                    key.EndsWith("_Range") ?
-                          key.Substring("SortHint-".Length, key.Length - "SortHint-".Length - "_Range".Length)
-                        : key.Substring("SortHint-".Length);
-                sortInfo.Add(new DynamicSortInfo
+                var key = sortOptions.Field;
+
+                if (key.EndsWith("_Range"))
                 {
-                    Field = fieldName,
-                    FieldType = sortOptions.Value
-                });
+                    sortInfo.Add(new DynamicSortInfo
+                    {
+                        Field = key.Substring(0, key.Length - "_Range".Length),
+                        FieldType = SortOptions.NumericDefault
+                    });
+                }
+                else
+                {
+                    sortInfo.Add(new DynamicSortInfo
+                    {
+                        Field = key,
+                        FieldType = SortOptions.String
+                    });
+                }
             }
 
             return sortInfo.ToArray();

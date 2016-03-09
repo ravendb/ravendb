@@ -109,7 +109,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ResultsTransformer = query.ResultsTransformer,
                 TransformerParameters = query.TransformerParameters,
                 ExplainScores = query.ExplainScores,
-                SortHints = query.SortHints
             };
             if (indexQuery.SortedFields == null)
                 return indexQuery;

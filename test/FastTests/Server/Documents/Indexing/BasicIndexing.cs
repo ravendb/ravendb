@@ -103,7 +103,7 @@ namespace FastTests.Server.Documents.Indexing
                     Name = "Name2",
                     Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.Float
+                    SortOption = SortOptions.NumericDefault
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
             }
@@ -133,7 +133,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal("Users", indexes[1].Definition.Collections[0]);
                 Assert.Equal(1, indexes[1].Definition.MapFields.Length);
                 Assert.Equal("Name2", indexes[1].Definition.MapFields[0].Name);
-                Assert.Equal(SortOptions.Float, indexes[1].Definition.MapFields[0].SortOption);
+                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields[0].SortOption);
                 Assert.False(indexes[1].Definition.MapFields[0].Highlighted);
             }
         }

@@ -211,8 +211,6 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
                 numericField = cached.Field;
             }
 
-            // TODO arek var sortOption = field.SortOption;
-
             if (value is LazyDoubleValue)
             {
                 var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner)); // TODO arek - 
@@ -221,7 +219,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
             }
             else if (value is long)
             {
-                yield return numericField.SetLongValue((long) value);
+                if (field.SortOption == SortOptions.NumbericDouble)
+                    yield return numericField.SetDoubleValue((long)value);
+                else
+                    yield return numericField.SetLongValue((long) value);
             }
             else
             {

@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {
-                    sortOptions = SortOptions.Double;
+                    sortOptions = SortOptions.NumbericDouble; // TODO arek
                 }
 
                 return new SortField(x.Field, (int)sortOptions, x.Descending);
