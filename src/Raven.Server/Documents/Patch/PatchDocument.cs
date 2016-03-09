@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Patch
 
             CustomizeEngine(jintEngine, scope);
 
-            jintEngine.SetValue("PutDocument", (Func<string, JsValue, JsValue, long?, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, jintEngine)));
+            jintEngine.SetValue("PutDocument", (Func<string, JsValue, JsValue, JsValue, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, jintEngine)));
             jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
             jintEngine.SetValue("DeleteDocument", (Action<string>)scope.DeleteDocument);
             jintEngine.SetValue("__document_id", document.Key);

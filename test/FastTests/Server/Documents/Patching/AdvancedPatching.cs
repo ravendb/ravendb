@@ -595,7 +595,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                         Script = @"PutDocument('Items/1', { Property: 1}, null, 'invalid-etag');",
                     });
                 });
-                Assert.Contains("Invalid ETag value 'invalid-etag' for document 'Items/1'", exception.InnerException.Message);
+                Assert.Contains("Invalid ETag value for document 'Items/1'", exception.InnerException.Message);
             }
         }
 

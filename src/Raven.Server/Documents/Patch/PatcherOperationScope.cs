@@ -258,12 +258,22 @@ namespace Raven.Server.Documents.Patch
             return ToJsObject(engine, document.Data);
         }
 
-        public virtual string PutDocument(string key, JsValue document, JsValue metadata, long? etag, Engine engine)
+        public virtual string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
         {
             if (document.IsObject() == false)
             {
                 throw new InvalidOperationException(
                     $"Created document must be a valid object which is not null or empty. Document key: '{key}'.");
+            }
+
+            long? etag = null;
+            if (etagJs.IsNumber())
+            {
+                etag = (long) etagJs.AsNumber();
+            }
+            else if(etagJs.IsNull() == false && etagJs.IsUndefined() == false)
+            {
+                throw new InvalidOperationException($"Invalid ETag value for document '{key}'");
             }
 
             var data = ToBlittable(document.AsObject());
