@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     sortField = SortFieldHelper.CustomField(sortField).Name;
                 }
 
-                var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortField);
+                var normalizedFieldName = IndexField.ReplaceInvalidCharactersInFieldName(sortField);
 
                 if (normalizedFieldName.EndsWith("_Range"))
                     normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);

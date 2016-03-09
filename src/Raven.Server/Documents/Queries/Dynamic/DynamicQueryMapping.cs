@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -86,18 +85,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             foreach (var dynamicSortInfo in sortDescriptors)
             {
-                dynamicSortInfo.Field = ReplaceInvalidCharactersForFields(dynamicSortInfo.Field);
+                dynamicSortInfo.Field = IndexField.ReplaceInvalidCharactersInFieldName(dynamicSortInfo.Field);
             }
         }
-       
-        static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled); // TODO arek - we should be able to get rid of it - we already have it in AutoIndexDefinition
 
         private void SetupFieldsToIndex(IEnumerable<Tuple<string, string>> fields)
         {
             MapFields = fields.Select(x => new DynamicQueryMappingItem
             {
                 From = x.Item1,
-                To = ReplaceInvalidCharactersForFields(x.Item2),
+                To = IndexField.ReplaceInvalidCharactersInFieldName(x.Item2),
                 QueryFrom = EscapeParentheses(x.Item2)
             }).OrderByDescending(x => x.QueryFrom.Length).ToArray();
 
@@ -106,11 +103,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private string EscapeParentheses(string str)
         {
             return str.Replace("(", @"\(").Replace(")", @"\)");
-        }
-
-        public static string ReplaceInvalidCharactersForFields(string field)
-        {
-            return replaceInvalidCharacterForFields.Replace(field, "_");
         }
 
         public static DynamicSortInfo[] GetSortInfo(Action<string> addField, IndexQuery indexQuery)
