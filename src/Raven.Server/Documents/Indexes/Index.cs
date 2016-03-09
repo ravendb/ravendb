@@ -241,11 +241,11 @@ namespace Raven.Server.Documents.Indexes
             lock (_locker)
             {
                 if (_disposed)
-                    throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+                    return;
 
                 _disposed = true;
 
-                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource?.Cancel();
 
                 _indexingThread?.Join();
                 _indexingThread = null;

@@ -33,7 +33,8 @@ namespace FastTests.Server.Documents.Indexing
                 } }), database);
                 index.Dispose();
 
-                Assert.Throws<ObjectDisposedException>(() => index.Dispose());
+                index.Dispose();// can dispose twice
+
                 Assert.Throws<ObjectDisposedException>(() => index.Start());
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
@@ -114,6 +115,7 @@ namespace FastTests.Server.Documents.Indexing
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
+                    .OrderBy(x=>x.IndexId)
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);
