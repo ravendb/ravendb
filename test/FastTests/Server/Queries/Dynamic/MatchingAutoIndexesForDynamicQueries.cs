@@ -276,7 +276,7 @@ namespace FastTests.Server.Queries.Dynamic
 
             var dynamicQueryWithStringSorting = DynamicQueryMapping.Create("Users", new IndexQuery
             {
-                Query = "Age_Range:{Ix9 TO NULL}",
+                Query = "Age_Range:{Lx9 TO NULL}",
                 SortedFields = new[] { new SortedField("Age_Range") },
             });
 

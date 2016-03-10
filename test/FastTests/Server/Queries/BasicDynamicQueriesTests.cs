@@ -32,7 +32,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_simple_numeric_where_clause()
+        public async Task Dynamic_query_with_simple_numeric_range_where_clause()
         {
             using (var store = await GetDocumentStore())
             {

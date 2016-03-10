@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var autoIndexDef = map.CreateAutoIndexDefinition();
 
-                var id = _indexStore.CreateIndex(autoIndexDef);
+                var id = _indexStore.CreateIndex(autoIndexDef); // TODO arek - handle concurrent attempts to create the same index here - the same dynamic queries run simultaneously
                 index = _indexStore.GetIndex(id);
 
                 newAutoIndex = true;
