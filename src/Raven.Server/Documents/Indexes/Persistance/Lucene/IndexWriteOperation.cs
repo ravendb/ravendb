@@ -30,15 +30,22 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             _analyzer = new LowerCaseKeywordAnalyzer();
 
             Monitor.Enter(_writeLock);
-            
-            _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-            _persistence.EnsureIndexWriter();
-            
-            _locker = directory.MakeLock("writing-to-index.lock");
+            try
+            {
+                _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-            if (_locker.Obtain() == false)
-                throw new InvalidOperationException();
+                _persistence.EnsureIndexWriter();
+            
+                _locker = directory.MakeLock("writing-to-index.lock");
+
+                if (_locker.Obtain() == false)
+                    throw new InvalidOperationException();
+            }
+            catch (Exception)
+            {
+                Monitor.Exit(_writeLock);
+            }
         }
 
         public void Dispose()
