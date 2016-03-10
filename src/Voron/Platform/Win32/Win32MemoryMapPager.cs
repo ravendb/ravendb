@@ -266,12 +266,10 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 return;
 
-            if (_fileStream != null)
-                _fileStream.Dispose();
-            if (_handle != null)
-                _handle.Dispose();
-            if (DeleteOnClose && _fileInfo != null)
-                _fileInfo.Delete();
+            _fileStream?.Dispose();
+            _handle?.Dispose();
+            if (DeleteOnClose)
+                _fileInfo?.Delete();
 
             base.Dispose();
         }
