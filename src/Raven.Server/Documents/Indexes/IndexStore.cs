@@ -113,22 +113,24 @@ namespace Raven.Server.Documents.Indexes
 
         private void DeleteIndexInternal(int id)
         {
-            Index index;
-            if (_indexes.TryRemoveById(id, out index) == false)
-                throw new InvalidOperationException("There is no index with id: " + id);
-
-            try
+            lock (_locker)
             {
-                index.Dispose();
-            }
-            catch (Exception)
-            {
-                //TODO [ppekrol] log
-            }
+                Index index;
+                if (_indexes.TryRemoveById(id, out index) == false)
+                    throw new InvalidOperationException("There is no index with id: " + id);
 
-            var path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath, id.ToString());
+                try
+                {
+                    index.Dispose();
+                }
+                catch (Exception)
+                {
+                    //TODO [ppekrol] log
+                }
 
-            Task.Factory.StartNew(() => IOExtensions.DeleteDirectory(path));
+                var path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath, id.ToString());
+                IOExtensions.DeleteDirectory(path);
+            }
         }
 
         public void StartIndexing()
@@ -190,16 +192,19 @@ namespace Raven.Server.Documents.Indexes
 
         private int ResetIndexInternal(Index index)
         {
-            DeleteIndex(index.IndexId);
-
-            switch (index.Type)
+            lock (_locker)
             {
-                case IndexType.AutoMap:
-                    var autoMapIndex = (AutoMapIndex)index;
-                    var autoMapIndexDefinition = autoMapIndex.Definition;
-                    return CreateIndex(autoMapIndexDefinition);
-                default:
-                    throw new NotSupportedException(index.Type.ToString());
+                DeleteIndex(index.IndexId);
+
+                switch (index.Type)
+                {
+                    case IndexType.AutoMap:
+                        var autoMapIndex = (AutoMapIndex)index;
+                        var autoMapIndexDefinition = autoMapIndex.Definition;
+                        return CreateIndex(autoMapIndexDefinition);
+                    default:
+                        throw new NotSupportedException(index.Type.ToString());
+                }
             }
         }
 
