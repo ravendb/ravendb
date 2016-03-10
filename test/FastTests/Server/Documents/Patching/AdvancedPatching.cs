@@ -616,7 +616,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
  {}, 123456789 );",
                     });
                 });
-                Assert.Contains("Document CustomTypes/1 does not exists, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exists, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 
