@@ -398,7 +398,7 @@ namespace Rachis.Transport
 
         internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
         {
-            return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator());
+            return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator(autoRefreshToken: false));
         }
 
         internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)

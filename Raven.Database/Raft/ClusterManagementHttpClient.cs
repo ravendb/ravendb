@@ -469,7 +469,7 @@ namespace Raven.Database.Raft
 
         internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
         {
-            return _securedAuthenticatorCache.GetOrAdd(info.Uri.AbsoluteUri, _ => new SecuredAuthenticator());
+            return _securedAuthenticatorCache.GetOrAdd(info.Uri.AbsoluteUri, _ => new SecuredAuthenticator(autoRefreshToken: false));
         }
 
         internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)

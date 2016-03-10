@@ -9,12 +9,30 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Abstractions.OAuth
 {
-    public class SecuredAuthenticator : AbstractAuthenticator
+    public class SecuredAuthenticator : AbstractAuthenticator, IDisposable
     {
+        private readonly bool autoRefreshToken;
+        private Timer autoRefreshTimer; 
+        private readonly object locker = new object();
+
+        private readonly TimeSpan defaultRefreshTimeInMilis = TimeSpan.FromMinutes(29);
+
+        public SecuredAuthenticator(bool autoRefreshToken)
+        {
+            this.autoRefreshToken = autoRefreshToken;
+        }
+
+        public void Dispose()
+        {
+            autoRefreshTimer?.Dispose();
+            autoRefreshTimer = null;
+        }
+
         public override void ConfigureRequest(object sender, WebRequestEventArgs e)
         {
             if (CurrentOauthToken != null)
@@ -118,6 +136,8 @@ namespace Raven.Abstractions.OAuth
                         var currentOauthToken = reader.ReadToEnd();
                         CurrentOauthToken = currentOauthToken;
                         CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
+
+                        ScheduleTokenRefresh(oauthSource, apiKey);
 
                         return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthTokenWithBearer));
                     }
@@ -234,11 +254,32 @@ namespace Raven.Abstractions.OAuth
                         CurrentOauthToken = currentOauthToken;
                         CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
 
+                        ScheduleTokenRefresh(oauthSource, apiKey);
+
                         return (Action<HttpClient>)(SetAuthorization);
                     }
                 }
             }
         }
 
+        private void ScheduleTokenRefresh(string oauthSource, string apiKey)
+        {
+            if (!autoRefreshToken)
+            {
+                return;
+            }
+
+            lock (locker)
+            {
+                if (autoRefreshTimer != null)
+                {
+                    autoRefreshTimer.Change(defaultRefreshTimeInMilis, Timeout.InfiniteTimeSpan);
+                }
+                else
+                {
+                    autoRefreshTimer = new Timer(_ => DoOAuthRequestAsync(null, oauthSource, apiKey), null, defaultRefreshTimeInMilis, Timeout.InfiniteTimeSpan);
+                }
+            }
+        }
     }
 }
