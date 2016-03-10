@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Linq;
-
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Testing
+namespace Raven.Tests.Issues
 {
 
     public class RavenDB_4393 : RavenTest
@@ -87,7 +85,7 @@ namespace Testing
                 {
                     RavenQueryStatistics stats;
                     var firstByCriticalTime = session.Query<MessagesViewIndex.SortAndFilterOptions, MessagesViewIndex>()
-                        .Statistics(out stats)                        
+                        .Statistics(out stats)
                         .Where(x => x.CriticalTime != null)
                         .OrderBy(x => x.CriticalTime)
                         .ProjectFromIndexFieldsInto<ProcessedMessage>()
