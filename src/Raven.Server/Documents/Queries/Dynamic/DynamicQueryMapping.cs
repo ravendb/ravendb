@@ -71,6 +71,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 });
             }
 
+            //TODO arek - HighlightedFields
+
             SortDescriptors = extendedSortDescriptors.ToArray();
         }
 

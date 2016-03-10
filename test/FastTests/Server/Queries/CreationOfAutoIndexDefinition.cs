@@ -218,6 +218,50 @@ namespace FastTests.Server.Queries
             Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
         }
 
+        [Fact]
+        public void DefinitionExtensionWontDuplicateFields()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "FirstName:A* LastName:a*",
+                SortedFields = new[]
+                {
+                    new SortedField("Count_Range"),
+                },
+            });
+
+            var existingDefinition = _sut.CreateAutoIndexDefinition();
+
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "FirstName:A* AddressId:addresses/1",
+                SortedFields = new[]
+                {
+                    new SortedField("Age_Range"),
+                    new SortedField("Count_Range")
+                },
+            });
+
+            _sut.ExtendMappingBasedOn(existingDefinition);
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("FirstName"));
+            Assert.True(definition.ContainsField("LastName"));
+            Assert.True(definition.ContainsField("AddressId"));
+            Assert.True(definition.ContainsField("Age"));
+            Assert.True(definition.ContainsField("Count"));
+            Assert.Equal("Auto/Users/ByAddressIdAndAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
+
+            var ageField = definition.GetField("Age");
+            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+
+            var countField = definition.GetField("Count");
+            Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
+        }
+
         private void create_dynamic_mapping_for_users_collection(string query)
         {
             _sut = DynamicQueryMapping.Create("Users", new IndexQuery

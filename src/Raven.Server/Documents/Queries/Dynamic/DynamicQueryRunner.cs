@@ -35,19 +35,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var autoIndexDef = map.CreateAutoIndexDefinition();
 
-                var id = _indexStore.CreateIndex(autoIndexDef); // TODO arek - handle concurrent attempts to create the same index here - the same dynamic queries run simultaneously
+                var id = _indexStore.CreateIndex(autoIndexDef);
                 index = _indexStore.GetIndex(id);
 
                 newAutoIndex = true;
             }
 
-            //TODO arek
-            //string realQuery = map.Items.Aggregate(query.Query, (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
-
-            //UpdateFieldNamesForSortedFields(query, map);
-
-            // We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
-            //UpdateFieldsInArray(map, query.FieldsToFetch);
+            query = EnsureValidQuery(query, map);
 
             return ExecuteActualQuery(index, query, newAutoIndex);
         }
@@ -100,6 +94,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             index = null;
             return false;
+        }
+
+        private static IndexQuery EnsureValidQuery(IndexQuery query, DynamicQueryMapping map)
+        {
+            foreach (var field in map.MapFields)
+            {
+                query.Query = query.Query.Replace(field.Name, IndexField.ReplaceInvalidCharactersInFieldName(field.Name));
+            }
+
+            return query;
         }
     }
 }

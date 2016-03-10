@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
@@ -6,6 +7,7 @@ using Xunit;
 
 namespace FastTests.Server.Queries
 {
+    [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class BasicDynamicQueriesTests : RavenTestBase
     {
         [Fact]
