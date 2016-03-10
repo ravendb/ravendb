@@ -17,23 +17,33 @@ namespace Tryouts
             public string LastName { get; set; }
         }
 
-        private const int numOfItems = 100;
+        private const int numOfItems = 100000;
 
         public static void Main(string[] args)
         {
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8080",
-                DefaultDatabase = "test2"				
+                DefaultDatabase = "FooBar123"
             })
             {
                 store.Initialize();
-              
-                BulkInsert(store).Wait();
+
+//				store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
+//				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+//				{
+//					Id = "FooBar123",
+//					Settings =
+//					{
+//						{ "Raven/DataDir", "~\\FooBar123" }
+//					}
+//				});
+
+                BulkInsert(store,100).Wait();
             }
         }
 
-        public static async Task BulkInsert(DocumentStore store)
+        public static async Task BulkInsert(DocumentStore store,int sizeBytes)
         {
             using (var bulkInsert = store.BulkInsert())
             {
@@ -42,11 +52,11 @@ namespace Tryouts
                     await bulkInsert.StoreAsync(new User { FirstName = "foo", LastName = "bar" });
                 }
             }
-            Console.Write("Opening bulk-insert...");
+            Console.Write($"Doing bulk-insert with docs sized -> {sizeBytes} bytes...");
             var sw = Stopwatch.StartNew();
             using (var bulkInsert = store.BulkInsert())
             {
-                for (int i = 0; i < 100*1000; i++)
+                for (int i = 0; i < numOfItems; i++)
                 {
                     await bulkInsert.StoreAsync(new User {FirstName = "foo", LastName = "bar"});
                 }
