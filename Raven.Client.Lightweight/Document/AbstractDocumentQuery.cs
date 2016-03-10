@@ -1221,7 +1221,7 @@ If you really want to do in memory filtering on the data returned from the query
         {
             EnsureValidFieldName(whereParams);
 
-            if (theSession != null && whereParams.Value != null && whereParams.Value != "*")
+            if (theSession != null && whereParams.Value != null && !(whereParams.Value is string))
                 sortByHints.Add(new KeyValuePair<string, SortOptions?>(whereParams.FieldName, theSession.Conventions.GetDefaultSortOption(whereParams.Value.GetType())));
 
             var transformToEqualValue = TransformToEqualValue(whereParams);

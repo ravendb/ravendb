@@ -29,12 +29,12 @@ namespace Raven.Tests.MailingList
 
             //  Auto/Logfiles/BySavedAnalysesAndSharedOnFacebookActionIdAndStoreIdAndUploadDateSortByUploadDate
             await ThirdQuery(session);
-
-            Assert.Equal(3, GetAutoIndexes(store).Length);
+            var definitions = GetAutoIndexes(store);
+            Assert.Equal(3, definitions.Length);
 
             // now lets delete the second index
-            store.DatabaseCommands.DeleteIndex("Auto/Logfiles/ByUploadDateSortByUploadDate");
-            store.DatabaseCommands.DeleteIndex("Auto/Logfiles/BySavedAnalysesAndStoreIdAndUploadDateSortBySavedAnalysesStoreIdUploadDate");
+            store.DatabaseCommands.DeleteIndex(definitions[1].Name);
+            store.DatabaseCommands.DeleteIndex(definitions[2].Name);
 
             await FirstQuery(session);
             await SecondQuery(session);
