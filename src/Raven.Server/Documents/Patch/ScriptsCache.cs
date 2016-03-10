@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Jint;
@@ -17,13 +18,13 @@ namespace Raven.Server.Documents.Patch
         {
             public int Usage;
             public DateTime Timestamp;
-            public ConcurrentQueue<Engine> Queue;
+            public Engine Engine;
         }
 
         private const int CacheMaxSize = 512;
 
-        private readonly ConcurrentDictionary<ScriptedPatchRequestAndCustomFunctionsToken, CachedResult> _cache =
-            new ConcurrentDictionary<ScriptedPatchRequestAndCustomFunctionsToken, CachedResult>();
+        private readonly Dictionary<ScriptedPatchRequestAndCustomFunctionsToken, CachedResult> _cache =
+            new Dictionary<ScriptedPatchRequestAndCustomFunctionsToken, CachedResult>();
 
         private class ScriptedPatchRequestAndCustomFunctionsToken
         {
@@ -61,47 +62,14 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public void CheckinScript(PatchRequest request, Engine context, string customFunctions)
-        {
-            CachedResult cacheByCustomFunctions;
-
-            var patchRequestAndCustomFunctionsTuple = new ScriptedPatchRequestAndCustomFunctionsToken(request, customFunctions);
-            if (_cache.TryGetValue(patchRequestAndCustomFunctionsTuple, out cacheByCustomFunctions))
-            {
-                if (cacheByCustomFunctions.Queue.Count > 20)
-                    return;
-                cacheByCustomFunctions.Queue.Enqueue(context);
-                return;
-            }
-            _cache.AddOrUpdate(patchRequestAndCustomFunctionsTuple, patchRequest =>
-            {
-                var queue = new ConcurrentQueue<Engine>();
-
-                return new CachedResult
-                {
-                    Queue = queue,
-                    Timestamp = SystemTime.UtcNow,
-                    Usage = 1
-                };
-            }, (patchRequest, result) =>
-            {
-                result.Queue.Enqueue(context);
-                return result;
-            });
-        }
-
-        public Engine CheckoutScript(Func<PatchRequest, Engine> createEngine, PatchRequest request, string customFunctions)
+        public Engine GetEngine(Func<PatchRequest, Engine> createEngine, PatchRequest request, string customFunctions)
         {
             CachedResult value;
             var patchRequestAndCustomFunctionsTuple = new ScriptedPatchRequestAndCustomFunctionsToken(request, customFunctions);
             if (_cache.TryGetValue(patchRequestAndCustomFunctionsTuple, out value))
             {
-                Interlocked.Increment(ref value.Usage);
-                Engine context;
-                if (value.Queue.TryDequeue(out context))
-                {
-                    return context;
-                }
+                value.Usage++;
+                return value.Engine;
             }
             var result = createEngine(request);
 
@@ -116,34 +84,23 @@ namespace Raven.Server.Documents.Patch
             var cachedResult = new CachedResult
             {
                 Usage = 1,
-                Queue = new ConcurrentQueue<Engine>(),
-                Timestamp = SystemTime.UtcNow
+                Timestamp = SystemTime.UtcNow,
+                Engine = result
             };
 
-            _cache.AddOrUpdate(patchRequestAndCustomFunctionsTuple, cachedResult, (_, existing) =>
-            {
-                Interlocked.Increment(ref existing.Usage);
-                return existing;
-            });
             if (_cache.Count > CacheMaxSize)
             {
-                foreach (var source in _cache
-                    .Where(x => x.Value != null)
-                    .OrderByDescending(x => x.Value.Usage)
-                    .ThenBy(x => x.Value.Timestamp)
-                    .Skip(CacheMaxSize - CacheMaxSize / 10))
+                foreach (var item in _cache.OrderBy(x => x.Value?.Usage)
+                    .ThenByDescending(x => x.Value?.Timestamp)
+                    .Take(CacheMaxSize / 10)
+                    .Select(source => source.Key)
+                    .ToList())
                 {
-                    if (Equals(source.Key, request))
-                        continue; // we don't want to remove the one we just added
-                    CachedResult ignored;
-                    _cache.TryRemove(source.Key, out ignored);
-                }
-                foreach (var source in _cache.Where(x => x.Value == null))
-                {
-                    CachedResult ignored;
-                    _cache.TryRemove(source.Key, out ignored);
+                    _cache.Remove(item);
                 }
             }
+            _cache[patchRequestAndCustomFunctionsTuple] = cachedResult;
+
 
             return result;
         }
