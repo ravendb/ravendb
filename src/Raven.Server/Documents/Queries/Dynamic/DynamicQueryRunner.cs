@@ -38,8 +38,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(autoIndexDef);
                 index = _indexStore.GetIndex(id);
 
-                index.Execute(); // TODO arek
-
                 newAutoIndex = true;
             }
 
@@ -82,6 +80,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return result;
                 }
 
+                _context.Reset(); // dispose already open read transactions - TODO arek
                 Thread.Sleep(100);
             }
         }

@@ -37,7 +37,7 @@ namespace Raven.Client.Connection
 
         public static string Indexes(this string url, string index)
         {
-            return $"{url}/indexes/{index}";
+            return $"{url}/indexes?name={index}";
         }
 
         public static string IndexDefinition(this string url, string index)

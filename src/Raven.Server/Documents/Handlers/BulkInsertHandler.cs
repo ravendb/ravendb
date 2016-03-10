@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
                                     const string message = "bad doc key";
                                     throw new InvalidDataException(message);
                                 }
-                                Database.DocumentsStorage.Put(context, docKey, 0, reader);
+                                Database.DocumentsStorage.Put(context, docKey, null, reader);
                             }
                             tx.Commit();
                         }

@@ -37,11 +37,11 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly Slice TypeSlice = "Type";
 
-        protected readonly LuceneIndexPersistance IndexPersistance;
+        protected readonly LuceneIndexPersistence IndexPersistence;
 
         private readonly object _locker = new object();
 
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private CancellationTokenSource _cancellationTokenSource;
 
         protected DocumentDatabase DocumentDatabase;
 
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes
             IndexId = indexId;
             Type = type;
             Definition = definition;
-            IndexPersistance = new LuceneIndexPersistance(indexId, definition);
+            IndexPersistence = new LuceneIndexPersistence(indexId, definition);
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes
 
                     switch (type)
                     {
-                        case IndexType.Auto:
+                        case IndexType.AutoMap:
                             return AutoMapIndex.Open(indexId, environment, documentDatabase);
                         default:
                             throw new NotImplementedException();
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name => Definition?.Name;
 
-        public bool ShouldRun { get; private set; } = true;
+        public bool IsRunning => _indexingThread != null;
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes
                         tx.Commit();
                     }
 
-                    IndexPersistance.Initialize(DocumentDatabase.Configuration.Indexing);
+                    IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
                     _initialized = true;
                 }
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Execute()
+        public void Start()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -200,6 +200,11 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread != null)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' is executing.");
 
+                if (DocumentDatabase.Configuration.Indexing.Disabled)
+                    return;
+
+                _cancellationTokenSource = new CancellationTokenSource();
+
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
                     Name = "Indexing of " + Name,
@@ -210,16 +215,37 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void Stop()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (_initialized == false)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' was not initialized.");
+
+            lock (_locker)
+            {
+                if (_indexingThread == null)
+                    return;
+
+                _cancellationTokenSource.Cancel();
+
+                var indexingThread = _indexingThread;
+                _indexingThread = null;
+                indexingThread.Join();
+            }
+        }
+
         public void Dispose()
         {
             lock (_locker)
             {
                 if (_disposed)
-                    throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+                    return;
 
                 _disposed = true;
 
-                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource?.Cancel();
 
                 _indexingThread?.Join();
                 _indexingThread = null;
@@ -240,7 +266,6 @@ namespace Raven.Server.Documents.Indexes
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             using (databaseContext.OpenReadTransaction())
-            using (indexContext.OpenReadTransaction())
             {
                 foreach (var collection in Collections)
                 {
@@ -261,11 +286,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastMappedEtags()
+        internal Dictionary<string, long> GetLastMappedEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -286,7 +310,7 @@ namespace Raven.Server.Documents.Indexes
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastTombstoneEtags()
+        internal Dictionary<string, long> GetLastTombstoneEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -349,7 +373,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
 
-                    while (ShouldRun)
+                    while (true)
                     {
                         try
                         {
@@ -388,8 +412,6 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract void DoIndexingWork(CancellationToken cancellationToken);
 
-
-
         private void HandleDocumentChange(DocumentChangeNotification notification)
         {
             if (Collections.Contains(notification.CollectionName) == false)
@@ -398,7 +420,6 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-       
         public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext context, CancellationToken token)
         {
             if (_disposed)
@@ -412,28 +433,32 @@ namespace Raven.Server.Documents.Indexes
 
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                result.IsStale = IsStale(context, indexContext);
+                using (var tx = indexContext.OpenReadTransaction())
+                {
+                    result.IsStale = IsStale(context, indexContext);
+
+                    Reference<int> totalResults = new Reference<int>();
+                    List<string> documentIds;
+
+                    using (var indexRead = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                    {
+                        documentIds = indexRead.Query(query, token, totalResults).ToList();
+                    }
+
+                    result.TotalResults = totalResults.Value;
+
+                    context.OpenReadTransaction();
+
+                    foreach (var id in documentIds)
+                    {
+                        var document = DocumentDatabase.DocumentsStorage.Get(context, id);
+
+                        result.Results.Add(document);
+                    }
+
+                    return result;
+                }
             }
-
-            Reference<int> totalResults = new Reference<int>();
-            List<string> documentIds;
-            using (var indexRead = IndexPersistance.Read())
-            {
-                documentIds = indexRead.Query(query, token, totalResults).ToList();
-            }
-
-            result.TotalResults = totalResults.Value;
-
-            context.OpenReadTransaction();
-
-            foreach (var id in documentIds)
-            {
-                var document = DocumentDatabase.DocumentsStorage.Get(context, id);
-
-                result.Results.Add(document);
-            }
-
-            return result;
         }
     }
 }

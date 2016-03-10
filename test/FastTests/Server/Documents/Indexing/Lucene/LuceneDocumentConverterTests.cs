@@ -230,7 +230,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.NotNull(result.GetField("Age"));
             var ageNumeric = result.GetFieldable("Age_Range") as NumericField;
             Assert.NotNull(ageNumeric);
-            Assert.Equal(25, ageNumeric.NumericValue);
+            Assert.Equal(25L, ageNumeric.NumericValue);
 
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
         }
