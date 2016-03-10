@@ -383,6 +383,12 @@ namespace Raven.Server.Documents.Indexes
 
                             DoIndexingWork(cts.Token);
 
+                            DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                            {
+                                Name = Name,
+                                Type = IndexChangeTypes.BatchCompleted
+                            });
+
                             _mre.Wait(cts.Token);
                         }
                         catch (OutOfMemoryException oome)

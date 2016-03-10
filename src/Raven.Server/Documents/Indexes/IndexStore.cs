@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Utils;
 
@@ -69,14 +70,25 @@ namespace Raven.Server.Documents.Indexes
 
         public int CreateIndex(AutoIndexDefinition definition)
         {
-            var indexId = _indexes.GetNextIndexId();
+            lock (_locker)
+            {
+                // TODO [ppekrol] check if we do not have identical index
 
-            var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
-            index.Start();
+                var indexId = _indexes.GetNextIndexId();
 
-            _indexes.Add(index);
+                var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
+                index.Start();
 
-            return indexId;
+                _indexes.Add(index);
+
+                _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexAdded
+                });
+
+                return indexId;
+            }
         }
 
         public int ResetIndex(string name)
@@ -127,6 +139,15 @@ namespace Raven.Server.Documents.Indexes
                 {
                     //TODO [ppekrol] log
                 }
+
+                _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexRemoved
+                });
+
+                if (_documentDatabase.Configuration.Indexing.RunInMemory)
+                    return;
 
                 var path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath, id.ToString());
                 IOExtensions.DeleteDirectory(path);
