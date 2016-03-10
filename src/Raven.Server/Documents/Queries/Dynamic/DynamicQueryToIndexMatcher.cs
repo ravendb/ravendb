@@ -48,13 +48,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             public string Index { get; set; }
             public string Reason { get; set; }
         }
-
-        // TODO arek - definitely too big method
+        
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
             if (query.MapFields.Length == 0 && // we optimize for empty queries to use Raven/DocumentsByEntityName
-                (query.SortDescriptors.Length == 0) // && // and no sorting was requested
-                )
+                (query.SortDescriptors.Length == 0)) // and no sorting was requested
                 //_indexStore.Contains(Constants.DocumentsByEntityNameIndex)) // and Raven/DocumentsByEntityName exists
             {
                 // TODO arek
@@ -147,18 +145,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var currentBestState = DynamicQueryMatchType.Complete;
 
-            if (query.MapFields.All(x => definition.ContainsField(x.From)) == false) // TODO arek: x.From
+            if (query.MapFields.All(x => definition.ContainsField(x.Name)) == false) // TODO arek: x.From
             {
                 explain(indexName, () =>
                 {
-                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.From) == false); //TODO are: x.From
+                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.Name) == false); //TODO are: x.From
                     return $"The following fields are missing: {string.Join(", ", missingFields)}";
                 });
 
                 currentBestState = DynamicQueryMatchType.Partial;
             }
 
-            //TODO arek: ignore sorting and highlighting for now
+            //TODO arek: ignore highlighting for now
             //if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
             //{
             //    var nonHighlightableFields = indexQuery

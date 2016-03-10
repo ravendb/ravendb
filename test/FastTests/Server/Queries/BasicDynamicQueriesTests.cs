@@ -9,7 +9,7 @@ namespace FastTests.Server.Queries
     public class BasicDynamicQueriesTests : RavenTestBase
     {
         [Fact]
-        public async Task Dynamic_query_with_simple_where_clause()
+        public async Task Dynamic_query_with_simple_string_where_clause()
         {
             using (var store = await GetDocumentStore())
             {
@@ -23,7 +23,30 @@ namespace FastTests.Server.Queries
                 
                 using (var session = store.OpenSession())
                 {
-                    var users = session.Query<User>().Where(x => x.Name == "Arek").ToList();
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name == "Arek").ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Arek", users[0].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Dynamic_query_with_simple_numeric_where_clause()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak", Age = 40 });
+                    await session.StoreAsync(new User { Name = "Arek", Age = 50 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age > 40).ToList();
 
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Arek", users[0].Name);
@@ -118,6 +141,37 @@ namespace FastTests.Server.Queries
                     Assert.Equal("users/3", users[0].Id);
                     Assert.Equal("users/1", users[1].Id);
                     Assert.Equal("users/2", users[2].Id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Dynamic_query_partial_match()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "David", Age = 31}, "users/1");
+                    await session.StoreAsync(new User { Name = "Adam", Age = 12}, "users/2");
+                    await session.StoreAsync(new User { Name = "John", Age = 24}, "users/3");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Name).ToList();
+
+                    Assert.Equal("users/2", users[0].Id);
+                    Assert.Equal("users/1", users[1].Id);
+                    Assert.Equal("users/3", users[2].Id);
+
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age > 20).ToList();
+
+                    Assert.Equal(2, users.Count);
+                    Assert.Equal("users/1", users[0].Id);
+                    Assert.Equal("users/3", users[1].Id);
                 }
             }
         }

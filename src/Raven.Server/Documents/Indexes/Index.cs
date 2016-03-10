@@ -420,7 +420,7 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-        public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext context, CancellationToken token)
+        public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext documentsContext, CancellationToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -435,7 +435,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (var tx = indexContext.OpenReadTransaction())
                 {
-                    result.IsStale = IsStale(context, indexContext);
+                    result.IsStale = IsStale(documentsContext, indexContext);
 
                     Reference<int> totalResults = new Reference<int>();
                     List<string> documentIds;
@@ -447,11 +447,11 @@ namespace Raven.Server.Documents.Indexes
 
                     result.TotalResults = totalResults.Value;
 
-                    context.OpenReadTransaction();
+                    documentsContext.OpenReadTransaction();
 
                     foreach (var id in documentIds)
                     {
-                        var document = DocumentDatabase.DocumentsStorage.Get(context, id);
+                        var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
 
                         result.Results.Add(document);
                     }

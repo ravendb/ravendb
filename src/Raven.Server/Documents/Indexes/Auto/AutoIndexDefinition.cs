@@ -11,7 +11,6 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
-        private readonly Dictionary<string, IndexField> _fieldsByName;
 
         public AutoIndexDefinition(string collection, IndexField[] fields)
             : base(FindIndexName(collection, fields), new[] { collection },fields)
@@ -21,27 +20,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
             if (fields.Length == 0)
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
-
-            _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x);
         }
 
         public int CountOfMapFields => MapFields.Length;
-
-        public bool ContainsField(string field)
-        {
-            if (field.EndsWith("_Range"))
-                field = field.Substring(0, field.Length - 6);
-
-            return _fieldsByName.ContainsKey(field);
-        }
-
-        public IndexField GetField(string field)
-        {
-            if (field.EndsWith("_Range"))
-                field = field.Substring(0, field.Length - 6);
-
-            return _fieldsByName[field];
-        }
 
         private static string FindIndexName(string collection, IReadOnlyCollection<IndexField> fields)
         {
