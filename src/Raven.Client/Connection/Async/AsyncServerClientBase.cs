@@ -110,7 +110,7 @@ namespace Raven.Client.Connection.Async
         internal async Task<T> ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, Task<T>> operation)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
-            if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
+            if (currentlyExecuting && Conventions.AllowMultipleAsyncOperations == false)
                 throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
 
             currentlyExecuting = true;

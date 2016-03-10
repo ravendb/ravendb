@@ -83,7 +83,7 @@ namespace Raven.Client.Counters.Replication
         {
             Debug.Assert(typeof(T).FullName.Contains("Task") == false);
 
-            if (currentlyExecuting && CountersConventions.AllowMultipuleAsyncOperations == false)
+            if (currentlyExecuting && CountersConventions.AllowMultipleAsyncOperations == false)
                 throw new InvalidOperationException("Only a single concurrent async request is allowed per async store instance.");
 
             currentlyExecuting = true;
