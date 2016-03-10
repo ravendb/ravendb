@@ -25,6 +25,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;

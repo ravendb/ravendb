@@ -42,7 +42,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
-
+using Raven.Client.Data.Indexes;
 
 namespace Raven.Client.Connection.Async
 {

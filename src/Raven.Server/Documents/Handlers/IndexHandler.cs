@@ -10,6 +10,12 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/indexes/stats", "GET")]
+        public Task Stats()
+        {
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/indexes", "RESET")]
         public Task Reset()
         {

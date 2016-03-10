@@ -21,6 +21,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Client.Data.Indexes;
+
 namespace Raven.Client.Indexes
 {
     /// <summary>

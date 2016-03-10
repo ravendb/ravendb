@@ -35,6 +35,11 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher);
         }
 
+        public int EntriesCount()
+        {
+            return _searcher.IndexReader.NumDocs();
+        }
+
         public IEnumerable<string> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults)
         {
             var docsToGet = query.PageSize;

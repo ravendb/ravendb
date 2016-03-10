@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Abstractions.Indexing;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -11,11 +13,12 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly Dictionary<string, IndexField> _fieldsByName;
 
-        protected IndexDefinitionBase(string name, string[] collections, IndexField[] mapFields)
+        protected IndexDefinitionBase(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
         {
             Name = name;
             Collections = collections;
             MapFields = mapFields;
+            LockMode = lockMode;
 
             _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x);
         }
@@ -25,6 +28,8 @@ namespace Raven.Server.Documents.Indexes
         public string[] Collections { get; set; }
 
         public IndexField[] MapFields { get; set; }
+
+        public IndexLockMode LockMode { get; set; }
 
         public abstract void Persist(TransactionOperationContext context);
 

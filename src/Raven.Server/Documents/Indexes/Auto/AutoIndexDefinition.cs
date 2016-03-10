@@ -11,9 +11,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
-
         public AutoIndexDefinition(string collection, IndexField[] fields)
-            : base(FindIndexName(collection, fields), new[] { collection },fields)
+            : base(FindIndexName(collection, fields), new[] { collection }, IndexLockMode.Unlock, fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
@@ -57,6 +56,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                 writer.WriteStartArray();
                 writer.WriteString(context.GetLazyString(collection));
                 writer.WriteEndArray();
+                writer.WriteComma();
+                writer.WritePropertyName(context.GetLazyString(nameof(LockMode)));
+                writer.WriteInteger((int)LockMode);
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
@@ -108,6 +110,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
                 {
+                    int lockModeAsInt;
+                    reader.TryGet(nameof(LockMode), out lockModeAsInt);
+
                     BlittableJsonReaderArray jsonArray;
                     reader.TryGet(nameof(Collections), out jsonArray);
 
@@ -141,7 +146,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                         fields[i] = field;
                     }
 
-                    return new AutoIndexDefinition(collection, fields);
+                    return new AutoIndexDefinition(collection, fields)
+                    {
+                        LockMode = (IndexLockMode)lockModeAsInt
+                    };
                 }
             }
         }

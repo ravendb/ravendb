@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents.Indexes
+﻿namespace Raven.Client.Data.Indexes
 {
     public enum IndexType
     {

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Utils;
 

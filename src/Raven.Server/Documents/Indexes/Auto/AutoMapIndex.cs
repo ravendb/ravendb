@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return instance;
         }
 
-        public override void DoIndexingWork(CancellationToken cancellationToken)
+        public override void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken)
         {
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             using (var tx = indexContext.OpenWriteTransaction())
             {
                 ExecuteCleanup(cancellationToken, databaseContext, indexContext);
-                ExecuteMap(cancellationToken, databaseContext, indexContext);
+                ExecuteMap(stats, cancellationToken, databaseContext, indexContext);
 
                 tx.Commit();
             }
@@ -67,10 +68,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                     using (databaseContext.OpenReadTransaction())
                     {
                         var sw = Stopwatch.StartNew();
-                        foreach (
-                            var tombstone in
-                                DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection,
-                                    lastEtag + 1, 0, pageSize))
+                        foreach (var tombstone in DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                         {
                             token.ThrowIfCancellationRequested();
 
@@ -82,8 +80,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                             indexActions.Delete(tombstone.Key);
 
-                            if (sw.Elapsed >
-                                DocumentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
+                            if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
                             {
                                 break;
                             }
@@ -99,13 +96,12 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
 
-
                 _mre.Set(); // might be more
             }
         }
 
 
-        private void ExecuteMap(CancellationToken cancellationToken, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        private void ExecuteMap(IndexingBatchStats stats, CancellationToken cancellationToken, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
@@ -128,23 +124,25 @@ namespace Raven.Server.Documents.Indexes.Auto
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
+                            stats.IndexingAttempts++;
+
                             count++;
                             lastEtag = document.Etag;
 
                             try
                             {
                                 indexWriter.IndexDocument(document);
+                                stats.IndexingSuccesses++;
                                 DocumentDatabase.Metrics.IndexedPerSecond.Mark();
                             }
                             catch (Exception e)
                             {
+                                stats.IndexingErrors++;
+
                                 // TODO [ppekrol] log?
-                                Console.WriteLine(e);
-                                throw;
                             }
 
-                            if (sw.Elapsed >
-                                DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
+                            if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
                             {
                                 break;
                             }
