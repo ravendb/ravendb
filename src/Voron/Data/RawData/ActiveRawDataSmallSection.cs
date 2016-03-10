@@ -152,13 +152,13 @@ namespace Voron.Data.RawData
             ushort numberOfPagesInSmallSection = 512;
             if (tx.DataPager.NumberOfAllocatedPages > 1024*32)
             {
-                numberOfPagesInSmallSection = (ushort) (tx.DataPager.PageSize - ReservedHeaderSpace);
+                numberOfPagesInSmallSection = (ushort) ((tx.DataPager.PageSize - ReservedHeaderSpace)/2);
             }
             else if (tx.DataPager.NumberOfAllocatedPages > 1024*16)
             {
                 numberOfPagesInSmallSection = 1024;
             }
-            Debug.Assert(numberOfPagesInSmallSection <= tx.DataPager.PageSize - ReservedHeaderSpace);
+            Debug.Assert(numberOfPagesInSmallSection <= ((tx.DataPager.PageSize - ReservedHeaderSpace) / 2));
 
             var sectionStart = tx.AllocatePage(numberOfPagesInSmallSection + 1);
             tx.BreakLargeAllocationToSeparatePages(sectionStart.PageNumber);
