@@ -83,6 +83,22 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(2, statuses.Length);
                 Assert.Equal("Running", statuses[0].Status);
                 Assert.Equal("Running", statuses[1].Status);
+
+                await store.AsyncDatabaseCommands.Admin.StopIndexAsync(statuses[1].Name).ConfigureAwait(false);
+
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+
+                Assert.Equal(2, statuses.Length);
+                Assert.Equal("Running", statuses[0].Status);
+                Assert.Equal("Paused", statuses[1].Status);
+
+                await store.AsyncDatabaseCommands.Admin.StartIndexAsync(statuses[1].Name).ConfigureAwait(false);
+
+                statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
+
+                Assert.Equal(2, statuses.Length);
+                Assert.Equal("Running", statuses[0].Status);
+                Assert.Equal("Running", statuses[1].Status);
             }
         }
     }

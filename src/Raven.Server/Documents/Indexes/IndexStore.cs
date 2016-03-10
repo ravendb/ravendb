@@ -177,6 +177,24 @@ namespace Raven.Server.Documents.Indexes
             Parallel.ForEach(indexes, index => index.Start());
         }
 
+        public void StartIndex(string name)
+        {
+            var index = GetIndex(name);
+            if (index == null)
+                throw new InvalidOperationException("There is no index with name: " + name);
+
+            index.Start();
+        }
+
+        public void StopIndex(string name)
+        {
+            var index = GetIndex(name);
+            if (index == null)
+                throw new InvalidOperationException("There is no index with name: " + name);
+
+            index.Stop();
+        }
+
         public void StopIndexing()
         {
             StopIndexing(_indexes);

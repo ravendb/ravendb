@@ -53,26 +53,41 @@ namespace Raven.Server.Documents.Handlers
         public Task Stop()
         {
             var types = HttpContext.Request.Query["type"];
-            if (types.Count == 0)
+            var names = HttpContext.Request.Query["name"];
+            if (types.Count == 0 && names.Count == 0)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
                 Database.IndexStore.StopIndexing();
                 return Task.CompletedTask;
             }
 
-            // TODO [ppekrol] add the ability to start/stop single index?
-            if (types.Count != 1)
-                throw new ArgumentException("Query string value 'type' must appear exactly once");
-            if (string.IsNullOrWhiteSpace(types[0]))
-                throw new ArgumentException("Query string value 'type' must have a non empty value");
+            if (types.Count != 0 && names.Count != 0)
+                throw new ArgumentException("Query string value 'type' and 'names' are mutually exclusive.");
 
-            if (string.Equals(types[0], "map", StringComparison.OrdinalIgnoreCase))
+            if (types.Count != 0)
             {
-                Database.IndexStore.StopMapIndexes();
+                if (types.Count != 1)
+                    throw new ArgumentException("Query string value 'type' must appear exactly once");
+                if (string.IsNullOrWhiteSpace(types[0]))
+                    throw new ArgumentException("Query string value 'type' must have a non empty value");
+
+                if (string.Equals(types[0], "map", StringComparison.OrdinalIgnoreCase))
+                {
+                    Database.IndexStore.StopMapIndexes();
+                }
+                else if (string.Equals(types[0], "map-reduce", StringComparison.OrdinalIgnoreCase))
+                {
+                    Database.IndexStore.StopMapReduceIndexes();
+                }
             }
-            else if (string.Equals(types[0], "map-reduce", StringComparison.OrdinalIgnoreCase))
+            else if (names.Count != 0)
             {
-                Database.IndexStore.StopMapReduceIndexes();
+                if (names.Count != 1)
+                    throw new ArgumentException("Query string value 'name' must appear exactly once");
+                if (string.IsNullOrWhiteSpace(names[0]))
+                    throw new ArgumentException("Query string value 'name' must have a non empty value");
+
+                Database.IndexStore.StopIndex(names[0]);
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
@@ -83,26 +98,41 @@ namespace Raven.Server.Documents.Handlers
         public Task Start()
         {
             var types = HttpContext.Request.Query["type"];
-            if (types.Count == 0)
+            var names = HttpContext.Request.Query["name"];
+            if (types.Count == 0 && names.Count == 0)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
                 Database.IndexStore.StartIndexing();
                 return Task.CompletedTask;
             }
 
-            // TODO [ppekrol] add the ability to start/stop single index?
-            if (types.Count != 1)
-                throw new ArgumentException("Query string value 'type' must appear exactly once");
-            if (string.IsNullOrWhiteSpace(types[0]))
-                throw new ArgumentException("Query string value 'type' must have a non empty value");
+            if (types.Count != 0 && names.Count != 0)
+                throw new ArgumentException("Query string value 'type' and 'names' are mutually exclusive.");
 
-            if (string.Equals(types[0], "map", StringComparison.OrdinalIgnoreCase))
+            if (types.Count != 0)
             {
-                Database.IndexStore.StartMapIndexes();
+                if (types.Count != 1)
+                    throw new ArgumentException("Query string value 'type' must appear exactly once");
+                if (string.IsNullOrWhiteSpace(types[0]))
+                    throw new ArgumentException("Query string value 'type' must have a non empty value");
+
+                if (string.Equals(types[0], "map", StringComparison.OrdinalIgnoreCase))
+                {
+                    Database.IndexStore.StartMapIndexes();
+                }
+                else if (string.Equals(types[0], "map-reduce", StringComparison.OrdinalIgnoreCase))
+                {
+                    Database.IndexStore.StartMapReduceIndexes();
+                }
             }
-            else if (string.Equals(types[0], "map-reduce", StringComparison.OrdinalIgnoreCase))
+            else if (names.Count != 0)
             {
-                Database.IndexStore.StartMapReduceIndexes();
+                if (names.Count != 1)
+                    throw new ArgumentException("Query string value 'name' must appear exactly once");
+                if (string.IsNullOrWhiteSpace(names[0]))
+                    throw new ArgumentException("Query string value 'name' must have a non empty value");
+
+                Database.IndexStore.StartIndex(names[0]);
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;

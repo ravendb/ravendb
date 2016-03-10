@@ -630,6 +630,16 @@ namespace Raven.Client.Connection
         ///     Disables all indexing.
         /// </summary>
         void StopIndexing();
+
+        /// <summary>
+        /// Starts given index.
+        /// </summary>
+        void StartIndex(string name);
+
+        /// <summary>
+        /// Disables given index.
+        /// </summary>
+        void StopIndex(string name);
     }
 
     public interface IInfoDatabaseCommands
