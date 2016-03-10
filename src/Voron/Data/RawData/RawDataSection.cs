@@ -60,7 +60,7 @@ namespace Voron.Data.RawData
                 var pageHeaderForId = PageHeaderFor(pageNumberInSection);
 
                 // this is in another section, cannot free it directly, so we'll forward to the right section
-                var sectionPageNumber = pageHeaderForId->PageNumber - pageHeaderForId->PageNumberInSection;
+                var sectionPageNumber = pageHeaderForId->PageNumber - pageHeaderForId->PageNumberInSection - 1;
                 return new RawDataSection(_tx, sectionPageNumber).GetAllIdsInSectionContaining(id);
             }
 
