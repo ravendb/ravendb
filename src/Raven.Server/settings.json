@@ -1,5 +1,5 @@
 ﻿{
-  "Raven/ServerUrl": "http://localhost:8080",
+  "Raven/ServerUrl": "http://localhost:8081",
   "Raven/DataDir": "C:/Deployment/Databsaes/System",
   "Raven/RunInMemory": false
 }

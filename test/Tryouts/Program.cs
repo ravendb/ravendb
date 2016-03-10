@@ -2,20 +2,27 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using NetTopologySuite.Utilities;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Data;
 using Raven.Client.Document;
 
 namespace Tryouts
 {
     public class Program
     {
-        public class User
+       
+        class CustomType
         {
-            public string FirstName { get; set; }
-
-            public string LastName { get; set; }
+            public string Id { get; set; }
+            public string Owner { get; set; }
+            public int Value { get; set; }
+            public List<string> Comments { get; set; }
+            public DateTime Date { get; set; }
+            public DateTimeOffset DateOffset { get; set; }
         }
+
 
         private const int numOfItems = 100;
 
@@ -23,36 +30,37 @@ namespace Tryouts
         {
             using (var store = new DocumentStore
             {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "test2"				
+                Url = "http://localhost:8081",
+                DefaultDatabase = "TestPatchPerformance"
             })
             {
                 store.Initialize();
-              
-                BulkInsert(store).Wait();
-            }
-        }
 
-        public static async Task BulkInsert(DocumentStore store)
-        {
-            using (var bulkInsert = store.BulkInsert())
-            {
-                for (int i = 0; i < 10; i++)
+                /*using (var session = store.OpenSession())
                 {
-                    await bulkInsert.StoreAsync(new User { FirstName = "foo", LastName = "bar" });
-                }
-            }
-            Console.Write("Opening bulk-insert...");
-            var sw = Stopwatch.StartNew();
-            using (var bulkInsert = store.BulkInsert())
-            {
-                for (int i = 0; i < 100*1000; i++)
-                {
-                    await bulkInsert.StoreAsync(new User {FirstName = "foo", LastName = "bar"});
-                }
-            }
-            Console.WriteLine($"Elapsed : {sw.ElapsedMilliseconds} ms");
+                    session.Store(new CustomType {Id = "Items/1", Value = 10, Comments = new List<string>(new[] {"one", "two", "three"})});
+                    session.SaveChanges();
+                }*/
 
+                Console.Write("Start patching...");
+                var sw = Stopwatch.StartNew();
+                Parallel.For(0, 10000, new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = 4
+                }, i =>
+                {
+                    store.DatabaseCommands.Patch("Items/1", new PatchRequest
+                    {
+                        Script = @"this.Value = newVal",
+                        Values =
+                        {
+                            ["newVal"] = 1
+                        }
+                    });
+                });
+                Console.WriteLine($"Elapsed : {sw.ElapsedMilliseconds} ms");
+
+            }
         }
     }
 }

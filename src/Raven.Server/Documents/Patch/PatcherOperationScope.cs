@@ -5,6 +5,7 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
+using Jint.Runtime.Descriptors;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -54,15 +55,21 @@ namespace Raven.Server.Documents.Patch
 
         public JsValue ToJsArray(Engine engine, BlittableJsonReaderArray json, string propertyKey)
         {
-            var elements = new JsValue[json.Length];
+            var result = engine.Array.Construct(Arguments.Empty);
             for (var i = 0; i < json.Length; i++)
             {
                 var value = json.GetValueTokenTupleByIndex(i);
-                elements[i] = ToJsValue(engine, value.Item1, value.Item2, propertyKey + "[" + i + "]");
+                var index = i.ToString();
+                var jsVal = ToJsValue(engine, value.Item1, value.Item2, propertyKey + "[" + index + "]");
+                result.FastAddProperty(index, jsVal, true, true, true);
             }
-
-            var result = engine.Array.Construct(Arguments.Empty);
-            engine.Array.PrototypeObject.Push(result, elements);
+            result.FastSetProperty("length", new PropertyDescriptor
+            {
+                Value = new JsValue(json.Length),
+                Configurable = true,
+                Enumerable = true,
+                Writable = true,
+            });
             return result;
         }
 
@@ -77,7 +84,7 @@ namespace Raven.Server.Documents.Patch
                 var value = property.Item2;
                 JsValue jsValue = ToJsValue(engine, value, property.Item3, propertyKey);
                 _propertiesByValue[propertyKey] = new KeyValuePair<object, JsValue>(value, jsValue);
-                jsObject.Put(name, jsValue, true);
+                jsObject.FastAddProperty(name, jsValue, true, true, true);
             }
             return jsObject;
         }
