@@ -216,7 +216,7 @@ namespace Voron.Data.RawData
             if (Contains(id) == false)
             {
                 // this is in another section, cannot free it directly, so we'll forward to the right section
-                var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection;
+                var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
                 var actualSection = new RawDataSection(_tx, sectionPageNumber);
                 if(actualSection.Contains(id)==false)
                     throw new InvalidDataException($"Cannot delete {id} because the raw data section starting in {sectionPageNumber} with size {actualSection.AllocatedSize} doesn't own it. Possible data corruption?");
