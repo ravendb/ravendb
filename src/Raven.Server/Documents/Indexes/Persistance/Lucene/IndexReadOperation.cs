@@ -14,7 +14,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 {
-    public class IndexReadOperation : IDisposable
+    public class IndexReadOperation : IndexOperationBase
     {
         private const string _Range = "_Range";
 
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         public IndexReadOperation(string indexName, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
         {
-            _analyzer = new LowerCaseKeywordAnalyzer();
+            _analyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer());
             _indexName = indexName;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher);
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }).ToArray());
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _analyzer?.Dispose();
             _releaseSearcher?.Dispose();

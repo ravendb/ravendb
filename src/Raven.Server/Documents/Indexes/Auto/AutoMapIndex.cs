@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Threading;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -139,7 +141,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                             {
                                 stats.IndexingErrors++;
 
-                                // TODO [ppekrol] log?
+                                Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{Name}'.", e);
+
+                                //context.AddError // TODO [ppekrol]
                             }
 
                             if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)

@@ -9,6 +9,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
@@ -56,6 +57,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice PrioritySlice = "Priority";
         }
+
+        protected readonly ILog Log = LogManager.GetLogger(typeof(Index));
 
         protected readonly LuceneIndexPersistence IndexPersistence;
 

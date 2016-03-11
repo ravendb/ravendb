@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -84,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
             
-            return new IndexWriteOperation(_writeLock, _directory, _indexWriter, _converter, writeTransaction, this); // TODO arek - 'this' :/
+            return new IndexWriteOperation(_writeLock, _definition.Name, _directory, _indexWriter, _converter, writeTransaction, this); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
@@ -118,12 +120,14 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 if (_indexWriter == null)
                 {
                     _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+                    // TODO [ppekrol] support for IndexReaderWarmer?
                     _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, 1024, null);
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                //IncrementWriteErrors(e); // TODO [ppekrol]
+                throw new IOException($"Failure to create index writer for '{_definition.Name}'.", e);
             }
         }
 
