@@ -107,6 +107,10 @@ namespace FastTests.Server.Queries
                             new OrderLine()
                             {
                                 ProductName = "Keyboard"
+                            },
+                            new OrderLine()
+                            {
+                                PricePerUnit = 12
                             }
                         }
                     }, "orders/1");
@@ -118,6 +122,10 @@ namespace FastTests.Server.Queries
                             new OrderLine()
                             {
                                 ProductName = "Microphone"
+                            },
+                            new OrderLine()
+                            {
+                                PricePerUnit = 10
                             }
                         }
                     }, "orders/2");
@@ -133,6 +141,10 @@ namespace FastTests.Server.Queries
                             new OrderLine()
                             {
                                 ProductName = "Keyboard"
+                            },
+                            new OrderLine()
+                            {
+                                PricePerUnit = 9
                             }
                         }
                     }, "orders/3");
@@ -147,6 +159,12 @@ namespace FastTests.Server.Queries
                     Assert.Equal(2, orders.Count);
                     Assert.Equal("orders/1", orders[0].Id);
                     Assert.Equal("orders/3", orders[1].Id);
+
+                    orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Lines.Any(y => y.PricePerUnit >= 10)).ToList();
+
+                    Assert.Equal(2, orders.Count);
+                    Assert.Equal("orders/1", orders[0].Id);
+                    Assert.Equal("orders/2", orders[1].Id);
                 }
             }
         }

@@ -11,7 +11,7 @@ namespace FastTests.Server.Queries
     public class BasicDynamicQueriesTests : RavenTestBase
     {
         [Fact]
-        public async Task Dynamic_query_with_simple_string_where_clause()
+        public async Task String_where_clause()
         {
             using (var store = await GetDocumentStore())
             {
@@ -34,7 +34,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_simple_numeric_range_where_clause()
+        public async Task Numeric_range_where_clause()
         {
             using (var store = await GetDocumentStore())
             {
@@ -57,7 +57,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_simple_where_clause_and_sorting()
+        public async Task Where_clause_and_sorting()
         {
             using (var store = await GetDocumentStore())
             {
@@ -91,7 +91,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_sorting_by_doubles()
+        public async Task Sorting_by_doubles()
         {
             using (var store = await GetDocumentStore())
             {
@@ -117,7 +117,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_sorting_by_strings()
+        public async Task Sorting_by_strings()
         {
             using (var store = await GetDocumentStore())
             {
@@ -148,7 +148,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_partial_match()
+        public async Task Partial_match()
         {
             using (var store = await GetDocumentStore())
             {
@@ -174,6 +174,8 @@ namespace FastTests.Server.Queries
                     Assert.Equal(2, users.Count);
                     Assert.Equal("users/1", users[0].Id);
                     Assert.Equal("users/3", users[1].Id);
+
+                    // TODO arek - get indexes and check that there are two indexes
                 }
             }
         }
