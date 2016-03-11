@@ -157,5 +157,54 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(IndexingPriority.Normal, stats.Priority);
             }
         }
+
+        [Fact]
+        public async Task SetLockModeAndSetPriority()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session
+                        .Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                }
+
+                var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128).ConfigureAwait(false);
+                Assert.Equal(1, indexes.Length);
+
+                var index = indexes[0];
+                var request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
+                var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                var stats = json.JsonDeserialization<IndexStats>();
+
+                Assert.Equal(index.IndexId, stats.Id);
+                Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                Assert.Equal(IndexingPriority.Normal, stats.Priority);
+
+                await store.AsyncDatabaseCommands.SetIndexLockAsync(index.Name, IndexLockMode.LockedIgnore).ConfigureAwait(false);
+                await store.AsyncDatabaseCommands.SetIndexPriorityAsync(index.Name, IndexingPriority.Error).ConfigureAwait(false);
+
+                request = store.AsyncDatabaseCommands.CreateRequest("/indexes/stats?name=" + index.Name, HttpMethod.Get);
+                json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                stats = json.JsonDeserialization<IndexStats>();
+
+                Assert.Equal(index.IndexId, stats.Id);
+                Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
+                Assert.Equal(IndexingPriority.Error, stats.Priority);
+            }
+        }
     }
 }

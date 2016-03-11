@@ -448,7 +448,7 @@ namespace Raven.Client.Connection
         void ResetIndex(string name);
 
 
-        void SetIndexLock(string name, IndexLockMode unlock);
+        void SetIndexLock(string name, IndexLockMode mode);
 
         void SetIndexPriority(string name, IndexingPriority priority);
 

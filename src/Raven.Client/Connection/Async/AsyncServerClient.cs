@@ -207,11 +207,11 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task SetIndexLockAsync(string name, IndexLockMode unLockMode, CancellationToken token = default(CancellationToken))
+        public Task SetIndexLockAsync(string name, IndexLockMode mode, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
             {
-                var operationUrl = operationMetadata.Url + "/indexes/" + name + "?op=" + "lockModeChange" + "&mode=" + unLockMode;
+                var operationUrl = operationMetadata.Url.SetIndexLock(name, mode);
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Post, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
@@ -224,16 +224,16 @@ namespace Raven.Client.Connection.Async
         public Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
-            {
-                var operationUrl = operationMetadata.Url + "/indexes/set-priority/" + name + "?priority=" + priority;
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Post, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
-                    request.AddOperationHeaders(OperationsHeaders);
-                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+                    var operationUrl = operationMetadata.Url.SetIndexPriority(name, priority);
+                    using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Post, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
+                    {
+                        request.AddOperationHeaders(OperationsHeaders);
+                        request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
-                    return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                }
-            }, token);
+                        return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    }
+                }, token);
         }
         public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, CancellationToken token = default(CancellationToken))
         {
@@ -706,7 +706,7 @@ namespace Raven.Client.Connection.Async
                 }
             });
         }
-        
+
         private async Task<JsonDocument> ResolveConflict(string httpResponse, long? etag, OperationMetadata operationMetadata, string key, CancellationToken token)
         {
             var conflicts = new StringReader(httpResponse);
@@ -715,7 +715,7 @@ namespace Raven.Client.Connection.Async
                 await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, etag, token).ConfigureAwait(false);
             if (result != null)
                 throw result;
-            var multiLoadResult = await DirectGetAsync(operationMetadata, new [] { key }, null, null,null, false, token).ConfigureAwait(false);
+            var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, false, token).ConfigureAwait(false);
             return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
         }
 
@@ -1813,7 +1813,7 @@ namespace Raven.Client.Connection.Async
                         string exclude = null,
                         RavenPagingInformation pagingInformation = null,
                         string skipAfter = null,
-                        string transformer = null, 
+                        string transformer = null,
                         Dictionary<string, RavenJToken> transformerParameters = null,
                         CancellationToken token = default(CancellationToken))
         {

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -55,11 +56,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/stats", "GET")]
         public Task Stats()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count != 1)
-                throw new ArgumentException("Query string value 'name' must appear exactly once");
-            if (string.IsNullOrWhiteSpace(names[0]))
-                throw new ArgumentException("Query string value 'name' must have a non empty value");
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             var index = Database.IndexStore.GetIndex(names[0]);
             if (index == null)
@@ -173,11 +170,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "RESET")]
         public Task Reset()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count != 1)
-                throw new ArgumentException("Query string value 'name' must appear exactly once");
-            if (string.IsNullOrWhiteSpace(names[0]))
-                throw new ArgumentException("Query string value 'name' must have a non empty value");
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             var newIndexId = Database.IndexStore.ResetIndex(names[0]);
 
@@ -197,11 +190,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "DELETE")]
         public Task Delete()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count != 1)
-                throw new ArgumentException("Query string value 'name' must appear exactly once");
-            if (string.IsNullOrWhiteSpace(names[0]))
-                throw new ArgumentException("Query string value 'name' must have a non empty value");
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             Database.IndexStore.DeleteIndex(names[0]);
 
@@ -336,6 +325,44 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndArray();
             }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/set-lock", "POST")]
+        public Task SetLockMode()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var modes = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
+
+            IndexLockMode mode;
+            if (Enum.TryParse(modes[0], out mode) == false)
+                throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modes[0]);
+
+            var index = Database.IndexStore.GetIndex(names[0]);
+            if (index == null)
+                throw new InvalidOperationException("There is not index with name: " + names[0]);
+
+            index.SetLock(mode);
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/set-priority", "POST")]
+        public Task SetPriority()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var priorities = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
+
+            IndexingPriority priority;
+            if (Enum.TryParse(priorities[0], out priority) == false)
+                throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorities[0]);
+
+            var index = Database.IndexStore.GetIndex(names[0]);
+            if (index == null)
+                throw new InvalidOperationException("There is not index with name: " + names[0]);
+
+            index.SetPriority(priority);
 
             return Task.CompletedTask;
         }

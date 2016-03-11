@@ -110,7 +110,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
 
                 var index2 = database.IndexStore.GetIndex(2);
-                index2.SetLockMode(IndexLockMode.LockedError);
+                index2.SetLock(IndexLockMode.LockedError);
                 index2.SetPriority(IndexingPriority.Disabled);
             }
 

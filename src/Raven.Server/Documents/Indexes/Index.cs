@@ -517,7 +517,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void SetLockMode(IndexLockMode mode)
+        public void SetLock(IndexLockMode mode)
         {
             if (Definition.LockMode == mode)
                 return;
