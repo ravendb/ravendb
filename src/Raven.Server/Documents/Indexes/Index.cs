@@ -79,6 +79,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
+        private DateTime? lastQueryingTime; // TODO [ppekrol] do we need to persist this?
+
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
@@ -557,6 +559,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var stats = new IndexStats();
                 stats.Id = IndexId;
+                stats.Name = Name;
                 stats.Type = Type;
                 stats.ForCollections = Collections.ToArray();
                 stats.EntriesCount = reader.EntriesCount();
@@ -578,16 +581,27 @@ namespace Raven.Server.Documents.Indexes
                         stats.LastIndexedEtags[collection] = ReadLastMappedEtag(tx, collection);
                 }
 
-                stats.LastQueryingTime = DateTime.Now; // TODO [ppekrol]
+                stats.LastQueryingTime = lastQueryingTime;
 
                 return stats;
             }
+        }
+
+        private void MarkQueried(DateTime time)
+        {
+            if (lastQueryingTime != null &&
+                lastQueryingTime.Value >= time)
+                return;
+
+            lastQueryingTime = time;
         }
 
         public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext documentsContext, CancellationToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            MarkQueried(SystemTime.UtcNow);
 
             TransactionOperationContext indexContext;
             var result = new DocumentQueryResult

@@ -64,7 +64,7 @@ namespace Raven.Client.Data.Indexes
         /// <summary>
         /// Time of last indexing (map or reduce) for this index.
         /// </summary>
-        public DateTime LastIndexingTime { get; set; }
+        public DateTime? LastIndexingTime { get; set; }
 
         /// <summary>
         /// Indicates if index is in-memory only.

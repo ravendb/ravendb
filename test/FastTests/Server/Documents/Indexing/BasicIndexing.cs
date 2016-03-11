@@ -309,6 +309,22 @@ namespace FastTests.Server.Documents.Indexing
                         index.UpdateStats(now, batchStats);
 
                         var stats = index.GetStats();
+                        Assert.Equal(index.IndexId, stats.Id);
+                        Assert.Equal(index.Name, stats.Name);
+                        Assert.False(stats.IsInvalidIndex);
+                        Assert.False(stats.IsTestIndex);
+                        Assert.True(stats.IsInMemory);
+                        Assert.Equal(IndexType.AutoMap, stats.Type);
+                        Assert.Equal(2, stats.EntriesCount);
+                        Assert.Equal(2, stats.IndexingAttempts);
+                        Assert.Equal(0, stats.IndexingErrors);
+                        Assert.Equal(2, stats.IndexingSuccesses);
+                        Assert.Equal(1, stats.ForCollections.Length);
+                        Assert.Equal(2, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(now, stats.LastIndexingTime);
+                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -337,6 +353,24 @@ namespace FastTests.Server.Documents.Indexing
                         now = SystemTime.UtcNow;
                         index.UpdateStats(now, batchStats);
 
+                        stats = index.GetStats();
+                        Assert.Equal(index.IndexId, stats.Id);
+                        Assert.Equal(index.Name, stats.Name);
+                        Assert.False(stats.IsInvalidIndex);
+                        Assert.False(stats.IsTestIndex);
+                        Assert.True(stats.IsInMemory);
+                        Assert.Equal(IndexType.AutoMap, stats.Type);
+                        Assert.Equal(3, stats.EntriesCount);
+                        Assert.Equal(3, stats.IndexingAttempts);
+                        Assert.Equal(0, stats.IndexingErrors);
+                        Assert.Equal(3, stats.IndexingSuccesses);
+                        Assert.Equal(1, stats.ForCollections.Length);
+                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(now, stats.LastIndexingTime);
+                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
+
                         using (var tx = context.OpenWriteTransaction())
                         {
                             database.DocumentsStorage.Delete(context, "key/1", null);
@@ -353,6 +387,24 @@ namespace FastTests.Server.Documents.Indexing
 
                         now = SystemTime.UtcNow;
                         index.UpdateStats(now, batchStats);
+
+                        stats = index.GetStats();
+                        Assert.Equal(index.IndexId, stats.Id);
+                        Assert.Equal(index.Name, stats.Name);
+                        Assert.False(stats.IsInvalidIndex);
+                        Assert.False(stats.IsTestIndex);
+                        Assert.True(stats.IsInMemory);
+                        Assert.Equal(IndexType.AutoMap, stats.Type);
+                        Assert.Equal(2, stats.EntriesCount);
+                        Assert.Equal(3, stats.IndexingAttempts);
+                        Assert.Equal(0, stats.IndexingErrors);
+                        Assert.Equal(3, stats.IndexingSuccesses);
+                        Assert.Equal(1, stats.ForCollections.Length);
+                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(now, stats.LastIndexingTime);
+                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
                     }
                 }
             }
