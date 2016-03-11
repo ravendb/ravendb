@@ -18,7 +18,7 @@ namespace Raven.Client.FileSystem
         public FilesConvention()
         {
             FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
-            AllowMultipuleAsyncOperations = true;
+            AllowMultipleAsyncOperations = true;
             IdentityPartsSeparator = "/";
             ShouldCacheRequest = url => true;
             MaxNumberOfRequestsPerSession = 30;
