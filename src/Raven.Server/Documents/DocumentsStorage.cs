@@ -749,16 +749,24 @@ namespace Raven.Server.Documents
                         continue;
 
                     var collectionTableName = it.CurrentKey.ToString();
-                    var collectionTable = new Table(_docsSchema, collectionTableName, context.Transaction.InnerTransaction);
 
-
-                    yield return new CollectionStat
-                    {
-                        Name = collectionTableName.Substring(1),
-                        Count = collectionTable.NumberOfEntries
-                    };
+                    yield return GetCollection(collectionTableName, context);
                 } while (it.MoveNext());
             }
+        }
+
+        public CollectionStat GetCollection(string collectionName, DocumentsOperationContext context)
+        {
+            if (collectionName[0] != '@')
+                collectionName = "@" + collectionName;
+
+            var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+
+            return new CollectionStat
+            {
+                Name = collectionName.Substring(1),
+                Count = collectionTable.NumberOfEntries
+            };
         }
     }
 }

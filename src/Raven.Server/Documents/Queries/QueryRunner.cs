@@ -10,12 +10,14 @@ namespace Raven.Server.Documents.Queries
     public class QueryRunner
     {
         private readonly IndexStore _indexStore;
-        private readonly DocumentsOperationContext _context;
+        private readonly DocumentsStorage _documentsStorage;
+        private readonly DocumentsOperationContext _documentsContext;
 
-        public QueryRunner(IndexStore indexStore, DocumentsOperationContext context)
+        public QueryRunner(IndexStore indexStore, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext)
         {
             _indexStore = indexStore;
-            _context = context;
+            _documentsStorage = documentsStorage;
+            _documentsContext = documentsContext;
         }
 
         public DocumentQueryResult ExecuteQuery(string indexName, IndexQuery query)
@@ -23,7 +25,7 @@ namespace Raven.Server.Documents.Queries
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
                 indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                var runner = new DynamicQueryRunner(_indexStore, _context);
+                var runner = new DynamicQueryRunner(_indexStore, _documentsStorage, _documentsContext);
 
                 return runner.Execute(indexName, query);
             }

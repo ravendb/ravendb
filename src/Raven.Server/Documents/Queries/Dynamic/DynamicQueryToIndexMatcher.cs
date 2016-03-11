@@ -52,18 +52,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
         
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
-            if (query.MapFields.Length == 0 && // we optimize for empty queries to use Raven/DocumentsByEntityName
-                (query.SortDescriptors.Length == 0)) // and no sorting was requested
-                //_indexStore.Contains(Constants.DocumentsByEntityNameIndex)) // and Raven/DocumentsByEntityName exists
-            {
-                // TODO arek
-                throw new NotImplementedException("We don't support empty dynamic queries for now");
-                //if (string.IsNullOrEmpty(query.ForCollection) == false)
-                //    indexQuery.Query = "Tag:" + entityName;
-                //return new DynamicQueryMatchResult(Constants.DocumentsByEntityNameIndex, DynamicQueryMatchType.Complete);
-                //}
-            }
-
             ExplainDelegate explain = (index, rejectionReason) => { };
             if (explanations != null)
             {

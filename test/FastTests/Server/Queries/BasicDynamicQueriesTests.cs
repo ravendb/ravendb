@@ -205,5 +205,44 @@ namespace FastTests.Server.Queries
                 }
             }
         }
+
+        [Fact]
+        public async Task Empty_query()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "David", Age = 31 }, "users/1");
+                    await session.StoreAsync(new User { Name = "Adam", Age = 12 }, "users/2");
+                    await session.StoreAsync(new User { Name = "John", Age = 24 }, "users/3");
+                    await session.StoreAsync(new User { Name = "James", Age = 24 }, "users/4");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList();
+
+                    Assert.Equal(4, users.Count);
+                    Assert.Equal("users/1", users[0].Id);
+                    Assert.Equal("users/2", users[1].Id);
+                    Assert.Equal("users/3", users[2].Id);
+                    Assert.Equal("users/4", users[3].Id);
+
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Skip(1).Take(2).ToList();
+
+                    Assert.Equal(2, users.Count);
+                    Assert.Equal("users/2", users[0].Id);
+                    Assert.Equal("users/3", users[1].Id);
+
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Skip(3).Take(10).ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("users/4", users[0].Id);
+                }
+            }
+        }
     }
 }

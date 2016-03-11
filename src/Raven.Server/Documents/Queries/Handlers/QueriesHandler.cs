@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Handlers
             DocumentsOperationContext context;
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                var runner = new QueryRunner(IndexStore, context);
+                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
 
                 var result = runner.ExecuteQuery(indexName, query);
 

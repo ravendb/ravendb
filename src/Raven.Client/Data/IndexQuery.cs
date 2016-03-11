@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 

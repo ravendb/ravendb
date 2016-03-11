@@ -15,11 +15,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private readonly IndexStore _indexStore;
         private readonly DocumentsOperationContext _context;
+        private readonly DocumentsStorage _documents;
 
-        public DynamicQueryRunner(IndexStore indexStore, DocumentsOperationContext context)
+        public DynamicQueryRunner(IndexStore indexStore, DocumentsStorage documents, DocumentsOperationContext context)
         {
             _indexStore = indexStore;
             _context = context;
+            _documents = documents;
         }
 
         public DocumentQueryResult Execute(string dynamicIndexName, IndexQuery query)
@@ -28,6 +30,29 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var map = DynamicQueryMapping.Create(collection, query);
 
+            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0)
+            {
+                // we optimize for empty queries without sorting options
+                var result = new DocumentQueryResult
+                {
+                    IndexName = collection,
+                    IsStale = false
+                };
+
+                _context.OpenReadTransaction();
+
+                var collectionStats = _documents.GetCollection(collection, _context);
+
+                result.TotalResults = (int) collectionStats.Count;
+
+                foreach (var document in _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize))
+                {
+                    result.Results.Add(document);
+                }
+
+                return result;
+            }
+            
             bool newAutoIndex = false;
 
             Index index;

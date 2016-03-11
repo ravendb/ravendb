@@ -103,13 +103,13 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, SortedField[] sortedFields)
         {
-            // TODO arek
-            //if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
-            //{
-            //    var gatherAllCollector = new GatherAllCollector();
-            //    indexSearcher.Search(documentQuery, gatherAllCollector);
-            //    return gatherAllCollector.ToTopDocs();
-            //}
+            if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
+            {
+                throw new NotImplementedException("TODO arek");
+                //var gatherAllCollector = new GatherAllCollector();
+                //indexSearcher.Search(documentQuery, gatherAllCollector);
+                //return gatherAllCollector.ToTopDocs();
+            }
 
             var absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow
             var minPageSize = Math.Max(absFullPage, 1);
