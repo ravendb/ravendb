@@ -18,7 +18,7 @@ namespace Raven.Client.TimeSeries
         public TimeSeriesConvention()
         {
             FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
-            AllowMultipuleAsyncOperations = true;
+            AllowMultipleAsyncOperations = true;
             ShouldCacheRequest = url => true;
         }
     }
