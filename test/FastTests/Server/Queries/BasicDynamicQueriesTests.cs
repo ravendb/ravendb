@@ -117,6 +117,32 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
+        public async Task Sorting_by_integers()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Camera { Zoom = 5 }, "cameras/1");
+                    await session.StoreAsync(new Camera { Zoom = 10 }, "cameras/2");
+                    await session.StoreAsync(new Camera { Zoom = 40 }, "cameras/3");
+                    await session.StoreAsync(new Camera { Zoom = 15 }, "cameras/4");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var cameras = session.Query<Camera>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Zoom).ToList();
+
+                    Assert.Equal("cameras/1", cameras[0].Id);
+                    Assert.Equal("cameras/2", cameras[1].Id);
+                    Assert.Equal("cameras/4", cameras[2].Id);
+                    Assert.Equal("cameras/3", cameras[3].Id);
+                }
+            }
+        }
+
+        [Fact]
         public async Task Sorting_by_strings()
         {
             using (var store = await GetDocumentStore())
