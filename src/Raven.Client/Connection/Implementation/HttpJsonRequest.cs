@@ -147,9 +147,10 @@ namespace Raven.Client.Connection.Implementation
 
             httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
 
+            var isNotGet = Method == HttpMethods.Post || Method == HttpMethods.Put || Method == HttpMethods.Patch || Method == HttpMethods.Eval;
             if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
             {
-                if (Method == HttpMethods.Post || Method == HttpMethods.Put || Method == HttpMethods.Patch || Method == HttpMethods.Eval)
+                if (isNotGet)
                 {
                     httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
                     httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
@@ -159,8 +160,19 @@ namespace Raven.Client.Connection.Implementation
                     httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
             }
 
+            if (requestParams.Etag.HasValue)
+            {
+                if (isNotGet)
+                {
+                    httpClient.DefaultRequestHeaders.IfMatch.Add(new EntityTagHeaderValue(requestParams.Etag.Value.ToString()));
+                }
+                else
+                {
+                    httpClient.DefaultRequestHeaders.IfNoneMatch.Add(new EntityTagHeaderValue(requestParams.Etag.Value.ToString()));
+                }
+            }
+
             headers.Add("Raven-Client-Version", ClientVersion);
-            WriteMetadata(requestParams.Metadata);
             requestParams.UpdateHeaders(headers);
         }
 
@@ -582,73 +594,6 @@ namespace Raven.Client.Connection.Implementation
         public TimeSpan Timeout { get; private set; }
 
         public HttpResponseMessage Response { get; private set; }
-
-        private void WriteMetadata(RavenJObject metadata)
-        {
-            if (metadata == null || metadata.Count == 0)
-                return;
-
-            foreach (var prop in metadata)
-            {
-                if (prop.Value == null || prop.Value.Type == JTokenType.Null)
-                    continue;
-
-                if (prop.Value.Type == JTokenType.Object ||
-                    prop.Value.Type == JTokenType.Array)
-                    continue;
-
-                var headerName = prop.Key;
-                var value = prop.Value.Value<object>().ToString();
-                if (headerName == Constants.MetadataEtagField)
-                {
-                    headerName = "If-None-Match";
-                    if (!value.StartsWith("\""))
-                    {
-                        value = "\"" + value;
-                    }
-                    if (!value.EndsWith("\""))
-                    {
-                        value = value + "\"";
-                    }
-                }
-
-
-                // Restricted headers require their own special treatment, otherwise an exception will
-                // be thrown.
-                // See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-
-                switch (headerName)
-                {
-                    case "Date":
-                        case "Referer":
-                        case "Content-Length":
-                        case "Expect":
-                        case "Range":
-                        case "Transfer-Encoding":
-                        case "User-Agent":
-                        case "Proxy-Connection":
-                        case "Host": // Host property is not supported by 3.5
-                            break;
-                    case "Content-Type":
-                        headers["Content-Type"] = value;
-                        break;
-                    case "If-Modified-Since":
-                        DateTime tmp;
-                        DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out tmp);
-                        httpClient.DefaultRequestHeaders.IfModifiedSince = tmp;
-                        break;
-                    case "Accept":
-                        httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
-                        break;
-                    case "Connection":
-                        httpClient.DefaultRequestHeaders.Connection.Add(value);
-                        break;
-                    default:
-                        headers[headerName] = value;
-                        break;
-                }
-            }
-        }
 
         public Task WriteWithObjectAsync<T>(IEnumerable<T> data)
         {

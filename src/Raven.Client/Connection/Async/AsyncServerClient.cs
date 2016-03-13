@@ -557,18 +557,15 @@ namespace Raven.Client.Connection.Async
 
         private async Task<PutResult> DirectPutAsync(OperationMetadata operationMetadata, string key, long? etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken))
         {
-            if (metadata == null)
-                metadata = new RavenJObject();
-            var method = String.IsNullOrEmpty(key) ? HttpMethod.Post : HttpMethod.Put;
-            if (etag != null)
-                metadata[Constants.MetadataEtagField] = new RavenJValue(etag);
-            else
-                metadata.Remove(Constants.MetadataEtagField);
+            if (metadata != null)
+                document[Constants.Metadata] = metadata;
+
+            var method = string.IsNullOrEmpty(key) ? HttpMethod.Post : HttpMethod.Put;
 
             if (key != null)
                 key = Uri.EscapeDataString(key);
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/document?id=" + key, method, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/document?id=" + key, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url), etag: etag).AddOperationHeaders(OperationsHeaders)))
             {
                 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
@@ -887,9 +884,7 @@ namespace Raven.Client.Connection.Async
             EnsureIsNotNullOrEmpty(requestUrl, "url");
             var result = await ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var metadata = new RavenJObject();
-
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, HttpMethod.Get, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
@@ -1174,8 +1169,6 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var metadata = new RavenJObject();
-
                 var actualStart = start;
 
                 var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
@@ -1206,7 +1199,7 @@ namespace Raven.Client.Connection.Async
                 if (nextPage)
                     actualUrl += "&next-page=true";
 
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, HttpMethod.Get, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
@@ -1448,9 +1441,7 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
             {
-                var metadata = new RavenJObject();
-
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", HttpMethod.Post, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
@@ -2006,9 +1997,7 @@ namespace Raven.Client.Connection.Async
             EnsureIsNotNullOrEmpty(requestUrl, "url");
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var metadata = new RavenJObject();
-
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, HttpMethod.Get, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
                     return await request.ReadResponseJsonAsync().ConfigureAwait(false);
                 }
@@ -2017,9 +2006,7 @@ namespace Raven.Client.Connection.Async
 
         public HttpJsonRequest CreateRequest(string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
         {
-            var metadata = new RavenJObject();
-
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, Url + requestUrl, method, metadata, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url), timeout)
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, Url + requestUrl, method, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url), timeout)
                 .AddOperationHeaders(OperationsHeaders);
             createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
             createHttpJsonRequestParams.DisableAuthentication = disableAuthentication;

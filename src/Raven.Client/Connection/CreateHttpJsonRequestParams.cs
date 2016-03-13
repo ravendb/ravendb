@@ -20,12 +20,12 @@ namespace Raven.Client.Connection
 
         private string urlCached;
 
-        public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, RavenJObject metadata, OperationCredentials credentials, ConventionBase convention, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
+        public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, OperationCredentials credentials, ConventionBase convention, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null, long? etag = null)
         {
+            Etag = etag;
             Owner = self;
             Url = url;
             Method = method;
-            Metadata = metadata;
             Credentials = credentials;
             Convention = convention;
             RequestTimeMetric = requestTimeMetric;
@@ -34,10 +34,7 @@ namespace Raven.Client.Connection
             ShouldCacheRequest = convention != null ? convention.ShouldCacheRequest : urlParam => false;
         }
 
-        public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, HttpMethod method, OperationCredentials credentials, ConventionBase convention, IRequestTimeMetric requestTimeMetric = null, TimeSpan? timeout = null)
-            : this(self, url, method, new RavenJObject(), credentials, convention, requestTimeMetric, timeout)
-        {
-        }
+        public long? Etag { get; }
 
         public Func<string, bool> ShouldCacheRequest { get; set; }
 
@@ -52,8 +49,6 @@ namespace Raven.Client.Connection
         public bool DisableAuthentication { get; set; }
 
         public bool DisableRequestCompression { get; set; }
-
-        public RavenJObject Metadata { get; set; }
 
         public HttpMethod Method { get; set; }
 
