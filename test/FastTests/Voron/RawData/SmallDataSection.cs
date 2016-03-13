@@ -17,7 +17,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -48,7 +48,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -88,7 +88,7 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction,"test");
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -121,7 +121,7 @@ namespace FastTests.Voron.RawData
             Env.Options.ManualFlushing = true;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
 
                 long id;
             
@@ -145,7 +145,7 @@ namespace FastTests.Voron.RawData
             long id;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
                 pageNumber = section.PageNumber;
           
                 //var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);

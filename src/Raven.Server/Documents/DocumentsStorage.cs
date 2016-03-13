@@ -626,6 +626,15 @@ namespace Raven.Server.Documents
                 if (expectedEtag != null && oldEtag != expectedEtag)
                     throw new ConcurrencyException(
                         $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+
+                int oldSize;
+                var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
+                var oldCollectionName = GetCollectionFromMetadata(key, oldDoc);
+                if(oldCollectionName != originalCollectionName)
+                    throw new InvalidOperationException(
+                        $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
+                        $"Delete the document and recreate the document {key}.");
+
                 table.Update(oldValue.Id, tbv);
             }
 
@@ -681,6 +690,17 @@ namespace Raven.Server.Documents
 
         private static string GetCollectionName(string key, BlittableJsonReaderObject document, out string originalCollectionName)
         {
+            var collectionName = GetCollectionFromMetadata(key, document);
+
+            originalCollectionName = collectionName;
+
+            // we have to have some way to distinguish between dynamic tree names
+            // and our fixed ones, otherwise a collection call Docs will corrupt our state
+            return "@" + collectionName;
+        }
+
+        private static string GetCollectionFromMetadata(string key, BlittableJsonReaderObject document)
+        {
             string collectionName;
             BlittableJsonReaderObject metadata;
             if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
@@ -688,16 +708,11 @@ namespace Raven.Server.Documents
                 collectionName = SystemDocumentsCollection;
             }
             else if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
+                     metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
             {
                 collectionName = NoCollectionSpecified;
             }
-
-            originalCollectionName = collectionName;
-
-            // we have to have some way to distinguish between dynamic tree names
-            // and our fixed ones, otherwise a collection call Docs will corrupt our state
-            return "@" + collectionName;
+            return collectionName;
         }
 
         public long IdentityFor(DocumentsOperationContext ctx, string key)

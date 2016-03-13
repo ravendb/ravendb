@@ -418,14 +418,14 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                 {
                     Script = @"
  this.Owner = this['@metadata']['Raven-Clr-Type'];
- this['@metadata']['Raven-Entity-Name'] = 'New-Entity';
+ this['@metadata']['Raven-Python-Type'] = 'Your.CustomType';
  ",
                 });
 
                 var resultDoc = await store.AsyncDatabaseCommands.GetAsync("CustomTypes/1");
                 var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
                 Assert.Equal(resultDoc.Metadata["Raven-Clr-Type"], result.Owner);
-                Assert.Equal("New-Entity", resultDoc.Metadata["Raven-Entity-Name"]);
+                Assert.Equal("Your.CustomType", resultDoc.Metadata["Raven-Python-Type"]);
             }
         }
 
