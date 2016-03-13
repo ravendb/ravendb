@@ -83,7 +83,7 @@ namespace Raven.Client.TimeSeries.Replication
         {
             Debug.Assert(typeof(T).FullName.Contains("Task") == false);
 
-            if (currentlyExecuting && TimeSeriesConventions.AllowMultipuleAsyncOperations == false)
+            if (currentlyExecuting && TimeSeriesConventions.AllowMultipleAsyncOperations == false)
                 throw new InvalidOperationException("Only a single concurrent async request is allowed per async store instance.");
 
             currentlyExecuting = true;

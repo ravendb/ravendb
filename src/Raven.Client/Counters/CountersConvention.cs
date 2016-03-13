@@ -14,7 +14,7 @@ namespace Raven.Client.Counters
         public CountersConvention()
         {
             FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
-            AllowMultipuleAsyncOperations = true;
+            AllowMultipleAsyncOperations = true;
             ShouldCacheRequest = url => true;
         }
     }
