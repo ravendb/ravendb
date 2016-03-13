@@ -127,7 +127,7 @@ namespace Voron.Data.Tables
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
 
-            var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
+            var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
             tableTree.Add(ActiveSectionSlice, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber));
             var stats = (TableSchemaStats*) tableTree.DirectAdd(StatsSlice, sizeof (TableSchemaStats));
             stats->NumberOfEntries = 0;

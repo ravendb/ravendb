@@ -147,7 +147,7 @@ namespace Voron.Data.RawData
         }
 
 
-        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx)
+        public static ActiveRawDataSmallSection Create(LowLevelTransaction tx, string owner)
         {
             ushort numberOfPagesInSmallSection = 512;
             if (tx.DataPager.NumberOfAllocatedPages > 1024*32)
@@ -156,7 +156,7 @@ namespace Voron.Data.RawData
             }
             else if (tx.DataPager.NumberOfAllocatedPages > 1024*16)
             {
-                numberOfPagesInSmallSection = 1024;
+                numberOfPagesInSmallSection = 1024; // TODO: better sizes
             }
             Debug.Assert(numberOfPagesInSmallSection <= ((tx.DataPager.PageSize - ReservedHeaderSpace) / 2));
 
@@ -169,6 +169,7 @@ namespace Voron.Data.RawData
             sectionHeader->NumberOfEntries = 0;
             sectionHeader->NumberOfPages = numberOfPagesInSmallSection;
             sectionHeader->LastUsedPage = 0;
+            sectionHeader->SectionOwnerHash = Hashing.XXHash64.CalculateRaw(owner);
 
             var availablespace = (ushort*) ((byte*) sectionHeader + ReservedHeaderSpace);
 
