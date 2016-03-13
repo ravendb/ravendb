@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text;
-using System.Threading;
 
 using Voron.Debugging;
 using Voron.Impl;
