@@ -97,9 +97,9 @@ namespace FastTests.Voron.RawData
             using (var tx = Env.WriteTransaction())
             {
                 var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
-                for (int i = 0; i < 1536; i++)
+                for (int i = 0; i < 192; i++)
                 {
-                    Assert.True(section.TryAllocate(1020, out id));
+                    Assert.True(section.TryAllocate(1020, out id), i.ToString());
                     if (i%77 == 0)
                     {
                         idToFree = id;
