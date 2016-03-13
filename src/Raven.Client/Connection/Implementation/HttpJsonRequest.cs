@@ -162,13 +162,14 @@ namespace Raven.Client.Connection.Implementation
 
             if (requestParams.Etag.HasValue)
             {
+                var etag = requestParams.Etag.Value.ToString();
                 if (isNotGet)
                 {
-                    httpClient.DefaultRequestHeaders.IfMatch.Add(new EntityTagHeaderValue(requestParams.Etag.Value.ToString()));
+                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("If-Match", etag);
                 }
                 else
                 {
-                    httpClient.DefaultRequestHeaders.IfNoneMatch.Add(new EntityTagHeaderValue(requestParams.Etag.Value.ToString()));
+                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("If-None-Match", etag);
                 }
             }
 
