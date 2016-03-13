@@ -9,9 +9,9 @@ namespace Raven.Client
     public abstract class ConventionBase
     {
         /// <summary>
-        /// Enable multipule async operations
+        /// Enable multiple async operations
         /// </summary>
-        public bool AllowMultipuleAsyncOperations { get; set; }
+        public bool AllowMultipleAsyncOperations { get; set; }
 
         /// <summary>
         /// Whatever or not RavenDB should cache the request to the specified url.
