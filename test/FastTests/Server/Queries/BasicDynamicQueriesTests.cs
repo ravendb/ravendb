@@ -1,6 +1,8 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Document;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -13,8 +15,17 @@ namespace FastTests.Server.Queries
         [Fact]
         public async Task String_where_clause()
         {
-            using (var store = await GetDocumentStore())
+            DocumentStore store =null;
+            try
             {
+                store = await GetDocumentStore();
+            }
+            catch (Exception ee)
+            {
+                Console.WriteLine(ee.Message);
+            }
+            //using (store)
+            //{
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Fitzchak" });
@@ -30,7 +41,7 @@ namespace FastTests.Server.Queries
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Arek", users[0].Name);
                 }
-            }
+            //}
         }
 
         [Fact]

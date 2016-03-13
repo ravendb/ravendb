@@ -296,8 +296,7 @@ namespace FastTests.Server.Documents.Indexing
                             }
 
                             tx.Commit();
-                        }
-
+                        }                        
                         var batchStats = new IndexingBatchStats();
                         index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
