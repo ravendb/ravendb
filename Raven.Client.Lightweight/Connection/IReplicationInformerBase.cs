@@ -49,7 +49,7 @@ namespace Raven.Client.Connection
 
         bool IsServerDown(Exception exception, out bool timeout);
 
-        bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode);
+        bool IsHttpStatus(Exception e,out HttpStatusCode statusCode, params HttpStatusCode[] httpStatusCode);
     }
 
     public interface IReplicationInformerBase<in TClient> : IReplicationInformerBase
