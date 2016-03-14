@@ -13,11 +13,11 @@ function Take-Count() {
 
 
 
-dnx test  -xml out.xml
+dnx test  -xml test-timings.xml
 
-[xml]$tests = Get-Content out.xml
+[xml]$tests = Get-Content test-timings.xml
 $tests.assemblies.assembly.collection.test | 
 	sort @{e={$_.time -as [double]} } -descending | 
 	% {$_.time + "  " + $_.name } | 
-	take-count 10
+	take-count 15
 
