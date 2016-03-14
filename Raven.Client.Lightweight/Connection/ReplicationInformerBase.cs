@@ -458,8 +458,9 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken);
         }
 
-        public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
+        public bool IsHttpStatus(Exception e, out HttpStatusCode statusCode, params HttpStatusCode[] httpStatusCode)
         {
+            statusCode = HttpStatusCode.InternalServerError;
             var aggregateException = e as AggregateException;
             if (aggregateException != null)
             {
@@ -469,6 +470,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
             if (ere != null)
             {
+                statusCode = ere.StatusCode;
                 return httpStatusCode.Contains(ere.StatusCode);
             }
 
