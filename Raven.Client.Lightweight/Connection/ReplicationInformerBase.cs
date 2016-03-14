@@ -480,7 +480,9 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             {
                 var httpWebResponse = webException.Response as HttpWebResponse;
                 if (httpWebResponse != null && httpStatusCode.Contains(httpWebResponse.StatusCode))
+                {
                     return true;
+                }
             }
 #endif
 
