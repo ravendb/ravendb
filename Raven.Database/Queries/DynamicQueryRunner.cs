@@ -99,7 +99,13 @@ namespace Raven.Database.Queries
                 ResultsTransformer = query.ResultsTransformer,
                 TransformerParameters = query.TransformerParameters,
                 ExplainScores = query.ExplainScores,
-                SortHints = query.SortHints
+                SortHints = query.SortHints,
+                ShowTimings = query.ShowTimings,
+                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                DisableCaching = query.DisableCaching,
+                SkipDuplicateChecking = query.SkipDuplicateChecking,
+                WaitForNonStaleResults = query.WaitForNonStaleResults
+                
             };
             if (indexQuery.SortedFields == null)
                 return indexQuery;

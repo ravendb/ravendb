@@ -381,6 +381,7 @@
     <Compile Include="RavenDeserializationBug.cs" />
     <Compile Include="RavenDynamicTests.cs" />
     <Compile Include="RavenProjectionGuid.cs" />
+    <Compile Include="RavenShowTimingsTest.cs" />
     <Compile Include="RecreatingIndexes.cs" />
     <Compile Include="ReduceAndTransform2.cs" />
     <Compile Include="RenamedProperty.cs" />
