@@ -228,6 +228,10 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Database.IndexStore.StopMapReduceIndexes();
                 }
+                else
+                {
+                    throw new ArgumentException("Query string value 'type' can only be 'map' or 'map-reduce' but was " + types[0]);
+                }
             }
             else if (names.Count != 0)
             {
