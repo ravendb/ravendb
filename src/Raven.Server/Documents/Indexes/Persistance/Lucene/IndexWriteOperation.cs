@@ -53,6 +53,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             catch (Exception)
             {
                 Monitor.Exit(_writeLock);
+                throw;
             }
         }
 
