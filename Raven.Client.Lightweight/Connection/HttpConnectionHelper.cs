@@ -16,8 +16,9 @@ namespace Raven.Client.Connection
 {
     public static class HttpConnectionHelper
     {
-        public static bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
+        public static bool IsHttpStatus(Exception e,out HttpStatusCode code,  params HttpStatusCode[] httpStatusCode)
         {
+            code = HttpStatusCode.InternalServerError;
             var aggregateException = e as AggregateException;
             if (aggregateException != null)
             {
@@ -27,6 +28,7 @@ namespace Raven.Client.Connection
             var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
             if (ere != null)
             {
+                code = ere.StatusCode;
                 return httpStatusCode.Contains(ere.StatusCode);
             }
 
@@ -36,7 +38,10 @@ namespace Raven.Client.Connection
             {
                 var httpWebResponse = webException.Response as HttpWebResponse;
                 if (httpWebResponse != null && httpStatusCode.Contains(httpWebResponse.StatusCode))
+                {
+                    code = ere.StatusCode;
                     return true;
+                }
             }
 #endif
 
