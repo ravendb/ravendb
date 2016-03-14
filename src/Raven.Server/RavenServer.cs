@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
 using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Hosting.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using Raven.Server.Config;
@@ -18,6 +22,10 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
+        public ConcurrentDictionary<string, AccessTokenBody> AccessTokensById = new ConcurrentDictionary<string, AccessTokenBody>();
+
+        public Timer Timer;
+
         public readonly ServerStore ServerStore;
         private IApplication _application;
 
@@ -31,6 +39,14 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration);
             Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
+            this.Timer = new Timer(ServerMaintanenceTimerByMinute, this, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        }
+
+        private static void ServerMaintanenceTimerByMinute(object state)
+        {
+            var serverInstance = state as RavenServer;
+            serverInstance?.AccessTokensById.ForEach(
+                x =>x.Value.IsExpired(x.Key, serverInstance.AccessTokensById)); // IsExpired also removes expired records
         }
 
         public void Initialize()
@@ -94,6 +110,7 @@ namespace Raven.Server
             Metrics.Dispose();
             _application?.Dispose();
             ServerStore?.Dispose();
+            Timer?.Dispose();
         }
     }
 }

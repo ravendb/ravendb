@@ -2,8 +2,6 @@
 {
     public enum AnonymousUserAccessModeValues
     {
-        All,
-        Get,
         None,
         Admin
     }

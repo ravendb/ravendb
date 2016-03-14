@@ -12,6 +12,10 @@ namespace Raven.Server.Routing
 
         public string Description { get; }
 
+        public bool SkipTryAuthorized { get; set; } // "NeverSecret"
+
+        public bool IgnoreDbRoute { get; set; }
+
         public RavenActionAttribute(string path, string method, string description = null)
         {
             Path = path;

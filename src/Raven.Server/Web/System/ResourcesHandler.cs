@@ -10,13 +10,13 @@ namespace Raven.Server.Web.System
 {
     public class ResourcesHandler : RequestHandler
     {
-        [RavenAction("/databases", "GET")]
+        [RavenAction("/databases", "GET", IgnoreDbRoute = true)]
         public Task Databases()
         {
             return ReturnResources("db/");
         }
 
-        [RavenAction("/fs", "GET")]
+        [RavenAction("/fs", "GET", IgnoreDbRoute = true)]
         public Task FileSystems()
         {
 

@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
@@ -59,7 +60,6 @@ namespace Raven.Server.Routing
             metricsCountersManager.RequestsMeter.Mark();
             metricsCountersManager.RequestsPerSecondCounter.Mark();
             Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
-            var sp = Environment.TickCount;
             if (handler == null)
             {
                 context.Response.StatusCode = 400;
@@ -67,109 +67,86 @@ namespace Raven.Server.Routing
                 return;
             }
 
-            string tryAuthMsg = null;
-            int authResponseCode;
-            if (NeverSecret.IsNeverSecretUrl(path) == false && 
-                TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database, IgnoreDb.Urls.Contains(path),
-                out authResponseCode, out tryAuthMsg) == false)
-            {
-                context.Response.StatusCode = authResponseCode;
-                await context.Response.WriteAsync($"{tryAuthMsg} for path: {method} {path}{context.Request.QueryString}");
+            var sp = Stopwatch.StartNew();
+            if (!tryMatch.Value.SkipTryAuthorize &&
+                 await TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database, tryMatch.Value.IgnoreDbRoute) == false)
                 return;
-            }
+            Console.WriteLine(sp.ElapsedMilliseconds);
+            
 
             await handler(reqCtx);
-            Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
 
+            Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
         }
 
-        private bool TryAuthorize(HttpContext context, RavenConfiguration configuration, DocumentDatabase database, bool ignoreDbAccess,
-                                  out int responseCode, out string msg)
+        private async Task<bool> TryAuthorize(HttpContext context, RavenConfiguration configuration, DocumentDatabase database, bool ignoreDb)
         {
+            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
+                return true;
+
             var authHeaderValues = context.Request.Headers["Authorization"];
-            var authHeader = authHeaderValues.FirstOrDefault();
+            var authHeader = authHeaderValues.Count == 0 ? null : authHeaderValues[0];
 
-            var hasApiKeyHeaderValues = context.Request.Headers["Has-Api-Key"]; // TODO (OAuth): is it redundent ?
-            var apiKeyHeader = hasApiKeyHeaderValues.FirstOrDefault();
+            string oAuthTokenInCookie = null;
+            if (authHeader == null)
+            {
+                var oAuthTokenInCookieValues = context.Request.Cookies["OAuth-Token"];
+                oAuthTokenInCookie = oAuthTokenInCookieValues.Count == 0 ? null : oAuthTokenInCookieValues[0];
+            }
 
-            
-            
-            var hasApiKey = false;
-            if (apiKeyHeader != null)
-                hasApiKey = "True".Equals(apiKeyHeader, StringComparison.CurrentCultureIgnoreCase);
-
-            var oAuthTokenInCookieValues = context.Request.Cookies["OAuth-Token"];
-            var oAuthTokenInCookie = oAuthTokenInCookieValues.FirstOrDefault();
-
-            if (hasApiKey || oAuthTokenInCookie != null ||
-                string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+            if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer ") || 
+                oAuthTokenInCookie != null)
             {
                 var token = GetToken(authHeader, oAuthTokenInCookie);
-                var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
-                    configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.All ||
-                    configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin ||
-                    configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Get && context.Request.Method.Equals("GET");
-
-                responseCode = 0;
-                msg = "";
-
-                if (token == null)
-                {
-                    if (allowUnauthenticatedUsers)
-                        return true;
-
-                    msg = "The access token is required";
-                    responseCode = hasApiKey ? 412 : 401;
-                    return false;
-                }
 
                 AccessTokenBody tokenBody;
-                var oauthParamaters = OAuthServerHelper.GetOAuthParameters(configuration);
-                if (AccessToken.TryParseBody(oauthParamaters, token, out tokenBody) == false)
+                if (_ravenServer.AccessTokensById.TryGetValue(token, out tokenBody) == false)
                 {
-                    if (allowUnauthenticatedUsers)
-                        return true;
-
-                    msg = "The access token is invalid";
-                    responseCode = 401;
+                    context.Response.StatusCode = 401;
+                    await context.Response.WriteAsync("The access token is invalid");
                     return false;
                 }
 
-                if (tokenBody.IsExpired()) // TODO (OAuth): IMHO this is way too expansive for each request (store utc now each minute, and check against stored value)
+                if (tokenBody.IsExpired(token, _ravenServer.AccessTokensById))
                 {
-                    if (allowUnauthenticatedUsers)
-                        return true;
-
-                    msg = "The access token is expired";
-                    responseCode = 401;
+                    context.Response.StatusCode = 401;
+                    await context.Response.WriteAsync("The access token is expired");
                     return false;
                 }
-
 
                 var resourceName = database?.ResourceName;
 
                 var writeAccess = context.Request.Method.Equals("GET");
                 if (!tokenBody.IsAuthorized(resourceName, writeAccess))
                 {
-                    if (allowUnauthenticatedUsers || ignoreDbAccess)
+                    // TODO : Add to these routes with "true" for skipAuthorize(neverSecret) RavenActionAttr: (some obsoulite)
+                    //    "/raven/studio.html",
+                    //    "/silverlight/Raven.Studio.xap",
+                    //    "/favicon.ico",
+                    //    "/clientaccesspolicy.xml",
+                    //    "/OAuth/Cookie",
+
+                    if (ignoreDb)
                         return true;
 
-                    msg = writeAccess ?
+                    var msg = writeAccess ?
                         "Not authorized for read/write access for tenant " + resourceName :
                         "Not authorized for tenant " + resourceName;
-                    responseCode = 403;
+
+                    context.Response.StatusCode = 403;
+                    await context.Response.WriteAsync(msg);
                     return false;
                 }
 
-                // TODO (OAuth): What to do with these:
+                // TODO (OAuth): Save user..
                 //controller.User = new OAuthPrincipal(tokenBody, controller.ResourceName);
                 //CurrentOperationContext.User.Value = controller.User;
 
                 return true;
             }
 
-            msg = "The access token is required";
-            responseCode = hasApiKey ? 412 : 401;
+            context.Response.StatusCode = 412;
+            await context.Response.WriteAsync("The access token is required");
             return false;
         }
 

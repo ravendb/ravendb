@@ -16,6 +16,8 @@ namespace Raven.Server.Routing
     {
         public readonly string Method;
         public readonly string Path;
+        public readonly bool SkipTryAuthorize;
+        public readonly bool IgnoreDbRoute;
 
         private HandleRequest _request;
         private RouteType _typeOfRoute;
@@ -26,10 +28,12 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        public RouteInformation(string method, string path)
+        public RouteInformation(string method, string path, bool skipTryAuthorize, bool ignoreDbRoute)
         {
             Method = method;
             Path = path;
+            SkipTryAuthorize = skipTryAuthorize;
+            IgnoreDbRoute = ignoreDbRoute;
         }
 
         public void Build(MethodInfo action)
@@ -42,6 +46,8 @@ namespace Raven.Server.Routing
             {
                 _typeOfRoute = RouteType.Databases;
             }
+
+            // SkipTryAuthorize = action.;
 
             // CurrentRequestContext currentRequestContext
             var currentRequestContext = Expression.Parameter(typeof (RequestHandlerContext), "currentRequestContext");

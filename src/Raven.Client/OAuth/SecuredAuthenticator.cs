@@ -2,6 +2,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -18,11 +19,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.OAuth
 {
-    public class SecuredAuthenticator : AbstractAuthenticator, IDisposable
+    public class SecuredAuthenticator : AbstractAuthenticator
     {
         private static readonly ILog Logger = LogManager.GetLogger(typeof(SecuredAuthenticator));
-        private string apiKey;
-        private ClientWebSocket webSocket;
         private bool disposed;
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
         private Uri uri;
@@ -129,35 +128,55 @@ namespace Raven.Abstractions.OAuth
             }
         }
 
-        public async Task<Action<HttpClient>> DoOAuthRequestAsync(string url, string apiKey)
+        public async Task<Action<HttpClient>> DoOAuthRequestAsync(string url, string apiKey, bool usesp = false)
         {
+            var sp = Stopwatch.StartNew();
             ThrowIfBadUrlOrApiKey(url, apiKey);
+            if (usesp)
+                Console.WriteLine("After throwIf" + sp.ElapsedMilliseconds);
+            uri = new Uri(url.Replace("http://", "ws://")); // TODO wss
 
-            this.apiKey = apiKey;
-
-            uri = new Uri(url.Replace("http://", "ws://").Replace(".fiddler", ""));
-
-            webSocket = new ClientWebSocket();
-
-            try
+            using (var webSocket = new ClientWebSocket())
             {
-                await EstablishConnection();
-                var recvRavenJObject = await Recieve();
-                var challenge = ComputeChallenge(recvRavenJObject);
-                await Send("ChallengeResponse", challenge);
-                recvRavenJObject = await Recieve();
-                SetCurrentTokenFromReply(recvRavenJObject);
+                try
+                {
+                    if (usesp)
+                        Console.WriteLine("After new clWS " + sp.ElapsedMilliseconds);
+                    Logger.Info("Trying to connect using WebSocket to {0} for authentication", uri);
+                    try
+                    {
+                        await webSocket.ConnectAsync(uri, CancellationToken.None);
+                    }
+                    catch (WebSocketException webSocketException)
+                    {
+                        throw new InvalidOperationException($"Cannot connect using WebSocket to {uri} for authentication", webSocketException);
+                    }
+                    if (usesp)
+                        Console.WriteLine("After connectAsync " + sp.ElapsedMilliseconds);
+                    var recvRavenJObject = await Recieve(webSocket);
+                    if (usesp)
+                        Console.WriteLine("After Recv " + sp.ElapsedMilliseconds);
+                    var challenge = ComputeChallenge(recvRavenJObject, apiKey);
+                    if (usesp)
+                        Console.WriteLine("After computeCH " + sp.ElapsedMilliseconds);
+                    await Send(webSocket, "ChallengeResponse", challenge);
+                    if (usesp)
+                        Console.WriteLine("After sendCH " + sp.ElapsedMilliseconds);
+                    recvRavenJObject = await Recieve(webSocket);
+                    if (usesp)
+                        Console.WriteLine("After afterRc " + sp.ElapsedMilliseconds);
 
-                return (Action<HttpClient>)(SetAuthorization);
-            }
-            catch (Exception ex)
-            {
-                Logger.DebugException($"Failed to DoOAuthRequest to {url} with {apiKey}", ex);
-                throw;
-            }
-            finally
-            {
-                Dispose();
+                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close from client", disposedToken.Token);
+                    if (usesp)
+                        Console.WriteLine("After closeAsync " + sp.ElapsedMilliseconds);
+                    SetCurrentTokenFromReply(recvRavenJObject);
+                    return (Action<HttpClient>)(SetAuthorization);
+                }
+                catch (Exception ex)
+                {
+                    Logger.DebugException($"Failed to DoOAuthRequest to {url} with {apiKey}", ex);
+                    throw;
+                }
             }
         }
 
@@ -166,37 +185,17 @@ namespace Raven.Abstractions.OAuth
             if (string.IsNullOrEmpty(url))
                 throw new InvalidOperationException("DoAuthRequest provided with invalid url");
 
-            if (this.apiKey != null)
-                throw new InvalidOperationException($"DoAuthRequest is in the middle of negotiation with {url}");
-
             if (apiKey == null)
                 throw new InvalidOperationException("DoAuthRequest provided with null apiKey");
         }
 
-        private async Task EstablishConnection()
-        {
-            if (disposed)
-                return;
-
-            Logger.Info("Trying to connect using WebSocket to {0} for authentication", uri);
-            try
-            {
-                await webSocket.ConnectAsync(uri, CancellationToken.None);
-            }
-            catch (WebSocketException webSocketException)
-            {
-                throw new InvalidOperationException($"Cannot connect using WebSocket to {uri} for authentication", webSocketException);
-            }
-        }
-
-        private async Task Send(string command, string commandParameter)
+        private async Task Send(ClientWebSocket webSocket, string command, string commandParameter)
         {
             Logger.Info($"Sending WebSocket Authentication Command {command} - {commandParameter} to {uri}");
 
             var ravenJObject = new RavenJObject
             {
-                ["Command"] = command,
-                ["Param"] = commandParameter,
+                [command] = commandParameter,
             };
 
             var stream = new MemoryStream();
@@ -206,63 +205,22 @@ namespace Raven.Abstractions.OAuth
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
         }
 
-        private string ComputeChallenge(RavenJObject recvRavenJObject)
+        private string ComputeChallenge(RavenJObject challengeJObject, string apiKey)
 
         {
-            if (recvRavenJObject == null)
+            if (challengeJObject == null)
                 throw new InvalidDataException("Got null json object in ComputeChallenge");
 
-            var responseCode = recvRavenJObject.Value<string>("ResponseCode");
-
-            if (responseCode == null)
-                throw new InvalidOperationException("Missing 'ResponseCode' in authentication response");
-
-            if (Logger.IsDebugEnabled)
-                Logger.Debug($"Got authentication response with command {responseCode} - for {uri}");
-
-            if (responseCode.Equals("400")) // BadRequest
-            {
-                DisposeAsync.Wait();
-                var description = recvRavenJObject.Value<string>("Description");
-                if (description == null)
-                    throw new InvalidDataException($"Missing or empty 'Description' in message, server response code : Bad Request");
-
-                throw new InvalidOperationException($"Server response code : Bad Request - {description}");
-            }
-
-            if (responseCode.Equals("412") == false) // Precondition Failed
-                throw new InvalidOperationException($"Got invalid responseCode {responseCode} - for {uri}");
-
-            var wwwAuthenticate = recvRavenJObject.Value<string>("WwwAuthenticate");
-
-            if (string.IsNullOrEmpty(wwwAuthenticate) || !wwwAuthenticate.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
-                throw new InvalidOperationException("Missing or empty 'WwwAuthenticate' in message");
-
-            var challengeDictionary = OAuthHelper.ParseDictionary(wwwAuthenticate.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
-
-            serverRSAExponent = challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);
-            serverRSAModulus = challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus);
-            challenge = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge);
+            serverRSAExponent = challengeJObject.Value<string>(OAuthHelper.Keys.RSAExponent);
+            serverRSAModulus = challengeJObject.Value<string>(OAuthHelper.Keys.RSAModulus);
+            challenge = challengeJObject.Value<string>(OAuthHelper.Keys.Challenge);
 
             if (string.IsNullOrEmpty(serverRSAExponent) || string.IsNullOrEmpty(serverRSAModulus) || string.IsNullOrEmpty(challenge))
-                throw new InvalidOperationException($"Invalid response from server, could not parse raven authentication information:{wwwAuthenticate}");
+                throw new InvalidOperationException("Invalid authentication information");
 
-            var exponent = OAuthHelper.ParseBytes(serverRSAExponent);
-            var modulus = OAuthHelper.ParseBytes(serverRSAModulus);
-
-            var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
-
-            if (apiKeyParts.Length > 2)
-            {
-                apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
-            }
-
-            if (apiKeyParts.Length < 2)
-                throw new InvalidOperationException("Invalid Api-Key. Contains less then two parts separated with slash");
-
+            var apiKeyParts = ExtractApiKeyAndSecret(apiKey);
             var apiKeyName = apiKeyParts[0].Trim();
             var apiSecret = apiKeyParts[1].Trim();
-
 
             var data = OAuthHelper.DictionaryToString(new Dictionary<string, string>
                 {
@@ -270,7 +228,9 @@ namespace Raven.Abstractions.OAuth
                     {OAuthHelper.Keys.RSAModulus, serverRSAModulus},
                     {
                         OAuthHelper.Keys.EncryptedData,
-                        OAuthHelper.EncryptAsymmetric(exponent, modulus, OAuthHelper.DictionaryToString(new Dictionary<string, string>
+                        OAuthHelper.EncryptAsymmetric(OAuthHelper.ParseBytes(serverRSAExponent),
+                        OAuthHelper.ParseBytes(serverRSAModulus),
+                        OAuthHelper.DictionaryToString(new Dictionary<string, string>
                         {
                             {OAuthHelper.Keys.APIKeyName, apiKeyName},
                             {OAuthHelper.Keys.Challenge, challenge},
@@ -282,7 +242,22 @@ namespace Raven.Abstractions.OAuth
             return data;
         }
 
-        private async Task<RavenJObject> Recieve()
+        private string[] ExtractApiKeyAndSecret(string apiKey)
+        {
+            var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
+
+            if (apiKeyParts.Length > 2)
+            {
+                apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
+            }
+
+            if (apiKeyParts.Length < 2)
+                throw new InvalidOperationException("Invalid Api-Key. Contains less then two parts separated with slash");
+
+            return apiKeyParts;
+        }
+
+        private async Task<RavenJObject> Recieve(ClientWebSocket webSocket)
         {
             try
             {
@@ -336,77 +311,18 @@ namespace Raven.Abstractions.OAuth
 
         private void SetCurrentTokenFromReply(RavenJObject recvRavenJObject)
         {
-            var responseCode = recvRavenJObject.Value<string>("ResponseCode");
+            var errorMsg = recvRavenJObject.Value<string>("Error");
 
-            if (responseCode == null)
-                throw new InvalidOperationException("Missing 'ResponseCode' in authentication response");
+            if (errorMsg != null)
+                throw new InvalidOperationException("Server returned error: " + errorMsg);
 
-            if (Logger.IsDebugEnabled)
-                Logger.Debug($"Got authentication response with command {responseCode} - for {uri}");
+            var currentOauthToken = recvRavenJObject.Value<string>("currentOauthToken");
 
-            string currentOauthToken = null;
+            if (currentOauthToken == null)
+                throw new InvalidOperationException("Missing 'currentOauthToken' in response message");
 
-            if (responseCode.Equals("200"))
-            {
-                currentOauthToken = recvRavenJObject.Value<string>("currentOauthToken");
-                if (currentOauthToken == null)
-                    throw new InvalidOperationException("Missing 'currentOauthToken' in 'ChallengeResponse' message");
-
-                CurrentOauthToken = currentOauthToken;
-                CurrentOauthTokenWithBearer = $"Bearer {CurrentOauthToken}";
-            }
-            else if (responseCode.Equals("400")) // BadRequest
-            {
-                DisposeAsync.Wait();
-                var description = recvRavenJObject.Value<string>("Description");
-                if (description == null)
-                    throw new InvalidDataException($"Missing or empty 'Description' in message");
-
-                throw new InvalidOperationException($"Server response code : Bad Request - {description}");
-            }
-            else if (responseCode.Equals("401")) // Unauthrized
-            {
-                var description = recvRavenJObject.Value<string>("Description");
-                if (description == null)
-                    throw new InvalidDataException($"Missing or empty 'Description' in message");
-
-                throw new InvalidOperationException($"Server response code : Unauthrized - {description}");
-            }
-            else
-            {
-                throw new InvalidOperationException($"Server response with unknow code : {responseCode}");
-            }
-        }
-
-        public void Dispose()
-        {
-            if (disposed)
-                return;
-
-            AsyncHelpers.RunSync(() => DisposeAsync);
-        }
-
-        public Task DisposeAsync
-        {
-            get
-            {
-                disposed = true;
-
-                disposedToken.Cancel();
-
-                return webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by the client", CancellationToken.None)
-                    .ContinueWith(_ =>
-                    {
-                        try
-                        {
-                            webSocket?.Dispose();
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.ErrorException($"Got error from server connection for {uri.ToString()}", e);
-                        }
-                    });
-            }
+            CurrentOauthToken = currentOauthToken;
+            CurrentOauthTokenWithBearer = $"Bearer {CurrentOauthToken}";
         }
     }
 }

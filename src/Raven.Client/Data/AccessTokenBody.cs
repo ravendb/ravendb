@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Raven.Abstractions.Data
@@ -8,13 +10,19 @@ namespace Raven.Abstractions.Data
     {
         public string UserId { get; set; }
         public List<ResourceAccess> AuthorizedDatabases { get; set; }
-        public double Issued { get; set; }
+        public long Issued { get; set; }
         public bool IsServerAdminAuthorized { get; set; }
 
-        public bool IsExpired()
+        public bool IsExpired(string tokenId, ConcurrentDictionary<string, AccessTokenBody> accessTokensById)
         {
-            var issued = DateTime.MinValue.AddMilliseconds(Issued);
-            return SystemTime.UtcNow.Subtract(issued).TotalMinutes > 30;
+            var ticks = Stopwatch.GetTimestamp() - Issued;
+            if ((ticks*60)/Stopwatch.Frequency > 30)
+            {
+                AccessTokenBody removedVal;
+                accessTokensById.TryRemove(tokenId, out removedVal);
+                return true;
+            }
+            return false;
         }
 
         public bool IsAuthorized(string tenantId, bool writeAccess)
@@ -59,6 +67,4 @@ namespace Raven.Abstractions.Data
             return true;
         }
     }
-
-    
 }

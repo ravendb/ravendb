@@ -39,7 +39,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/build/version", "GET")]
+        [RavenAction("/build/version", "GET", "build-version", SkipTryAuthorized = true)]
         public async Task Get()
         {
             var versionBuffer = await VersionBuffer.Value;

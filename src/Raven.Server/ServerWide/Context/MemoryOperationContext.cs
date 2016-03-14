@@ -348,8 +348,6 @@ namespace Raven.Server.ServerWide.Context
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    // TODO (OAuth): there's a problem here (timeout)
-                    // await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed in server by the client", CancellationToken.None);
                     return null;
                 }
 

@@ -19,7 +19,7 @@ namespace Raven.Server.Web.Studo
             return Task.CompletedTask;
         }
 
-        [RavenAction("/studio-tasks/server-configs", "GET")]
+        [RavenAction("/studio-tasks/server-configs", "GET", IgnoreDbRoute = true)]
         public Task Get()
         {
             //TODO: implement
