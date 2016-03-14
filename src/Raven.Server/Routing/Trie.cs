@@ -86,6 +86,17 @@ namespace Raven.Server.Routing
                             Match.CaptureLength = i - Match.CaptureStart;
                             i--;
                         }
+                        else
+                        {
+                            maybe = current.Children['$'];
+                            if (maybe != null)
+                            {
+                                CurrentIndex = 0;
+                                Match.MatchLength = i;
+                                Value = maybe.Value;
+                                return maybe;
+                            }
+                        }
                     }
                     current = maybe;
                     CurrentIndex = 1;

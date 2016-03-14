@@ -3,8 +3,6 @@ using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 
-using Sparrow.Collections;
-
 namespace Raven.Server.Documents
 {
     public class DocumentsNotifications
@@ -13,19 +11,19 @@ namespace Raven.Server.Documents
 
         public event Action<DocumentChangeNotification> OnDocumentChange;
 
-        public void RaiseNotifications(Notification notification)
+        public event Action<IndexChangeNotification> OnIndexChange;
+
+        public void RaiseNotifications(IndexChangeNotification indexChangeNotification)
         {
-            var documentChangeNotification = notification as DocumentChangeNotification;
-            if (documentChangeNotification != null)
-            {
-                foreach (var connection in Connections)
-                    connection.Value.SendDocumentChanges(documentChangeNotification);
+            OnIndexChange?.Invoke(indexChangeNotification);
+        }
 
-                OnDocumentChange?.Invoke(documentChangeNotification);
-                return;
-            }
+        public void RaiseNotifications(DocumentChangeNotification documentChangeNotification)
+        {
+            OnDocumentChange?.Invoke(documentChangeNotification);
 
-            throw new NotSupportedException();
+            foreach (var connection in Connections)
+                connection.Value.SendDocumentChanges(documentChangeNotification);
         }
 
         public void Connect(NotificationsClientConnection connection)

@@ -1,18 +1,31 @@
-﻿using System.Linq;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Document;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Queries
 {
+    [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class BasicDynamicQueriesTests : RavenTestBase
     {
         [Fact]
-        public async Task Dynamic_query_with_simple_where_clause()
+        public async Task String_where_clause()
         {
-            using (var store = await GetDocumentStore())
+            DocumentStore store =null;
+            try
             {
+                store = await GetDocumentStore();
+            }
+            catch (Exception ee)
+            {
+                Console.WriteLine(ee.Message);
+            }
+            //using (store)
+            //{
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Fitzchak" });
@@ -23,7 +36,30 @@ namespace FastTests.Server.Queries
                 
                 using (var session = store.OpenSession())
                 {
-                    var users = session.Query<User>().Where(x => x.Name == "Arek").ToList();
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name == "Arek").ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("Arek", users[0].Name);
+                }
+            //}
+        }
+
+        [Fact]
+        public async Task Numeric_range_where_clause()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak", Age = 40 });
+                    await session.StoreAsync(new User { Name = "Arek", Age = 50 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age > 40).ToList();
 
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Arek", users[0].Name);
@@ -32,7 +68,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_simple_where_clause_and_sorting()
+        public async Task Where_clause_and_sorting()
         {
             using (var store = await GetDocumentStore())
             {
@@ -66,7 +102,7 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_sorting_by_doubles()
+        public async Task Sorting_by_doubles()
         {
             using (var store = await GetDocumentStore())
             {
@@ -92,7 +128,33 @@ namespace FastTests.Server.Queries
         }
 
         [Fact]
-        public async Task Dynamic_query_with_sorting_by_strings()
+        public async Task Sorting_by_integers()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Camera { Zoom = 5 }, "cameras/1");
+                    await session.StoreAsync(new Camera { Zoom = 10 }, "cameras/2");
+                    await session.StoreAsync(new Camera { Zoom = 40 }, "cameras/3");
+                    await session.StoreAsync(new Camera { Zoom = 15 }, "cameras/4");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var cameras = session.Query<Camera>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Zoom).ToList();
+
+                    Assert.Equal("cameras/1", cameras[0].Id);
+                    Assert.Equal("cameras/2", cameras[1].Id);
+                    Assert.Equal("cameras/4", cameras[2].Id);
+                    Assert.Equal("cameras/3", cameras[3].Id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Sorting_by_strings()
         {
             using (var store = await GetDocumentStore())
             {
@@ -118,6 +180,78 @@ namespace FastTests.Server.Queries
                     Assert.Equal("users/3", users[0].Id);
                     Assert.Equal("users/1", users[1].Id);
                     Assert.Equal("users/2", users[2].Id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Partial_match()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "David", Age = 31}, "users/1");
+                    await session.StoreAsync(new User { Name = "Adam", Age = 12}, "users/2");
+                    await session.StoreAsync(new User { Name = "John", Age = 24}, "users/3");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Name).ToList();
+
+                    Assert.Equal("users/2", users[0].Id);
+                    Assert.Equal("users/1", users[1].Id);
+                    Assert.Equal("users/3", users[2].Id);
+
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age > 20).ToList();
+
+                    Assert.Equal(2, users.Count);
+                    Assert.Equal("users/1", users[0].Id);
+                    Assert.Equal("users/3", users[1].Id);
+
+                    // TODO arek - get indexes and check that there are two indexes
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Empty_query()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "David", Age = 31 }, "users/1");
+                    await session.StoreAsync(new User { Name = "Adam", Age = 12 }, "users/2");
+                    await session.StoreAsync(new User { Name = "John", Age = 24 }, "users/3");
+                    await session.StoreAsync(new User { Name = "James", Age = 24 }, "users/4");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList();
+
+                    Assert.Equal(4, users.Count);
+                    Assert.Equal("users/1", users[0].Id);
+                    Assert.Equal("users/2", users[1].Id);
+                    Assert.Equal("users/3", users[2].Id);
+                    Assert.Equal("users/4", users[3].Id);
+
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Skip(1).Take(2).ToList();
+
+                    Assert.Equal(2, users.Count);
+                    Assert.Equal("users/2", users[0].Id);
+                    Assert.Equal("users/3", users[1].Id);
+
+                    users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Skip(3).Take(10).ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("users/4", users[0].Id);
                 }
             }
         }

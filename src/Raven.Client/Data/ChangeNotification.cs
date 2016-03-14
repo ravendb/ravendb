@@ -70,9 +70,7 @@ namespace Raven.Abstractions.Data
     {
         None = 0,
 
-        MapCompleted = 1,
-        ReduceCompleted = 2,
-        RemoveFromIndex = 4,
+        BatchCompleted = 1,
 
         IndexAdded = 8,
         IndexRemoved = 16,

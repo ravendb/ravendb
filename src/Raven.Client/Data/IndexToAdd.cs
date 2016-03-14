@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 
 namespace Raven.Abstractions.Data
 {

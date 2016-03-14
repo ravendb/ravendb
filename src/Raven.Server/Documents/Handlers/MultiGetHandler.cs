@@ -34,7 +34,6 @@ namespace Raven.Server.Documents.Handlers
                     var statusProperty = context.GetLazyStringForFieldWithCaching("Status");
                     var headersProperty = context.GetLazyStringForFieldWithCaching("Headers");
 
-
                     HttpContext.Response.StatusCode = 200;
 
                     for (int i = 0; i < requests.Length; i++)

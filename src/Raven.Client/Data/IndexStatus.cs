@@ -1,14 +1,14 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="IndexingStatus.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="IndexStatus.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 namespace Raven.Abstractions.Data
 {
-    public class IndexingStatus
+    public class IndexStatus
     {
-        public string MappingStatus { get; set; }
+        public string Name { get; set; }
 
-        public string ReducingStatus { get; set; }
+        public string Status { get; set; }
     }
 }

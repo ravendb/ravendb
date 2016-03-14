@@ -10,6 +10,7 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 
 using Raven.Abstractions.Data;
+using Raven.Database.Indexing;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parse;
 
@@ -31,6 +32,9 @@ namespace Raven.Server.Documents.Queries
         static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
         static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
 
+        public static bool UseLuceneASTParser { get { return useLuceneASTParser; } set { useLuceneASTParser = value; } }
+        private static bool useLuceneASTParser = true;
+
         /* The reason that we use @emptyIn<PermittedUsers>:(no-results)
          * instead of using @in<PermittedUsers>:()
          * is that lucene does not access an empty () as a valid syntax.
@@ -51,6 +55,28 @@ namespace Raven.Server.Documents.Queries
             var originalQuery = query;
             try
             {
+                if (UseLuceneASTParser)
+                {
+                    try
+                    {
+                        var parser = new LuceneQueryParser();
+                        parser.Parse(query);
+                        var res = parser.LuceneAST.ToQuery(
+                            new LuceneASTQueryConfiguration
+                            {
+                                Analayzer = analyzer,
+                                DefaultOperator = indexQuery.DefaultOperator,
+                                FieldName = indexQuery.DefaultField ?? string.Empty
+                            });
+                        // The parser should throw ParseException in this case.
+                        if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");
+                        return res;
+                    }
+                    catch (ParseException pe)
+                    {
+                        throw new ParseException("Could not parse: '" + query + "'", pe);
+                    }
+                }
                 var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
                 {
                     DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or

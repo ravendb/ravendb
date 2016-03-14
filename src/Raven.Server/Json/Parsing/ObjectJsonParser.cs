@@ -31,8 +31,6 @@ namespace Raven.Server.Json.Parsing
             _source = source;
         }
 
-
-
         public void Remove(string property)
         {
             if (_source == null)
@@ -241,7 +239,7 @@ namespace Raven.Server.Json.Parsing
                 {
                     _state.StringBuffer = lsv.Buffer;
                     _state.StringSize = lsv.Size;
-                    _state.CompressedSize = -1;// don't even try
+                    _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.String;
                     ReadEscapePositions(lsv.Buffer, lsv.Size);
                     return;

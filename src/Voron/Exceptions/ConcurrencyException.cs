@@ -8,5 +8,15 @@ namespace Voron.Exceptions
             : base(message)
         {
         }
+
+        /// <summary>
+        /// Expected Etag.
+        /// </summary>
+        public long ExpectedETag { get; set; }
+
+        /// <summary>
+        /// Actual Etag.
+        /// </summary>
+        public long ActualETag { get; set; }
     }
 }

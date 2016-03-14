@@ -15,11 +15,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private readonly IndexStore _indexStore;
         private readonly DocumentsOperationContext _context;
+        private readonly DocumentsStorage _documents;
 
-        public DynamicQueryRunner(IndexStore indexStore, DocumentsOperationContext context)
+        public DynamicQueryRunner(IndexStore indexStore, DocumentsStorage documents, DocumentsOperationContext context)
         {
             _indexStore = indexStore;
             _context = context;
+            _documents = documents;
         }
 
         public DocumentQueryResult Execute(string dynamicIndexName, IndexQuery query)
@@ -28,6 +30,29 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var map = DynamicQueryMapping.Create(collection, query);
 
+            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0)
+            {
+                // we optimize for empty queries without sorting options
+                var result = new DocumentQueryResult
+                {
+                    IndexName = collection,
+                    IsStale = false
+                };
+
+                _context.OpenReadTransaction();
+
+                var collectionStats = _documents.GetCollection(collection, _context);
+
+                result.TotalResults = (int) collectionStats.Count;
+
+                foreach (var document in _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize))
+                {
+                    result.Results.Add(document);
+                }
+
+                return result;
+            }
+            
             bool newAutoIndex = false;
 
             Index index;
@@ -38,31 +63,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(autoIndexDef);
                 index = _indexStore.GetIndex(id);
 
-                index.Execute(); // TODO arek
-
                 newAutoIndex = true;
             }
 
-            //TODO arek
-            //string realQuery = map.Items.Aggregate(query.Query, (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
-
-            //UpdateFieldNamesForSortedFields(query, map);
-
-            // We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
-            //UpdateFieldsInArray(map, query.FieldsToFetch);
+            query = EnsureValidQuery(query, map);
 
             return ExecuteActualQuery(index, query, newAutoIndex);
-        }
-
-        private static void UpdateFieldNamesForSortedFields(IndexQuery query, DynamicQueryMapping map)
-        {
-            if (query.SortedFields == null) return;
-            foreach (var sortedField in query.SortedFields)
-            {
-                var item = map.MapFields.FirstOrDefault(x => x.From == sortedField.Field);
-                if (item != null)
-                    sortedField.Field = item.To;
-            }
         }
 
         private DocumentQueryResult ExecuteActualQuery(Index index, IndexQuery query, bool newAutoIndex)
@@ -82,59 +88,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return result;
                 }
 
-                _context.Reset(); // dispose already open read transactions - TODO arek
+                _context.Reset(); // dispose already open read transactions
                 Thread.Sleep(100);
             }
-        }
-
-        private static IndexQuery CreateIndexQuery(IndexQuery query, DynamicQueryMapping map, string realQuery)
-        {
-            var indexQuery = new IndexQuery
-            {
-                Cutoff = query.Cutoff,
-                WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow,
-                PageSize = query.PageSize,
-                Query = realQuery,
-                Start = query.Start,
-                FieldsToFetch = query.FieldsToFetch,
-                IsDistinct = query.IsDistinct,
-                SortedFields = query.SortedFields,
-                DefaultField = query.DefaultField,
-                CutoffEtag = query.CutoffEtag,
-                DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
-                DefaultOperator = query.DefaultOperator,
-                SkippedResults = query.SkippedResults,
-                HighlighterPreTags = query.HighlighterPreTags,
-                HighlighterPostTags = query.HighlighterPostTags,
-                HighlightedFields = query.HighlightedFields,
-                HighlighterKeyName = query.HighlighterKeyName,
-                ResultsTransformer = query.ResultsTransformer,
-                TransformerParameters = query.TransformerParameters,
-                ExplainScores = query.ExplainScores,
-                SortHints = query.SortHints
-            };
-            if (indexQuery.SortedFields == null)
-                return indexQuery;
-
-            for (int index = 0; index < indexQuery.SortedFields.Length; index++)
-            {
-                var sortedField = indexQuery.SortedFields[index];
-                var fieldName = sortedField.Field;
-                bool hasRange = false;
-                if (fieldName.EndsWith("_Range"))
-                {
-                    fieldName = fieldName.Substring(0, fieldName.Length - "_Range".Length);
-                    hasRange = true;
-                }
-
-                var item = map.MapFields.FirstOrDefault(x => string.Equals(x.QueryFrom, fieldName, StringComparison.OrdinalIgnoreCase));
-                if (item == null)
-                    continue;
-
-                indexQuery.SortedFields[index] = new SortedField(hasRange ? item.To + "_Range" : item.To);
-                indexQuery.SortedFields[index].Descending = sortedField.Descending;
-            }
-            return indexQuery;
         }
 
         private bool TryMatchExistingIndexToQuery(DynamicQueryMapping map, out Index index)
@@ -154,16 +110,25 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // We need to clone that other index 
                     // We need to add all our requested indexes information to our cloned index
                     // We can then use our new index instead
-                    
-                    throw new NotSupportedException("TODO arek");
-                    //var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(matchResult.IndexName);
-                    //map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
+
+                    var currentIndex = _indexStore.GetIndex(matchResult.IndexName);
+                    map.ExtendMappingBasedOn(currentIndex.Definition);
 
                     break;
             }
 
             index = null;
             return false;
+        }
+
+        private static IndexQuery EnsureValidQuery(IndexQuery query, DynamicQueryMapping map)
+        {
+            foreach (var field in map.MapFields)
+            {
+                query.Query = query.Query.Replace(field.Name, IndexField.ReplaceInvalidCharactersInFieldName(field.Name));
+            }
+
+            return query;
         }
     }
 }

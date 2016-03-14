@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -64,6 +65,10 @@ namespace Raven.Server.Web.System
                 RouteMatch.Url.Length - RouteMatch.MatchLength);
 
             var ravenPath = $"~/../../Raven.Studio/wwwroot/{filename}";
+
+#if DEBUG
+            ravenPath = Path.GetFullPath(ravenPath).Replace($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}", $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}");
+#endif
 
             if (File.Exists(ravenPath))
             {

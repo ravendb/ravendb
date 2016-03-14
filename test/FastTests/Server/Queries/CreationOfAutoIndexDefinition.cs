@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
@@ -144,11 +143,6 @@ namespace FastTests.Server.Queries
                 {
                     new SortedField("Age_Range"), 
                 },
-                SortHints = new Dictionary<string, SortOptions>()
-                {
-                    { "SortHint-Name", SortOptions.String },
-                    { "SortHint-Age", SortOptions.Int }
-                }
             });
 
             var definition = _sut.CreateAutoIndexDefinition();
@@ -157,11 +151,115 @@ namespace FastTests.Server.Queries
             Assert.Equal("Users", definition.Collections[0]);
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Age"));
-            Assert.Equal("Auto/Users/ByAgeAndNameSortByAgeName", definition.Name);
+            Assert.Equal("Auto/Users/ByAgeAndNameSortByAge", definition.Name);
             var nameField = definition.GetField("Name");
-            Assert.Equal(SortOptions.String, nameField.SortOption);
+            Assert.Null(nameField.SortOption);
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.Int, ageField.SortOption);
+            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+        }
+
+        [Fact]
+        public void CreateDefinitionForQueryWithRangeField()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "Age_Range:{Lx30 TO NULL}"
+            });
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("Age"));
+            Assert.Equal("Auto/Users/ByAgeSortByAge", definition.Name);
+            var nameField = definition.GetField("Age");
+            Assert.Equal(SortOptions.NumericDefault, nameField.SortOption);
+        }
+
+        [Fact]
+        public void ExtendsMappingBasedOnExistingDefinition()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "FirstName:A*",
+                SortedFields = new[]
+                {
+                    new SortedField("Count_Range"),
+                },
+            });
+
+            var existingDefinition = _sut.CreateAutoIndexDefinition();
+
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "LastName:A*",
+                SortedFields = new[]
+                {
+                    new SortedField("Age_Range"),
+                },
+            });
+
+            _sut.ExtendMappingBasedOn(existingDefinition);
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("FirstName"));
+            Assert.True(definition.ContainsField("LastName"));
+            Assert.True(definition.ContainsField("Age"));
+            Assert.True(definition.ContainsField("Count"));
+            Assert.Equal("Auto/Users/ByAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
+
+            var ageField = definition.GetField("Age");
+            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+
+            var countField = definition.GetField("Count");
+            Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
+        }
+
+        [Fact]
+        public void DefinitionExtensionWontDuplicateFields()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "FirstName:A* LastName:a*",
+                SortedFields = new[]
+                {
+                    new SortedField("Count_Range"),
+                },
+            });
+
+            var existingDefinition = _sut.CreateAutoIndexDefinition();
+
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "FirstName:A* AddressId:addresses/1",
+                SortedFields = new[]
+                {
+                    new SortedField("Age_Range"),
+                    new SortedField("Count_Range")
+                },
+            });
+
+            _sut.ExtendMappingBasedOn(existingDefinition);
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("FirstName"));
+            Assert.True(definition.ContainsField("LastName"));
+            Assert.True(definition.ContainsField("AddressId"));
+            Assert.True(definition.ContainsField("Age"));
+            Assert.True(definition.ContainsField("Count"));
+            Assert.Equal("Auto/Users/ByAddressIdAndAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
+
+            var ageField = definition.GetField("Age");
+            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+
+            var countField = definition.GetField("Count");
+            Assert.Equal(SortOptions.NumericDefault, countField.SortOption);
         }
 
         private void create_dynamic_mapping_for_users_collection(string query)

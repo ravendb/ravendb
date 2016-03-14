@@ -8,7 +8,6 @@ using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Web
 {
@@ -53,8 +52,8 @@ namespace Raven.Server.Web
         {
             var requestBodyStream = HttpContext.Request.Body;
 
-            if(IsGzipRequest()==false)
-                return  requestBodyStream;
+            if (IsGzipRequest() == false)
+                return requestBodyStream;
 
             var gZipStream = new GZipStream(requestBodyStream, CompressionMode.Decompress);
             HttpContext.Response.RegisterForDispose(gZipStream);
@@ -112,8 +111,8 @@ namespace Raven.Server.Web
 
             long etag;
             if (long.TryParse(etags[0], out etag) == false)
-                    throw new ArgumentException(
-                        "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
+                throw new ArgumentException(
+                    "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
             return etag;
         }
 
@@ -137,13 +136,13 @@ namespace Raven.Server.Web
                 throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
             }
 
-                int result;
-                if (int.TryParse(val[0], out result) == false)
-                    throw new ArgumentException(
-                        string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
-                return result;
+            int result;
+            if (int.TryParse(val[0], out result) == false)
+                throw new ArgumentException(
+                    string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+            return result;
         }
-        
+
         protected long GetLongQueryString(string name)
         {
             var val = HttpContext.Request.Query[name];
@@ -222,6 +221,17 @@ namespace Raven.Server.Web
                 return result;
 
             throw new ArgumentException($"Could not parse query string '{name}' as date");
+        }
+
+        protected StringValues GetQueryStringValueAndAssertIfSingleAndNotEmpty(string name)
+        {
+            var values = HttpContext.Request.Query[name];
+            if (values.Count != 1)
+                throw new ArgumentException($"Query string value '{name}' must appear exactly once");
+            if (string.IsNullOrWhiteSpace(values[0]))
+                throw new ArgumentException($"Query string value '{name}' must have a non empty value");
+
+            return values;
         }
     }
 }

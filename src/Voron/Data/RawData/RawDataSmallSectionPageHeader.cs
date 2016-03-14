@@ -9,7 +9,7 @@ using Voron.Data.BTrees;
 namespace Voron.Data.RawData
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public unsafe struct RawDataSmallSectionPageHeader
+    public struct RawDataSmallSectionPageHeader
     {
         [FieldOffset(0)]
         public long PageNumber;
@@ -32,5 +32,7 @@ namespace Voron.Data.RawData
         [FieldOffset(20)]
         public ushort NumberOfPages;
 
+        [FieldOffset(22)]
+        public ulong SectionOwnerHash;
     }
 }

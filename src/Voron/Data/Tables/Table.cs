@@ -409,7 +409,7 @@ namespace Voron.Data.Tables
                     }
                 }
 
-                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction);
+                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name);
                 _tableTree.Add(TableSchema.ActiveSectionSlice, EndianBitConverter.Little.GetBytes(_activeDataSmallSection.PageNumber));
 
                 var allocationResult = _activeDataSmallSection.TryAllocate(size, out id);

@@ -5,8 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Queries;
@@ -31,17 +35,36 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : IDisposable
     {
-        private static readonly string EtagsMap = "Etags.Map";
+        private class Schema
+        {
+            public static readonly string StatsTree = "Stats";
 
-        private static readonly string EtagsTombstone = "Etags.Tombstone";
+            public static readonly string EtagsMapTree = "Etags.Map";
 
-        private static readonly Slice TypeSlice = "Type";
+            public static readonly string EtagsTombstoneTree = "Etags.Tombstone";
+
+            public static readonly Slice TypeSlice = "Type";
+
+            public static readonly Slice CreatedTimestampSlice = "CreatedTimestamp";
+
+            public static readonly Slice IndexingAttemptsSlice = "IndexingAttempts";
+
+            public static readonly Slice IndexingSuccessesSlice = "IndexingSuccesses";
+
+            public static readonly Slice IndexingErrorsSlice = "IndexingErrors";
+
+            public static readonly Slice LastIndexingTimeSlice = "LastIndexingTime";
+
+            public static readonly Slice PrioritySlice = "Priority";
+        }
+
+        protected readonly ILog Log = LogManager.GetLogger(typeof(Index));
 
         protected readonly LuceneIndexPersistence IndexPersistence;
 
         private readonly object _locker = new object();
 
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private CancellationTokenSource _cancellationTokenSource;
 
         protected DocumentDatabase DocumentDatabase;
 
@@ -58,6 +81,8 @@ namespace Raven.Server.Documents.Indexes
         private bool _disposed;
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
+
+        private DateTime? lastQueryingTime; // TODO [ppekrol] do we need to persist this?
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -81,8 +106,8 @@ namespace Raven.Server.Documents.Indexes
                 var environment = new StorageEnvironment(options);
                 using (var tx = environment.ReadTransaction())
                 {
-                    var statsTree = tx.ReadTree("Stats");
-                    var result = statsTree.Read(TypeSlice);
+                    var statsTree = tx.ReadTree(Schema.StatsTree);
+                    var result = statsTree.Read(Schema.TypeSlice);
                     if (result == null)
                         throw new InvalidOperationException($"Stats tree does not contain 'Type' entry in index '{indexId}'.");
 
@@ -90,7 +115,7 @@ namespace Raven.Server.Documents.Indexes
 
                     switch (type)
                     {
-                        case IndexType.Auto:
+                        case IndexType.AutoMap:
                             return AutoMapIndex.Open(indexId, environment, documentDatabase);
                         default:
                             throw new NotImplementedException();
@@ -108,11 +133,13 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexType Type { get; }
 
+        public IndexingPriority Priority { get; private set; }
+
         public IndexDefinitionBase Definition { get; }
 
         public string Name => Definition?.Name;
 
-        public bool ShouldRun { get; private set; } = true;
+        public bool IsRunning => _indexingThread != null;
 
         protected void Initialize(DocumentDatabase documentDatabase)
         {
@@ -164,11 +191,23 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var typeInt = (int)Type;
 
-                        var statsTree = tx.InnerTransaction.CreateTree("Stats");
-                        statsTree.Add(TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
+                        var statsTree = tx.InnerTransaction.CreateTree(Schema.StatsTree);
+                        statsTree.Add(Schema.TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
 
-                        tx.InnerTransaction.CreateTree(EtagsMap);
-                        tx.InnerTransaction.CreateTree(EtagsTombstone);
+                        if (statsTree.ReadVersion(Schema.CreatedTimestampSlice) == 0)
+                        {
+                            var binaryDate = SystemTime.UtcNow.ToBinary();
+                            statsTree.Add(Schema.CreatedTimestampSlice, new Slice((byte*)&binaryDate, sizeof(long)));
+                        }
+
+                        var priority = statsTree.Read(Schema.PrioritySlice);
+                        if (priority == null)
+                            Priority = IndexingPriority.Normal;
+                        else
+                            Priority = (IndexingPriority)priority.Reader.ReadLittleEndianInt32();
+
+                        tx.InnerTransaction.CreateTree(Schema.EtagsMapTree);
+                        tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
 
                         Definition.Persist(context);
 
@@ -187,7 +226,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Execute()
+        public void Start()
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -200,6 +239,11 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread != null)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' is executing.");
 
+                if (DocumentDatabase.Configuration.Indexing.Disabled)
+                    return;
+
+                _cancellationTokenSource = new CancellationTokenSource();
+
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
                     Name = "Indexing of " + Name,
@@ -210,16 +254,37 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void Stop()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (_initialized == false)
+                throw new InvalidOperationException($"Index '{Name} ({IndexId})' was not initialized.");
+
+            lock (_locker)
+            {
+                if (_indexingThread == null)
+                    return;
+
+                _cancellationTokenSource.Cancel();
+
+                var indexingThread = _indexingThread;
+                _indexingThread = null;
+                indexingThread.Join();
+            }
+        }
+
         public void Dispose()
         {
             lock (_locker)
             {
                 if (_disposed)
-                    throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+                    return;
 
                 _disposed = true;
 
-                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource?.Cancel();
 
                 _indexingThread?.Join();
                 _indexingThread = null;
@@ -260,11 +325,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastMappedEtags()
+        internal Dictionary<string, long> GetLastMappedEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -285,7 +349,7 @@ namespace Raven.Server.Documents.Indexes
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
-        internal Dictionary<string, long> GetLastTombstoneEtags()
+        internal Dictionary<string, long> GetLastTombstoneEtagsForDebug()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -305,12 +369,12 @@ namespace Raven.Server.Documents.Indexes
 
         protected long ReadLastTombstoneEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, EtagsTombstone, collection);
+            return ReadLastEtag(tx, Schema.EtagsTombstoneTree, collection);
         }
 
         protected long ReadLastMappedEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, EtagsMap, collection);
+            return ReadLastEtag(tx, Schema.EtagsMapTree, collection);
         }
 
         private static long ReadLastEtag(RavenTransaction tx, string tree, string collection)
@@ -326,12 +390,12 @@ namespace Raven.Server.Documents.Indexes
 
         protected static void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, EtagsTombstone, collection, etag);
+            WriteLastEtag(tx, Schema.EtagsTombstoneTree, collection, etag);
         }
 
         protected static void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, EtagsMap, collection, etag);
+            WriteLastEtag(tx, Schema.EtagsMapTree, collection, etag);
         }
 
         private static unsafe void WriteLastEtag(RavenTransaction tx, string tree, string collection, long etag)
@@ -348,17 +412,23 @@ namespace Raven.Server.Documents.Indexes
                 {
                     DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
 
-                    while (ShouldRun)
+                    while (true)
                     {
+                        _mre.Reset();
+
+                        var startTime = SystemTime.UtcNow;
+                        var stats = new IndexingBatchStats();
                         try
                         {
-                            _mre.Reset();
-
                             cts.Token.ThrowIfCancellationRequested();
 
-                            DoIndexingWork(cts.Token);
+                            DoIndexingWork(stats, cts.Token);
 
-                            _mre.Wait(cts.Token);
+                            DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                            {
+                                Name = Name,
+                                Type = IndexChangeTypes.BatchCompleted
+                            });
                         }
                         catch (OutOfMemoryException oome)
                         {
@@ -376,6 +446,17 @@ namespace Raven.Server.Documents.Indexes
                         {
                             // TODO
                         }
+
+                        UpdateStats(startTime, stats);
+
+                        try
+                        {
+                            _mre.Wait(cts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return;
+                        }
                     }
                 }
                 finally
@@ -385,9 +466,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract void DoIndexingWork(CancellationToken cancellationToken);
-
-
+        public abstract void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken);
 
         private void HandleDocumentChange(DocumentChangeNotification notification)
         {
@@ -397,14 +476,138 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
-       
-        public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext context, CancellationToken token)
+        internal unsafe void UpdateStats(DateTime indexingTime, IndexingBatchStats stats)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+
+                statsTree.Increment(Schema.IndexingAttemptsSlice, stats.IndexingAttempts);
+                statsTree.Increment(Schema.IndexingSuccessesSlice, stats.IndexingSuccesses);
+                statsTree.Increment(Schema.IndexingErrorsSlice, stats.IndexingErrors);
+
+                var binaryDate = indexingTime.ToBinary();
+                statsTree.Add(Schema.LastIndexingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
+
+                tx.Commit();
+            }
+        }
+
+        public unsafe void SetPriority(IndexingPriority priority)
+        {
+            if (Priority == priority)
+                return;
+
+            lock (_locker)
+            {
+                if (Priority == priority)
+                    return;
+
+                TransactionOperationContext context;
+                using (_contextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+                    var priorityInt = (int)priority;
+                    statsTree.Add(Schema.PrioritySlice, new Slice((byte*)&priorityInt, sizeof(int)));
+
+                    tx.Commit();
+                }
+
+                Priority = priority;
+            }
+        }
+
+        public void SetLock(IndexLockMode mode)
+        {
+            if (Definition.LockMode == mode)
+                return;
+
+            lock (_locker)
+            {
+                if (Definition.LockMode == mode)
+                    return;
+
+                TransactionOperationContext context;
+                using (_contextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var oldLockMode = Definition.LockMode;
+                    try
+                    {
+                        Definition.LockMode = mode;
+                        Definition.Persist(context);
+
+                        tx.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        Definition.LockMode = oldLockMode;
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public IndexStats GetStats()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+            {
+                var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+
+                var stats = new IndexStats();
+                stats.Id = IndexId;
+                stats.Name = Name;
+                stats.Type = Type;
+                stats.ForCollections = Collections.ToArray();
+                stats.EntriesCount = reader.EntriesCount();
+                stats.IsInMemory = _environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions;
+                stats.CreatedTimestamp = DateTime.FromBinary(statsTree.Read(Schema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
+                stats.LockMode = Definition.LockMode;
+                stats.Priority = Priority;
+
+                var lastIndexingTime = statsTree.Read(Schema.LastIndexingTimeSlice);
+                if (lastIndexingTime != null)
+                {
+                    stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
+                    stats.IndexingAttempts = statsTree.Read(Schema.IndexingAttemptsSlice).Reader.ReadLittleEndianInt32();
+                    stats.IndexingErrors = statsTree.Read(Schema.IndexingErrorsSlice).Reader.ReadLittleEndianInt32();
+                    stats.IndexingSuccesses = statsTree.Read(Schema.IndexingAttemptsSlice).Reader.ReadLittleEndianInt32();
+
+                    stats.LastIndexedEtags = new Dictionary<string, long>();
+                    foreach (var collection in Collections)
+                        stats.LastIndexedEtags[collection] = ReadLastMappedEtag(tx, collection);
+                }
+
+                stats.LastQueryingTime = lastQueryingTime;
+
+                return stats;
+            }
+        }
+
+        private void MarkQueried(DateTime time)
+        {
+            if (lastQueryingTime != null &&
+                lastQueryingTime.Value >= time)
+                return;
+
+            lastQueryingTime = time;
+        }
+
+        public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext documentsContext, CancellationToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
 
+            MarkQueried(SystemTime.UtcNow);
+
             TransactionOperationContext indexContext;
-            var result = new DocumentQueryResult()
+            var result = new DocumentQueryResult
             {
                 IndexName = Name
             };
@@ -413,7 +616,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (var tx = indexContext.OpenReadTransaction())
                 {
-                    result.IsStale = IsStale(context, indexContext); 
+                    result.IsStale = IsStale(documentsContext, indexContext);
 
                     Reference<int> totalResults = new Reference<int>();
                     List<string> documentIds;
@@ -425,11 +628,11 @@ namespace Raven.Server.Documents.Indexes
 
                     result.TotalResults = totalResults.Value;
 
-                    context.OpenReadTransaction();
+                    documentsContext.OpenReadTransaction();
 
                     foreach (var id in documentIds)
                     {
-                        var document = DocumentDatabase.DocumentsStorage.Get(context, id);
+                        var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
 
                         result.Results.Add(document);
                     }

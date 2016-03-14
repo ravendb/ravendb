@@ -6,6 +6,8 @@
 using System;
 using System.Collections.Generic;
 
+using Raven.Client.Data.Indexes;
+
 namespace Raven.Abstractions.Data
 {
     public class DatabaseStatistics

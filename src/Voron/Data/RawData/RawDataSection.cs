@@ -60,8 +60,14 @@ namespace Voron.Data.RawData
                 var pageHeaderForId = PageHeaderFor(pageNumberInSection);
 
                 // this is in another section, cannot free it directly, so we'll forward to the right section
-                var sectionPageNumber = pageHeaderForId->PageNumber - pageHeaderForId->PageNumberInSection;
-                return new RawDataSection(_tx, sectionPageNumber).GetAllIdsInSectionContaining(id);
+                var sectionPageNumber = pageHeaderForId->PageNumber - pageHeaderForId->PageNumberInSection - 1;
+                var actualSection = new RawDataSection(_tx, sectionPageNumber);
+                if (actualSection._sectionHeader->SectionOwnerHash != _sectionHeader->SectionOwnerHash)
+                {
+                    throw new InvalidDataException(
+                        $"Cannot get all ids in section containing {id} because the raw data section starting in {sectionPageNumber} belongs to a different owner");
+                }
+                return actualSection.GetAllIdsInSectionContaining(id);
             }
 
             var ids = new List<long>(_sectionHeader->NumberOfEntries);
@@ -186,7 +192,7 @@ namespace Voron.Data.RawData
             var posInPage = (int)(id % _pageSize);
             var pageNumberInSection = (id - posInPage) / _pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
-            var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection;
+            var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
             return sectionPageNumber;
         }
 
@@ -196,7 +202,13 @@ namespace Voron.Data.RawData
             if (sectionPageNumber != _sectionHeader->PageNumber)
             {
                 // this is in another section, cannot delete it directly, so we'll forward to the right section
-                new RawDataSection(_tx, sectionPageNumber).DeleteSection(sectionPageNumber);
+                var actualSection = new RawDataSection(_tx, sectionPageNumber);
+                if (actualSection._sectionHeader->SectionOwnerHash != _sectionHeader->SectionOwnerHash)
+                {
+                    throw new InvalidDataException(
+                        $"Cannot delete section because the raw data section starting in {sectionPageNumber} belongs to a different owner");
+                }
+                actualSection.DeleteSection(sectionPageNumber);
                 return;
             }
 
@@ -216,10 +228,17 @@ namespace Voron.Data.RawData
             if (Contains(id) == false)
             {
                 // this is in another section, cannot free it directly, so we'll forward to the right section
-                var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection;
+                var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
                 var actualSection = new RawDataSection(_tx, sectionPageNumber);
-                if(actualSection.Contains(id)==false)
+                if (actualSection.Contains(id) == false)
                     throw new InvalidDataException($"Cannot delete {id} because the raw data section starting in {sectionPageNumber} with size {actualSection.AllocatedSize} doesn't own it. Possible data corruption?");
+
+                if (actualSection._sectionHeader->SectionOwnerHash != _sectionHeader->SectionOwnerHash)
+                {
+                    throw new InvalidDataException(
+                        $"Cannot delete {id} because the raw data section starting in {sectionPageNumber} belongs to a different owner");
+                }
+
                 return actualSection.Free(id);
             }
 

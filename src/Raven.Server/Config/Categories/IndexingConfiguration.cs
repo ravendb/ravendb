@@ -22,6 +22,10 @@ namespace Raven.Server.Config.Categories
 
         public bool RunInMemory => _runInMemory();
 
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/Indexing/Disable")]
+        public bool Disabled { get; set; }
+
         [Description("The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/IndexStoragePath")]

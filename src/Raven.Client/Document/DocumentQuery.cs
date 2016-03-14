@@ -96,7 +96,6 @@ namespace Raven.Client.Document
                 queryStats = queryStats,
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
                 theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
-                sortByHints = sortByHints,
                 orderByFields = orderByFields,
                 isDistinct = isDistinct,
                 allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
@@ -191,7 +190,6 @@ namespace Raven.Client.Document
                 queryStats = queryStats,
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
                 theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
-                sortByHints = sortByHints,
                 orderByFields = orderByFields,
                 isDistinct = isDistinct,
                 allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
@@ -885,12 +883,7 @@ namespace Raven.Client.Document
         {
             var orderByfields = propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray();
             OrderBy(orderByfields);
-            for (int index = 0; index < orderByfields.Length; index++)
-            {
-                var fld = orderByfields[index];
-                if (theSession != null)
-                    sortByHints.Add(new KeyValuePair<string, SortOptions?>(fld, theSession.Conventions.GetDefaultSortOption(propertySelectors[index].ReturnType)));
-            }
+
             return this;
         }
 
@@ -916,12 +909,7 @@ namespace Raven.Client.Document
         {
             var orderByfields = propertySelectors.Select(expression => MakeFieldSortDescending(GetMemberQueryPathForOrderBy(expression))).ToArray();
             OrderByDescending(orderByfields);
-            for (int index = 0; index < orderByfields.Length; index++)
-            {
-                var fld = orderByfields[index];
-                if (theSession != null)
-                    sortByHints.Add(new KeyValuePair<string, SortOptions?>(fld, theSession.Conventions.GetDefaultSortOption(propertySelectors[index].ReturnType)));
-            }
+            
             return this;
         }
 

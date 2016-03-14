@@ -13,6 +13,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;

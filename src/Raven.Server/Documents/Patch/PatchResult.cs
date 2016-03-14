@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 
@@ -60,5 +61,7 @@ namespace Raven.Server.Documents.Patch
         /// Additional debugging information (if requested).
         /// </summary>
         public DynamicJsonValue DebugActions { get; set; }
+
+        public DynamicJsonArray DebugInfo { get; set; }
     }
 }

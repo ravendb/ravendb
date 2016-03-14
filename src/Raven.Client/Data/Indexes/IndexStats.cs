@@ -3,15 +3,16 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using  Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data.Indexes
 {
     public class IndexStats
     {
@@ -43,54 +44,17 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// This value represents etag of last document indexed (using map) by this index.
         /// </summary>
-        public long? LastIndexedEtag { get; set; }
-
-        /// <summary>
-        /// Shows the difference between last document etag available in database and last indexed etag.
-        /// </summary>
-        public int? IndexingLag { get; set; }
-
-        /// <summary>
-        /// Time of last indexing for this index.
-        /// </summary>
-        public DateTime LastIndexedTimestamp { get; set; }
+        public Dictionary<string, long> LastIndexedEtags { get; set; }
 
         /// <summary>
         /// Time of last query for this index.
         /// </summary>
-        public DateTime? LastQueryTimestamp { get; set; }
-
-        public int TouchCount { get; set; }
+        public DateTime? LastQueryingTime { get; set; }
 
         /// <summary>
         /// Index priority (Normal, Disabled, Idle, Abandoned, Error)
         /// </summary>
         public IndexingPriority Priority { get; set; }
-
-        /// <summary>
-        /// Indicates how many times database tried to index documents (reduce) using this index.
-        /// </summary>
-        public int? ReduceIndexingAttempts { get; set; }
-
-        /// <summary>
-        /// Indicates how many reducing attempts succeeded.
-        /// </summary>
-        public int? ReduceIndexingSuccesses { get; set; }
-
-        /// <summary>
-        /// Indicates how many reducing attempts failed.
-        /// </summary>
-        public int? ReduceIndexingErrors { get; set; }
-
-        /// <summary>
-        /// This value represents etag of last document indexed (using reduce) by this index.
-        /// </summary>
-        public long? LastReducedEtag { get; set; }
-
-        /// <summary>
-        /// Time of last reduce for this index.
-        /// </summary>
-        public DateTime? LastReducedTimestamp { get; set; }
 
         /// <summary>
         /// Date of index creation.
@@ -100,12 +64,12 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Time of last indexing (map or reduce) for this index.
         /// </summary>
-        public DateTime LastIndexingTime { get; set; }
+        public DateTime? LastIndexingTime { get; set; }
 
         /// <summary>
         /// Indicates if index is in-memory only.
         /// </summary>
-        public string IsOnRam { get; set; }
+        public bool IsInMemory { get; set; }
 
         /// <summary>
         /// Indicates current lock mode:
@@ -116,19 +80,19 @@ namespace Raven.Abstractions.Data
         public IndexLockMode LockMode { get; set; }
 
         /// <summary>
-        /// Indicates if it is a MapReduce index.
+        /// Indicates index type.
         /// </summary>
-        public bool IsMapReduce { get; set; }
+        public IndexType Type { get; set; }
 
         /// <summary>
-        /// List of all entity names (collections) for which this index is working.
+        /// List of all collections for which this index is working.
         /// </summary>
-        public string[] ForEntityName { get; set; } 
+        public string[] ForCollections { get; set; }
 
         /// <summary>
         /// Total number of entries in this index.
         /// </summary>
-        public int DocsCount { get; set; }
+        public int EntriesCount { get; set; }
 
         /// <summary>
         /// Indicates if this is a test index (works on a limited data set - for testing purposes only)
@@ -138,26 +102,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Determines if index is invalid. If more thant 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
         /// </summary>
-        public bool IsInvalidIndex
-        {
-            get
-            {
-                return IndexFailureInformation.CheckIndexInvalid(IndexingAttempts, IndexingErrors, ReduceIndexingAttempts, ReduceIndexingErrors);
-            }
-        }
-
-        public override string ToString()
-        {
-            return Id.ToString(CultureInfo.InvariantCulture);
-        }
-
-        public void SetLastDocumentEtag(long? lastDocEtag)
-        {
-            if (lastDocEtag == null)
-                return;
-
-            IndexingLag = (int) (lastDocEtag - LastIndexedEtag);
-        }
+        public bool IsInvalidIndex => IndexFailureInformation.CheckIndexInvalid(IndexingAttempts, IndexingErrors);
     }
 
     [Flags]
@@ -166,11 +111,11 @@ namespace Raven.Abstractions.Data
         None = 0,
 
         Normal = 1,
-        
+
         Disabled = 2,
-        
+
         Idle = 4,
-        
+
         Abandoned = 8,
 
         Error = 16,
@@ -180,7 +125,7 @@ namespace Raven.Abstractions.Data
 
     public enum IndexingOperation
     {
-// ReSharper disable InconsistentNaming
+        // ReSharper disable InconsistentNaming
         LoadDocument,
 
         Linq_MapExecution,
@@ -208,7 +153,7 @@ namespace Raven.Abstractions.Data
         Extension_Suggestions,
 
         StorageCommit,
-// ReSharper restore InconsistentNaming
+        // ReSharper restore InconsistentNaming
     }
 
     public abstract class BasePerformanceStats
@@ -219,7 +164,7 @@ namespace Raven.Abstractions.Data
     public class PerformanceStats : BasePerformanceStats
     {
         public IndexingOperation Name { get; set; }
-        
+
 
         public static PerformanceStats From(IndexingOperation name, long durationMs)
         {
@@ -239,7 +184,7 @@ namespace Raven.Abstractions.Data
         }
         public long NumberOfThreads { get; set; }
 
-        public List<ParallelBatchStats> BatchedOperations { get; set; } 
+        public List<ParallelBatchStats> BatchedOperations { get; set; }
     }
 
     public class ParallelBatchStats
@@ -250,7 +195,7 @@ namespace Raven.Abstractions.Data
             Operations = new List<PerformanceStats>();
         }
         public long StartDelay { get; set; }
-        public List<PerformanceStats> Operations { get; set; } 
+        public List<PerformanceStats> Operations { get; set; }
     }
 
     public class ReducingPerformanceStats
@@ -274,7 +219,7 @@ namespace Raven.Abstractions.Data
         public DateTime Started { get; set; }
         public DateTime Completed { get; set; }
         public TimeSpan Duration { get; set; }
-        public double DurationMs{ get { return Math.Round(Duration.TotalMilliseconds, 2); } }
+        public double DurationMs { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
         [JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
         public List<BasePerformanceStats> Operations { get; set; }
 

@@ -1,39 +1,29 @@
 using System;
-using System.Runtime.Serialization;
 
-namespace Raven.Abstractions.Exceptions
+namespace Raven.Client.Exceptions
 {
-
-    public class InvalidSpatialShapException : Exception
+    public class InvalidSpatialShapeException : Exception
     {
-
-
-        public InvalidSpatialShapException()
+        public InvalidSpatialShapeException()
         {
         }
 
-        public InvalidSpatialShapException(string message)
+        public InvalidSpatialShapeException(string message)
             : base(message)
         {
         }
 
-        public InvalidSpatialShapException(string message, Exception inner)
+        public InvalidSpatialShapeException(string message, Exception inner)
             : base(message, inner)
         {
         }
 
-        private readonly string invalidDocumentId;
-
-        public InvalidSpatialShapException(Exception invalidShapeException, string invalidDocumentId)
+        public InvalidSpatialShapeException(Exception invalidShapeException, string invalidDocumentId)
             : base(invalidShapeException.Message, invalidShapeException)
         {
-            this.invalidDocumentId = invalidDocumentId;
+            InvalidDocumentId = invalidDocumentId;
         }
 
-        public string InvalidDocumentId
-        {
-            get { return invalidDocumentId; }
-        }
-
+        public string InvalidDocumentId { get; }
     }
 }
