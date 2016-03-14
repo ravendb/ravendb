@@ -6,7 +6,7 @@ namespace Raven.Server.Web.Cluster
 {
     public class ClusterTopologyHandler : RequestHandler
     {
-        [RavenAction("/cluster/topology", "GET", IgnoreDbRoute = true)]
+        [RavenAction("/cluster/topology", "GET")]
         public Task Get()
         {
             //TODO: Implement

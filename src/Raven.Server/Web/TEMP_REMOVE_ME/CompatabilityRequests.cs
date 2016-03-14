@@ -33,7 +33,7 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
             return HttpContext.Response.WriteAsync("{'LatestBuild':'4.0.404'}");
         }
 
-        [RavenAction("/license/status", "GET", IgnoreDbRoute = true)]
+        [RavenAction("/license/status", "GET")]
         public Task FakeResponseForLicenseStatus()
         {
             return HttpContext.Response.WriteAsync("{'Status':'AGPL','Error':false,'Attributes':{}, 'Message': 'Hi there'}");

@@ -8,50 +8,74 @@ using System.Threading.Tasks;
 using Lucene.Net.Support;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 
-namespace Raven.Server.Authentication
+namespace Raven.Server.Web.Authentication
 {
     public class OAuthApiKeyHandler : RequestHandler
     {
-        private const string debugTag = "/oauth/api-key";
+        private const string DebugTag = "/oauth/api-key";
         private static readonly ILog Logger = LogManager.GetLogger(typeof(OAuthApiKeyHandler));
         private const int MaxOAuthContentLength = 1500;
         private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
 
-        [RavenAction("/oauth/api-key", "GET", "/oauth/api-key", SkipTryAuthorized = true)]
+        [RavenAction("/oauth/api-key", "GET", "/oauth/api-key", NoAuthorizationRequired = true)]
         public async Task OauthGetApiKey()
         {
             try
             {
                 using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
                 {
-                    MemoryOperationContext context;
-                    using (ServerStore.ContextPool.AllocateOperationContext(out context))
+                    try
                     {
-                        await SendInitialChallenge(webSocket);
+                        MemoryOperationContext context;
+                        using (ServerStore.ContextPool.AllocateOperationContext(out context))
+                        {
+                            await SendInitialChallenge(webSocket);
+                            var accessToken = await ProcessToken(context, webSocket);
+                            if (accessToken == null)
+                            {
+                                await SendError(webSocket, "Unable to authenticate api key");
+                                return;
+                            }
 
-                        var reply = await context.ReadFromWebSocket(webSocket, debugTag, ServerStore.ServerShutdown);
+                            AccessToken old;
+                            if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
+                            {
+                                AccessToken value;
+                                Server.AccessTokensByName.TryRemove(old.Name, out value);
+                            }
 
-                        await ResponseWithToken(reply, webSocket);
+                            Server.AccessTokensById[accessToken.Token] = accessToken;
+                            Server.AccessTokensByName[accessToken.Name] = accessToken;
 
-                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close by server",
+                            await SendResponse(webSocket, new DynamicJsonValue
+                            {
+                                ["currentToken"] = accessToken.Token
+                            });
+
+                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by server",
                                 ServerStore.ServerShutdown);
-                        if (Logger.IsDebugEnabled)
-                            Logger.Debug("WebSocket was closed from client");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsWarnEnabled)
+                            Logger.WarnException("Failed to authenticate api key", e);
+                        await SendError(webSocket, e.ToString());
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.DebugException("Got exception while handling /oauth/api-key EP", ex);
+                Logger.DebugException("Got exception while handling /oauth/api-key endpoint", ex);
             }
         }
 
@@ -98,50 +122,50 @@ namespace Raven.Server.Authentication
             return requestContents;
         }
 
-        private async Task ResponseWithToken(BlittableJsonReaderObject reader, WebSocket webSocket)
+
+        private async Task<AccessToken> ProcessToken(MemoryOperationContext context, WebSocket webSocket)
         {
-            try
+            using (var reader = await context.ReadFromWebSocket(webSocket, DebugTag, ServerStore.ServerShutdown))
             {
                 var requestContents = ExtractChallengeResponse(reader);
 
                 var encryptedData = ExtractEncryptedData(requestContents);
 
-                string apiKeyName, challenge, timestampStr, response;
-                ExtractDecryptedData(encryptedData, out apiKeyName, out challenge, out timestampStr, out response);
+                var challengeDictionary = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptAsymmetric(encryptedData));
+
+                var apiKeyName = challengeDictionary.GetOrDefault(OAuthHelper.Keys.APIKeyName);
+                var challenge = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge);
+                var response = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Response);
+
+                if (string.IsNullOrEmpty(apiKeyName) || string.IsNullOrEmpty(challenge) || string.IsNullOrEmpty(response))
+                {
+                    throw new InvalidOperationException(
+                        "Got null or empty apiKeyName/challenge/response in 'ChallengeResponse' message");
+                }
+
+                var challengeData = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptSymmetric(challenge));
+
+                var timestampStr = challengeData.GetOrDefault(OAuthHelper.Keys.ChallengeTimestamp);
+
+                if (string.IsNullOrEmpty(timestampStr))
+                {
+                    throw new InvalidOperationException("Got null or empty encryptedData in 'ChallengeResponse' message");
+                }
 
                 ThrowIfTimestampNotVerified(timestampStr);
 
                 string secret;
-                var accessToken = GetApiKeySecret(apiKeyName, out secret);
+                var accessToken = BuildAccessTokenAndGetApiKeySecret(apiKeyName, out secret);
 
                 var expectedResponse = OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, secret));
 
                 if (response != expectedResponse)
                 {
-                    await SendError(webSocket, "Unauthorized Client - Invalid Challenge Key");
-                    return;
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failure to authenticate api key {apiKeyName}");
+                    return null;
                 }
-
-                var tokenKey = Guid.NewGuid().ToString();
-                Server.AccessTokensById[tokenKey] = accessToken;
-
-                var jsonToken = new DynamicJsonValue
-                {
-                    ["currentOauthToken"] = tokenKey
-                };
-
-                await SendResponse(webSocket, jsonToken).ConfigureAwait(false);
-            }
-            catch (Exception ioe)
-            {
-                try
-                {
-                    await SendError(webSocket, ioe.ToString());
-                }
-                catch (Exception e)
-                {
-                    Log.InfoException("Could not send oauth error to websocket client", e);
-                }
+                return accessToken;
             }
         }
 
@@ -153,33 +177,6 @@ namespace Raven.Server.Authentication
                 throw new InvalidOperationException(
                     "The challenge is either old or from the future in 'ChallengeResponse' message" +
                     $"challengeTimestamp={challengeTimestamp}, MaxChallengeAge={MaxChallengeAge}, SystemTime.UtcNow={SystemTime.UtcNow}");
-            }
-        }
-
-        private void ExtractDecryptedData(string encryptedData,
-            out string apiKeyName, out string challenge, out string timestampStr, out string response)
-        {
-            timestampStr = null;
-
-            var challengeDictionary = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptAsymmetric(encryptedData));
-
-            apiKeyName = challengeDictionary.GetOrDefault(OAuthHelper.Keys.APIKeyName);
-            challenge = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge);
-            response = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Response);
-
-            if (string.IsNullOrEmpty(apiKeyName) || string.IsNullOrEmpty(challenge) || string.IsNullOrEmpty(response))
-            {
-                throw new InvalidOperationException(
-                    "Got null or empty apiKeyName/challenge/response in 'ChallengeResponse' message");
-            }
-
-            var challengeData = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptSymmetric(challenge));
-
-            timestampStr = challengeData.GetOrDefault(OAuthHelper.Keys.ChallengeTimestamp);
-
-            if (string.IsNullOrEmpty(timestampStr))
-            {
-                throw new InvalidOperationException("Got null or empty encryptedData in 'ChallengeResponse' message");
             }
         }
 
@@ -215,7 +212,7 @@ namespace Raven.Server.Authentication
             await SendResponse(webSocket, json).ConfigureAwait(false);
         }
 
-        private AccessTokenBody GetApiKeySecret(string apiKeyName, out string secret)
+        private AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
         {
 
             TransactionOperationContext context;
@@ -242,7 +239,7 @@ namespace Raven.Server.Authentication
                     throw new InvalidOperationException("Missing 'Secret' property in " + Constants.ApiKeyPrefix + apiKeyName);
                 }
 
-                List<ResourceAccess> databases = new EquatableList<ResourceAccess>();
+                var databases = new Dictionary<string, AccessToken.Mode>(StringComparer.OrdinalIgnoreCase);
 
                 BlittableJsonReaderObject accessMode;
                 if (apiDoc.TryGet("AccessMode", out accessMode) == false)
@@ -260,17 +257,19 @@ namespace Raven.Server.Authentication
                         throw new InvalidOperationException(
                             "Missing value of dbName -'" + dbName.Item1 + "' property in " + Constants.ApiKeyPrefix + apiKeyName);
                     }
-
-                    databases.Add(new ResourceAccess
+                    AccessToken.Mode mode;
+                    if (Enum.TryParse(accessValue, out mode) == false)
                     {
-                        TenantId = dbName.Item1,
-                        AccessMode = accessValue
-                    });
+                        throw new InvalidOperationException(
+                            $"Invalid value of dbName -'{dbName.Item1}' property in api key: {apiKeyName}, cannot understand: {accessValue}");
+                    }
+                    databases[dbName.Item1] = mode;
                 }
 
-                return new AccessTokenBody
+                return new AccessToken
                 {
-                    UserId = apiKeyName,
+                    Name = apiKeyName,
+                    Token = "Bearer " + Guid.NewGuid(),
                     AuthorizedDatabases = databases,
                     Issued = Stopwatch.GetTimestamp()
                 };

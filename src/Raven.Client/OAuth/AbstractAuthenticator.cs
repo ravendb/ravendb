@@ -8,8 +8,8 @@ namespace Raven.Abstractions.OAuth
 {
     public abstract class AbstractAuthenticator
     {
-        protected string CurrentOauthToken { get; set; }
-        protected string CurrentOauthTokenWithBearer { get; set; }
+        public string CurrentToken { get; set; }
+        public string CurrentTokenWithBearer { get; set; }
 
         public virtual void ConfigureRequest(object sender, WebRequestEventArgs e)
         {
@@ -18,7 +18,7 @@ namespace Raven.Abstractions.OAuth
 
         protected void SetAuthorization(WebRequestEventArgs e)
         {
-            if (string.IsNullOrEmpty(CurrentOauthToken))
+            if (string.IsNullOrEmpty(CurrentToken))
                 return;
 
             if (e.Client == null)
@@ -28,16 +28,16 @@ namespace Raven.Abstractions.OAuth
 
         protected void SetAuthorization(HttpClient e)
         {
-            if (string.IsNullOrEmpty(CurrentOauthToken))
+            if (string.IsNullOrEmpty(CurrentToken))
                 return;
 
             try
             {
-                e.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentOauthToken);
+                e.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentToken);
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException(string.Format("Could not set the Authorization to the value 'Bearer {0}'", CurrentOauthToken), ex);
+                throw new InvalidOperationException(string.Format("Could not set the Authorization to the value 'Bearer {0}'", CurrentToken), ex);
             }
         }
 

@@ -60,7 +60,7 @@ namespace Raven.Client.Extensions
                 if (string.IsNullOrEmpty(oauthSource))
                     oauthSource = serverUrl + "/OAuth/API-Key";
 
-                return securedAuthenticator.DoOAuthRequestAsync(serverUrl, oauthSource, credentials.ApiKey);
+                return securedAuthenticator.DoOAuthRequestAsync(oauthSource, credentials.ApiKey);
             };
 
         }

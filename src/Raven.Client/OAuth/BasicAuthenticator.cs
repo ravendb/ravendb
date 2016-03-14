@@ -43,8 +43,8 @@ namespace Raven.Abstractions.OAuth
                 using (var reader = new StreamReader(stream))
                 {
                     var currentOauthToken = reader.ReadToEnd();
-                    CurrentOauthToken = currentOauthToken;
-                    CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
+                    CurrentToken = currentOauthToken;
+                    CurrentTokenWithBearer = "Bearer " + currentOauthToken;
                     return (Action<HttpClient>)(SetAuthorization);
                 }
             }

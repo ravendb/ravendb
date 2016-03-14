@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
-using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 
-namespace Raven.Server.Authentication
+namespace Raven.Server.Web.Authentication
 {
     public class AdminApiKeysHandler : RequestHandler
     {
-        [RavenAction("/admin/api-keys", "PUT", "/admin/api-keys?name={api-key-name:string}", SkipTryAuthorized = true)]
+        [RavenAction("/admin/api-keys", "PUT", "/admin/api-keys?name={api-key-name:string}", NoAuthorizationRequired = true)]
         public Task PutApiKey()
         {
             TransactionOperationContext ctx;

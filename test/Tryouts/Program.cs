@@ -21,7 +21,7 @@ namespace Tryouts
             {
                 DefaultDatabase = "test",
                 ApiKey = "user/abc",
-                Url = "http://localhost.fiddler:8080/"
+                Url = "http://localhost:8081/"
             })
             {
                 store.Initialize();
@@ -53,7 +53,7 @@ namespace Tryouts
             {
                 try
                 {
-                    securedAuthenticator.DoOAuthRequestAsync("http://127.0.0.1:8080/oauth/api-key",
+                    securedAuthenticator.DoOAuthRequestAsync("http://127.0.0.1:8081/oauth/api-key",
                         store.ApiKey,
                         usesp).Wait();
 

@@ -6,10 +6,8 @@ using System.Text;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Server.Config;
-using Raven.Server.ServerWide;
 
-
-namespace Raven.Server.Authentication
+namespace Raven.Server.Web.Authentication
 {
     internal static class OAuthServerHelper
     {

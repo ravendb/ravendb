@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Routing;
@@ -22,7 +23,9 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
-        public ConcurrentDictionary<string, AccessTokenBody> AccessTokensById = new ConcurrentDictionary<string, AccessTokenBody>();
+        public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
+        public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
+
 
         public Timer Timer;
 
@@ -39,14 +42,22 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration);
             Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
-            this.Timer = new Timer(ServerMaintanenceTimerByMinute, this, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
-        private static void ServerMaintanenceTimerByMinute(object state)
+        private void ServerMaintenanceTimerByMinute(object state)
         {
-            var serverInstance = state as RavenServer;
-            serverInstance?.AccessTokensById.ForEach(
-                x =>x.Value.IsExpired(x.Key, serverInstance.AccessTokensById)); // IsExpired also removes expired records
+            foreach (var accessToken in AccessTokensById.Values)
+            {
+                if (accessToken.IsExpired == false)
+                    continue;
+
+                AccessToken _;
+                if (AccessTokensById.TryRemove(accessToken.Token, out _))
+                {
+                    AccessTokensByName.TryRemove(accessToken.Name, out _);
+                }
+            }
         }
 
         public void Initialize()

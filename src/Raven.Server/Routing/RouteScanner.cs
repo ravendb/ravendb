@@ -38,7 +38,7 @@ namespace Raven.Server.Routing
                     var routeKey = route.Method + route.Path;
                     if (routes.TryGetValue(routeKey, out routeInfo) == false)
                     {
-                        routes[routeKey] = routeInfo = new RouteInformation(route.Method, route.Path, route.SkipTryAuthorized, route.IgnoreDbRoute);
+                        routes[routeKey] = routeInfo = new RouteInformation(route.Method, route.Path, route.NoAuthorizationRequired);
                     }
                     else
                     {

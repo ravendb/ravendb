@@ -34,9 +34,9 @@ namespace SlowTests.Voron
                     var entries = new Table(_entriesSchema, "IndexEntries", tx);
                     for (int i = 0; i < 10; i++)
                     {
-                        var assembly = typeof(IndexPointToNonLeafPageTests).GetTypeInfo().Assembly;
+                        var assembly = typeof(DuplicatePageUsage).GetTypeInfo().Assembly;
                         fixed (byte* buffer = new byte[1024])
-                        using (var fs = assembly.GetManifestResourceStream("FastTests.Voron.Bugs.Data.places.txt"))
+                        using (var fs = assembly.GetManifestResourceStream("SlowTests.Voron.Data.places.txt"))
                         using (var reader = new StreamReader(fs))
                         {
                             string readLine;
