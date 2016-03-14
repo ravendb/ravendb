@@ -5,6 +5,7 @@ using Lucene.Net.Store;
 
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Voron.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -39,10 +40,9 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             {
                 _analyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer());
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                //context.AddError //TODO [ppekrol]
-                throw;
+                throw new IndexAnalyzerException(e);
             }
             
             Monitor.Enter(_writeLock);
@@ -58,10 +58,10 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
                 if (_locker.Obtain() == false)
                     throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{name}' index.");
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 Monitor.Exit(_writeLock);
-                throw;
+                throw new IndexWriteException(e);
             }
         }
 

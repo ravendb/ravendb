@@ -14,6 +14,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -57,6 +58,10 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice PrioritySlice = "Priority";
         }
+
+        private long writeErrors;
+
+        private const long WriteErrorsLimit = 10;
 
         protected readonly ILog Log = LogManager.GetLogger(typeof(Index));
 
@@ -216,6 +221,8 @@ namespace Raven.Server.Documents.Indexes
 
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
+                    DocumentDatabase.Notifications.OnIndexChange += HandleIndexChange;
+
                     _initialized = true;
                 }
                 catch (Exception)
@@ -285,6 +292,8 @@ namespace Raven.Server.Documents.Indexes
                 _disposed = true;
 
                 _cancellationTokenSource?.Cancel();
+
+                DocumentDatabase.Notifications.OnIndexChange -= HandleIndexChange;
 
                 _indexingThread?.Join();
                 _indexingThread = null;
@@ -423,7 +432,7 @@ namespace Raven.Server.Documents.Indexes
                         _mre.Reset();
 
                         var startTime = SystemTime.UtcNow;
-                        var stats = new IndexingBatchStats();
+                        var stats = new IndexingBatchStats(IndexId, Name);
                         try
                         {
                             cts.Token.ThrowIfCancellationRequested();
@@ -436,18 +445,23 @@ namespace Raven.Server.Documents.Indexes
                                 Type = IndexChangeTypes.BatchCompleted
                             });
 
+                            ResetWriteErrors();
+
                             if (Log.IsDebugEnabled)
                                 Log.Debug($"Finished indexing for '{Name} ({IndexId})'.'");
                         }
                         catch (OutOfMemoryException oome)
                         {
                             Log.WarnException($"Out of memory occured for '{Name} ({IndexId})'.", oome);
-                            // TODO
+                            // TODO [ppekrol] GC?
                         }
-                        catch (AggregateException ae)
+                        catch (IndexWriteException iwe)
                         {
-                            Log.WarnException($"Exception occured for '{Name} ({IndexId})'.", ae.ExtractSingleInnerException());
-                            // TODO
+                            HandleWriteErrors(stats, iwe);
+                        }
+                        catch (IndexAnalyzerException iae)
+                        {
+                            stats.AddAnalyzerError(iae);
                         }
                         catch (OperationCanceledException)
                         {
@@ -456,10 +470,16 @@ namespace Raven.Server.Documents.Indexes
                         catch (Exception e)
                         {
                             Log.WarnException($"Exception occured for '{Name} ({IndexId})'.", e);
-                            // TODO
                         }
 
-                        UpdateStats(startTime, stats);
+                        try
+                        {
+                            UpdateStats(startTime, stats);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.ErrorException($"Could not update stats for '{Name} ({IndexId})'.", e);
+                        }
 
                         try
                         {
@@ -478,7 +498,36 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private void ResetWriteErrors()
+        {
+            writeErrors = Interlocked.Exchange(ref writeErrors, 0);
+        }
+
+        private void HandleWriteErrors(IndexingBatchStats stats, IndexWriteException iwe)
+        {
+            stats.AddWriteError(iwe);
+
+            if (iwe.InnerException is SystemException) // Don't count transient errors
+                return;
+
+            writeErrors = Interlocked.Increment(ref writeErrors);
+
+            if (Priority == IndexingPriority.Error || Interlocked.Read(ref writeErrors) < WriteErrorsLimit)
+                return;
+
+            SetPriority(IndexingPriority.Error);
+        }
+
         public abstract void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken);
+
+        private void HandleIndexChange(IndexChangeNotification notification)
+        {
+            if (string.Equals(notification.Name, Name, StringComparison.OrdinalIgnoreCase) == false)
+                return;
+
+            if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
+                Stop();
+        }
 
         private void HandleDocumentChange(DocumentChangeNotification notification)
         {
@@ -538,6 +587,15 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 Priority = priority;
+
+                if (priority == IndexingPriority.Error)
+                {
+                    DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                    {
+                        Name = Name,
+                        Type = IndexChangeTypes.IndexMarkedAsErrored
+                    });
+                }
 
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Changed priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");

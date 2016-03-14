@@ -1,6 +1,5 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents;
@@ -43,7 +42,7 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     CreateUsers(db);
 
-                    var stats = new IndexingBatchStats();
+                    var stats = new IndexingBatchStats(mri.IndexId, mri.Name);
                     mri.DoIndexingWork(stats, CancellationToken.None);
 
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))

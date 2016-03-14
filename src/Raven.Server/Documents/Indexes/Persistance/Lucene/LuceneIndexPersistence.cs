@@ -6,6 +6,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Voron;
 using Voron.Impl;
@@ -126,8 +127,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             }
             catch (Exception e)
             {
-                //IncrementWriteErrors(e); // TODO [ppekrol]
-                throw new IOException($"Failure to create index writer for '{_definition.Name}'.", e);
+                throw new IndexWriteException(e);
             }
         }
 

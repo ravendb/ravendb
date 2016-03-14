@@ -42,14 +42,14 @@ namespace Raven.Server.Documents.Indexes.Auto
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
             {
-                ExecuteCleanup(cancellationToken, databaseContext, indexContext);
+                ExecuteCleanup(stats, cancellationToken, databaseContext, indexContext);
                 ExecuteMap(stats, cancellationToken, databaseContext, indexContext);
 
                 tx.Commit();
             }
         }
 
-        private void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        private void ExecuteCleanup(IndexingBatchStats stats, CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                             token.ThrowIfCancellationRequested();
 
                             if (Log.IsDebugEnabled)
-                                Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processing tombstone: {tombstone.Key}.");
+                                Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processing tombstone {tombstone.Key} ({tombstone.Etag}).");
 
                             count++;
                             lastEtag = tombstone.Etag;
@@ -166,9 +166,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                             {
                                 stats.IndexingErrors++;
 
-                                Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{Name}'.", e);
+                                Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{Name} ({IndexId}'.", e);
 
-                                //context.AddError // TODO [ppekrol]
+                                stats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
                             }
 
                             if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)

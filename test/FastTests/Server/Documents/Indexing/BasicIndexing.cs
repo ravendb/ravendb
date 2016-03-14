@@ -297,7 +297,7 @@ namespace FastTests.Server.Documents.Indexing
 
                             tx.Commit();
                         }                        
-                        var batchStats = new IndexingBatchStats();
+                        var batchStats = new IndexingBatchStats(index.IndexId, index.Name);
                         index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
                         Assert.Equal(2, batchStats.IndexingAttempts);
@@ -342,7 +342,7 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        batchStats = new IndexingBatchStats();
+                        batchStats = new IndexingBatchStats(index.IndexId, index.Name);
                         index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(3, index.GetLastMappedEtagsForDebug().Values.Min());
                         Assert.Equal(1, batchStats.IndexingAttempts);
@@ -377,7 +377,7 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        batchStats = new IndexingBatchStats();
+                        batchStats = new IndexingBatchStats(index.IndexId, index.Name);
                         index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(4, index.GetLastTombstoneEtagsForDebug().Values.Min());
                         Assert.Equal(0, batchStats.IndexingAttempts);
