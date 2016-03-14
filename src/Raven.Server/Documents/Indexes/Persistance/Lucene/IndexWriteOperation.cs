@@ -2,6 +2,8 @@
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+
+using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Indexing;
 using Voron.Impl;
@@ -11,8 +13,13 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 {
     public class IndexWriteOperation : IndexOperationBase
     {
+        private readonly ILog Log = LogManager.GetLogger(typeof(IndexWriteOperation));
+
         private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
         private readonly object _writeLock;
+
+        private readonly string _name;
+
         private readonly LuceneIndexWriter _writer;
         private readonly LuceneDocumentConverter _converter;
         private readonly LuceneIndexPersistence _persistence;
@@ -23,6 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         public IndexWriteOperation(object writeLock, string name, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
         {
             _writeLock = writeLock;
+            _name = name;
             _writer = writer;
             _converter = converter;
             _persistence = persistence;
@@ -82,11 +90,17 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             var luceneDoc = _converter.ConvertToCachedDocument(document);
 
             _writer.AddDocument(luceneDoc, _analyzer);
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Indexed document for '{_name}'. Key: {document.Key} Etag: {document.Etag}. Output: {luceneDoc}.");
         }
 
         public void Delete(string key)
         {
             _writer.DeleteDocuments(_documentId.CreateTerm(key));
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Deleted document for '{_name}'. Key: {key}.");
         }
     }
 }

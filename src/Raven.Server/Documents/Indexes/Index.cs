@@ -388,18 +388,21 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        protected static void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
+        protected void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
             WriteLastEtag(tx, Schema.EtagsTombstoneTree, collection, etag);
         }
 
-        protected static void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
+        protected void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
         {
             WriteLastEtag(tx, Schema.EtagsMapTree, collection, etag);
         }
 
-        private static unsafe void WriteLastEtag(RavenTransaction tx, string tree, string collection, long etag)
+        private unsafe void WriteLastEtag(RavenTransaction tx, string tree, string collection, long etag)
         {
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Writing last etag for '{Name} ({IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
+
             var statsTree = tx.InnerTransaction.CreateTree(tree);
             statsTree.Add(collection, new Slice((byte*)&etag, sizeof(long)));
         }
@@ -414,6 +417,9 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
+                        if (Log.IsDebugEnabled)
+                            Log.Debug($"Starting indexing for '{Name} ({IndexId})'.'");
+
                         _mre.Reset();
 
                         var startTime = SystemTime.UtcNow;
@@ -429,13 +435,18 @@ namespace Raven.Server.Documents.Indexes
                                 Name = Name,
                                 Type = IndexChangeTypes.BatchCompleted
                             });
+
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Finished indexing for '{Name} ({IndexId})'.'");
                         }
                         catch (OutOfMemoryException oome)
                         {
+                            Log.WarnException($"Out of memory occured for '{Name} ({IndexId})'.", oome);
                             // TODO
                         }
                         catch (AggregateException ae)
                         {
+                            Log.WarnException($"Exception occured for '{Name} ({IndexId})'.", ae.ExtractSingleInnerException());
                             // TODO
                         }
                         catch (OperationCanceledException)
@@ -444,6 +455,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         catch (Exception e)
                         {
+                            Log.WarnException($"Exception occured for '{Name} ({IndexId})'.", e);
                             // TODO
                         }
 
@@ -478,6 +490,9 @@ namespace Raven.Server.Documents.Indexes
 
         internal unsafe void UpdateStats(DateTime indexingTime, IndexingBatchStats stats)
         {
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Updating statistics for '{Name} ({IndexId})'. Stats: {stats}.");
+
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
@@ -493,6 +508,9 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.Commit();
             }
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Updated statistics for '{Name} ({IndexId})'.");
         }
 
         public unsafe void SetPriority(IndexingPriority priority)
@@ -504,6 +522,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (Priority == priority)
                     return;
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Changing priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
 
                 TransactionOperationContext context;
                 using (_contextPool.AllocateOperationContext(out context))
@@ -517,6 +538,9 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 Priority = priority;
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Changed priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
             }
         }
 
@@ -529,6 +553,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (Definition.LockMode == mode)
                     return;
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Changing lock mode for '{Name} ({IndexId})' from '{Definition.LockMode}' to '{mode}'.");
 
                 TransactionOperationContext context;
                 using (_contextPool.AllocateOperationContext(out context))
@@ -548,6 +575,9 @@ namespace Raven.Server.Documents.Indexes
                         throw;
                     }
                 }
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Changed lock mode for '{Name} ({IndexId})' from '{Definition.LockMode}' to '{mode}'.");
             }
         }
 
