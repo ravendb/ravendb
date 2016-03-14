@@ -13,26 +13,17 @@ namespace Raven.Server.Documents
 
         public event Action<IndexChangeNotification> OnIndexChange;
 
-        public void RaiseNotifications(Notification notification)
+        public void RaiseNotifications(IndexChangeNotification indexChangeNotification)
         {
-            var documentChangeNotification = notification as DocumentChangeNotification;
-            if (documentChangeNotification != null)
-            {
-                foreach (var connection in Connections)
-                    connection.Value.SendDocumentChanges(documentChangeNotification);
+            OnIndexChange?.Invoke(indexChangeNotification);
+        }
 
-                OnDocumentChange?.Invoke(documentChangeNotification);
-                return;
-            }
+        public void RaiseNotifications(DocumentChangeNotification documentChangeNotification)
+        {
+            OnDocumentChange?.Invoke(documentChangeNotification);
 
-            var indexChangeNotification = notification as IndexChangeNotification;
-            if (indexChangeNotification != null)
-            {
-                OnIndexChange?.Invoke(indexChangeNotification);
-                return;
-            }
-
-            throw new NotSupportedException();
+            foreach (var connection in Connections)
+                connection.Value.SendDocumentChanges(documentChangeNotification);
         }
 
         public void Connect(NotificationsClientConnection connection)
