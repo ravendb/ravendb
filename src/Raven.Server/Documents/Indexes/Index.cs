@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 
 using Raven.Abstractions;
@@ -10,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
@@ -20,6 +22,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -58,6 +61,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice PrioritySlice = "Priority";
         }
+
+        private readonly TableSchema _errorsSchema = new TableSchema();
 
         private long writeErrors;
 
@@ -171,7 +176,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected unsafe void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -190,34 +195,7 @@ namespace Raven.Server.Documents.Indexes
                     _unmanagedBuffersPool = new UnmanagedBuffersPool($"Indexes//{IndexId}");
                     _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
 
-                    TransactionOperationContext context;
-                    using (_contextPool.AllocateOperationContext(out context))
-                    using (var tx = context.OpenWriteTransaction())
-                    {
-                        var typeInt = (int)Type;
-
-                        var statsTree = tx.InnerTransaction.CreateTree(Schema.StatsTree);
-                        statsTree.Add(Schema.TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
-
-                        if (statsTree.ReadVersion(Schema.CreatedTimestampSlice) == 0)
-                        {
-                            var binaryDate = SystemTime.UtcNow.ToBinary();
-                            statsTree.Add(Schema.CreatedTimestampSlice, new Slice((byte*)&binaryDate, sizeof(long)));
-                        }
-
-                        var priority = statsTree.Read(Schema.PrioritySlice);
-                        if (priority == null)
-                            Priority = IndexingPriority.Normal;
-                        else
-                            Priority = (IndexingPriority)priority.Reader.ReadLittleEndianInt32();
-
-                        tx.InnerTransaction.CreateTree(Schema.EtagsMapTree);
-                        tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
-
-                        Definition.Persist(context);
-
-                        tx.Commit();
-                    }
+                    CreateSchema();
 
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
@@ -230,6 +208,53 @@ namespace Raven.Server.Documents.Indexes
                     Dispose();
                     throw;
                 }
+            }
+        }
+
+        private unsafe void CreateSchema()
+        {
+            _errorsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 1,
+                IsGlobal = true,
+                Name = "Errors"
+            });
+            _errorsSchema.DefineFixedSizeIndex("ErrorTimestamps", new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 0,
+                IsGlobal = true
+            });
+
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                _errorsSchema.Create(tx.InnerTransaction, "Errors");
+
+                var typeInt = (int)Type;
+
+                var statsTree = tx.InnerTransaction.CreateTree(Schema.StatsTree);
+                statsTree.Add(Schema.TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
+
+                if (statsTree.ReadVersion(Schema.CreatedTimestampSlice) == 0)
+                {
+                    var binaryDate = SystemTime.UtcNow.ToBinary();
+                    statsTree.Add(Schema.CreatedTimestampSlice, new Slice((byte*)&binaryDate, sizeof(long)));
+                }
+
+                var priority = statsTree.Read(Schema.PrioritySlice);
+                if (priority == null)
+                    Priority = IndexingPriority.Normal;
+                else
+                    Priority = (IndexingPriority)priority.Reader.ReadLittleEndianInt32();
+
+                tx.InnerTransaction.CreateTree(Schema.EtagsMapTree);
+                tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
+
+                Definition.Persist(context);
+
+                tx.Commit();
             }
         }
 
@@ -432,7 +457,7 @@ namespace Raven.Server.Documents.Indexes
                         _mre.Reset();
 
                         var startTime = SystemTime.UtcNow;
-                        var stats = new IndexingBatchStats(IndexId, Name);
+                        var stats = new IndexingBatchStats();
                         try
                         {
                             cts.Token.ThrowIfCancellationRequested();
@@ -537,6 +562,40 @@ namespace Raven.Server.Documents.Indexes
             _mre.Set();
         }
 
+        public unsafe List<IndexingError> GetErrors()
+        {
+            var errors = new List<IndexingError>();
+
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+
+                foreach (var result in table.SeekForwardFrom(_errorsSchema.FixedSizeIndexes["ErrorTimestamps"], 0))
+                {
+                    int size;
+                    var error = new IndexingError();
+
+                    var ptr = result.Read(0, out size);
+                    error.Timestamp = DateTime.FromBinary(IPAddress.NetworkToHostOrder(*(long*)ptr));
+
+                    ptr = result.Read(1, out size);
+                    error.Document = new LazyStringValue(null, ptr, size, context);
+
+                    ptr = result.Read(2, out size);
+                    error.Action = new LazyStringValue(null, ptr, size, context);
+
+                    ptr = result.Read(3, out size);
+                    error.Error = new LazyStringValue(null, ptr, size, context);
+
+                    errors.Add(error);
+                }
+            }
+
+            return errors;
+        }
+
         internal unsafe void UpdateStats(DateTime indexingTime, IndexingBatchStats stats)
         {
             if (Log.IsDebugEnabled)
@@ -546,6 +605,8 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
+                var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
+
                 var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
 
                 statsTree.Increment(Schema.IndexingAttemptsSlice, stats.IndexingAttempts);
@@ -555,11 +616,47 @@ namespace Raven.Server.Documents.Indexes
                 var binaryDate = indexingTime.ToBinary();
                 statsTree.Add(Schema.LastIndexingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
 
+                foreach (var error in stats.Errors)
+                {
+                    var ticksBigEndian = IPAddress.HostToNetworkOrder(error.Timestamp.Ticks);
+                    var document = context.GetLazyString(error.Document);
+                    var action = context.GetLazyString(error.Action);
+                    var e = context.GetLazyString(error.Error);
+
+                    var tvb = new TableValueBuilder
+                    {
+                        { (byte*)&ticksBigEndian, sizeof(long) },
+                        { document.Buffer, document.Size },
+                        { action.Buffer, action.Size },
+                        { e.Buffer, e.Size }
+                    };
+
+                    table.Insert(tvb);
+                }
+
+                CleanupErrors(table);
+
                 tx.Commit();
             }
 
             if (Log.IsDebugEnabled)
                 Log.Debug($"Updated statistics for '{Name} ({IndexId})'.");
+        }
+
+        private void CleanupErrors(Table table)
+        {
+            const int MaxNumberOfErrors = 50;
+            if (table.NumberOfEntries <= MaxNumberOfErrors)
+                return;
+
+            var take = table.NumberOfEntries - MaxNumberOfErrors;
+            foreach (var result in table.SeekForwardFrom(_errorsSchema.FixedSizeIndexes["ErrorTimestamps"], 0))
+            {
+                if (take-- <= 0)
+                    return;
+
+                table.Delete(result.Id);
+            }
         }
 
         public unsafe void SetPriority(IndexingPriority priority)
