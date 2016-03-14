@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
@@ -31,6 +32,11 @@ namespace Raven.Server.Web.Authentication
                     ServerStore.Write(ctx, Constants.ApiKeyPrefix + name[0], apiKey);
 
                     tx.Commit();
+                }
+                AccessToken value;
+                if (Server.AccessTokensByName.TryRemove(name[0], out value))
+                {
+                    Server.AccessTokensById.TryRemove(value.Token, out value);
                 }
                 return Task.CompletedTask;
             }
