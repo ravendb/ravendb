@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Linq;
+using Raven.Client.Linq;
 using  Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 

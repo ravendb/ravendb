@@ -1,12 +1,14 @@
-﻿using Raven.Server.ServerWide.Context;
+﻿using Raven.Abstractions.Indexing;
+using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Indexes
+namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {
         public IndexField[] GroupByFields;
 
-        public AutoMapReduceIndexDefinition(string name, string[] collections, IndexField[] mapFields, IndexField[] groupByFields) : base(name, collections,mapFields)
+        public AutoMapReduceIndexDefinition(string name, string[] collections, IndexField[] mapFields, IndexField[] groupByFields)
+            : base(name, collections, IndexLockMode.Unlock, mapFields)
         {
             GroupByFields = groupByFields;
         }

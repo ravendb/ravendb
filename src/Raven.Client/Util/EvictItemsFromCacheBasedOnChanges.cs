@@ -29,7 +29,7 @@ namespace Raven.Client.Util
             var indexSub = changes.ForAllIndexes();
             indexesSubscription = indexSub.Subscribe(this);
 
-            connectionTask = Task.Factory.ContinueWhenAll(new Task[] {docSub.Task, indexSub.Task}, tasks => { });
+            connectionTask = Task.Factory.ContinueWhenAll(new Task[] { docSub.Task, indexSub.Task }, tasks => { });
         }
 
         public Task ConnectionTask
@@ -47,9 +47,7 @@ namespace Raven.Client.Util
 
         public void OnNext(IndexChangeNotification change)
         {
-            if (change.Type == IndexChangeTypes.MapCompleted || 
-                change.Type == IndexChangeTypes.ReduceCompleted || 
-                change.Type == IndexChangeTypes.IndexRemoved)
+            if (change.Type == IndexChangeTypes.BatchCompleted || change.Type == IndexChangeTypes.IndexRemoved)
             {
                 evictCacheOldItems(databaseName);
             }

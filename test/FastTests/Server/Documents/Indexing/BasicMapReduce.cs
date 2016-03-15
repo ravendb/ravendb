@@ -43,7 +43,8 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     CreateUsers(db);
 
-                    mri.DoIndexingWork(CancellationToken.None);
+                    var stats = new IndexingBatchStats();
+                    mri.DoIndexingWork(stats, CancellationToken.None);
 
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                     {

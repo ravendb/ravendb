@@ -106,7 +106,6 @@ namespace Raven.Client.Document
                 queryStats = queryStats,
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
                 theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
-                sortByHints = sortByHints,
                 orderByFields = orderByFields,
                 isDistinct = isDistinct,
                 allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,

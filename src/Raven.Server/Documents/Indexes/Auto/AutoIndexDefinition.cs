@@ -11,37 +11,17 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoIndexDefinition : IndexDefinitionBase
     {
-        private readonly Dictionary<string, IndexField> _fieldsByName;
-
         public AutoIndexDefinition(string collection, IndexField[] fields)
-            : base(FindIndexName(collection, fields), new[] { collection },fields)
+            : base(FindIndexName(collection, fields), new[] { collection }, IndexLockMode.Unlock, fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
 
             if (fields.Length == 0)
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
-
-            _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x);
         }
 
         public int CountOfMapFields => MapFields.Length;
-
-        public bool ContainsField(string field)
-        {
-            if (field.EndsWith("_Range"))
-                field = field.Substring(0, field.Length - 6);
-
-            return _fieldsByName.ContainsKey(field);
-        }
-
-        public IndexField GetField(string field)
-        {
-            if (field.EndsWith("_Range"))
-                field = field.Substring(0, field.Length - 6);
-
-            return _fieldsByName[field];
-        }
 
         private static string FindIndexName(string collection, IReadOnlyCollection<IndexField> fields)
         {
@@ -76,6 +56,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                 writer.WriteStartArray();
                 writer.WriteString(context.GetLazyString(collection));
                 writer.WriteEndArray();
+                writer.WriteComma();
+                writer.WritePropertyName(context.GetLazyString(nameof(LockMode)));
+                writer.WriteInteger((int)LockMode);
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
@@ -127,6 +110,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
                 {
+                    int lockModeAsInt;
+                    reader.TryGet(nameof(LockMode), out lockModeAsInt);
+
                     BlittableJsonReaderArray jsonArray;
                     reader.TryGet(nameof(Collections), out jsonArray);
 
@@ -160,7 +146,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                         fields[i] = field;
                     }
 
-                    return new AutoIndexDefinition(collection, fields);
+                    return new AutoIndexDefinition(collection, fields)
+                    {
+                        LockMode = (IndexLockMode)lockModeAsInt
+                    };
                 }
             }
         }

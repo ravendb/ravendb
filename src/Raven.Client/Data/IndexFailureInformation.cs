@@ -18,21 +18,14 @@ namespace Raven.Abstractions.Data
         {
             get
             {
-                return CheckIndexInvalid(Attempts, Errors, ReduceAttempts, ReduceErrors);
+                return CheckIndexInvalid(Attempts, Errors);
             }
         }
 
-        public static bool CheckIndexInvalid(int attempts, int errors, int? reduceAttempts, int? reduceErrors)
+        public static bool CheckIndexInvalid(int attempts, int errors)
         {
             if (attempts == 0 || errors == 0)
                 return false;
-            if (reduceAttempts != null)
-            {
-                // we don't have enough attempts to make a useful determination
-                if (attempts + reduceAttempts < 100)
-                    return false;
-                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > 0.15;
-            }
             // we don't have enough attempts to make a useful determination
             if (attempts < 100)
                 return false;
@@ -58,21 +51,6 @@ namespace Raven.Abstractions.Data
         /// Number of indexing successes.
         /// </summary>
         public int Successes { get; set; }
-
-        /// <summary>
-        /// Number of reduce attempts.
-        /// </summary>
-        public int? ReduceAttempts { get; set; }
-
-        /// <summary>
-        /// Number of reduce errors.
-        /// </summary>
-        public int? ReduceErrors { get; set; }
-
-        /// <summary>
-        /// Number of reduce successes.
-        /// </summary>
-        public int? ReduceSuccesses { get; set; }
 
         /// <summary>
         /// Failure rate.

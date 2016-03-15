@@ -28,6 +28,7 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -158,9 +159,9 @@ namespace Raven.Client.Connection
         {
             AsyncHelpers.RunSync(() => asyncServerClient.ResetIndexAsync(name));
         }
-        public void SetIndexLock(string name, IndexLockMode unLockMode) 
+        public void SetIndexLock(string name, IndexLockMode mode) 
         {
-            AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, unLockMode));
+            AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, mode));
         }
         public void SetIndexPriority(string name, IndexingPriority priority )
         {
@@ -342,13 +343,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, options));
         }
 
-        public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests,
-            BulkOperationOptions options = null)
-        {
-            return AsyncHelpers.RunSync(() => asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, options));
-        }
-
-        public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch,
+        public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest patch,
             BulkOperationOptions options = null)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, options));
@@ -424,42 +419,22 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize));
         }
 
-        public RavenJObject Patch(string key, PatchRequest[] patches)
-        {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches));
-        }
-
-        public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
-        {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, ignoreMissing));
-        }
-
-        public RavenJObject Patch(string key, ScriptedPatchRequest patch)
+        public RavenJObject Patch(string key, PatchRequest patch)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
+        public RavenJObject Patch(string key, PatchRequest patch, bool ignoreMissing)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, ignoreMissing));
         }
 
-        public RavenJObject Patch(string key, PatchRequest[] patches, long? etag)
-        {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, etag));
-        }
-
-        public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault)
-        {
-            return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault));
-        }
-
-        public RavenJObject Patch(string key, ScriptedPatchRequest patch, long? etag)
+        public RavenJObject Patch(string key, PatchRequest patch, long? etag)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, etag));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault)
+        public RavenJObject Patch(string key, PatchRequest patchExisting, PatchRequest patchDefault)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchExisting, patchDefault));
         }

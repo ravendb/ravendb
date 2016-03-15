@@ -21,6 +21,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Client.Data.Indexes;
+
 namespace Raven.Client.Indexes
 {
     /// <summary>
@@ -548,27 +550,27 @@ namespace Raven.Client.Indexes
                 var fieldType = field.PropertyType;
                 if (fieldType == typeof(int))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.Int);
+                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
                 }
                 else if (fieldType == typeof(long))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.Long);
+                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
                 }
                 else if (fieldType == typeof(short))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.Short);
+                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
                 }
                 else if (fieldType == typeof(decimal))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.Double);
+                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
                 }
                 else if (fieldType == typeof(double))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.Double);
+                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
                 }
                 else if (fieldType == typeof(float))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.Float);
+                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
                 }
             }
 

@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 using Raven.Abstractions.Linq;
+using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server.Json;

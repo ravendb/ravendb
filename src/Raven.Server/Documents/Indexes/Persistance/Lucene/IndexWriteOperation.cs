@@ -9,7 +9,7 @@ using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 {
-    public class IndexWriteOperation : IDisposable
+    public class IndexWriteOperation : IndexOperationBase
     {
         private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
         private readonly object _writeLock;
@@ -20,28 +20,44 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        public IndexWriteOperation(object writeLock, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, 
-                                    Transaction writeTransaction, LuceneIndexPersistence persistence)
+        public IndexWriteOperation(object writeLock, string name, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
         {
             _writeLock = writeLock;
             _writer = writer;
             _converter = converter;
             _persistence = persistence;
-            _analyzer = new LowerCaseKeywordAnalyzer();
 
+            try
+            {
+                _analyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer());
+            }
+            catch (Exception)
+            {
+                //context.AddError //TODO [ppekrol]
+                throw;
+            }
+            
             Monitor.Enter(_writeLock);
-            
-            _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-            _persistence.EnsureIndexWriter();
-            
-            _locker = directory.MakeLock("writing-to-index.lock");
+            try
+            {
+                _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-            if (_locker.Obtain() == false)
-                throw new InvalidOperationException();
+                _persistence.EnsureIndexWriter();
+
+                _locker = directory.MakeLock("writing-to-index.lock");
+
+                if (_locker.Obtain() == false)
+                    throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{name}' index.");
+            }
+            catch (Exception)
+            {
+                Monitor.Exit(_writeLock);
+                throw;
+            }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             try
             {

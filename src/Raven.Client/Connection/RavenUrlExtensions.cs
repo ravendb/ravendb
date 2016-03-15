@@ -1,5 +1,7 @@
 using System;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
@@ -38,6 +40,16 @@ namespace Raven.Client.Connection
         public static string Indexes(this string url, string index)
         {
             return $"{url}/indexes?name={index}";
+        }
+
+        public static string SetIndexLock(this string url, string index, IndexLockMode mode)
+        {
+            return $"{url}/indexes/set-lock?name={index}&mode={mode}";
+        }
+
+        public static string SetIndexPriority(this string url, string index, IndexingPriority priority)
+        {
+            return $"{url}/indexes/set-priority?name={index}&priority={priority}";
         }
 
         public static string IndexDefinition(this string url, string index)

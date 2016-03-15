@@ -3,10 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using Raven.Abstractions.Data;
 
-namespace Raven.Abstractions.Exceptions
+using System;
+
+namespace Raven.Client.Exceptions
 {
     /// <summary>
     /// This exception is raised when a concurrency conflict is encountered

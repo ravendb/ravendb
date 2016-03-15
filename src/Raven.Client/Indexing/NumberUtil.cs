@@ -16,25 +16,9 @@ namespace Raven.Abstractions.Indexing
         /// <summary>
         /// Translate a number to an indexable string
         /// </summary>
-        public static string NumberToString(int number)
-        {
-            return "Ix" + number.ToString("G", CultureInfo.InvariantCulture);
-        }
-
-        /// <summary>
-        /// Translate a number to an indexable string
-        /// </summary>
         public static string NumberToString(long number)
         {
             return "Lx" + number.ToString("G", CultureInfo.InvariantCulture);
-        }
-
-        /// <summary>
-        /// Translate a number to an indexable string
-        /// </summary>
-        public static string NumberToString(float number)
-        {
-            return "Fx" + number.ToString("G", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -66,17 +50,13 @@ namespace Raven.Abstractions.Indexing
                     switch (num.Length)
                     {
                         case 8:
-                            return int.Parse(num, NumberStyles.HexNumber);
+                            return (long) int.Parse(num, NumberStyles.HexNumber);
                         case 16:
                             return long.Parse(num, NumberStyles.HexNumber);
                     }
                     break;
-                case "Ix":
-                    return int.Parse(num, CultureInfo.InvariantCulture);
                 case "Lx":
                     return long.Parse(num, CultureInfo.InvariantCulture);
-                case "Fx":
-                    return  float.Parse(num, CultureInfo.InvariantCulture);
                 case "Dx":
                     return  double.Parse(num, CultureInfo.InvariantCulture);
             }

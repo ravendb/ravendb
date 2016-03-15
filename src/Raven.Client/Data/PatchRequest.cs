@@ -1,101 +1,49 @@
-//-----------------------------------------------------------------------
-// <copyright file="PatchRequest.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Data
 {
     /// <summary>
-    /// A patch request for a specified document
+    /// An advanced patch request for a specified document (using JavaScript)
     /// </summary>
     public class PatchRequest
     {
         /// <summary>
-        /// Type of patch operation.
+        /// JavaScript function to use to patch a document
         /// </summary>
-        public PatchCommandType Type { get; set; }
+        /// <value>The type.</value>
+        public string Script { get; set; }
 
         /// <summary>
-        /// Gets or sets the previous value, which is compared against the current value to verify a
-        /// change isn't overwriting new values.
-        /// <para>If the value is <c>null</c>, the operation is always successful</para>
+        /// Additional arguments passed to JavaScript function from Script.
         /// </summary>
-        public RavenJToken PrevVal { get; set; }
+        public Dictionary<string, object> Values { get; set; }
 
-        /// <summary>
-        /// New value.
-        /// </summary>
-        public RavenJToken Value { get; set; }
-
-        /// <summary>
-        /// Nested operations to perform. This is only valid when the <see cref="Type"/> is <see cref="PatchCommandType.Modify"/>.
-        /// </summary>
-        public PatchRequest[] Nested { get; set; }
-
-        /// <summary>
-        /// Property/field name to patch.
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Only valid for collection types. Position in collection to patch.
-        /// </summary>
-        public int? Position { get; set; }
-
-        /// <summary>
-        /// Only valid for collections. Set this property to true if you want to modify all items in an collection.
-        /// </summary>
-        public bool? AllPositions { get; set; }
-
-        /// <summary>
-        /// Translate this instance to json
-        /// </summary>
-        public RavenJObject ToJson()
+        public PatchRequest()
         {
-            var jObject = new RavenJObject
-                            {
-                                {"Type", new RavenJValue(Type.ToString())},
-                                {"Value", Value},
-                                {"Name", new RavenJValue(Name)}
-                            };
-            if (Position != null)
-                jObject.Add("Position", new RavenJValue(Position.Value));
-            if (Nested != null)
-                jObject.Add("Nested",  new RavenJArray(Nested.Select(x => x.ToJson())));
-            if (AllPositions != null)
-                jObject.Add("AllPositions", new RavenJValue(AllPositions.Value));
-            if (PrevVal != null)
-                jObject.Add("PrevVal", PrevVal);
-            return jObject;
+            Values = new Dictionary<string, object>();
         }
 
-        /// <summary>
-        /// Create an instance from a json object
-        /// </summary>
-        public static PatchRequest FromJson(RavenJObject patchRequestJson)
+        protected bool Equals(PatchRequest other)
         {
-            PatchRequest[] nested = null;
-            var nestedJson = patchRequestJson.Value<RavenJToken>("Nested");
-            if (nestedJson != null && nestedJson.Type != JTokenType.Null)
-                nested = patchRequestJson.Value<RavenJArray>("Nested").Cast<RavenJObject>().Select(FromJson).ToArray();
+            if(other == null)
+                return false;
+            return string.Equals(Script, other.Script) && Values.Keys.SequenceEqual(other.Values.Keys);
+        }
 
-            return new PatchRequest
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return Equals(obj as PatchRequest);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
             {
-                Type = (PatchCommandType)Enum.Parse(typeof(PatchCommandType), patchRequestJson.Value<string>("Type"), true),
-                Name = patchRequestJson.Value<string>("Name"),
-                Nested = nested,
-                Position = patchRequestJson.Value<int?>("Position"),
-                AllPositions = patchRequestJson.Value<bool?>("AllPositions"),
-                PrevVal = patchRequestJson["PrevVal"],
-                Value = patchRequestJson["Value"],
-            };
+                return Values.Keys.Aggregate(Script.GetHashCode()*397, (i, s) => i*397 ^ s.GetHashCode());
+            }
         }
     }
 }

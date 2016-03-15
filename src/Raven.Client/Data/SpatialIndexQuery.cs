@@ -75,7 +75,6 @@ namespace Raven.Abstractions.Data
             ResultsTransformer = query.ResultsTransformer;
             TransformerParameters = query.TransformerParameters;
             ExplainScores = query.ExplainScores;
-            SortHints = query.SortHints;
             IsDistinct = query.IsDistinct;
             AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
                 query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;

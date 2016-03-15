@@ -1,12 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Net;
+﻿using System.IO;
 using System.Reflection;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
 
-namespace FastTests.Voron.Bugs
+namespace SlowTests.Voron
 {
     public class DuplicatePageUsage
     {

@@ -2,67 +2,37 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Patching;
+using NetTopologySuite.Utilities;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Data;
 using Raven.Client.Document;
 
 namespace Tryouts
 {
     public class Program
     {
-        public class User
+       
+        class CustomType
         {
-            public string FirstName { get; set; }
-
-            public string LastName { get; set; }
+            public string Id { get; set; }
+            public string Owner { get; set; }
+            public int Value { get; set; }
+            public List<string> Comments { get; set; }
+            public DateTime Date { get; set; }
+            public DateTimeOffset DateOffset { get; set; }
         }
 
-        private const int numOfItems = 100000;
+
+        private const int numOfItems = 100;
 
         public static void Main(string[] args)
         {
-            using (var store = new DocumentStore
+            using (var x = new AdvancedPatching())
             {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "FooBar123"
-            })
-            {
-                store.Initialize();
-
-//				store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
-//				store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-//				{
-//					Id = "FooBar123",
-//					Settings =
-//					{
-//						{ "Raven/DataDir", "~\\FooBar123" }
-//					}
-//				});
-
-                BulkInsert(store,100).Wait();
+                x.CanPatchMetadata().Wait();
             }
-        }
-
-        public static async Task BulkInsert(DocumentStore store,int sizeBytes)
-        {
-            using (var bulkInsert = store.BulkInsert())
-            {
-                for (int i = 0; i < 10; i++)
-                {
-                    await bulkInsert.StoreAsync(new User { FirstName = "foo", LastName = "bar" });
-                }
-            }
-            Console.Write($"Doing bulk-insert with docs sized -> {sizeBytes} bytes...");
-            var sw = Stopwatch.StartNew();
-            using (var bulkInsert = store.BulkInsert())
-            {
-                for (int i = 0; i < numOfItems; i++)
-                {
-                    await bulkInsert.StoreAsync(new User {FirstName = "foo", LastName = "bar"});
-                }
-            }
-            Console.WriteLine($"Elapsed : {sw.ElapsedMilliseconds} ms");
-
         }
     }
 }

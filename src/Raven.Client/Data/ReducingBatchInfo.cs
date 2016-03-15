@@ -8,6 +8,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
+using Raven.Client.Data.Indexes;
+
 namespace Raven.Abstractions.Data
 {
     public class ReducingBatchInfo

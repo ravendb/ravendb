@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -333,7 +334,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public override void DoIndexingWork(CancellationToken cancellationToken)
+        public override void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken)
         {
             using (var instance = new ReducingExecuter(this, cancellationToken))
                 instance.Execute();

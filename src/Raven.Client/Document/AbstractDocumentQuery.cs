@@ -138,11 +138,6 @@ namespace Raven.Client.Document
         protected string highlighterKeyName;
 
         /// <summary>
-        ///   The types to sort the fields by (NULL if not specified)
-        /// </summary>
-        protected HashSet<KeyValuePair<string, SortOptions?>> sortByHints = new HashSet<KeyValuePair<string, SortOptions?>>(SortOptionsEqualityProvider.Instance);
-
-        /// <summary>
         ///   The page size to use when querying the index
         /// </summary>
         protected int? pageSize;
@@ -360,7 +355,6 @@ namespace Raven.Client.Document
             conventions = other.conventions;
             cutoff = other.cutoff;
             orderByFields = other.orderByFields;
-            sortByHints = other.sortByHints;
             pageSize = other.pageSize;
             queryText = other.queryText;
             start = other.start;
@@ -956,8 +950,6 @@ namespace Raven.Client.Document
             });
             fieldName = descending ? "-" + fieldName : fieldName;
             orderByFields = orderByFields.Concat(new[] { fieldName }).ToArray();
-            if (theSession != null)
-                sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption(fieldType)));
         }
 
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
@@ -1199,10 +1191,7 @@ If you really want to do in memory filtering on the data returned from the query
         public void WhereEquals(WhereParams whereParams)
         {
             EnsureValidFieldName(whereParams);
-
-            if (theSession != null && whereParams.Value != null)
-                sortByHints.Add(new KeyValuePair<string, SortOptions?>(whereParams.FieldName, theSession.Conventions.GetDefaultSortOption(whereParams.Value.GetType())));
-
+            
             var transformToEqualValue = TransformToEqualValue(whereParams);
             lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
 
@@ -1377,9 +1366,6 @@ If you really want to do in memory filtering on the data returned from the query
         {
             AppendSpaceIfNeeded(queryText.Length > 0);
 
-            if ((start ?? end) != null && theSession != null)
-                sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption((start ?? end).GetType())));
-
             NegateIfNeeded();
 
             fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
@@ -1401,8 +1387,6 @@ If you really want to do in memory filtering on the data returned from the query
         public void WhereBetweenOrEqual(string fieldName, object start, object end)
         {
             AppendSpaceIfNeeded(queryText.Length > 0);
-            if ((start ?? end) != null && theSession != null)
-                sortByHints.Add(new KeyValuePair<string, SortOptions?>(fieldName, theSession.Conventions.GetDefaultSortOption((start ?? end).GetType())));
 
             NegateIfNeeded();
 
@@ -1895,7 +1879,6 @@ If you really want to do in memory filtering on the data returned from the query
                     WaitForNonStaleResults = theWaitForNonStaleResults,
                     CutoffEtag = cutoffEtag,
                     SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-                    SortHints = sortByHints.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value.Value),
                     FieldsToFetch = fieldsToFetch,
                     SpatialFieldName = spatialFieldName,
                     QueryShape = queryShape,
@@ -1932,7 +1915,6 @@ If you really want to do in memory filtering on the data returned from the query
                 WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
                 WaitForNonStaleResults = theWaitForNonStaleResults,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-                SortHints = sortByHints.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value.Value),
                 FieldsToFetch = fieldsToFetch,
                 DefaultField = defaultField,
                 DefaultOperator = defaultOperator,
