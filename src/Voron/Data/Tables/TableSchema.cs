@@ -120,8 +120,8 @@ namespace Voron.Data.Tables
         /// </summary>
         public void Create(Transaction tx, string name)
         {
-            if (_pk == null)
-                throw new InvalidOperationException($"Cannot create table {name} without a primary key");
+            if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
+                throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
             var tableTree = tx.CreateTree(name);
             if (tableTree.State.NumberOfEntries > 0)
@@ -132,15 +132,18 @@ namespace Voron.Data.Tables
             var stats = (TableSchemaStats*) tableTree.DirectAdd(StatsSlice, sizeof (TableSchemaStats));
             stats->NumberOfEntries = 0;
 
-            if (_pk.IsGlobal == false)
+            if (_pk != null)
             {
-                var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof (TreeRootHeader));
-                indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
-            }
-            else
-            {
-                tx.CreateTree(_pk.Name);
+                if (_pk.IsGlobal == false)
+                {
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                    var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(TreeRootHeader));
+                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                }
+                else
+                {
+                    tx.CreateTree(_pk.Name);
+                }
             }
 
             foreach (var indexDef in _indexes.Values)

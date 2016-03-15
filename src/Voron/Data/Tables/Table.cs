@@ -288,9 +288,12 @@ namespace Voron.Data.Tables
         private void DeleteValueFromIndex(long id, TableValueReader value)
         {
             //TODO: Avoid all those allocations by using a single buffer
-            var keySlice = _schema.Key.GetSlice(value);
-            var pkTree = GetTree(_schema.Key);
-            pkTree.Delete(keySlice);
+            if (_schema.Key != null)
+            {
+                var keySlice = _schema.Key.GetSlice(value);
+                var pkTree = GetTree(_schema.Key);
+                pkTree.Delete(keySlice);
+            }
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
@@ -351,10 +354,12 @@ namespace Voron.Data.Tables
 
         private void InsertIndexValuesFor(long id, TableValueReader value)
         {
-
-            var pkval = _schema.Key.GetSlice(value);
-            var pkIndex = GetTree(_schema.Key);
-            pkIndex.Add(pkval, new Slice((byte*)&id, sizeof(long)));
+            if (_schema.Key != null)
+            {
+                var pkval = _schema.Key.GetSlice(value);
+                var pkIndex = GetTree(_schema.Key);
+                pkIndex.Add(pkval, new Slice((byte*)&id, sizeof(long)));
+            }
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
