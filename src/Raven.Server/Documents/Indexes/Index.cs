@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Indexes
             });
             _errorsSchema.DefineFixedSizeIndex("ErrorTimestamps", new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = 1,
                 IsGlobal = true
             });
 
@@ -523,12 +523,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void ResetWriteErrors()
+        internal void ResetWriteErrors()
         {
             writeErrors = Interlocked.Exchange(ref writeErrors, 0);
         }
 
-        private void HandleWriteErrors(IndexingBatchStats stats, IndexWriteException iwe)
+        internal void HandleWriteErrors(IndexingBatchStats stats, IndexWriteException iwe)
         {
             stats.AddWriteError(iwe);
 
@@ -577,16 +577,16 @@ namespace Raven.Server.Documents.Indexes
                     int size;
                     var error = new IndexingError();
 
-                    var ptr = result.Read(0, out size);
+                    var ptr = result.Read(1, out size);
                     error.Timestamp = DateTime.FromBinary(IPAddress.NetworkToHostOrder(*(long*)ptr));
 
-                    ptr = result.Read(1, out size);
+                    ptr = result.Read(2, out size);
                     error.Document = new LazyStringValue(null, ptr, size, context);
 
-                    ptr = result.Read(2, out size);
+                    ptr = result.Read(3, out size);
                     error.Action = new LazyStringValue(null, ptr, size, context);
 
-                    ptr = result.Read(3, out size);
+                    ptr = result.Read(4, out size);
                     error.Error = new LazyStringValue(null, ptr, size, context);
 
                     errors.Add(error);
@@ -616,25 +616,31 @@ namespace Raven.Server.Documents.Indexes
                 var binaryDate = indexingTime.ToBinary();
                 statsTree.Add(Schema.LastIndexingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
 
-                foreach (var error in stats.Errors)
+                if (stats.Errors != null)
                 {
-                    var ticksBigEndian = IPAddress.HostToNetworkOrder(error.Timestamp.Ticks);
-                    var document = context.GetLazyString(error.Document);
-                    var action = context.GetLazyString(error.Action);
-                    var e = context.GetLazyString(error.Error);
-
-                    var tvb = new TableValueBuilder
+                    var startId = table.NumberOfEntries;
+                    foreach (var error in stats.Errors)
                     {
-                        { (byte*)&ticksBigEndian, sizeof(long) },
-                        { document.Buffer, document.Size },
-                        { action.Buffer, action.Size },
-                        { e.Buffer, e.Size }
-                    };
+                        var id = ++startId;
+                        var ticksBigEndian = IPAddress.HostToNetworkOrder(error.Timestamp.Ticks);
+                        var document = context.GetLazyString(error.Document);
+                        var action = context.GetLazyString(error.Action);
+                        var e = context.GetLazyString(error.Error);
 
-                    table.Insert(tvb);
+                        var tvb = new TableValueBuilder
+                                      {
+                                          { (byte*)&id, sizeof(long) },
+                                          { (byte*)&ticksBigEndian, sizeof(long) },
+                                          { document.Buffer, document.Size },
+                                          { action.Buffer, action.Size },
+                                          { e.Buffer, e.Size }
+                                      };
+
+                        table.Insert(tvb);
+                    }
+
+                    CleanupErrors(table);
                 }
-
-                CleanupErrors(table);
 
                 tx.Commit();
             }
