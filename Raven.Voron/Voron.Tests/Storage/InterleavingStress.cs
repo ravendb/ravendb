@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using Voron.Impl;
 using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests.Storage
 {
-    public unsafe class InterleavingStress : StorageTest
+    public class InterleavingStress : StorageTest
     {
         [PrefixesFact]
         public void ShouldReusePagesButStillNotMixStuffUp()

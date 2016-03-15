@@ -768,12 +768,11 @@ namespace Voron.Trees
         private bool TryOverwriteOverflowPages(NodeHeader* updatedNode,
                                                       MemorySlice key, int len, ushort? version, out byte* pos)
         {
-            if (updatedNode->Flags == NodeFlags.PageRef &&
-                _tx.Id <= _tx.Environment.OldestTransaction) // ensure MVCC - do not overwrite if there is some older active transaction that might read those overflows
+            if (updatedNode->Flags == NodeFlags.PageRef)
             {
-                var overflowPage = _tx.GetReadOnlyPage(updatedNode->PageNumber);
+                var readOnlyOverflowPage = _tx.GetReadOnlyPage(updatedNode->PageNumber);
 
-                if (len <= overflowPage.OverflowSize)
+                if (len <= readOnlyOverflowPage.OverflowSize)
                 {
                     CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
 
@@ -781,7 +780,7 @@ namespace Voron.Trees
                         updatedNode->Version = 0;
                     updatedNode->Version++;
 
-                    var availableOverflows = _tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
+                    var availableOverflows = _tx.DataPager.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
 
                     var requestedOverflows = _tx.DataPager.GetNumberOfOverflowPages(len);
 
@@ -789,14 +788,15 @@ namespace Voron.Trees
 
                     for (int i = 0; i < overflowsToFree; i++)
                     {
-                        _tx.FreePage(overflowPage.PageNumber + requestedOverflows + i);
+                        _tx.FreePage(readOnlyOverflowPage.PageNumber + requestedOverflows + i);
                     }
 
-                    State.RecordFreedPage(overflowPage, overflowsToFree); // we use overflowPage here just to have an instance of Page to properly update stats
+                    State.RecordFreedPage(readOnlyOverflowPage, overflowsToFree);
 
-                    overflowPage.OverflowSize = len;
+                    var writtableOverflowPage = _tx.AllocatePage(requestedOverflows, PageFlags.Overflow, updatedNode->PageNumber);
 
-                    pos = overflowPage.Base + Constants.PageHeaderSize;
+                    writtableOverflowPage.OverflowSize = len;
+                    pos = writtableOverflowPage.Base + Constants.PageHeaderSize;
                     return true;
                 }
             }
