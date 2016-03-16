@@ -1,5 +1,3 @@
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,15 +10,18 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.OAuth
+namespace Raven.Client.OAuth
 {
-    public class SecuredAuthenticator : AbstractAuthenticator
+    public class SecuredAuthenticator
     {
+        public string CurrentToken { get; set; }
+        public string CurrentTokenWithBearer { get; set; }
         private static readonly ILog Logger = LogManager.GetLogger(typeof(SecuredAuthenticator));
         private bool disposed;
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
@@ -30,11 +31,49 @@ namespace Raven.Abstractions.OAuth
         private string challenge;
         private const int MaxWebSocketRecvSize = 4096;
 
-        public override void ConfigureRequest(object sender, WebRequestEventArgs e)
+        protected void SetAuthorization(WebRequestEventArgs e)
+        {
+            if (string.IsNullOrEmpty(CurrentToken))
+                return;
+
+            if (e.Client == null)
+                return;
+            SetAuthorization(e.Client);
+        }
+
+        protected void SetAuthorization(HttpClient e)
+        {
+            if (string.IsNullOrEmpty(CurrentToken))
+                return;
+
+            try
+            {
+                e.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentToken);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(string.Format("Could not set the Authorization to the value 'Bearer {0}'", CurrentToken), ex);
+            }
+        }
+
+        protected static void SetHeader(WebHeaderCollection headers, string key, string value)
+        {
+            try
+            {
+                headers[key] = value;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not set '" + key + "' = '" + value + "'", e);
+            }
+        }
+
+
+        public void ConfigureRequest(object sender, WebRequestEventArgs e)
         {
             if (CurrentToken != null)
             {
-                base.ConfigureRequest(sender, e);
+                SetAuthorization(e);
                 return;
             }
 
@@ -48,7 +87,7 @@ namespace Raven.Abstractions.OAuth
         {
             var sp = Stopwatch.StartNew();
             ThrowIfBadUrlOrApiKey(url, apiKey);
-            uri = new Uri(url.Replace("http://", "ws://")); // TODO wss
+            uri = new Uri(url.Replace("http://", "ws://").Replace("https://", "wss://"));
 
             using (var webSocket = new ClientWebSocket())
             {
@@ -68,7 +107,14 @@ namespace Raven.Abstractions.OAuth
                     await Send(webSocket, "ChallengeResponse", challenge);
                     recvRavenJObject = await Recieve(webSocket);
 
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close from client", disposedToken.Token);
+                    try
+                    {
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Close from client", disposedToken.Token);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                     SetCurrentTokenFromReply(recvRavenJObject);
                     return (Action<HttpClient>)(SetAuthorization);
                 }

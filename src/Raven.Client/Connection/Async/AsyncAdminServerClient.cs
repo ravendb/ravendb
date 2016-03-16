@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
@@ -168,6 +169,31 @@ namespace Raven.Client.Connection.Async
                     return (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
             }, token);
+        }
+
+        public async Task PutApiKeyAsync(string name, ApiKeyDataRequest apiKeyData,
+           CancellationToken token = default(CancellationToken))
+        {
+            using (var request = adminRequest.CreatePutApiKeyRequest(name))
+            {
+                await
+                    request.WriteAsync(RavenJObject.FromObject(apiKeyData))
+                        .WithCancellation(token)
+                        .ConfigureAwait(false);
+
+                await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ApiKeyDataRequest> GetApiKeyAsync(string name,
+            CancellationToken token = default(CancellationToken))
+        {
+            using (var request = adminRequest.CreateGetApiKeyRequest(name))
+            {
+                var json =
+                    (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.Deserialize<ApiKeyDataRequest>(innerAsyncServerClient.convention);
+            }
         }
 
         public IAsyncDatabaseCommands Commands

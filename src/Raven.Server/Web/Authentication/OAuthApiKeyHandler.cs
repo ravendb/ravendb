@@ -58,7 +58,7 @@ namespace Raven.Server.Web.Authentication
 
                             await SendResponse(webSocket, new DynamicJsonValue
                             {
-                                ["currentToken"] = accessToken.Token
+                                ["CurrentToken"] = accessToken.Token
                             });
 
                             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by server",
@@ -224,12 +224,12 @@ namespace Raven.Server.Web.Authentication
 
                 if (apiDoc == null)
                 {
-                    throw new InvalidOperationException($"Could not find document ${Constants.ApiKeyPrefix}{apiKeyName}");
+                    throw new InvalidOperationException($"Could not find document {Constants.ApiKeyPrefix}{apiKeyName}");
                 }
 
-                string apiKeyDefinitionEnabled;
-                if (apiDoc.TryGet<string>("Enabled", out apiKeyDefinitionEnabled) == false ||
-                    apiKeyDefinitionEnabled.Equals("False", StringComparison.OrdinalIgnoreCase))
+                bool apiKeyDefinitionEnabled;
+                if (apiDoc.TryGet("Enabled", out apiKeyDefinitionEnabled) == false ||
+                    apiKeyDefinitionEnabled == false)
                 {
                     throw new InvalidOperationException("Unauthorized Client - Unknown API Key");
                 }
@@ -239,12 +239,12 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException("Missing 'Secret' property in " + Constants.ApiKeyPrefix + apiKeyName);
                 }
 
-                var databases = new Dictionary<string, AccessToken.Mode>(StringComparer.OrdinalIgnoreCase);
+                var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
 
                 BlittableJsonReaderObject accessMode;
-                if (apiDoc.TryGet("AccessMode", out accessMode) == false)
+                if (apiDoc.TryGet("ResourcesAccessMode", out accessMode) == false)
                 {
-                    throw new InvalidOperationException("Missing 'AccessMode' property in " + Constants.ApiKeyPrefix + apiKeyName);
+                    throw new InvalidOperationException("Missing 'ResourcesAccessMode' property in " + Constants.ApiKeyPrefix + apiKeyName);
                 }
 
                 for (var i = 0; i < accessMode.Count; i++)
@@ -257,7 +257,7 @@ namespace Raven.Server.Web.Authentication
                         throw new InvalidOperationException(
                             "Missing value of dbName -'" + dbName.Item1 + "' property in " + Constants.ApiKeyPrefix + apiKeyName);
                     }
-                    AccessToken.Mode mode;
+                    AccessModes mode;
                     if (Enum.TryParse(accessValue, out mode) == false)
                     {
                         throw new InvalidOperationException(

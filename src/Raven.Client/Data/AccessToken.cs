@@ -9,16 +9,9 @@ namespace Raven.Client.Data
 {
     public class AccessToken
     {
-        public enum Mode
-        {
-            None,
-            ReadOnly,
-            ReadWrite,
-            Admin
-        }
         public string Token { get; set; }
         public string Name { get; set; }
-        public Dictionary<string, Mode> AuthorizedDatabases { get; set; }
+        public Dictionary<string, AccessModes> AuthorizedDatabases { get; set; }
         public long Issued { get; set; }
         public bool IsServerAdminAuthorized { get; set; }
 

@@ -7,6 +7,7 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
@@ -93,6 +94,16 @@ namespace Raven.Client.Connection
         public AdminStatistics GetStatistics()
         {
             return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetStatisticsAsync());
+        }
+
+        public ApiKeyDataRequest GetApiKey(string name)
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetApiKeyAsync(name));
+        }
+
+        public void PutApiKey(string name, ApiKeyDataRequest apiKeyData)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.PutApiKeyAsync(name, apiKeyData));
         }
     }
 }

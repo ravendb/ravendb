@@ -122,23 +122,23 @@ namespace Raven.Server.Routing
             if (resourceName == null)
                 return true;
 
-            AccessToken.Mode mode;
+            AccessModes mode;
             var hasValue = 
                 accessToken.AuthorizedDatabases.TryGetValue(resourceName, out mode) ||
                 accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
 
             if (hasValue == false)
-                mode = AccessToken.Mode.None;
+                mode = AccessModes.None;
 
             string text;
             switch (mode)
             {
-                case AccessToken.Mode.None:
+                case AccessModes.None:
                     context.Response.StatusCode = 403;
                     text = $"Api Key {accessToken.Name} does not have access to {resourceName}";
                     await context.Response.WriteAsync(text);
                     return false;
-                case AccessToken.Mode.ReadOnly:
+                case AccessModes.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
                         context.Response.StatusCode = 403;
@@ -147,8 +147,8 @@ namespace Raven.Server.Routing
                         return false;
                     }
                     return true;
-                case AccessToken.Mode.ReadWrite:
-                case AccessToken.Mode.Admin:
+                case AccessModes.ReadWrite:
+                case AccessModes.Admin:
                     return true;
                 default:
                     throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
