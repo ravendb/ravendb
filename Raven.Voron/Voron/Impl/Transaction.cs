@@ -166,23 +166,6 @@ namespace Voron.Impl
             }
         }
 
-        internal void WriteDirect(Page[] pages, long nextPageNumber)
-        {
-            for (int i = 0; i < pages.Length; i++)
-            {
-                int numberOfPages = 1;
-                var page = pages[i];
-                if (page.IsOverflow)
-                {
-                    numberOfPages = (page.OverflowSize / AbstractPager.PageSize) + (page.OverflowSize % AbstractPager.PageSize == 0 ? 0 : 1);
-                    i += numberOfPages;
-                    _overflowPagesInTransaction += (numberOfPages - 1);
-                }
-
-                WritePageDirect(page, numberOfPages);				
-            }
-        }
-
         private void WritePageDirect(Page page, int numberOfPagesIncludingOverflow)
         {
             var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
@@ -734,12 +717,6 @@ namespace Voron.Impl
                 long pageNumber = writableKey.Key;
                 if (!_dirtyPages.Contains(pageNumber))
                     throw new VoronUnrecoverableErrorException("Writable key is not dirty (which means you are asking for a page modification for no reason).");
-
-                var page = this.GetReadOnlyPage(pageNumber);
-
-                ulong pageHash = Hashing.XXHash64.Calculate(page.Base, page.PageSize);
-                if (pageHash == writableKey.Value)
-                    throw new VoronUnrecoverableErrorException("Writable key is not dirty (which means you are asking for a page modification for no reason).");
             }
         }
 
@@ -772,7 +749,7 @@ namespace Voron.Impl
             if ( readOnlyPages.TryGetValue(page.PageNumber, out storedHash) )
             {
                 if (pageHash != storedHash)
-                    throw new VoronUnrecoverableErrorException("Read Only Page has change between tracking requests.");
+                    throw new VoronUnrecoverableErrorException("Read Only Page has change between tracking requests. Page #" + page.PageNumber);
             }
             else
             {
