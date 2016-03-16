@@ -160,8 +160,14 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteInteger(stats.IndexingSuccesses);
                 writer.WriteComma();
 
+                writer.WritePropertyName(context.GetLazyString(nameof(stats.ErrorsCount)));
+                writer.WriteInteger(stats.ErrorsCount);
+                writer.WriteComma();
+
                 writer.WritePropertyName(context.GetLazyString(nameof(stats.IsTestIndex)));
                 writer.WriteBool(stats.IsTestIndex);
+
+
 
                 writer.WriteEndObject();
             }
