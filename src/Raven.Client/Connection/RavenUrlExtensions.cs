@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
@@ -75,6 +77,32 @@ namespace Raven.Client.Connection
         public static string Stats(this string url)
         {
             return $"{url}/stats";
+        }
+
+        public static string IndexErrors(this string url, IEnumerable<string> indexNames)
+        {
+            var result = $"{url}/indexes/errors";
+            if (indexNames == null)
+                return result;
+
+            var first = true;
+            foreach (var indexName in indexNames)
+            {
+                if (first)
+                    result += "?";
+                else
+                    result += "&";
+
+                first = false;
+                result += "name=" + indexName;
+            }
+
+            return result;
+        }
+
+        public static string IndexStatistics(this string url, string name)
+        {
+            return $"{url}/indexes/stats?name={name}";
         }
 
         public static string UserInfo(this string url)

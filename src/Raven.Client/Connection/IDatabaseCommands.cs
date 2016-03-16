@@ -245,10 +245,17 @@ namespace Raven.Client.Connection
         /// </summary>
         DatabaseStatistics GetStatistics();
 
+        IndexErrors GetIndexErrors(string name);
+
+        IndexErrors[] GetIndexErrors(IEnumerable<string> indexNames);
+
+        IndexErrors[] GetIndexErrors();
+
+        IndexStats GetIndexStatistics(string name);
+
         /// <summary>
         ///     Retrieve the user info
         /// </summary>
-
         UserInfo GetUserInfo();
 
         /// <summary>

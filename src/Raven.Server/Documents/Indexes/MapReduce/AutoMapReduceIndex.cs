@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     _cancellationToken.ThrowIfCancellationRequested();
 
                     var lastEtag = DoMap(collection, lastMappedEtag);
-                    WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+                    _parent.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
                 }
 
                 var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;

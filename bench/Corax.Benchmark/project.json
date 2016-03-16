@@ -1,0 +1,30 @@
+﻿{
+  "version": "4.0.0-*",
+  "compilationOptions": {
+    "allowUnsafe": true,
+    "emitEntryPoint": true
+  },
+
+  "dependencies": {
+    "Raven.Server": "4.0.0-*",
+    "Sparrow": "4.0.0-*"
+  },
+
+  "commands": {
+    "Corax.Benchmark": "Corax.Benchmark"
+  },
+
+  "frameworks": {
+    "dnxcore50": {
+      "dependencies": {
+        "Microsoft.CSharp": "4.0.1-beta-23516",
+        "System.Collections": "4.0.11-beta-23516",
+        "System.Console": "4.0.0-beta-23516",
+        "System.Linq": "4.0.1-beta-23516",
+        "System.Threading": "4.0.11-beta-23516",
+        "System.Threading.ThreadPool": "4.0.10-beta-23516",
+        "Voron": "4.0.0-*"
+      }
+    }
+  }
+}
