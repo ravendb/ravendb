@@ -484,6 +484,9 @@ namespace Voron.Data.Fixed
             var newEntryStart = tmp.TempPagePointer + srcCopyStart;
             *((long*) newEntryStart) = key;
 
+            if (_lastMatch == 0)
+                srcCopyStart += _entrySize;
+
             Memory.Copy(newEntryStart + _entrySize, dataStart + srcCopyStart, (startingEntryCount - pos)*_entrySize);
             return newEntriesCount;
         }
