@@ -88,11 +88,6 @@ namespace Raven.Abstractions.Data
         public IndexStats[] Indexes { get; set; }
 
         /// <summary>
-        /// Array of indexing errors that occured in database.
-        /// </summary>
-        public IndexingError[] Errors { get; set; }
-
-        /// <summary>
         /// Information about future indexing batches.
         /// </summary>
         public FutureBatchStats[] Prefetches { get; set; }

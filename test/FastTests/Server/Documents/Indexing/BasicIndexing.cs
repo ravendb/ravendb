@@ -10,6 +10,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
@@ -296,7 +297,7 @@ namespace FastTests.Server.Documents.Indexing
                             }
 
                             tx.Commit();
-                        }                        
+                        }
                         var batchStats = new IndexingBatchStats();
                         index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
@@ -405,6 +406,78 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void WriteErrors()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                using (var index = AutoMapIndex.CreateNew(
+                    1,
+                    new AutoIndexDefinition(
+                        "Users",
+                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
+                    database))
+                {
+                    index.Start();
+                    Assert.True(index.IsRunning);
+
+                    IndexStats stats;
+                    var batchStats = new IndexingBatchStats();
+                    var iwe = new IndexWriteException();
+                    for (int i = 0; i < 10; i++)
+                    {
+                        stats = index.GetStats();
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                        index.HandleWriteErrors(batchStats, iwe);
+                    }
+
+                    stats = index.GetStats();
+                    Assert.Equal(IndexingPriority.Error, stats.Priority);
+                    Assert.True(SpinWait.SpinUntil(() => index.IsRunning == false, TimeSpan.FromSeconds(5)));
+                }
+            }
+        }
+
+        [Fact]
+        public void Errors()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                using (var index = AutoMapIndex.CreateNew(
+                    1,
+                    new AutoIndexDefinition(
+                        "Users",
+                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
+                    database))
+                {
+                    var stats = new IndexingBatchStats();
+                    index.UpdateStats(SystemTime.UtcNow, stats);
+
+                    Assert.Equal(0, index.GetErrors().Count);
+
+                    stats.AddWriteError(new IndexWriteException());
+                    stats.AddAnalyzerError(new IndexAnalyzerException());
+                    index.UpdateStats(SystemTime.UtcNow, stats);
+
+                    var errors = index.GetErrors();
+                    Assert.Equal(2, errors.Count);
+                    Assert.Equal("Write", errors[0].Action);
+                    Assert.Equal("Analyzer", errors[1].Action);
+
+                    for (int i = 0; i < Index.MaxNumberOfKeptErrors; i++)
+                    {
+                        var now = SystemTime.UtcNow;
+                        stats.Errors[0].Timestamp = now;
+                        stats.Errors[1].Timestamp = now;
+                        index.UpdateStats(now, stats);
+                    }
+
+                    errors = index.GetErrors();
+                    Assert.Equal(Index.MaxNumberOfKeptErrors, errors.Count);
                 }
             }
         }

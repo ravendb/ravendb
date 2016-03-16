@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Client.Indexing;
 using FastTests.Server.Documents.Patching;
 using NetTopologySuite.Utilities;
 using Raven.Abstractions.Data;
@@ -29,9 +30,9 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var x = new AdvancedPatching())
+            using (var x = new BasicIndexing())
             {
-                x.CanPatchMetadata().Wait();
+                x.GetErrors().Wait();
             }
         }
     }
