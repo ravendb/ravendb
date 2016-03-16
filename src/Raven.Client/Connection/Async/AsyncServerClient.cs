@@ -1496,6 +1496,35 @@ namespace Raven.Client.Connection.Async
             }
         }
 
+        public async Task<IndexErrors> GetIndexErrorsAsync(string name, CancellationToken token = default(CancellationToken))
+        {
+            var errors = await GetIndexErrorsAsync(new[] { name }, token).ConfigureAwait(false);
+            return errors[0];
+        }
+
+        public async Task<IndexErrors[]> GetIndexErrorsAsync(IEnumerable<string> indexNames, CancellationToken token = default(CancellationToken))
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.IndexErrors(indexNames), HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
+            {
+                var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.Deserialize<IndexErrors[]>(convention);
+            }
+        }
+
+        public Task<IndexErrors[]> GetIndexErrorsAsync(CancellationToken token = default(CancellationToken))
+        {
+            return GetIndexErrorsAsync(indexNames: null, token: token);
+        }
+
+        public async Task<IndexStats> GetIndexStatisticsAsync(string name, CancellationToken token = new CancellationToken())
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.IndexStatistics(name), HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
+            {
+                var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.Deserialize<IndexStats>(convention);
+            }
+        }
+
         public async Task<UserInfo> GetUserInfoAsync(CancellationToken token = default(CancellationToken))
         {
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.UserInfo(), HttpMethod.Get, PrimaryCredentials, convention)))

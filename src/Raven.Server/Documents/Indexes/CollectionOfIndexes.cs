@@ -87,5 +87,7 @@ namespace Raven.Server.Documents.Indexes
         {
             return GetEnumerator();
         }
+
+        public int Count => _indexesById.Count;
     }
 }

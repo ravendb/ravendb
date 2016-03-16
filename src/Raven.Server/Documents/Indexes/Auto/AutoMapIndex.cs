@@ -2,8 +2,6 @@
 using System.Diagnostics;
 using System.Threading;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -44,23 +42,32 @@ namespace Raven.Server.Documents.Indexes.Auto
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
             {
-                ExecuteCleanup(cancellationToken, databaseContext, indexContext);
+                ExecuteCleanup(stats, cancellationToken, databaseContext, indexContext);
                 ExecuteMap(stats, cancellationToken, databaseContext, indexContext);
 
                 tx.Commit();
             }
         }
 
-        private void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        private void ExecuteCleanup(IndexingBatchStats stats, CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Collections: {string.Join(",", Collections)}.");
+
             foreach (var collection in Collections)
             {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Collection: {collection}.");
+
                 long lastMappedEtag;
                 long lastTombstoneEtag;
                 lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
                 lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
 
                 var lastEtag = lastTombstoneEtag;
                 var count = 0;
@@ -73,6 +80,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                         foreach (var tombstone in DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                         {
                             token.ThrowIfCancellationRequested();
+
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processing tombstone {tombstone.Key} ({tombstone.Etag}).");
 
                             count++;
                             lastEtag = tombstone.Etag;
@@ -93,6 +103,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                 if (count == 0)
                     return;
 
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processed {count} tombstones in '{collection}' collection.");
+
                 if (lastEtag <= lastTombstoneEtag)
                     return;
 
@@ -107,10 +120,19 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Executing map for '{Name} ({IndexId})'. Collections: {string.Join(",", Collections)}.");
+
             foreach (var collection in Collections)
             {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing map for '{Name} ({IndexId})'. Collection: {collection}.");
+
                 long lastMappedEtag;
                 lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing map for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}.");
 
                 var lastEtag = lastMappedEtag;
                 var count = 0;
@@ -125,6 +147,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                         foreach (var document in DocumentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                         {
                             cancellationToken.ThrowIfCancellationRequested();
+
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processing document: {document.Key}.");
 
                             stats.IndexingAttempts++;
 
@@ -141,9 +166,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                             {
                                 stats.IndexingErrors++;
 
-                                Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{Name}'.", e);
+                                Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{Name} ({IndexId}'.", e);
 
-                                //context.AddError // TODO [ppekrol]
+                                stats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
                             }
 
                             if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
@@ -158,6 +183,9 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                     if (lastEtag <= lastMappedEtag)
                         return;
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing map for '{Name} ({IndexId})'. Processed {count} documents in '{collection}' collection.");
 
                     WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
                 }

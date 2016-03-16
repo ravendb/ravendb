@@ -2,11 +2,14 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Exceptions;
+using Raven.Server.Utils;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 
@@ -204,6 +207,70 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
                 Assert.Equal(IndexingPriority.Error, stats.Priority);
+            }
+        }
+
+        [Fact]
+        public async Task GetErrors()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session
+                        .Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                }
+
+                var database = await Server.ServerStore.DatabasesLandlord
+                    .GetResourceInternal(new StringSegment(store.DefaultDatabase, 0))
+                    .ConfigureAwait(false);
+
+                var index = database.IndexStore.GetIndexes().First();
+                var now = SystemTime.UtcNow;
+                var nowNext = now.AddTicks(1);
+
+                var batchStats = new IndexingBatchStats();
+                batchStats.AddMapError("users/1", "error/1");
+                batchStats.AddAnalyzerError(new IndexAnalyzerException());
+                batchStats.Errors[0].Timestamp = now;
+                batchStats.Errors[1].Timestamp = nowNext;
+
+                index.UpdateStats(SystemTime.UtcNow, batchStats);
+
+                var error = await store.AsyncDatabaseCommands.GetIndexErrorsAsync(index.Name).ConfigureAwait(false);
+                Assert.Equal(index.Name, error.Name);
+                Assert.Equal(2, error.Errors.Length);
+                Assert.Equal("Map", error.Errors[0].Action);
+                Assert.Equal("users/1", error.Errors[0].Document);
+                Assert.Equal("error/1", error.Errors[0].Error);
+                Assert.Equal(now, error.Errors[0].Timestamp);
+
+                Assert.Equal("Analyzer", error.Errors[1].Action);
+                Assert.Null(error.Errors[1].Document);
+                Assert.True(error.Errors[1].Error.Contains("Could not create analyzer:"));
+                Assert.Equal(nowNext, error.Errors[1].Timestamp);
+
+                var errors = await store.AsyncDatabaseCommands.GetIndexErrorsAsync().ConfigureAwait(false);
+                Assert.Equal(1, errors.Length);
+
+                errors = await store.AsyncDatabaseCommands.GetIndexErrorsAsync(new[] { index.Name }).ConfigureAwait(false);
+                Assert.Equal(1, errors.Length);
+
+                var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name).ConfigureAwait(false);
+                Assert.Equal(2, stats.ErrorsCount);
             }
         }
     }

@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -21,7 +20,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Changes;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Data;
@@ -270,6 +268,14 @@ namespace Raven.Client.Connection.Async
         ///     Retrieve the statistics for the database
         /// </summary>
         Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken token = default(CancellationToken));
+
+        Task<IndexErrors> GetIndexErrorsAsync(string name, CancellationToken token = default(CancellationToken));
+
+        Task<IndexErrors[]> GetIndexErrorsAsync(IEnumerable<string> indexNames, CancellationToken token = default(CancellationToken));
+
+        Task<IndexErrors[]> GetIndexErrorsAsync(CancellationToken token = default(CancellationToken));
+
+        Task<IndexStats> GetIndexStatisticsAsync(string name, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Get the all terms stored in the index for the specified field

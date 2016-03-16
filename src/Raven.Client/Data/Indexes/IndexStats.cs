@@ -94,6 +94,8 @@ namespace Raven.Client.Data.Indexes
         /// </summary>
         public int EntriesCount { get; set; }
 
+        public int ErrorsCount { get; set; }
+
         /// <summary>
         /// Indicates if this is a test index (works on a limited data set - for testing purposes only)
         /// </summary>
