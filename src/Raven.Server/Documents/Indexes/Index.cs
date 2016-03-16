@@ -213,10 +213,11 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void CreateSchema()
         {
-            _errorsSchema.DefineFixedSizeIndex("ErrorTimestamps", new TableSchema.FixedSizeSchemaIndexDef
+            _errorsSchema.DefineIndex("ErrorTimestamps", new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
-                IsGlobal = true
+                IsGlobal = true,
+                Name = "ErrorTimestamps"
             });
 
             TransactionOperationContext context;
@@ -565,24 +566,27 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
 
-                foreach (var result in table.SeekForwardFrom(_errorsSchema.FixedSizeIndexes["ErrorTimestamps"], long.MinValue))
+                foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys))
                 {
-                    int size;
-                    var error = new IndexingError();
+                    foreach (var tvr in sr.Results)
+                    {
+                        int size;
+                        var error = new IndexingError();
 
-                    var ptr = result.Read(0, out size);
-                    error.Timestamp = DateTime.FromBinary(IPAddress.NetworkToHostOrder(*(long*)ptr));
+                        var ptr = tvr.Read(0, out size);
+                        error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
 
-                    ptr = result.Read(1, out size);
-                    error.Document = new LazyStringValue(null, ptr, size, context);
+                        ptr = tvr.Read(1, out size);
+                        error.Document = new LazyStringValue(null, ptr, size, context);
 
-                    ptr = result.Read(2, out size);
-                    error.Action = new LazyStringValue(null, ptr, size, context);
+                        ptr = tvr.Read(2, out size);
+                        error.Action = new LazyStringValue(null, ptr, size, context);
 
-                    ptr = result.Read(3, out size);
-                    error.Error = new LazyStringValue(null, ptr, size, context);
+                        ptr = tvr.Read(3, out size);
+                        error.Error = new LazyStringValue(null, ptr, size, context);
 
-                    errors.Add(error);
+                        errors.Add(error);
+                    }
                 }
             }
 
@@ -646,12 +650,15 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             var take = table.NumberOfEntries - MaxNumberOfErrors;
-            foreach (var result in table.SeekForwardFrom(_errorsSchema.FixedSizeIndexes["ErrorTimestamps"], long.MinValue))
+            foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys))
             {
-                if (take-- <= 0)
-                    return;
+                foreach (var tvr in sr.Results)
+                {
+                    if (take-- <= 0)
+                        return;
 
-                table.Delete(result.Id);
+                    table.Delete(tvr.Id);
+                }
             }
         }
 

@@ -470,7 +470,10 @@ namespace FastTests.Server.Documents.Indexing
 
                     for (int i = 0; i < 100; i++)
                     {
-                        index.UpdateStats(SystemTime.UtcNow, stats);
+                        var now = SystemTime.UtcNow;
+                        stats.Errors[0].Timestamp = now;
+                        stats.Errors[1].Timestamp = now;
+                        index.UpdateStats(now, stats);
                     }
 
                     errors = index.GetErrors();

@@ -479,7 +479,10 @@ namespace Voron.Data.Tables
         {
             int size;
             var ptr = DirectRead(id, out size);
-            var secondaryIndexForValue = new TableValueReader(ptr, size);
+            var secondaryIndexForValue = new TableValueReader(ptr, size)
+            {
+                Id = id
+            };
             return secondaryIndexForValue;
         }
 
@@ -607,7 +610,7 @@ namespace Voron.Data.Tables
                     if (it.CurrentKey > maxValue)
                         break;
 
-                    if (deletedList.Count > 10*1024)
+                    if (deletedList.Count > 10 * 1024)
                         return false;
 
                     deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());

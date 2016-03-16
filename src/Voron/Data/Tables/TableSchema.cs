@@ -28,7 +28,6 @@ namespace Voron.Data.Tables
             /// </summary>
             public int StartIndex = -1;
             public int Count = -1;
-            public bool MultiValue;
             public Slice NameAsSlice;
             public string Name;
 
@@ -97,7 +96,6 @@ namespace Voron.Data.Tables
             if (string.IsNullOrWhiteSpace(_pk.Name))
                 _pk.Name = "PK";
             _pk.NameAsSlice = _pk.Name;
-            _pk.MultiValue = false;
 
             if (_pk.Count > 1)
                 throw new InvalidOperationException("Primary key must be a single field");
