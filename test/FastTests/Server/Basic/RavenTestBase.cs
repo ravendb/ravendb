@@ -26,9 +26,9 @@ namespace Raven.Tests.Core
         public const string ServerName = "Raven.Tests.Core.Server";
 
         protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
-        protected readonly HashSet<string> PathsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        protected static readonly HashSet<string> PathsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private static int _currentServerUsages;
+        private static long _currentServerUsages;
         private static RavenServer _globalServer;
         private static readonly object ServerLocker = new object();
         private RavenServer _localServer;
@@ -40,11 +40,17 @@ namespace Raven.Tests.Core
             {
                 if (_localServer != null)
                     return _localServer;
+                if (_globalServer != null)
+                {
+                    Interlocked.Increment(ref _currentServerUsages);
+                    _localServer = _globalServer;
+                    return _localServer;
+                }
                 lock (ServerLocker)
                 {
                     if (_globalServer == null)
                         _globalServer = CreateServer();
-                    _currentServerUsages++;
+                    Interlocked.Increment(ref _currentServerUsages);
                     _localServer = _globalServer;
                 }
                 return _globalServer;
@@ -171,11 +177,10 @@ namespace Raven.Tests.Core
 
             if (_localServer != null)
             {
+                if(Interlocked.Decrement(ref _currentServerUsages)>0)
+                    return;
                 lock (ServerLocker)
                 {
-                    if (--_currentServerUsages > 0)
-                        return;
-
                     try
                     {
                         _globalServer.Dispose();
