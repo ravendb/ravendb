@@ -748,6 +748,7 @@ namespace Raven.Server.Documents.Indexes
             using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
             {
                 var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+                var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
 
                 var stats = new IndexStats();
                 stats.Id = IndexId;
@@ -759,6 +760,7 @@ namespace Raven.Server.Documents.Indexes
                 stats.CreatedTimestamp = DateTime.FromBinary(statsTree.Read(Schema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
+                stats.ErrorsCount = (int)table.NumberOfEntries;
 
                 var lastIndexingTime = statsTree.Read(Schema.LastIndexingTimeSlice);
                 if (lastIndexingTime != null)

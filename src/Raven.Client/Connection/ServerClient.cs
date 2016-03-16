@@ -7,7 +7,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -17,7 +16,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
-using Raven.Client.Changes;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -31,7 +29,6 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -362,6 +359,26 @@ namespace Raven.Client.Connection
         public DatabaseStatistics GetStatistics()
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetStatisticsAsync());
+        }
+
+        public IndexErrors GetIndexErrors(string name)
+        {
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexErrorsAsync(name));
+        }
+
+        public IndexErrors[] GetIndexErrors(IEnumerable<string> indexNames)
+        {
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexErrorsAsync(indexNames));
+        }
+
+        public IndexErrors[] GetIndexErrors()
+        {
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexErrorsAsync());
+        }
+
+        public IndexStats GetIndexStatistics(string name)
+        {
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexStatisticsAsync(name));
         }
 
         public UserInfo GetUserInfo()

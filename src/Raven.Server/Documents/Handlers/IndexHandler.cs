@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -367,6 +369,101 @@ namespace Raven.Server.Documents.Handlers
                 throw new InvalidOperationException("There is not index with name: " + names[0]);
 
             index.SetPriority(priority);
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/errors", "GET")]
+        public Task GetErrors()
+        {
+            var names = HttpContext.Request.Query["name"];
+
+            List<Index> indexes;
+            if (names.Count == 0)
+                indexes = Database.IndexStore.GetIndexes().ToList();
+            else
+            {
+                indexes = new List<Index>();
+                foreach (var name in names)
+                {
+                    var index = Database.IndexStore.GetIndex(name);
+                    if (index == null)
+                        throw new InvalidOperationException("There is not index with name: " + name);
+
+                    indexes.Add(index);
+                }
+            }
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartArray();
+
+                var first = true;
+                foreach (var index in indexes)
+                {
+                    if (first == false)
+                    {
+                        writer.WriteComma();
+                    }
+
+                    first = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString("Name"));
+                    writer.WriteString(context.GetLazyString(index.Name));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("Errors"));
+                    writer.WriteStartArray();
+                    var firstError = true;
+                    foreach (var error in index.GetErrors())
+                    {
+                        if (firstError == false)
+                        {
+                            writer.WriteComma();
+                        }
+
+                        firstError = false;
+
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(context.GetLazyString(nameof(error.Timestamp)));
+                        writer.WriteString(context.GetLazyString(error.Timestamp.GetDefaultRavenFormat()));
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(context.GetLazyString(nameof(error.Document)));
+                        if (string.IsNullOrWhiteSpace(error.Document) == false)
+                            writer.WriteString(context.GetLazyString(error.Document));
+                        else
+                            writer.WriteNull();
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(context.GetLazyString(nameof(error.Action)));
+                        if (string.IsNullOrWhiteSpace(error.Action) == false)
+                            writer.WriteString(context.GetLazyString(error.Action));
+                        else
+                            writer.WriteNull();
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(context.GetLazyString(nameof(error.Error)));
+                        if (string.IsNullOrWhiteSpace(error.Error) == false)
+                            writer.WriteString(context.GetLazyString(error.Error));
+                        else
+                            writer.WriteNull();
+
+                        writer.WriteEndObject();
+                    }
+
+                    writer.WriteEndArray();
+
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndArray();
+            }
 
             return Task.CompletedTask;
         }

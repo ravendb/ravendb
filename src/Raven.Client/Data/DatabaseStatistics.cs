@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 
 namespace Raven.Abstractions.Data
@@ -87,11 +86,6 @@ namespace Raven.Abstractions.Data
         /// Statistics for each index in database.
         /// </summary>
         public IndexStats[] Indexes { get; set; }
-
-        /// <summary>
-        /// Array of indexing errors that occured in database.
-        /// </summary>
-        public IndexingError[] Errors { get; set; }
 
         /// <summary>
         /// Information about future indexing batches.
