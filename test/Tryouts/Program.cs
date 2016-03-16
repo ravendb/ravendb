@@ -2,57 +2,38 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Client.Indexing;
+using FastTests.Server.Documents.Patching;
+using NetTopologySuite.Utilities;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Data;
 using Raven.Client.Document;
 
 namespace Tryouts
 {
     public class Program
     {
-        public class User
+       
+        class CustomType
         {
-            public string FirstName { get; set; }
-
-            public string LastName { get; set; }
+            public string Id { get; set; }
+            public string Owner { get; set; }
+            public int Value { get; set; }
+            public List<string> Comments { get; set; }
+            public DateTime Date { get; set; }
+            public DateTimeOffset DateOffset { get; set; }
         }
+
 
         private const int numOfItems = 100;
 
         public static void Main(string[] args)
         {
-            using (var store = new DocumentStore
+            using (var x = new BasicIndexing())
             {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "test2"				
-            })
-            {
-                store.Initialize();
-              
-                BulkInsert(store).Wait();
+                x.GetErrors().Wait();
             }
-        }
-
-        public static async Task BulkInsert(DocumentStore store)
-        {
-            using (var bulkInsert = store.BulkInsert())
-            {
-                for (int i = 0; i < 10; i++)
-                {
-                    await bulkInsert.StoreAsync(new User { FirstName = "foo", LastName = "bar" });
-                }
-            }
-            Console.Write("Opening bulk-insert...");
-            var sw = Stopwatch.StartNew();
-            using (var bulkInsert = store.BulkInsert())
-            {
-                for (int i = 0; i < 100*1000; i++)
-                {
-                    await bulkInsert.StoreAsync(new User {FirstName = "foo", LastName = "bar"});
-                }
-            }
-            Console.WriteLine($"Elapsed : {sw.ElapsedMilliseconds} ms");
-
         }
     }
 }

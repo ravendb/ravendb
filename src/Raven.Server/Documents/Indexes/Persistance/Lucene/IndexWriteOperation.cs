@@ -2,17 +2,25 @@
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+
+using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Voron.Impl;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 {
-    public class IndexWriteOperation : IDisposable
+    public class IndexWriteOperation : IndexOperationBase
     {
+        private readonly ILog Log = LogManager.GetLogger(typeof(IndexWriteOperation));
+
         private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
         private readonly object _writeLock;
+
+        private readonly string _name;
+
         private readonly LuceneIndexWriter _writer;
         private readonly LuceneDocumentConverter _converter;
         private readonly LuceneIndexPersistence _persistence;
@@ -20,28 +28,44 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        public IndexWriteOperation(object writeLock, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, 
-                                    Transaction writeTransaction, LuceneIndexPersistence persistence)
+        public IndexWriteOperation(object writeLock, string name, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
         {
             _writeLock = writeLock;
+            _name = name;
             _writer = writer;
             _converter = converter;
             _persistence = persistence;
-            _analyzer = new LowerCaseKeywordAnalyzer();
 
+            try
+            {
+                _analyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer());
+            }
+            catch (Exception e)
+            {
+                throw new IndexAnalyzerException(e);
+            }
+            
             Monitor.Enter(_writeLock);
-            
-            _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-            _persistence.EnsureIndexWriter();
-            
-            _locker = directory.MakeLock("writing-to-index.lock");
+            try
+            {
+                _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-            if (_locker.Obtain() == false)
-                throw new InvalidOperationException();
+                _persistence.EnsureIndexWriter();
+
+                _locker = directory.MakeLock("writing-to-index.lock");
+
+                if (_locker.Obtain() == false)
+                    throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{name}' index.");
+            }
+            catch (Exception e)
+            {
+                Monitor.Exit(_writeLock);
+                throw new IndexWriteException(e);
+            }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             try
             {
@@ -66,11 +90,17 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             var luceneDoc = _converter.ConvertToCachedDocument(document);
 
             _writer.AddDocument(luceneDoc, _analyzer);
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Indexed document for '{_name}'. Key: {document.Key} Etag: {document.Etag}. Output: {luceneDoc}.");
         }
 
         public void Delete(string key)
         {
             _writer.DeleteDocuments(_documentId.CreateTerm(key));
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Deleted document for '{_name}'. Key: {key}.");
         }
     }
 }

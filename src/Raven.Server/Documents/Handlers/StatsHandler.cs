@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
+
+using Raven.Client.Data.Indexes;
 using Raven.Database.Util;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -20,6 +23,8 @@ namespace Raven.Server.Documents.Handlers
                 context.OpenReadTransaction();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    var indexes = Database.IndexStore.GetIndexes().ToList();
+
                     //TODO: Implement properly and split to dedicated endpoints
                     //TODO: So we don't get so much stuff to ignore in the stats
                     context.Write(writer, new DynamicJsonValue
@@ -29,9 +34,9 @@ namespace Raven.Server.Documents.Handlers
                         ["DatabaseTransactionVersionSizeInMB"] = -1,
 
                         // indexing - should be in its /stats/indexing
-                        ["CountOfIndexes"] = 0,
+                        ["CountOfIndexes"] = indexes.Count,
                         ["StaleIndexes"] = new DynamicJsonArray(),
-                        ["CountOfIndexesExcludingDisabledAndAbandoned"] = 0,
+                        ["CountOfIndexesExcludingDisabledAndAbandoned"] = indexes.Count(index => index.Priority != IndexingPriority.Disabled && index.Priority != IndexingPriority.Abandoned),
                         ["CountOfResultTransformers"] = 0,
                         ["InMemoryIndexingQueueSizes"] = new DynamicJsonArray(),
                         ["ApproximateTaskCount"] = 0,
@@ -39,7 +44,6 @@ namespace Raven.Server.Documents.Handlers
                         ["CurrentNumberOfItemsToIndexInSingleBatch"] = 1,
                         ["CurrentNumberOfItemsToReduceInSingleBatch"] = 1,
 
-                        ["Errors"] = new DynamicJsonArray(),
                         ["Prefetches"] = new DynamicJsonArray(),
 
                         // documents

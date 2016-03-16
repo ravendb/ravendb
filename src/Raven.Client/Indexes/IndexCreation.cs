@@ -13,6 +13,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 
 namespace Raven.Client.Indexes

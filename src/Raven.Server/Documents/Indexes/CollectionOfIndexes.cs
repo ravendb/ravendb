@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var collection in index.Definition.Collections)
             {
-                var indexes = _indexesByCollection.GetOrAdd(collection, new ConcurrentSet<Index>());
+                var indexes = _indexesByCollection.GetOrAdd(collection, s => new ConcurrentSet<Index>());
                 indexes.Add(index);
             }
         }
@@ -87,5 +87,7 @@ namespace Raven.Server.Documents.Indexes
         {
             return GetEnumerator();
         }
+
+        public int Count => _indexesById.Count;
     }
 }

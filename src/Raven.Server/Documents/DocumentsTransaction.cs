@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-
-using Raven.Client.Data;
+using Raven.Abstractions.Data;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -15,7 +14,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentsNotifications _notifications;
 
-        private readonly List<Notification> _afterCommitNotifications = new List<Notification>();
+        private readonly List<DocumentChangeNotification> _afterCommitNotifications = new List<DocumentChangeNotification>();
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsNotifications notifications)
             : base(transaction)
@@ -31,7 +30,7 @@ namespace Raven.Server.Documents
             AfterCommit();
         }
 
-        public void AddAfterCommitNotification(Notification notification)
+        public void AddAfterCommitNotification(DocumentChangeNotification notification)
         {
             _afterCommitNotifications.Add(notification);
         }

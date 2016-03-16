@@ -45,6 +45,16 @@ namespace Raven.Client.Connection
             AsyncHelpers.RunSync(() => asyncAdminServerClient.StopIndexingAsync());
         }
 
+        public void StartIndex(string name)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.StartIndexAsync(name));
+        }
+
+        public void StopIndex(string name)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.StopIndexAsync(name));
+        }
+
         public void StartIndexing(int? maxNumberOfParallelIndexTasks)
         {
             AsyncHelpers.RunSync(() => asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks));

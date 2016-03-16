@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
                                 };
                             }
 
-                            mutableMetadata["Raven-Last-Modified"] = DateTime.UtcNow.GetDefaultRavenFormat();
+                            mutableMetadata["Raven-Last-Modified"] = SystemTime.UtcNow.GetDefaultRavenFormat(isUtc: true);
 
                             parsedCommands[i].Document = context.ReadObject(doc, parsedCommands[i].Key,
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);

@@ -209,10 +209,6 @@ namespace Raven.Server.Documents.Queries.Parse
 
             switch (numericType)
             {
-                case TypeCode.Int32:
-                    {
-                        return NumericRangeQuery.NewIntRange(field, (int)(from ?? Int32.MinValue), (int)(to ?? Int32.MaxValue), minInclusive, maxInclusive);
-                    }
                 case TypeCode.Int64:
                     {
                         return NumericRangeQuery.NewLongRange(field, (long)(from ?? Int64.MinValue), (long)(to ?? Int64.MaxValue), minInclusive, maxInclusive);
@@ -221,9 +217,11 @@ namespace Raven.Server.Documents.Queries.Parse
                     {
                         return NumericRangeQuery.NewDoubleRange(field, (double)(from ?? Double.MinValue), (double)(to ?? Double.MaxValue), minInclusive, maxInclusive);
                     }
+
+                case TypeCode.Int32:
                 case TypeCode.Single:
                     {
-                        return NumericRangeQuery.NewFloatRange(field, (float)(from ?? Single.MinValue), (float)(to ?? Single.MaxValue), minInclusive, maxInclusive);
+                        throw new NotSupportedException($"Unexpected numeric type in a numeric range query. Type: {numericType}, range: {from} - {to}.");
                     }
                 default:
                     {

@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
@@ -40,6 +44,16 @@ namespace Raven.Client.Connection
             return $"{url}/indexes?name={index}";
         }
 
+        public static string SetIndexLock(this string url, string index, IndexLockMode mode)
+        {
+            return $"{url}/indexes/set-lock?name={index}&mode={mode}";
+        }
+
+        public static string SetIndexPriority(this string url, string index, IndexingPriority priority)
+        {
+            return $"{url}/indexes/set-priority?name={index}&priority={priority}";
+        }
+
         public static string IndexDefinition(this string url, string index)
         {
             return $"{url}/indexes/{index}?definition=yes";
@@ -63,6 +77,32 @@ namespace Raven.Client.Connection
         public static string Stats(this string url)
         {
             return $"{url}/stats";
+        }
+
+        public static string IndexErrors(this string url, IEnumerable<string> indexNames)
+        {
+            var result = $"{url}/indexes/errors";
+            if (indexNames == null)
+                return result;
+
+            var first = true;
+            foreach (var indexName in indexNames)
+            {
+                if (first)
+                    result += "?";
+                else
+                    result += "&";
+
+                first = false;
+                result += "name=" + indexName;
+            }
+
+            return result;
+        }
+
+        public static string IndexStatistics(this string url, string name)
+        {
+            return $"{url}/indexes/stats?name={name}";
         }
 
         public static string UserInfo(this string url)

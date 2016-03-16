@@ -68,6 +68,28 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
+        public Task StartIndexAsync(string name, CancellationToken token = new CancellationToken())
+        {
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            {
+                using (var req = adminRequest.StartIndex(operationMetadata.Url, name))
+                {
+                    await req.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                }
+            }, token);
+        }
+
+        public Task StopIndexAsync(string name, CancellationToken token = new CancellationToken())
+        {
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            {
+                using (var req = adminRequest.StopIndex(operationMetadata.Url, name))
+                {
+                    await req.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                }
+            }, token);
+        }
+
         public Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null, CancellationToken token = default(CancellationToken))
         {
             return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>

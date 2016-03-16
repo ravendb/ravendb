@@ -6,7 +6,6 @@ using Jint;
 using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
@@ -150,7 +149,7 @@ namespace Raven.Server.Documents.Patch
             Engine jintEngine;
             try
             {
-                jintEngine = ScriptsCache.CheckoutScript(CreateEngine, patch, scope.CustomFunctions);
+                jintEngine = ScriptsCache.GetEngine(CreateEngine, patch, scope.CustomFunctions);
             }
             catch (NotSupportedException e)
             {
@@ -177,8 +176,6 @@ namespace Raven.Server.Documents.Patch
                 OutputLog(jintEngine, scope);
                 if (scope.DebugMode)
                     scope.DebugInfo.Add(string.Format("Statements executed: {0}", jintEngine.StatementsCount));
-
-                ScriptsCache.CheckinScript(patch, jintEngine, scope.CustomFunctions);
 
                 return scope;
             }
@@ -320,11 +317,13 @@ namespace Raven.Server.Documents.Patch
 
         private void OutputLog(Engine engine, PatcherOperationScope scope)
         {
-            var arr = engine.GetValue("debug_outputs");
-            if (arr == JsValue.Null || arr.IsArray() == false)
+            var numberOfOutputs = (int)engine.GetValue("number_of_outputs").AsNumber();
+            if (numberOfOutputs == 0)
                 return;
 
-            foreach (var property in arr.AsArray().GetOwnProperties())
+            var arr = engine.GetValue("debug_outputs").AsArray();
+
+            foreach (var property in arr.GetOwnProperties())
             {
                 if (property.Key == "length")
                     continue;

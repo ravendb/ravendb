@@ -52,8 +52,7 @@ namespace Raven.Client.Util.Auth
 
         private HttpJsonRequest CreateRequestParams(OperationMetadata operationMetadata, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false)
         {
-            var metadata = new RavenJObject();
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(profilingInfo, operationMetadata.Url + requestUrl, method, metadata, operationMetadata.Credentials, convention)
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(profilingInfo, operationMetadata.Url + requestUrl, method, operationMetadata.Credentials, convention)
                 .AddOperationHeaders(operationHeaders);
 
             createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;

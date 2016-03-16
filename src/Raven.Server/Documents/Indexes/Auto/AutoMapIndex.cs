@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
+
+using Raven.Abstractions.Logging;
+using Raven.Client.Data.Indexes;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -30,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return instance;
         }
 
-        public override void DoIndexingWork(CancellationToken cancellationToken)
+        public override void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken)
         {
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
@@ -39,40 +42,44 @@ namespace Raven.Server.Documents.Indexes.Auto
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
             {
+                ExecuteCleanup(stats, cancellationToken, databaseContext, indexContext);
+                ExecuteMap(stats, cancellationToken, databaseContext, indexContext);
 
-                ExecuteCleanup(cancellationToken, databaseContext, indexContext);
-                ExecuteMap(cancellationToken, databaseContext, indexContext);
-
-               
                 tx.Commit();
             }
         }
 
-        private void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext,TransactionOperationContext indexContext)
+        private void ExecuteCleanup(IndexingBatchStats stats, CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
             foreach (var collection in Collections)
             {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Collection: {collection}.");
+
                 long lastMappedEtag;
                 long lastTombstoneEtag;
                 lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
                 lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
 
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
+
                 var lastEtag = lastTombstoneEtag;
                 var count = 0;
 
+                var sw = Stopwatch.StartNew();
                 using (var indexActions = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction))
                 {
                     using (databaseContext.OpenReadTransaction())
                     {
-                        var sw = Stopwatch.StartNew();
-                        foreach (
-                            var tombstone in
-                                DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection,
-                                    lastEtag + 1, 0, pageSize))
+                        foreach (var tombstone in DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                         {
                             token.ThrowIfCancellationRequested();
+
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processing tombstone {tombstone.Key} ({tombstone.Etag}).");
 
                             count++;
                             lastEtag = tombstone.Etag;
@@ -82,8 +89,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                             indexActions.Delete(tombstone.Key);
 
-                            if (sw.Elapsed >
-                                DocumentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
+                            if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.TombstoneProcessingTimeout.AsTimeSpan)
                             {
                                 break;
                             }
@@ -94,60 +100,72 @@ namespace Raven.Server.Documents.Indexes.Auto
                 if (count == 0)
                     return;
 
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processed {count} tombstones in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+
                 if (lastEtag <= lastTombstoneEtag)
                     return;
 
                 WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
-
 
                 _mre.Set(); // might be more
             }
         }
 
 
-        private void ExecuteMap(CancellationToken cancellationToken, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        private void ExecuteMap(IndexingBatchStats stats, CancellationToken cancellationToken, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
             foreach (var collection in Collections)
             {
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing map for '{Name} ({IndexId})'. Collection: {collection}.");
+
                 long lastMappedEtag;
                 lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Executing map for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}.");
 
                 var lastEtag = lastMappedEtag;
                 var count = 0;
 
+                var sw = Stopwatch.StartNew();
                 using (var indexWriter = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     using (databaseContext.OpenReadTransaction())
                     {
-                        var sw = Stopwatch.StartNew();
-                        foreach (
-                            var document in
-                                DocumentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection,
-                                    lastEtag + 1, 0, pageSize))
+                        foreach (var document in DocumentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                         {
                             cancellationToken.ThrowIfCancellationRequested();
+
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Executing map for '{Name} ({IndexId})'. Processing document: {document.Key}.");
+
+                            stats.IndexingAttempts++;
 
                             count++;
                             lastEtag = document.Etag;
 
-                                try
-                                {
-                                    indexWriter.IndexDocument(document);
-                                    this.DocumentDatabase.Metrics.IndexedPerSecond.Mark();
-                                }
-                                catch (Exception e)
-                                {
-                                    // TODO [ppekrol] log?
-                                    Console.WriteLine(e);
-                                    throw;
-                                }
+                            try
+                            {
+                                indexWriter.IndexDocument(document);
+                                stats.IndexingSuccesses++;
+                                DocumentDatabase.Metrics.IndexedPerSecond.Mark();
+                            }
+                            catch (Exception e)
+                            {
+                                stats.IndexingErrors++;
+                                if(Log.IsWarnEnabled)
+                                    Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{Name} ({IndexId}'.", e);
 
-                            if (sw.Elapsed >
-                                DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
+                                stats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
+                            }
+
+                            if (sw.Elapsed > DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan)
                             {
                                 break;
                             }
@@ -160,8 +178,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                     if (lastEtag <= lastMappedEtag)
                         return;
 
-                    WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing map for '{Name} ({IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
+                    WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
                 }
 
                 _mre.Set(); // might be more

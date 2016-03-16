@@ -21,6 +21,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -244,10 +245,17 @@ namespace Raven.Client.Connection
         /// </summary>
         DatabaseStatistics GetStatistics();
 
+        IndexErrors GetIndexErrors(string name);
+
+        IndexErrors[] GetIndexErrors(IEnumerable<string> indexNames);
+
+        IndexErrors[] GetIndexErrors();
+
+        IndexStats GetIndexStatistics(string name);
+
         /// <summary>
         ///     Retrieve the user info
         /// </summary>
-
         UserInfo GetUserInfo();
 
         /// <summary>
@@ -447,7 +455,7 @@ namespace Raven.Client.Connection
         void ResetIndex(string name);
 
 
-        void SetIndexLock(string name, IndexLockMode unlock);
+        void SetIndexLock(string name, IndexLockMode mode);
 
         void SetIndexPriority(string name, IndexingPriority priority);
 
@@ -630,6 +638,16 @@ namespace Raven.Client.Connection
         ///     Disables all indexing.
         /// </summary>
         void StopIndexing();
+
+        /// <summary>
+        /// Starts given index.
+        /// </summary>
+        void StartIndex(string name);
+
+        /// <summary>
+        /// Disables given index.
+        /// </summary>
+        void StopIndex(string name);
     }
 
     public interface IInfoDatabaseCommands

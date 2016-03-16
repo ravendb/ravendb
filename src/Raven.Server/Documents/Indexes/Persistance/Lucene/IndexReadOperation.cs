@@ -14,7 +14,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 {
-    public class IndexReadOperation : IDisposable
+    public class IndexReadOperation : IndexOperationBase
     {
         private const string _Range = "_Range";
 
@@ -29,10 +29,15 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         public IndexReadOperation(string indexName, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
         {
-            _analyzer = new LowerCaseKeywordAnalyzer();
+            _analyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer());
             _indexName = indexName;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher);
+        }
+
+        public int EntriesCount()
+        {
+            return _searcher.IndexReader.NumDocs();
         }
 
         public IEnumerable<string> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults)
@@ -98,13 +103,13 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, SortedField[] sortedFields)
         {
-            // TODO arek
-            //if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
-            //{
-            //    var gatherAllCollector = new GatherAllCollector();
-            //    indexSearcher.Search(documentQuery, gatherAllCollector);
-            //    return gatherAllCollector.ToTopDocs();
-            //}
+            if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
+            {
+                throw new NotImplementedException("TODO arek");
+                //var gatherAllCollector = new GatherAllCollector();
+                //indexSearcher.Search(documentQuery, gatherAllCollector);
+                //return gatherAllCollector.ToTopDocs();
+            }
 
             var absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow
             var minPageSize = Math.Max(absFullPage, 1);
@@ -181,14 +186,14 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {
-                    sortOptions = SortOptions.Double;
+                    sortOptions = SortOptions.NumbericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be veryfied better
                 }
 
                 return new SortField(x.Field, (int)sortOptions, x.Descending);
             }).ToArray());
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _analyzer?.Dispose();
             _releaseSearcher?.Dispose();

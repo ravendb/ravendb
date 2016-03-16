@@ -3,11 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
@@ -103,9 +106,13 @@ namespace FastTests.Server.Documents.Indexing
                     Name = "Name2",
                     Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.Float
+                    SortOption = SortOptions.NumericDefault
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
+
+                var index2 = database.IndexStore.GetIndex(2);
+                index2.SetLock(IndexLockMode.LockedError);
+                index2.SetPriority(IndexingPriority.Disabled);
             }
 
             using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
@@ -115,7 +122,7 @@ namespace FastTests.Server.Documents.Indexing
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
-                    .OrderBy(x=>x.IndexId)
+                    .OrderBy(x => x.IndexId)
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);
@@ -127,14 +134,18 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal("Name1", indexes[0].Definition.MapFields[0].Name);
                 Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields[0].SortOption);
                 Assert.True(indexes[0].Definition.MapFields[0].Highlighted);
+                Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
+                Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(1, indexes[1].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[1].Definition.Collections[0]);
                 Assert.Equal(1, indexes[1].Definition.MapFields.Length);
                 Assert.Equal("Name2", indexes[1].Definition.MapFields[0].Name);
-                Assert.Equal(SortOptions.Float, indexes[1].Definition.MapFields[0].SortOption);
+                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields[0].SortOption);
                 Assert.False(indexes[1].Definition.MapFields[0].Highlighted);
+                Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
+                Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
             }
         }
 
@@ -287,9 +298,33 @@ namespace FastTests.Server.Documents.Indexing
 
                             tx.Commit();
                         }
-
-                        index.DoIndexingWork(CancellationToken.None);
+                        var batchStats = new IndexingBatchStats();
+                        index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
+                        Assert.Equal(2, batchStats.IndexingAttempts);
+                        Assert.Equal(2, batchStats.IndexingSuccesses);
+                        Assert.Equal(0, batchStats.IndexingErrors);
+
+                        var now = SystemTime.UtcNow;
+                        index.UpdateStats(now, batchStats);
+
+                        var stats = index.GetStats();
+                        Assert.Equal(index.IndexId, stats.Id);
+                        Assert.Equal(index.Name, stats.Name);
+                        Assert.False(stats.IsInvalidIndex);
+                        Assert.False(stats.IsTestIndex);
+                        Assert.True(stats.IsInMemory);
+                        Assert.Equal(IndexType.AutoMap, stats.Type);
+                        Assert.Equal(2, stats.EntriesCount);
+                        Assert.Equal(2, stats.IndexingAttempts);
+                        Assert.Equal(0, stats.IndexingErrors);
+                        Assert.Equal(2, stats.IndexingSuccesses);
+                        Assert.Equal(1, stats.ForCollections.Length);
+                        Assert.Equal(2, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(now, stats.LastIndexingTime);
+                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -308,8 +343,33 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        index.DoIndexingWork(CancellationToken.None);
+                        batchStats = new IndexingBatchStats();
+                        index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(3, index.GetLastMappedEtagsForDebug().Values.Min());
+                        Assert.Equal(1, batchStats.IndexingAttempts);
+                        Assert.Equal(1, batchStats.IndexingSuccesses);
+                        Assert.Equal(0, batchStats.IndexingErrors);
+
+                        now = SystemTime.UtcNow;
+                        index.UpdateStats(now, batchStats);
+
+                        stats = index.GetStats();
+                        Assert.Equal(index.IndexId, stats.Id);
+                        Assert.Equal(index.Name, stats.Name);
+                        Assert.False(stats.IsInvalidIndex);
+                        Assert.False(stats.IsTestIndex);
+                        Assert.True(stats.IsInMemory);
+                        Assert.Equal(IndexType.AutoMap, stats.Type);
+                        Assert.Equal(3, stats.EntriesCount);
+                        Assert.Equal(3, stats.IndexingAttempts);
+                        Assert.Equal(0, stats.IndexingErrors);
+                        Assert.Equal(3, stats.IndexingSuccesses);
+                        Assert.Equal(1, stats.ForCollections.Length);
+                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(now, stats.LastIndexingTime);
+                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -318,10 +378,106 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        index.DoIndexingWork(CancellationToken.None);
-
+                        batchStats = new IndexingBatchStats();
+                        index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(4, index.GetLastTombstoneEtagsForDebug().Values.Min());
+                        Assert.Equal(0, batchStats.IndexingAttempts);
+                        Assert.Equal(0, batchStats.IndexingSuccesses);
+                        Assert.Equal(0, batchStats.IndexingErrors);
+
+                        now = SystemTime.UtcNow;
+                        index.UpdateStats(now, batchStats);
+
+                        stats = index.GetStats();
+                        Assert.Equal(index.IndexId, stats.Id);
+                        Assert.Equal(index.Name, stats.Name);
+                        Assert.False(stats.IsInvalidIndex);
+                        Assert.False(stats.IsTestIndex);
+                        Assert.True(stats.IsInMemory);
+                        Assert.Equal(IndexType.AutoMap, stats.Type);
+                        Assert.Equal(2, stats.EntriesCount);
+                        Assert.Equal(3, stats.IndexingAttempts);
+                        Assert.Equal(0, stats.IndexingErrors);
+                        Assert.Equal(3, stats.IndexingSuccesses);
+                        Assert.Equal(1, stats.ForCollections.Length);
+                        Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
+                        Assert.Equal(now, stats.LastIndexingTime);
+                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void WriteErrors()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                using (var index = AutoMapIndex.CreateNew(
+                    1,
+                    new AutoIndexDefinition(
+                        "Users",
+                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
+                    database))
+                {
+                    index.Start();
+                    Assert.True(index.IsRunning);
+
+                    IndexStats stats;
+                    var batchStats = new IndexingBatchStats();
+                    var iwe = new IndexWriteException();
+                    for (int i = 0; i < 10; i++)
+                    {
+                        stats = index.GetStats();
+                        Assert.Equal(IndexingPriority.Normal, stats.Priority);
+                        index.HandleWriteErrors(batchStats, iwe);
+                    }
+
+                    stats = index.GetStats();
+                    Assert.Equal(IndexingPriority.Error, stats.Priority);
+                    Assert.True(SpinWait.SpinUntil(() => index.IsRunning == false, TimeSpan.FromSeconds(5)));
+                }
+            }
+        }
+
+        [Fact]
+        public void Errors()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                using (var index = AutoMapIndex.CreateNew(
+                    1,
+                    new AutoIndexDefinition(
+                        "Users",
+                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
+                    database))
+                {
+                    var stats = new IndexingBatchStats();
+                    index.UpdateStats(SystemTime.UtcNow, stats);
+
+                    Assert.Equal(0, index.GetErrors().Count);
+
+                    stats.AddWriteError(new IndexWriteException());
+                    stats.AddAnalyzerError(new IndexAnalyzerException());
+                    index.UpdateStats(SystemTime.UtcNow, stats);
+
+                    var errors = index.GetErrors();
+                    Assert.Equal(2, errors.Count);
+                    Assert.Equal("Write", errors[0].Action);
+                    Assert.Equal("Analyzer", errors[1].Action);
+
+                    for (int i = 0; i < Index.MaxNumberOfKeptErrors; i++)
+                    {
+                        var now = SystemTime.UtcNow;
+                        stats.Errors[0].Timestamp = now;
+                        stats.Errors[1].Timestamp = now;
+                        index.UpdateStats(now, stats);
+                    }
+
+                    errors = index.GetErrors();
+                    Assert.Equal(Index.MaxNumberOfKeptErrors, errors.Count);
                 }
             }
         }

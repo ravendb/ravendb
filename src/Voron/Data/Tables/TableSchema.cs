@@ -28,7 +28,6 @@ namespace Voron.Data.Tables
             /// </summary>
             public int StartIndex = -1;
             public int Count = -1;
-            public bool MultiValue;
             public Slice NameAsSlice;
             public string Name;
 
@@ -97,7 +96,6 @@ namespace Voron.Data.Tables
             if (string.IsNullOrWhiteSpace(_pk.Name))
                 _pk.Name = "PK";
             _pk.NameAsSlice = _pk.Name;
-            _pk.MultiValue = false;
 
             if (_pk.Count > 1)
                 throw new InvalidOperationException("Primary key must be a single field");
@@ -120,27 +118,30 @@ namespace Voron.Data.Tables
         /// </summary>
         public void Create(Transaction tx, string name)
         {
-            if (_pk == null)
-                throw new InvalidOperationException($"Cannot create table {name} without a primary key");
+            if (_pk == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
+                throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
             var tableTree = tx.CreateTree(name);
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
 
-            var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
+            var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
             tableTree.Add(ActiveSectionSlice, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber));
             var stats = (TableSchemaStats*) tableTree.DirectAdd(StatsSlice, sizeof (TableSchemaStats));
             stats->NumberOfEntries = 0;
 
-            if (_pk.IsGlobal == false)
+            if (_pk != null)
             {
-                var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof (TreeRootHeader));
-                indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
-            }
-            else
-            {
-                tx.CreateTree(_pk.Name);
+                if (_pk.IsGlobal == false)
+                {
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                    var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(TreeRootHeader));
+                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                }
+                else
+                {
+                    tx.CreateTree(_pk.Name);
+                }
             }
 
             foreach (var indexDef in _indexes.Values)

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -24,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Handlers
             DocumentsOperationContext context;
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                var runner = new QueryRunner(IndexStore, context);
+                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
 
                 var result = runner.ExecuteQuery(indexName, query);
 
@@ -129,23 +127,6 @@ namespace Raven.Server.Documents.Queries.Handlers
                 /* TODO arek queryFromPostRequest ?? */
 
                 result.Query = string.Empty;
-            }
-
-            return result;
-        }
-
-        private Dictionary<string, SortOptions> GetSortHints(string sortHintPrefix) // TODO arek: RavenDB-4371
-        {
-            var result = new Dictionary<string, SortOptions>();
-
-            foreach (var pair in HttpContext.Request.Query.Where(pair => pair.Key.StartsWith(sortHintPrefix, StringComparison.OrdinalIgnoreCase)))
-            {
-                var key = pair.Key;
-                var value = Uri.UnescapeDataString(pair.Value);
-
-                SortOptions sort;
-                Enum.TryParse(value, true, out sort);
-                result[Uri.UnescapeDataString(key)] = sort;
             }
 
             return result;

@@ -55,6 +55,39 @@ namespace SlowTests.Voron
         }
 
 
+        [Fact]
+        public void Should_be_able_to_read_and_write_lots_of_data()
+        {
+            CreatTestSchema();
+            var testData = GenerateTestData().ToList();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree(TestTreeName);
+                foreach (var dataPair in testData)
+                    tree.Add(dataPair.Key, StreamFor(dataPair.Value));
+                tx.Commit();
+            }
+
+            using (var snapshot = Env.ReadTransaction())
+            {
+                using (var iterator = snapshot.ReadTree(TestTreeName).Iterate())
+                {
+                    Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+
+                    do
+                    {
+                        var value = iterator.CreateReaderForCurrent().ToStringValue();
+                        var extractedDataPair = new KeyValuePair<string, string>(iterator.CurrentKey.ToString(), value);
+                        Assert.Contains(extractedDataPair, testData);
+
+                    } while (iterator.MoveNext());
+                }
+
+            }
+        }
+
+
         private void CreatTestSchema()
         {
             using (var tx = Env.WriteTransaction())

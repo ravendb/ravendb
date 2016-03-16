@@ -54,6 +54,16 @@ namespace Raven.Client.Connection
             return createRequestForSystemDatabase(deleteUrl, HttpMethods.Delete);
         }
 
+        public HttpJsonRequest StartIndex(string serverUrl, string name)
+        {
+            return createReplicationAwareRequest(serverUrl, "/indexes/start?name=" + name, HttpMethods.Post);
+        }
+
+        public HttpJsonRequest StopIndex(string serverUrl, string name)
+        {
+            return createReplicationAwareRequest(serverUrl, "/indexes/stop?name=" + name, HttpMethods.Post);
+        }
+
         public HttpJsonRequest StopIndexing(string serverUrl)
         {
             return createReplicationAwareRequest(serverUrl, "/indexes/stop", HttpMethods.Post);
