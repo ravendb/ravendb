@@ -13,7 +13,7 @@ namespace Raven.Server.Json
     {
         public readonly MemoryOperationContext Context;
         public readonly byte* Buffer;
-        public int Size;
+        public readonly int Size;
         public string String;
         public int[] EscapePositions;
         public UnmanagedBuffersPool.AllocatedMemoryData AllocatedMemoryData;
