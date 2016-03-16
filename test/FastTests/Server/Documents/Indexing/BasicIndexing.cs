@@ -468,7 +468,7 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal("Write", errors[0].Action);
                     Assert.Equal("Analyzer", errors[1].Action);
 
-                    for (int i = 0; i < 100; i++)
+                    for (int i = 0; i < Index.MaxNumberOfKeptErrors; i++)
                     {
                         var now = SystemTime.UtcNow;
                         stats.Errors[0].Timestamp = now;
@@ -477,7 +477,7 @@ namespace FastTests.Server.Documents.Indexing
                     }
 
                     errors = index.GetErrors();
-                    Assert.Equal(50, errors.Count);
+                    Assert.Equal(Index.MaxNumberOfKeptErrors, errors.Count);
                 }
             }
         }

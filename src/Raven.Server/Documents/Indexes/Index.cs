@@ -68,6 +68,8 @@ namespace Raven.Server.Documents.Indexes
 
         private const long WriteErrorsLimit = 10;
 
+        public const int MaxNumberOfKeptErrors = 500;
+
         protected readonly ILog Log = LogManager.GetLogger(typeof(Index));
 
         protected readonly LuceneIndexPersistence IndexPersistence;
@@ -645,11 +647,10 @@ namespace Raven.Server.Documents.Indexes
 
         private void CleanupErrors(Table table)
         {
-            const int MaxNumberOfErrors = 50;
-            if (table.NumberOfEntries <= MaxNumberOfErrors)
+            if (table.NumberOfEntries <= MaxNumberOfKeptErrors)
                 return;
 
-            var take = table.NumberOfEntries - MaxNumberOfErrors;
+            var take = table.NumberOfEntries - MaxNumberOfKeptErrors;
             foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys))
             {
                 foreach (var tvr in sr.Results)
