@@ -132,7 +132,7 @@ namespace Raven.Client.Changes
                     throw;
                 }
                 HttpStatusCode code;
-                if (HttpConnectionHelper.IsHttpStatus(e,out code, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.Unauthorized))
+                if (HttpConnectionHelper.IsHttpStatus(e,out code, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.Unauthorized, HttpStatusCode.ServiceUnavailable))
                 {
                     logger.Error("Failed to connect to {0} with id {1}, server returned with an error code:{2}", url, id, code);
                     throw;
