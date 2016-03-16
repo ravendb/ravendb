@@ -465,8 +465,8 @@ namespace Voron.Data.Fixed
 
                 return 1;
             }
-            var dataStart = ptr + sizeof (FixedSizeTreeHeader.Embedded);
-            var header = (FixedSizeTreeHeader.Embedded*) ptr;
+            var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
+            var header = (FixedSizeTreeHeader.Embedded*)ptr;
             var startingEntryCount = header->NumberOfEntries;
             var pos = BinarySearch(dataStart, startingEntryCount, key, _entrySize);
             var newEntriesCount = startingEntryCount;
@@ -477,17 +477,31 @@ namespace Voron.Data.Fixed
             }
             if (_lastMatch > 0)
                 pos++; // we need to put this _after_ the previous one
-            newSize = (newEntriesCount*_entrySize);
+            newSize = (newEntriesCount * _entrySize);
 
-            srcCopyStart = pos*_entrySize;
-            Memory.Copy(tmp.TempPagePointer, dataStart, srcCopyStart);
-            var newEntryStart = tmp.TempPagePointer + srcCopyStart;
-            *((long*) newEntryStart) = key;
+            srcCopyStart = pos * _entrySize;
 
             if (_lastMatch == 0)
-                srcCopyStart += _entrySize;
+            {
+                // can just copy as is
+                Memory.Copy(tmp.TempPagePointer, dataStart, startingEntryCount * _entrySize);
+            }
+            else
+            {
+                // copy with a gap
+                Memory.Copy(tmp.TempPagePointer, dataStart, srcCopyStart);
+                var sizeLeftToCopy = (startingEntryCount - pos) * _entrySize;
+                if (sizeLeftToCopy > 0)
+                {
+                    Memory.Copy(tmp.TempPagePointer + srcCopyStart + _entrySize,
+                        dataStart + srcCopyStart, sizeLeftToCopy);
+                }
+            }
 
-            Memory.Copy(newEntryStart + _entrySize, dataStart + srcCopyStart, (startingEntryCount - pos)*_entrySize);
+
+            var newEntryStart = tmp.TempPagePointer + srcCopyStart;
+            *((long*)newEntryStart) = key;
+
             return newEntriesCount;
         }
 
