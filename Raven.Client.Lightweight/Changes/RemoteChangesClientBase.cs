@@ -136,7 +136,7 @@ namespace Raven.Client.Changes
                 }
 
                 HttpStatusCode code;
-                if (replicationInformer.IsHttpStatus(e,out code, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.Unauthorized))
+                if (replicationInformer.IsHttpStatus(e,out code, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.Unauthorized, HttpStatusCode.ServiceUnavailable))
                 {
                     logger.Error("Failed to connect to {0} with id {1}, server returned with an error code:{2}", url, id, code);
                     throw;
