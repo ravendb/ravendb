@@ -640,9 +640,6 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.Commit();
             }
-
-            if (Log.IsDebugEnabled)
-                Log.Debug($"Updated statistics for '{Name} ({IndexId})'.");
         }
 
         private void CleanupErrors(Table table)
@@ -697,9 +694,6 @@ namespace Raven.Server.Documents.Indexes
                         Type = IndexChangeTypes.IndexMarkedAsErrored
                     });
                 }
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Changed priority for '{Name} ({IndexId})' from '{Priority}' to '{priority}'.");
             }
         }
 
@@ -734,9 +728,6 @@ namespace Raven.Server.Documents.Indexes
                         throw;
                     }
                 }
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Changed lock mode for '{Name} ({IndexId})' from '{Definition.LockMode}' to '{mode}'.");
             }
         }
 
