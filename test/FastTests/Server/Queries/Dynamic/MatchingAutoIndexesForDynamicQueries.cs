@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -297,9 +298,57 @@ namespace FastTests.Server.Queries.Dynamic
             Assert.Equal(definition.Name, result.IndexName);
         }
 
+        [Fact]
+        public void Failure_if_matching_index_is_disabled_errored_or_has_lot_of_errors()
+        {
+            var definition = new AutoIndexDefinition("Users", new[]
+            {
+                new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                },
+            });
+
+            add_index(definition);
+
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery { Query = "Name:Arek" });
+
+            var index = get_index(definition.Name);
+
+            index.SetPriority(IndexingPriority.Disabled);
+
+            var result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
+
+            index.SetPriority(IndexingPriority.Error);
+
+            result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
+
+            index.SetPriority(IndexingPriority.Normal);
+            index.UpdateStats(DateTime.UtcNow, new IndexingBatchStats()
+            {
+                IndexingAttempts = 1000,
+                IndexingErrors = 900
+            });
+
+            result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
+        }
+
         private void add_index(AutoIndexDefinition definition)
         {
             _documentDatabase.IndexStore.CreateIndex(definition);
+        }
+
+        private Index get_index(string name)
+        {
+            return _documentDatabase.IndexStore.GetIndex(name);
         }
 
         public void Dispose()

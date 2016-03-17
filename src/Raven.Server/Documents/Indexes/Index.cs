@@ -355,6 +355,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public long GetLastMappedEtagFor(string collection)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.OpenReadTransaction())
+                {
+                    return ReadLastMappedEtag(tx, collection);
+                }
+            }
+        }
+
         /// <summary>
         /// This should only be used for testing purposes.
         /// </summary>
