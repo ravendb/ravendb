@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Data
 {
-    public class ApiKeyDataRequest
+    public class ApiKeyDefinition
     {
         public bool Enabled;
         public string Secret;

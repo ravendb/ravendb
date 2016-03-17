@@ -96,12 +96,12 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetStatisticsAsync());
         }
 
-        public ApiKeyDataRequest GetApiKey(string name)
+        public ApiKeyDefinition GetApiKey(string name)
         {
             return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetApiKeyAsync(name));
         }
 
-        public void PutApiKey(string name, ApiKeyDataRequest apiKeyData)
+        public void PutApiKey(string name, ApiKeyDefinition apiKeyData)
         {
             AsyncHelpers.RunSync(() => asyncAdminServerClient.PutApiKeyAsync(name, apiKeyData));
         }

@@ -171,7 +171,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public async Task PutApiKeyAsync(string name, ApiKeyDataRequest apiKeyData,
+        public async Task PutApiKeyAsync(string name, ApiKeyDefinition apiKeyData,
            CancellationToken token = default(CancellationToken))
         {
             using (var request = adminRequest.CreatePutApiKeyRequest(name))
@@ -185,14 +185,14 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task<ApiKeyDataRequest> GetApiKeyAsync(string name,
+        public async Task<ApiKeyDefinition> GetApiKeyAsync(string name,
             CancellationToken token = default(CancellationToken))
         {
             using (var request = adminRequest.CreateGetApiKeyRequest(name))
             {
                 var json =
                     (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return json.Deserialize<ApiKeyDataRequest>(innerAsyncServerClient.convention);
+                return json.Deserialize<ApiKeyDefinition>(innerAsyncServerClient.convention);
             }
         }
 

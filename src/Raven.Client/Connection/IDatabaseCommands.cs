@@ -618,14 +618,14 @@ namespace Raven.Client.Connection
         /// <param name="name">User Name</param>
         /// <param name="apiKeyData">ApiKey containing Enabled, Secret, AccessMode</param>
         /// <returns></returns>
-        void PutApiKey(string name, ApiKeyDataRequest apiKeyData);
+        void PutApiKey(string name, ApiKeyDefinition apiKeyData);
 
         /// <summary>
         /// Retrieve existing api key
         /// </summary>
         /// <param name="name">User Name</param>
         /// <returns></returns>
-        ApiKeyDataRequest GetApiKey(string name);
+        ApiKeyDefinition GetApiKey(string name);
     }
 
     public interface IAdminDatabaseCommands

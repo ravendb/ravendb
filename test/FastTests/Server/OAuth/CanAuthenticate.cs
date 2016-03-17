@@ -21,17 +21,19 @@ namespace FastTests.Server.OAuth
             using (var store = await GetDocumentStore())
             {
                 var securedAuthenticator = new SecuredAuthenticator();
-                var doAuthTask = securedAuthenticator.DoOAuthRequestAsync(store.Url + "/oauth/api-key", "super/secret");
-
-                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await doAuthTask);
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                    await securedAuthenticator.DoOAuthRequestAsync(store.Url + "/oauth/api-key", "super/secret"));
                 Assert.Contains("Could not find document apikeys/super", exception.Message);
 
-                var apiKey = new ApiKeyDataRequest
+                var apiKey = new ApiKeyDefinition
                 {
                     Enabled = true,
                     Secret = "secret",
+                    ResourcesAccessMode =
+                    {
+                        ["testDbName"] =AccessModes.Admin
+                    }
                 };
-                apiKey.ResourcesAccessMode.Add("testDbName", AccessModes.Admin);
 
 
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
@@ -39,9 +41,7 @@ namespace FastTests.Server.OAuth
 
                 Assert.NotNull(doc);
 
-                securedAuthenticator = new SecuredAuthenticator();
-                doAuthTask = securedAuthenticator.DoOAuthRequestAsync(store.Url + "/oauth/api-key", "super/secret");
-                await doAuthTask;
+                await securedAuthenticator.DoOAuthRequestAsync(store.Url + "/oauth/api-key", "super/secret");
 
                 Assert.NotNull(securedAuthenticator.CurrentToken);
                 Assert.NotEqual("", securedAuthenticator.CurrentToken);
