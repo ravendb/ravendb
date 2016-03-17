@@ -17,7 +17,7 @@ dnx test  -xml test-timings.xml
 
 [xml]$tests = Get-Content test-timings.xml
 $tests.assemblies.assembly.collection.test | 
-	sort @{e={$_.time -as [double]} } -descending | 
-	% {$_.time + "  " + $_.name } | 
-	take-count 15
+    sort @{e={$_.time -as [double]} } -descending | 
+    % {$_.time + "  " + $_.name } | 
+    take-count 15
 

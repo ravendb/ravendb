@@ -94,6 +94,8 @@ namespace Raven.Abstractions.Data
         public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
         public const string SideBySideIndexNamePrefix = "ReplacementOf/";
 
+        public const string ApiKeyPrefix = "apikeys/";
+
         //Files
         public const int WindowsMaxPath = 260 - 30;
 

@@ -7,12 +7,17 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
-using NetTopologySuite.Noding;
-using Raven.Database.Util;
+using Raven.Abstractions.Data;
+using Raven.Server.Config;
+using Raven.Server.Config.Attributes;
+using Raven.Server.Documents;
+using System.Threading;
+using Raven.Client.Data;
 using Raven.Server.Web;
+using static System.String;
 
 namespace Raven.Server.Routing
 {
@@ -56,16 +61,98 @@ namespace Raven.Server.Routing
             metricsCountersManager.RequestsMeter.Mark();
             metricsCountersManager.RequestsPerSecondCounter.Mark();
             Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
-            var sp = Environment.TickCount;
             if (handler == null)
             {
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsync("There is no handler for {context.Request.Method} {context.Request.Path}");
                 return;
             }
-            await handler(reqCtx);
-            Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
 
+            if (tryMatch.Value.NoAuthorizationRequired == false)
+            {
+                var authResult = await TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database);
+                if (authResult == false)
+                    return;
+            }
+
+            await handler(reqCtx);
+
+            Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
+        }
+
+        private async Task<bool> TryAuthorize(HttpContext context, RavenConfiguration configuration,
+            DocumentDatabase database)
+        {
+            if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
+                return true;
+
+            var authHeaderValues = context.Request.Headers["Authorization"];
+            var token = authHeaderValues.Count == 0 ? null : authHeaderValues[0];
+
+            if (token == null)
+            {
+                var oAuthTokenInCookieValues = context.Request.Cookies["OAuth-Token"];
+                token = oAuthTokenInCookieValues.Count == 0 ? null : oAuthTokenInCookieValues[0];
+            }
+
+            if (token == null)
+            {
+                context.Response.StatusCode = 412;
+                await context.Response.WriteAsync("The access token is required");
+                return false;
+            }
+
+            AccessToken accessToken;
+            if (_ravenServer.AccessTokensById.TryGetValue(token, out accessToken) == false)
+            {
+                context.Response.StatusCode = 412;
+                await context.Response.WriteAsync("The access token is invalid");
+                return false;
+            }
+
+            if (accessToken.IsExpired)
+            {
+                context.Response.StatusCode = 412;
+                await context.Response.WriteAsync("The access token is expired");
+                return false;
+            }
+
+            var resourceName = database?.ResourceName;
+
+            if (resourceName == null)
+                return true;
+
+            AccessModes mode;
+            var hasValue = 
+                accessToken.AuthorizedDatabases.TryGetValue(resourceName, out mode) ||
+                accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
+
+            if (hasValue == false)
+                mode = AccessModes.None;
+
+            string text;
+            switch (mode)
+            {
+                case AccessModes.None:
+                    context.Response.StatusCode = 403;
+                    text = $"Api Key {accessToken.Name} does not have access to {resourceName}";
+                    await context.Response.WriteAsync(text);
+                    return false;
+                case AccessModes.ReadOnly:
+                    if (context.Request.Method != "GET")
+                    {
+                        context.Response.StatusCode = 403;
+                        text = $"Api Key {accessToken.Name} does not have write access to {resourceName} but made a {context.Request.Method} request";
+                        await context.Response.WriteAsync(text);
+                        return false;
+                    }
+                    return true;
+                case AccessModes.ReadWrite:
+                case AccessModes.Admin:
+                    return true;
+                default:
+                    throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
+            }
         }
     }
 }

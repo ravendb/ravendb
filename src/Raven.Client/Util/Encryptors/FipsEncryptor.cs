@@ -303,6 +303,16 @@ namespace Raven.Abstractions.Util.Encryptors
                 return algorithm.ExportParameters(includePrivateParameters);
             }
 
+            public byte[] SignHash(byte [] data)
+            {
+                return algorithm.SignHash(data, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+            }
+
+            public bool VerifyHash(byte[] hash, byte[] signature)
+            {
+                return algorithm.VerifyHash(hash, signature, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+            }
+
             public void Dispose()
             {
                 if (algorithm != null)

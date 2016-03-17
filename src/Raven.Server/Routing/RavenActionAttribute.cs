@@ -12,6 +12,8 @@ namespace Raven.Server.Routing
 
         public string Description { get; }
 
+        public bool NoAuthorizationRequired { get; set; } // "NeverSecret"
+
         public RavenActionAttribute(string path, string method, string description = null)
         {
             Path = path;

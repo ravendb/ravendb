@@ -17,6 +17,8 @@ namespace Raven.Server.Routing
         public readonly string Method;
         public readonly string Path;
 
+        public readonly bool NoAuthorizationRequired;
+
         private HandleRequest _request;
         private RouteType _typeOfRoute;
 
@@ -26,10 +28,11 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        public RouteInformation(string method, string path)
+        public RouteInformation(string method, string path, bool noAuthorizationRequired)
         {
             Method = method;
             Path = path;
+            NoAuthorizationRequired = noAuthorizationRequired;
         }
 
         public void Build(MethodInfo action)
