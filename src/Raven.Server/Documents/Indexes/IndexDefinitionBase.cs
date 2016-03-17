@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Indexing;
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
             MapFields = mapFields;
             LockMode = lockMode;
 
-            _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x);
+            _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
         }
 
         public string Name { get; set; }
