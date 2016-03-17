@@ -143,6 +143,7 @@ namespace Raven.Smuggler
             filesystemOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => filesOptions.Destination.ApiKey = value);
             filesystemOptionSet.Add("f|filesystem:", OptionCategory.SmugglerFileSystem, "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => filesOptions.Source.DefaultFileSystem = value);
             filesystemOptionSet.Add("f2|filesystem2:", OptionCategory.SmugglerFileSystem, "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value);
+            filesystemOptionSet.Add("batch-size:", OptionCategory.SmugglerFileSystem, "The batch size for requests", s => filesOptions.BatchSize = int.Parse(s));
         }
 
         private NetworkCredential GetCredentials(FilesConnectionStringOptions connectionStringOptions)
@@ -270,7 +271,7 @@ namespace Raven.Smuggler
                 if (e is AggregateException)
                     Console.WriteLine(e.SimplifyError());
                 else
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine(e);
             
                 Environment.Exit(-1);
             }            

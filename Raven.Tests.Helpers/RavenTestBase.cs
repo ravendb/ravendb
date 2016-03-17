@@ -108,12 +108,12 @@ namespace Raven.Tests.Helpers
         {
             var messages = GetAsyncVoidMethods(assembly)
                 .Select(method =>
-                    String.Format("'{0}.{1}' is an async Task method.",
-                        method.DeclaringType.Name,
+                    String.Format("'{0}.{1}' is an async void method.",
+                        method.DeclaringType.FullName,
                         method.Name))
                 .ToList();
             if(messages.Any())
-                throw new InvalidConstraintException("async Task methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
+                throw new InvalidConstraintException("async void methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
         }
 
         ~RavenTestBase()
@@ -544,7 +544,9 @@ namespace Raven.Tests.Helpers
                 ? TimeSpan.FromMinutes(5)
                 : TimeSpan.FromSeconds(20));
 
-            var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
+            var spinUntil = SpinWait.SpinUntil(() => 
+                databaseCommands.GetStatistics().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0, 
+                timeout.Value);
             if (spinUntil)
             {
                 return;

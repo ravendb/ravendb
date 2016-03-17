@@ -24,6 +24,7 @@ namespace Raven.Abstractions.Extensions
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // Raven internal headers
+            Constants.SerializedSizeOnDisk,
             Constants.RavenServerBuild,
             "Raven-Client-Version",
             "Non-Authoritative-Information",
@@ -118,11 +119,11 @@ namespace Raven.Abstractions.Extensions
             "X-SITE-DEPLOYMENT-ID",
         };
 
-        private static readonly HashSet<string> HeadersToIgnoreForClient = HeadersToIgnoreClient.Except(new[]
+        private static readonly HashSet<string> HeadersToIgnoreForClient = new HashSet<string>(HeadersToIgnoreClient.Except(new[]
         {
             Constants.LastModified,
-            Constants.RavenLastModified
-        }).ToHashSet();
+            Constants.RavenLastModified,
+        }), StringComparer.OrdinalIgnoreCase);
 
         private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                                                                                {

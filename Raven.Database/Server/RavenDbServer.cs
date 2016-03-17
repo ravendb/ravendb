@@ -198,7 +198,7 @@ namespace Raven.Server
 
             public Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName)
             {
-                return options.FileSystemLandlord.GetFileSystemInternal(fileSystemName);
+                return options.FileSystemLandlord.GetFileSystemInternalAsync(fileSystemName);
             }
 
             public RequestManager RequestManager { get { return options.RequestManager; } }

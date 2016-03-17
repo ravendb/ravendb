@@ -56,7 +56,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             get
             {
-                var fs = FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
+                var fs = FileSystemsLandlord.GetFileSystemInternalAsync(FileSystemName);
                 if (fs == null)
                 {
                     throw new InvalidOperationException("Could not find a file system named: " + FileSystemName);
@@ -97,7 +97,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (IsInternalRequest == false)
                 RequestManager.IncrementRequestCount();
 
-            var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
+            var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternalAsync(FileSystemName);
             if (fileSystemInternal == null)
             {
                 var msg = "Could not find a file system named: " + FileSystemName;

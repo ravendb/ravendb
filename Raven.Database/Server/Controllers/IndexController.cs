@@ -267,7 +267,17 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                Database.Indexes.PutIndex(index, data);
+                long opId;
+                Database.Indexes.PutIndex(index, data, out opId);
+
+                //treat includePrecomputeOperation as a flag
+                var includePrecomputeOperation = GetQueryStringValue("includePrecomputeOperation");
+                if (!String.IsNullOrWhiteSpace(includePrecomputeOperation) &&
+                    includePrecomputeOperation.Equals("yes",StringComparison.OrdinalIgnoreCase))
+                {
+                    return GetMessageWithObject(new { Index = index, OperationId = opId }, HttpStatusCode.Created);
+                }
+
                 return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
             }
             catch (Exception ex)
@@ -303,6 +313,13 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage >IndexPost(string id)
         {
             var index = id;
+            /*
+            This is a workaround to support version 30037 and below where index post conflicts with index set priorety
+            */
+            if (id.StartsWith("set-priority/"))
+            {
+                SetPriorityInternal(id.Substring("set-priority/".Length));
+            }
 
             if ("forceReplace".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
             {
@@ -378,6 +395,19 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/indexes/set-priority/{*id}")]
         public HttpResponseMessage SetPriority(string id)
         {
+            return SetPriorityInternal(id);
+        }
+
+        [HttpPost]
+        [RavenRoute("indexes-set-priority/{*id}")]
+        [RavenRoute("databases/{databaseName}/indexes-set-priority/{*id}")]
+        public HttpResponseMessage SetPriorityConflicFixed(string id)
+        {
+            return SetPriorityInternal(id);
+        }
+
+        private HttpResponseMessage SetPriorityInternal(string id)
+        {
             var index = id;
 
             IndexingPriority indexingPriority;
@@ -390,8 +420,15 @@ namespace Raven.Database.Server.Controllers
             }
 
             var instance = Database.IndexStorage.GetIndexInstance(index);
+            var oldPriority = instance.Priority;
             Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
             instance.Priority = indexingPriority;
+
+            if (oldPriority == IndexingPriority.Disabled &&
+                (indexingPriority == IndexingPriority.Normal || indexingPriority == IndexingPriority.Idle))
+            {
+                Database.WorkContext.NotifyAboutWork();
+            }
 
             return GetEmptyMessage();
         }

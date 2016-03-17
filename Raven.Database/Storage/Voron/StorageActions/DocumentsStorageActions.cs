@@ -98,14 +98,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
+        public Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped)
         {
-            if (take < 0)
-                throw new ArgumentException("must have zero or positive value", "take");
+            if (skip < 0)
+                throw new ArgumentException("must have zero or positive value", "skip");
 
-            if (take == 0)
+            if (skip == 0)
+            {
+                skipped = 0;
                 return etag;
-
+            }
+                
             if (string.IsNullOrEmpty(etag))
                 throw new ArgumentNullException("etag");
 
@@ -114,30 +117,38 @@ namespace Raven.Database.Storage.Voron.StorageActions
             {
                 var slice = (Slice)etag.ToString();
                 if (iterator.Seek(slice) == false)
+                {
+                    skipped = 0;
                     return etag;
+                }
 
-                if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+                var count = 0;
+                if (iterator.CurrentKey.Equals(slice) || etag == Etag.Empty) // need gt, not ge
                 {
                     if (iterator.MoveNext() == false)
+                    {
+                        skipped = 0;
                         return etag;
-                }
-                
-                ValueReader etagReader;
-                long totalSize = 0;
+                    }
 
+                    count++;
+                }
+
+                Slice etagSlice;
                 do
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    etagReader = iterator.CurrentKey.CreateReader();
-                    /*var docKey = GetKeyFromCurrent(iterator);
-                    var readResult = tableStorage.Documents.Read(Snapshot, docKey, null);
-                    totalSize += readResult.Reader.Length;
-                    if (maxSize.HasValue && totalSize >= maxSize)
-                        break;*/
-                }
-                while (iterator.MoveNext() && --take > 0);
+                    etagSlice = iterator.CurrentKey;
 
-                return Etag.Parse(etagReader.ReadBytes(16, out take));
+                    if (count >= skip)
+                        break;
+
+                    count++;
+                }
+                while (iterator.MoveNext());
+
+                skipped = count;
+                return Etag.Parse(etagSlice.ToString());
             }
         }
 
@@ -366,7 +377,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
         public JsonDocumentMetadata DocumentMetadataByKey(string key)
         {
             if (string.IsNullOrEmpty(key))
-                throw new ArgumentNullException("key");
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document key can't be null or empty");
+                return null;
+            }
 
             var normalizedKey = CreateKey(key);
             var sliceKey = (Slice)normalizedKey;
@@ -422,7 +437,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
                           .Delete(writeBatch.Value, deletedETag);
 
-            documentCacher.RemoveCachedDocument(normalizedKey, etag);
+            documentCacher.RemoveCachedDocument(normalizedKey, existingEtag);
 
             if (logger.IsDebugEnabled) { logger.Debug("Deleted document with key = '{0}'", key); }
 
@@ -445,6 +460,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
 
             if (logger.IsDebugEnabled) { logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key); }
+
+            if (existingEtag != null)
+                documentCacher.RemoveCachedDocument(normalizedKey, existingEtag);
 
             return new AddDocumentResult
             {
@@ -515,6 +533,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
             keyByEtagIndex.Add(writeBatch.Value, newEtag, normalizedKey);
+
+            documentCacher.RemoveCachedDocument(normalizedKey, preTouchEtag);
             etagTouches.Add(preTouchEtag, afterTouchEtag);
 
             if (logger.IsDebugEnabled) { logger.Debug("TouchDocument() - document with key = '{0}'", key); }

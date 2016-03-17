@@ -497,8 +497,13 @@ more responsive application.
         /// <param name="id">The id.</param>
         /// <param name="documentFound">The document found.</param>
         /// <param name="metadata">The metadata.</param>
+        /// <param name="isStreaming">Is the conversion is part of the streaming? If yes, no sense in registering missing properties</param>
         /// <returns></returns>
-        public object ConvertToEntity(Type entityType, string id, RavenJObject documentFound, RavenJObject metadata)
+        public object ConvertToEntity(Type entityType, 
+            string id, 
+            RavenJObject documentFound, 
+            RavenJObject metadata,
+            bool isStreaming = false)
         {
             try
             {
@@ -516,7 +521,9 @@ more responsive application.
 
                 IDisposable disposable = null;
                 var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
-                if (defaultRavenContractResolver != null && Conventions.PreserveDocumentPropertiesNotFoundOnModel)
+                if (!isStreaming && 
+                    defaultRavenContractResolver != null && 
+                    Conventions.PreserveDocumentPropertiesNotFoundOnModel)
                 {
                     disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
                 }
@@ -905,7 +912,7 @@ more responsive application.
                 Document = json,
                 Etag = etag,
                 Key = documentMetadata.Key,
-                Metadata = (RavenJObject)documentMetadata.Metadata.CloneToken(),
+                Metadata = ((RavenJObject)documentMetadata.Metadata.CloneToken()).FilterHeadersToObject(),
             };
         }
 

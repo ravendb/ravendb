@@ -27,6 +27,7 @@
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -143,7 +144,7 @@
     <Compile Include="Issues\RavenDB_4066.cs" />
     <Compile Include="Issues\RavenDB_4069.cs" />
     <Compile Include="Issues\RavenDB_4092.cs" />
-    <Compile Include="Issues\RavenDB_4164.cs" />
+    <Compile Include="Issues\RavenDB_4189.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />
     <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />

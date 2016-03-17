@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="StronglyTypedRavenSettings.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -48,9 +48,15 @@ namespace Raven.Database.Config
         }
 
         public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
-        {
+        { 
+            const int defaultPrecomputedBatchSize = 32 * 1024;
+            MaxPrecomputedBatchSizeForNewIndex = new IntegerSetting(settings["Raven/MaxPrecomputedBatchSizeForNewIndex"], defaultPrecomputedBatchSize);
+
+            const int defaultPrecomputedBatchTotalDocumentSizeInBytes = 1024*1024*250;  //250 mb
+            MaxPrecomputedBatchTotalDocumentSizeInBytes = new IntegerSetting(settings["Raven/MaxPrecomputedBatchTotalDocumentSizeInBytes"], defaultPrecomputedBatchTotalDocumentSizeInBytes);
+
             //1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
-            MaxClauseCount = new IntegerSetting(settings[Constants.MaxClauseCount],1024); 
+            MaxClauseCount = new IntegerSetting(settings[Constants.MaxClauseCount], 1024);
 
             AllowScriptsToAdjustNumberOfSteps = new BooleanSetting(settings[Constants.AllowScriptsToAdjustNumberOfSteps], false);
 
@@ -228,6 +234,7 @@ namespace Raven.Database.Config
 
             Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
             Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
+            Voron.SkipConsistencyChecks = new BooleanSetting(settings[Constants.Voron.SkipConsistencyChecks], false);
             Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
 
             var txJournalPath = settings[Constants.RavenTxJournalPath];
@@ -249,21 +256,21 @@ namespace Raven.Database.Config
 
             Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
             Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
-            Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"],false);
+            Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"], false);
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
             FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
-            FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
+            FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate], false);
             Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
             Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
             Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
             Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
             Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
-            Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking],false);
+            Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking], false);
 
             DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
 
@@ -272,8 +279,8 @@ namespace Raven.Database.Config
             TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 
             ImplicitFetchFieldsFromDocumentMode = new EnumSetting<ImplicitFetchFieldsMode>(settings["Raven/ImplicitFetchFieldsFromDocumentMode"], ImplicitFetchFieldsMode.Enabled);
-            
-            if (settings["Raven/MaxServicePointIdleTime"] != null) 
+
+            if (settings["Raven/MaxServicePointIdleTime"] != null)
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 
             WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
@@ -282,6 +289,8 @@ namespace Raven.Database.Config
             ConcurrentResourceLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentResourceLoadTimeout],
                 TimeSpan.FromSeconds(15),
                 TimeSpanArgumentType.FromParse);
+
+            CacheDocumentsInMemory = new BooleanSetting(settings["Raven/CacheDocumentsInMemory"], true);
         }
 
         private string GetDefaultWebDir()
@@ -295,7 +304,7 @@ namespace Raven.Database.Config
 
             // we need to leave ( a lot ) of room for other things as well, so we min the cache size
             var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
-                // reduce the unmanaged cache size from the default min
+                                    // reduce the unmanaged cache size from the default min
                                     cacheSizeMaxSetting.Value;
 
             if (val < 0)
@@ -303,6 +312,12 @@ namespace Raven.Database.Config
 
             return val;
         }
+
+        public IntegerSetting MaxPrecomputedBatchTotalDocumentSizeInBytes { get; private set; }
+
+        public IntegerSetting MaxPrecomputedBatchSizeForNewIndex { get; private set; }
+
+        public BooleanSetting CacheDocumentsInMemory { get; set; }
 
 
         public IntegerSetting MaxConcurrentResourceLoads { get; private set; }
@@ -343,7 +358,7 @@ namespace Raven.Database.Config
         public TimeSpanSetting PrewarmFacetsOnIndexingMaxAge { get; private set; }
 
         public TimeSpanSetting PrewarmFacetsSyncronousWaitTime { get; private set; }
-        
+
         public IntegerSettingWithMin MaxNumberOfItemsToProcessInSingleBatch { get; private set; }
 
         public IntegerSetting AvailableMemoryForRaisingBatchSizeLimit { get; private set; }
@@ -470,6 +485,9 @@ namespace Raven.Database.Config
             public StringSetting JournalsStoragePath { get; set; }
 
             public BooleanSetting AllowOn32Bits { get; set; }
+
+            public BooleanSetting SkipConsistencyChecks { get; set; }
+
         }
 
         public class EsentConfiguration

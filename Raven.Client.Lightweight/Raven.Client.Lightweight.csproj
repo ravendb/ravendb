@@ -34,6 +34,7 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
     <NoWarn>1591, 618</NoWarn>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -177,6 +178,8 @@
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
     <Compile Include="FileSystem\SynchronizationServerClient.cs" />
     <Compile Include="Helpers\EnvironmentHelper.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Util\Auth\SingleAuthTokenRetriever.cs" />
     <Compile Include="Indexes\AbstractScriptedIndexCreationTask.cs" />
     <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />

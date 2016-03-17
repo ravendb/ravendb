@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -19,6 +20,7 @@ using Raven.Client.Extensions;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Client.FileSystem.Listeners;
+using Raven.Client.Util.Auth;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -301,134 +303,52 @@ namespace Raven.Client.FileSystem
 
             var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
 
-            if (pageSize != int.MaxValue)
+            var sb = new StringBuilder(operationMetadata.Url)
+                .Append("/streams/files?etag=")
+                .Append(fromEtag)
+                .Append("&pageSize=")
+                .Append(pageSize);
+
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
+                                        .AddOperationHeaders(OperationsHeaders));
+
+            request.RemoveAuthorizationHeader();
+
+            var tokenRetriever = new SingleAuthTokenRetriever(this, RequestFactory, Conventions, OperationsHeaders, operationMetadata);
+
+            var token = await tokenRetriever.GetToken().ConfigureAwait(false);
+            try
             {
-                return new EtagStreamResults(this, fromEtag, pageSize);
+                token = await tokenRetriever.ValidateThatWeCanUseToken(token).ConfigureAwait(false);
             }
-            else
+            catch (Exception e)
             {
-                var sb = new StringBuilder(operationMetadata.Url)
-                    .Append("/streams/files?etag=")
-                    .Append(fromEtag)
-                    .Append("&pageSize=")
-                    .Append(pageSize);
+                request.Dispose();
 
-                var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, this.Conventions)
-                                            .AddOperationHeaders(OperationsHeaders));
+                throw new InvalidOperationException(
+                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
 
-                var response = await request.ExecuteRawResponseAsync()
-                                            .ConfigureAwait(false);
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+            HttpResponseMessage response;
+
+            try
+            {
+                response = await request.ExecuteRawResponseAsync()
+                    .ConfigureAwait(false);
 
                 await response.AssertNotFailingResponse().ConfigureAwait(false);
-
-                return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
             }
-        }
-
-        internal class EtagStreamResults : IAsyncEnumerator<FileHeader>
-        {
-            private readonly AsyncFilesServerClient client;
-            private readonly OperationMetadata operationMetadata;
-            private readonly NameValueCollection headers;
-            private readonly Etag startEtag;
-            private readonly int pageSize;
-            private readonly FilesConvention conventions;
-            private readonly HttpJsonRequestFactory requestFactory;
-
-            private bool complete;
-            private bool wasInitialized;
-
-            private FileHeader current;
-            private YieldStreamResults currentStream;
-
-            private Etag currentEtag;
-            private int currentPageCount = 0;
-
-
-            public EtagStreamResults(AsyncFilesServerClient client, Etag startEtag, int pageSize)
+            catch (Exception)
             {
-                this.client = client;
-                this.startEtag = startEtag;
-                this.pageSize = pageSize;
+                request.Dispose();
 
-                this.requestFactory = client.RequestFactory;
-                this.operationMetadata = new OperationMetadata(client.BaseUrl, client.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication);
-                this.headers = client.OperationsHeaders;
-                this.conventions = client.Conventions;
+                throw;
             }
 
-            private async Task RequestPage(Etag etag)
-            {
-                if (currentStream != null)
-                    currentStream.Dispose();
-
-                var sb = new StringBuilder(operationMetadata.Url)
-                       .Append("/streams/files?etag=")
-                       .Append(etag)
-                       .Append("&pageSize=")
-                       .Append(pageSize);
-
-                var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(client, sb.ToString(), "GET", operationMetadata.Credentials, conventions)
-                                            .AddOperationHeaders(headers));
-
-                var response = await request.ExecuteRawResponseAsync()
-                                            .ConfigureAwait(false);
-
-                await response.AssertNotFailingResponse().ConfigureAwait(false);
-
-                currentPageCount = 0;
-                currentEtag = etag;
-                currentStream = new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
-            }
-
-            public async Task<bool> MoveNextAsync()
-            {
-                if (complete)
-                {
-                    // to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
-                    // also return false, rather than throwing
-                    return false;
-                }
-
-                if (wasInitialized == false)
-                {
-                    await RequestPage(startEtag).ConfigureAwait(false);
-                    wasInitialized = true;
-                }
-
-                if (await currentStream.MoveNextAsync().ConfigureAwait(false) == false)
-                {
-                    // We didn't finished the page, so there is no more data to retrieve.
-                    if (currentPageCount < pageSize)
-                    {
-                        complete = true;
-                        return false;
-                    }
-                    else
-                    {
-                        await RequestPage(current.Etag).ConfigureAwait(false);
-                        return await this.MoveNextAsync().ConfigureAwait(false);
-                    }
-                }
-                else
-                {
-                    current = currentStream.Current;
-                    currentPageCount++;
-
-                    return true;
-                }
-            }
-
-            public FileHeader Current
-            {
-                get { return current; }
-            }
-
-            public void Dispose()
-            {
-                if (currentStream != null)
-                    currentStream.Dispose();
-            }
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
         }
 
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>

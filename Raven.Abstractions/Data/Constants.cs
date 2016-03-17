@@ -23,6 +23,7 @@ namespace Raven.Abstractions.Data
 
 
         public const string LastModified = "Last-Modified";
+        public const string SerializedSizeOnDisk = "SerializedSizeOnDisk";
         public const string CreationDate = "Creation-Date";
         public const string RavenCreationDate = "Raven-Creation-Date";
         public const string RavenLastModified = "Raven-Last-Modified";
@@ -268,6 +269,7 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
             public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
+            public const string SkipConsistencyChecks = "Raven/Voron/SkipConsistencyChecks";
             public const string ScratchBufferSizeNotificationThreshold = "Raven/Voron/ScratchBufferSizeNotificationThreshold";
         }
 

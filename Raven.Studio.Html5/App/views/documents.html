@@ -1,32 +1,43 @@
-<div class="documents-page no-outline" tabindex="0">
+<div id="documents-pane" class="documents-page no-outline" tabindex="0" data-bind="enableResize: true">
     <!-- ko if: alerts().length > 0 -->
-        <!-- ko foreach: alerts -->
-        <div class="alert alert-warning alert-dismissable" role="alert">
-            <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-            <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
-        </div>
-        <!-- /ko -->
+    <!-- ko foreach: alerts -->
+    <div class="alert alert-warning alert-dismissable" role="alert">
+        <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
+    </div>
+    <!-- /ko -->
     <!-- /ko -->
 
-    <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
-        <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
+    <div id="documents-page-container" class="col-md-2 col-resizable-target">
+        
+        <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
+            <li class="all-docs-collection" data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
+                <a href="javascript:void(0)">
+                    <div class="collection-name">
+                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
+                        <span class="collection-text pull-left collection-name-part" data-bind="text: prettyLabel(name), attr: {title: name}"></span>
+                    </div>
+                </a>
+            </li>
+        </ul>
+        <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collectionsExceptAllDocs, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
             <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                 <a href="javascript:void(0)">
                     <div class="collection-name">
                         <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                        <span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: {title: name}"></span>
+                        <span class="collection-text pull-left collection-name-part" data-bind="text: prettyLabel(name), attr: {title: name}"></span>
                         <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')'"></span>
                     </div>
                 </a>
             </li>
         </ul>
     </div>
-    <div class="col-md-10">
+    <div id="documents-list-container" class="col-md-10 col-resizable-affected">
         <div class="btn-toolbar" role="toolbar">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group">
                 <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll, visible: hasDocuments" title="Select all or none">
-                    <img data-bind="attr: { src: hasAllDocumentsSelected() ? 'content/images/checked.png' : hasAnyDocumentsSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" />
+                    <img data-bind="attr: { src: hasAllDocumentsSelected() ? 'content/images/checked.png' : hasAnyDocumentsSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }"/>
                 </button>
             </div>
             <div class="btn-group">
@@ -66,7 +77,8 @@
                 </button>
             </div>
             <div class="btn-group">
-                <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled"><i class="fa fa-spinner fa-spin fa-2x"></i></div>
+                <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled"><i class="fa fa-spinner fa-spin fa-2x"></i>
+                </div>
             </div>
         </div>
         <div class="documents-select" data-bind="with: selectedCollection, visible: hasAnyDocumentsSelected() && !hasAllDocumentsSelected() && isAnyDocumentsAutoSelected()">

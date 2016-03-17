@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -7096,8 +7096,21 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   color: rgba(255, 255, 255, 0.75);
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
+#documents-page-container {
+  border-right: solid 3px rgba(0, 0, 0, 0.73);
+  padding-right: 0;
+}
+#documents-page-container ul {
+  overflow: auto;
+  max-height: 100%;
+  padding-right: 15px;
+}
 .document-collections li {
   outline: none;
+  padding-left: 15px;
+}
+.document-collections li.all-docs-collection {
+  padding-left: 0;
 }
 .document-collections .collection-color-strip {
   margin-right: 5px;
@@ -7117,9 +7130,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
   max-width: 90%;
-}
-.document-collections li:not(:first-child) {
-  padding-left: 15px;
 }
 #index-merge-suggestions .index-name {
   text-decoration: underline;
@@ -8485,10 +8495,10 @@ a.global_help_link:focus {
 .text-height-fix {
   line-height: 34px;
 }
-#matchingDocumentsGrid {
-  margin-bottom: -30px;
-}
 .alert-danger a {
   color: white;
   text-decoration: underline;
+}
+.no-outline {
+  outline-style: none;
 }

@@ -298,7 +298,7 @@ namespace Raven.Database.Server.Tenancy
             return resource.SynchronizationTask.Context.LastSuccessfulSynchronizationTime;
         }
 
-        public async Task<RavenFileSystem> GetFileSystemInternal(string name)
+        public async Task<RavenFileSystem> GetFileSystemInternalAsync(string name)
         {
             Task<RavenFileSystem> db;
 

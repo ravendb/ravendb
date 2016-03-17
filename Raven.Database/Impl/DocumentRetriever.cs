@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Impl.DTC;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -32,6 +31,9 @@ namespace Raven.Database.Impl
         private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> loadedIdsForProjectionRetrievals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> loadedIdsForProjectionFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         private readonly InMemoryRavenConfiguration configuration;
         private readonly IStorageActionsAccessor actions;
         private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
@@ -55,7 +57,7 @@ namespace Raven.Database.Impl
         public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)
         {
             return ExecuteReadTriggers(ProcessReadVetoes(
-                RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, skipDuplicateCheck),
+                RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, loadedIdsForProjectionRetrievals, fieldsToFetch, indexDefinition, skipDuplicateCheck),
                 null, ReadOperation.Query), null, ReadOperation.Query);
         }
 
@@ -101,6 +103,7 @@ namespace Raven.Database.Impl
         private JsonDocument RetrieveDocumentInternal(
             IndexQueryResult queryResult,
             HashSet<string> loadedIds,
+            HashSet<string> loadedProjections,
             FieldsToFetch fieldsToFetch,
             IndexDefinition indexDefinition,
             bool skipDuplicateCheck)
@@ -128,6 +131,7 @@ namespace Raven.Database.Impl
             }
 
             JsonDocument doc = null;
+            var hasTransformerInQuery = string.IsNullOrWhiteSpace(fieldsToFetch.Query.ResultsTransformer) == false;
 
             if (fieldsToFetch.IsProjection)
             {
@@ -139,15 +143,38 @@ namespace Raven.Database.Impl
                     {
                         hasStoredFields = value != FieldStorage.No;
                     }
+
                     foreach (var fieldToFetch in fieldsToFetch.Fields)
                     {
                         if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false && value != FieldStorage.No) continue;
                         hasStoredFields = true;
                     }
+
                     if (hasStoredFields == false)
                     {
-                        // duplicate document, filter it out
-                        if (loadedIds.Add(queryResult.Key) == false) return null;
+                        //the flag AllowMultipleIndexEntriesForSameDocumentToResultTransformer only
+                        //has meaning only if we have a transformer in the query processing pipeline
+                        if (hasTransformerInQuery)
+                        {
+                            // duplicate document, filter it out
+                            // the flag AllowMultipleIndexEntriesForSameDocumentToResultTransformer explicitly allows duplicates 							
+                            if (loadedIds.Add(queryResult.Key) == false &&
+                                fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false)
+                                return null;
+                        }
+                        else
+                        {
+                            // duplicate document, filter it out
+                            if (loadedIds.Add(queryResult.Key) == false)
+                                return null;
+                        }
+                    }
+                    //here as well, the filtering makes sense only if we have a transformer in the query
+                    else if (fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false &&
+                             hasTransformerInQuery) //we have a query with transformer
+                    {
+                        if (loadedProjections.Add(queryResult.Key) == false)
+                            return null;
                     }
                 }
 
@@ -172,7 +199,7 @@ namespace Raven.Database.Impl
                                 var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
                                 foreach (var property in result)
                                 {
-                                    if (property.Value == null ) continue;
+                                    if (property.Value == null) continue;
 
                                     queryResult.Projection[property.Key] = property.Value;
                                 }
@@ -193,8 +220,7 @@ namespace Raven.Database.Impl
                 }
             }
             else if (fieldsToFetch.FetchAllStoredFields && string.IsNullOrEmpty(queryResult.Key) == false
-                && (fieldsToFetch.Query == null || fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false)
-                )
+                && (fieldsToFetch.Query == null || fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false))
             {
                 // duplicate document, filter it out
                 if (loadedIds.Add(queryResult.Key) == false)
@@ -259,7 +285,7 @@ namespace Raven.Database.Impl
 
             if (doc != null && doc.Metadata != null)
                 doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
-            
+
             if (disableCache == false && (doc == null || doc.NonAuthoritativeInformation != true))
                 cache[key] = doc;
 
@@ -283,7 +309,7 @@ namespace Raven.Database.Impl
             }
             else
             {
-                doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, fieldsToFetch, indexDefinition, skipDuplicateCheck);
+                doc = RetrieveDocumentInternal(arg, loadedIdsForFilter, loadedIdsForProjectionFilter, fieldsToFetch, indexDefinition, skipDuplicateCheck);
                 arg.Document = doc;
                 arg.DocumentLoaded = true;
             }

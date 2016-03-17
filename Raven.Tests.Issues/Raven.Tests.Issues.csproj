@@ -25,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -137,8 +138,22 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="NewIndexOptimizationIssue.cs" />
+    <Compile Include="RavenDB-4196.cs" />
+    <Compile Include="RavenDB-4300.cs" />
+    <Compile Include="RavenDB-4379.cs" />
+    <Compile Include="RavenDB-4393.cs" />
+    <Compile Include="RavenDB_3928.cs" />
+    <Compile Include="RavenDB-4227.cs" />
+    <Compile Include="RavenDB_4053.cs" />
+    <Compile Include="RavenDB-4222.cs" />
+    <Compile Include="RavenDB-4221.cs" />
+    <Compile Include="RavenDB_4110.cs" />
+    <Compile Include="RavenDB_4215.cs" />
+    <Compile Include="RavenDB-4210.cs" />
     <Compile Include="RavenDB-4153.cs" />
     <Compile Include="RavenDB-4144.cs" />
+    <Compile Include="RavenDB-4240.cs" />
     <Compile Include="RavenDB-4085.cs" />
     <Compile Include="RavenDB-4041.cs" />
     <Compile Include="RavenDB-4011.cs" />
@@ -468,11 +483,16 @@
     <Compile Include="RavenDB_406.cs" />
     <Compile Include="RavenDB_4065.cs" />
     <Compile Include="RavenDB_4066.cs" />
+    <Compile Include="RavenDB_4099.cs" />
     <Compile Include="RavenDB_410.cs" />
     <Compile Include="RavenDB_4173.cs" />
     <Compile Include="RavenDB_421.cs" />
     <Compile Include="RavenDB_422.cs" />
+    <Compile Include="RavenDB_4226.cs" />
+    <Compile Include="RavenDB_4241.cs" />
     <Compile Include="RavenDB_425.cs" />
+    <Compile Include="RavenDB_4269.cs" />
+    <Compile Include="RavenDB_4388.cs" />
     <Compile Include="RavenDB_478.cs" />
     <Compile Include="RavenDB_483.cs" />
     <Compile Include="RavenDB_505.cs" />
@@ -533,6 +553,7 @@
     <Compile Include="RavenDB_3113.cs" />
     <Compile Include="RavenDB_3106.cs" />
     <Compile Include="RavenDB-3225.cs" />
+    <Compile Include="ThorMigrationIssues.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
   <ItemGroup>

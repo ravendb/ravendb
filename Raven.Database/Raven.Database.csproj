@@ -52,6 +52,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -295,6 +296,7 @@
     <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
     <Compile Include="Server\Controllers\DebugVoronController.cs" />
+    <Compile Include="Server\Controllers\SmugglerController.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -351,7 +353,10 @@
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerExporter.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From52To53.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From51To52.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
@@ -466,7 +471,6 @@
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
     <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsIndexTrigger.cs" />
     <Compile Include="Bundles\SqlReplication\ConversionScriptResult.cs" />
     <Compile Include="Bundles\SqlReplication\ItemToReplicate.cs" />
@@ -477,6 +481,7 @@
     <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
+    <Compile Include="Impl\NullDocumentCacher.cs" />
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
@@ -776,7 +781,7 @@
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\VirtualAttachmentDeleteTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\VirtualDeleteAndRemoveConflictsTrigger.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
@@ -1204,6 +1209,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Util\Raven.Debug\x64\dbghelp.dll" />
+    <EmbeddedResource Include="Util\Raven.Debug\x86\dbghelp.dll" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />

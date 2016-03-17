@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -18,6 +18,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\checkEncryptionKey.ts" />
@@ -32,6 +33,7 @@
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\forceLicenseUpdate.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugTasksSummaryCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStudioConfig.ts" />
     <TypeScriptCompile Include="App\commands\licenseCheckConnectivityCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteResourceCommand.ts" />
@@ -152,8 +154,10 @@
     <TypeScriptCompile Include="App\common\autoCompleteBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
+    <TypeScriptCompile Include="App\common\enableResizeBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\common\queryUtil.ts" />
+    <TypeScriptCompile Include="App\common\downloader.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\environmentColor.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
@@ -344,7 +348,6 @@
     <TypeScriptCompile Include="App\commands\getDocRefsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugCurrentlyIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugQueriesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getStatusDebugTasksCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugRoutesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugSqlReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugIndexFieldsCommand.ts" />
@@ -672,7 +675,7 @@
       <DependentUpon>app.less</DependentUpon>
     </Content>
     <Content Include="Content\app.min.css">
-      <DependentUpon>app.less</DependentUpon>
+      <DependentUpon>app.css</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
     <Content Include="Content\bootstrap-multiselect.css" />
@@ -957,9 +960,6 @@
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
-    <Content Include="Content\app.css.map">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
     <Content Include="readme-optimized-build.md" />
     <Content Include="Content\bootstrap.less" />
     <Content Include="Content\variables.less" />
@@ -1021,6 +1021,10 @@
     <Content Include="Content\bootstrap.css.map">
       <DependentUpon>bootstrap.css</DependentUpon>
     </Content>
+    <None Include="compilerconfig.json" />
+    <None Include="compilerconfig.json.defaults">
+      <DependentUpon>compilerconfig.json</DependentUpon>
+    </None>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>
@@ -1123,6 +1127,7 @@
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
     <TypeScriptSourceMap>True</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES5</TypeScriptTarget>

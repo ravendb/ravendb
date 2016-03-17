@@ -498,13 +498,15 @@ namespace Raven.Tests.Replication
                 source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
                 SetupReplication(source, "testDB", destination);
 
-                //make sure not to replicate the index automatically
                 var userIndex = new UserIndex();
-                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
 
                 var indexStatsBeforeReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
                 Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 
+                //make sure not to replicate the index automatically
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+
+                
                 var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?indexName={1}", source.Url, userIndex.IndexName);
                 var replicationRequest = requestFactory.Create(replicationRequestUrl, "POST", new RavenConnectionStringOptions
                 {

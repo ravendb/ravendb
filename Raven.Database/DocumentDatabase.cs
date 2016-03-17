@@ -51,7 +51,7 @@ namespace Raven.Database
     {
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-        private static string buildVersion;
+        private static int buildVersion = -1;
 
         private static string productVersion;
 
@@ -250,15 +250,15 @@ namespace Raven.Database
 
         public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
-        public static string BuildVersion
+        public static int BuildVersion
         {
             get
             {
-                if (buildVersion == null)
+                if (buildVersion == -1)
                 {
                     var customAttributes = typeof (DocumentDatabase).Assembly.GetCustomAttributes(false);
                     dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
-                    buildVersion = versionAtt.Build;
+                    buildVersion = int.Parse(versionAtt.Build);
                 }
                 return buildVersion;
             }

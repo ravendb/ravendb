@@ -24,6 +24,7 @@ import searchByQueryCommand = require("commands/filesystem/searchByQueryCommand"
 import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemStatsCommand");
 import filesystemEditFile = require("viewmodels/filesystem/filesystemEditFile");
 import fileRenameDialog = require("viewmodels/filesystem/fileRenameDialog");
+import queryUtil = require("common/queryUtil");
 
 class filesystemFiles extends viewModelBase {
 
@@ -211,7 +212,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     fetchFiles(directory: string, skip: number, take: number): JQueryPromise<pagedResultSet> {
-        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), this.escapeQueryString(directory), skip, take).execute();
+        var task = new getFilesystemFilesCommand(appUrl.getFileSystem(), directory, skip, take).execute();
         return task;
     }
 
@@ -288,8 +289,11 @@ class filesystemFiles extends viewModelBase {
             if (selectedFolder == null)
                 selectedFolder = "";
 
-            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + encodeURIComponent(selectedItem.getId());
-            window.location.assign(url);
+            var fs = this.activeFilesystem();
+            var fileName = selectedItem.getId();
+
+            var url = appUrl.forResourceQuery(fs) + "/files" + selectedFolder + "/" + encodeURIComponent(fileName);
+            this.downloader.download(fs, url);
         }
     }
 
@@ -384,7 +388,7 @@ class filesystemFiles extends viewModelBase {
                 });
         } else {
             // Run the query so that we have an idea of what we'll be deleting.
-            var query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+            var query = "__directoryName:" + queryUtil.escapeTerm(this.selectedFolder());
             new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
                 .execute()
                 .done((results: pagedResultSet) => {
@@ -395,11 +399,6 @@ class filesystemFiles extends viewModelBase {
                 }
             });
         }
-    }
-
-    private escapeQueryString(query: string): string {
-        if (!query) return null;
-        return query.replace(/([ \-\_\.])/g, '\\$1');
     }
 
     promptDeleteFilesMatchingQuery(resultCount: number, query: string) {

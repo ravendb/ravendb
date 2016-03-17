@@ -6,7 +6,7 @@ using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Threading;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
 
 namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
@@ -15,7 +15,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
     {
         private const uint OutputBufferSize = 1024;
         private const int InputBufferSize = 8 * 1024;
-        private static readonly Logger log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         private readonly ReaderWriterLockSlim _disposerLock = new ReaderWriterLockSlim();
 

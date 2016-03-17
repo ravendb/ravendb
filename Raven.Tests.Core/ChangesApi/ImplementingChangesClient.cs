@@ -206,7 +206,7 @@ namespace Raven.Tests.Core.ChangesApi
                 throw new NotImplementedException();
             }
 
-            public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
+            public bool IsHttpStatus(Exception e, out HttpStatusCode statusCode, params HttpStatusCode[] httpStatusCode)
             {
                 throw new NotImplementedException();
             }

@@ -11,7 +11,7 @@ properties {
     $base_dir  = resolve-path .
     $lib_dir = "$base_dir\SharedLibs"
     $packages_dir = "$base_dir\packages"
-    $build_dir = "$base_dir\build"
+    $build_dir = "$base_dir\artifacts"
     $sln_file_name = "zzz_RavenDB_Release.sln"
     $sln_file = "$base_dir\$sln_file_name"
     $version = "3.0"
@@ -33,6 +33,8 @@ properties {
     $dnx = "$dnxRuntimeDir\dnx.exe"
     
     $nuget = "$base_dir\.nuget\NuGet.exe"
+    
+    $global:is_pull_request = $FALSE
 }
 
 task default -depends Test, DoReleasePart1
@@ -141,17 +143,23 @@ task FullStorageTest {
 task Test -depends TestDnx {
     Clear-Host
 
-    $test_prjs = @( `
-        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
-        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
-        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
-        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
-        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
-        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
-        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
-        "$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
-        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll")
+    $test_prjs = New-Object System.Collections.ArrayList
+
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll");
+    
+    if ($global:is_pull_request -eq $FALSE) {
+        [void]$test_prjs.Add("$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll");
+    }
+    
+    [void]$test_prjs.Add("$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll");
+    
     Write-Host $test_prjs
     
     $xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -227,9 +235,11 @@ task Stable {
 
 task RunTests -depends Test
 
+task PullRequest {
+    $global:is_pull_request = $TRUE
+}
+
 task RunAllTests -depends FullStorageTest,RunTests,StressTest
-
-
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null

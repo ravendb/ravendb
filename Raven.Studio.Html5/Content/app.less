@@ -2,7 +2,6 @@
 
 @selectionColor: #ffc;
 /*@selectionColor: black;*/
-
 html, body {
     height: 100%;
 }
@@ -341,12 +340,12 @@ html, body {
 /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
 /*
 .ace_editor {
-		border: 1px solid lightgray;
-		margin: auto;
-		height: 200px;
-		width: 80%;
-		position: relative !important
-	}*/
+        border: 1px solid lightgray;
+        margin: auto;
+        height: 200px;
+        width: 80%;
+        position: relative !important
+    }*/
 
 .fullScreen .fullScreen-editor {
     height: auto !important;
@@ -636,10 +635,25 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 
-.document-collections {
+#documents-page-container {
+    border-right: solid 3px rgba(0, 0,0, .73);
+    padding-right: 0;
 
+    ul {
+        overflow: auto;
+        max-height: 100%;
+        padding-right: 15px;
+    }
+}
+.document-collections {
+    
     li {
         outline: none;
+        padding-left: 15px;
+    }
+
+    li.all-docs-collection {
+        padding-left: 0;
     }
 
     .collection-color-strip {
@@ -662,11 +676,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
         max-width: 90%;
-    }
-
-    li:not(:first-child) {
-        // All collections except the first one ("All Documents") are indented.
-        padding-left: 15px;
     }
 }
 
@@ -2186,14 +2195,14 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 }
 
 .nvd3 {
-	.nv-brushBackground rect {
-		stroke: none;
-	}
+    .nv-brushBackground rect {
+        stroke: none;
+    }
 
-	.nv-brush .extent {
-		fill: gray;
-		fill-opacity: 0.1 !important;
-	}
+    .nv-brush .extent {
+        fill: gray;
+        fill-opacity: 0.1 !important;
+    }
 }
 
 .topBorder td {
@@ -2274,14 +2283,14 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     margin-bottom: 3px;
 }
 .text-height-fix {
-	line-height: 34px;
-}
-
-#matchingDocumentsGrid {
-    margin-bottom: -30px;
+    line-height: 34px;
 }
 
 .alert-danger a {
     color: white;
     text-decoration: underline;
+}
+
+.no-outline {
+    outline-style: none;
 }

@@ -123,7 +123,7 @@ namespace Raven.Database.Server.Connections
                         activeResource = await DatabasesLandlord.GetDatabaseInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
                         break;
                     case FileSystemsUrlPrefix:
-                        activeResource = await fileSystemsLandlord.GetFileSystemInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
+                        activeResource = await fileSystemsLandlord.GetFileSystemInternalAsync(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
                         break;
                     default:
                         throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");

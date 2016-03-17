@@ -141,7 +141,7 @@ namespace Raven.Abstractions.Json
                     @this = x as FastCompoundKey;
                     k = y as SlowCompoundKey;
                 }
-                else
+                else 
                 {
                     @this = y as FastCompoundKey;
                     k = x as SlowCompoundKey;
@@ -150,6 +150,15 @@ namespace Raven.Abstractions.Json
                 JsonConverterCollection kCollection;
                 if (!k.Collection.TryGetTarget(out kCollection))
                     return false;
+
+                if (@this == null) //special case, both x and y are SlowCompoundKey
+                {
+                    var thisKey = y as SlowCompoundKey;
+                    JsonConverterCollection thisCollection;
+                    if (!thisKey.Collection.TryGetTarget(out thisCollection))
+                        return false;
+                    return thisCollection == kCollection;
+                }
 
                 return @this.Collection == kCollection;
             }

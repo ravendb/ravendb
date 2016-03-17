@@ -25,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -128,6 +129,7 @@
     <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="PeterBalzli.cs" />
     <Compile Include="AaronSt.cs" />
     <Compile Include="AccessControlHeaders.cs" />
     <Compile Include="Accounts.cs" />
@@ -294,6 +296,7 @@
     <Compile Include="JsonNetRequiresUsToHaveTheDynamicSnkFileAsAnEmbeddedResource.cs" />
     <Compile Include="JustFacetSearch.cs" />
     <Compile Include="Justin.cs" />
+    <Compile Include="Kamran.cs" />
     <Compile Include="kendaleiv.cs" />
     <Compile Include="Kijana.cs" />
     <Compile Include="Kushnir.cs" />
@@ -368,6 +371,7 @@
     <Compile Include="PhilJones\PhilJones.cs" />
     <Compile Include="PhilJones\PhilJones88.cs" />
     <Compile Include="PhilJones\Projections.cs" />
+    <Compile Include="QueryShouldNotAppendMetaData.cs" />
     <Compile Include="RavenArrayQueryInputTests.cs" />
     <Compile Include="RavenDB252.cs" />
     <Compile Include="RavenDB669.cs" />
@@ -377,6 +381,7 @@
     <Compile Include="RavenDeserializationBug.cs" />
     <Compile Include="RavenDynamicTests.cs" />
     <Compile Include="RavenProjectionGuid.cs" />
+    <Compile Include="RavenShowTimingsTest.cs" />
     <Compile Include="RecreatingIndexes.cs" />
     <Compile Include="ReduceAndTransform2.cs" />
     <Compile Include="RenamedProperty.cs" />

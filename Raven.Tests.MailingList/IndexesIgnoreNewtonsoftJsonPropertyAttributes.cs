@@ -34,6 +34,9 @@ namespace RavenTestConsole.RavenTests
         
             [Raven.Imports.Newtonsoft.Json.JsonProperty("ZipCode")]
             public string Postcode { get; set; }
+
+            [Raven.Imports.Newtonsoft.Json.JsonProperty("~i'm@Ivalid#")]
+            public string InvalidProperty { get; set; }
         }
 
         private class StudentDtos_ByEmailDomain : AbstractIndexCreationTask<StudentDto, StudentDtos_ByEmailDomain.Result>
@@ -42,6 +45,7 @@ namespace RavenTestConsole.RavenTests
             {
                 public string Email { get; set; }
                 public string Postcode { get; set; }
+                public string InvalidProperty { get; set; }
             }
 
             public StudentDtos_ByEmailDomain()
@@ -50,7 +54,8 @@ namespace RavenTestConsole.RavenTests
                                   select new Result
                                   {
                                       Email = studentDto.Email,
-                                      Postcode = studentDto.Postcode
+                                      Postcode = studentDto.Postcode,
+                                      InvalidProperty = studentDto.InvalidProperty
                                   };
             }
         }
@@ -74,13 +79,35 @@ namespace RavenTestConsole.RavenTests
 
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,
-    Postcode = studentDto.ZipCode
+    Postcode = studentDto.ZipCode,
+    InvalidProperty = studentDto[""~i'm@Ivalid#""]
 })", definition.Map);
 
                 Assert.NotEqual(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.EmailAddress,
-    Postcode = studentDto.ZipCode
+    Postcode = studentDto.ZipCode,
+    InvalidProperty = studentDto[""~i'm@Ivalid#""]
 })", definition.Map);
+            }
+        }
+
+        /// <summary>
+        /// Checks that the index definitions actually compiles and run as expected on the server
+        /// </summary>
+        [Fact]
+        public void WillGenerateIndexDefinitions()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new StudentDtos_ByEmailDomain().Execute(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new StudentDto {Email = "a@b.c", Postcode = "30900"});
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    var res =session.Query<StudentDto>().Single(x => x.Postcode.Equals("30900"));
+                    Assert.Equal(res.Postcode,"30900");
+                }
             }
         }
     }

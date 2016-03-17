@@ -1068,7 +1068,7 @@ namespace Raven.Database.Indexing
                 return null;
             }
             using (CultureHelper.EnsureInvariantCulture())
-            using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+            using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
             {
                 var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
                 context.RaiseIndexChangeNotification(new IndexChangeNotification
@@ -1416,6 +1416,7 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
+
             foreach (var index in indexes)
             {
                 if (index.Value.IsMapReduce == false)
@@ -1427,6 +1428,7 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
+
             foreach (var index in indexes)
             {
                 if (index.Value.IsMapReduce)
@@ -1434,28 +1436,28 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void FlushIndexes(HashSet<int> indexIds)
+        public void FlushIndexes(HashSet<int> indexIds, bool onlyAddIndexError)
         {
             if (indexes == null || indexIds.Count == 0)
                 return;
 
             foreach (var indexId in indexIds)
             {
-                FlushIndex(indexId);
+                FlushIndex(indexId, onlyAddIndexError);
             }
         }
 
-        public void FlushIndex(int indexId)
+        public void FlushIndex(int indexId, bool onlyAddIndexError)
         {
             Index value;
             if (indexes.TryGetValue(indexId, out value))
-                FlushIndex(value);
+                FlushIndex(value, onlyAddIndexError);
         }
 
-        private static void FlushIndex(Index value)
+        private static void FlushIndex(Index value, bool onlyAddIndexError = false)
         {
             var sp = Stopwatch.StartNew();
-
+            
             try
             {
                 value.Flush(value.GetLastEtagFromStats());
@@ -1465,12 +1467,19 @@ namespace Raven.Database.Indexing
                 value.IncrementWriteErrors(e);
                 log.WarnException(string.Format("Failed to flush {0} index: {1} (id: {2})",
                     GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId), e);
+
+                if (onlyAddIndexError)
+                {
+                    value.AddIndexFailedFlushError(e);
+                    return;
+                }
+
                 throw;
             }
 
             if (log.IsDebugEnabled)
             {
-                log.Debug("Flashed {0} index: {1} (id: {2}), took {3}ms",
+                log.Debug("Flushed {0} index: {1} (id: {2}), took {3}ms",
                     GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
             }
         }
@@ -1479,6 +1488,19 @@ namespace Raven.Database.Indexing
         {
             return isMapReduce ? "map-reduce" : "simple map";
         }
+
+        public List<int> GetDisabledIndexIds()
+        {
+            var indexIds = new List<int>();
+
+            foreach (var index in indexes)
+            {
+                if (index.Value.Priority.HasFlag(IndexingPriority.Disabled))
+                    indexIds.Add(index.Key);
+            }
+
+            return indexIds;
+        } 
 
         public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
         {
@@ -1559,7 +1581,13 @@ namespace Raven.Database.Indexing
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
         {
             var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
-
+            switch (indexToReplace.LockMode)
+            {
+                case IndexLockMode.LockedIgnore:
+                    return false;
+                case IndexLockMode.LockedError:
+                    throw new InvalidOperationException("An attempt to replace an index, locked with LockedError, by a side by side index was detected.");
+            }
             var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
             if (success == false)
                 return false;

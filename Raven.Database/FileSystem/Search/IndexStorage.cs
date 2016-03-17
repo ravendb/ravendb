@@ -25,6 +25,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Constants = Raven.Abstractions.Data.Constants;
 using Directory = System.IO.Directory;
 using LuceneDirectory = Lucene.Net.Store.Directory;
@@ -122,6 +123,14 @@ namespace Raven.Database.FileSystem.Search
             }           
         }
 
+        internal LuceneDirectory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexFolder)
+        {
+            var newDir = new LuceneCodecDirectory(indexFolder, new AbstractIndexCodec[0]);
+            LuceneDirectory.Copy(ramDir, newDir, false);
+            WriteIndexVersion(newDir);
+            return newDir;
+        }
+
         private void OpenIndexOnStartup()
         {            
             analyzer = new LowerCaseKeywordAnalyzer();
@@ -135,7 +144,7 @@ namespace Raven.Database.FileSystem.Search
                 try
                 {
                     luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
-
+                    
                     // Skip sanity test if we are running in memory. Index will not exist anyways.
                     if (!configuration.RunInMemory && !IsIndexStateValid(luceneDirectory))
                         throw new InvalidOperationException("Sanity check on the index failed.");
@@ -143,7 +152,7 @@ namespace Raven.Database.FileSystem.Search
                     directory = luceneDirectory;
                     writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
                     writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
-
+                    
                     currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
 
                     break;
@@ -256,50 +265,46 @@ namespace Raven.Database.FileSystem.Search
         private LuceneDirectory OpenOrCreateLuceneDirectory(string path)
         {
             if (configuration.RunInMemory)
-            {
                 return new RAMDirectory();
-            }
-            else
+
+            var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
+
+            try
             {
-                var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
-
-                try
+                // We check if the directory already exists
+                if (!IndexReader.IndexExists(luceneDirectory))
                 {
-                    // We check if the directory already exists
-                    if (!IndexReader.IndexExists(luceneDirectory))
+                    TryResettingIndex();
+                }
+                else
+                {
+                    // We prepare in case we have to change the index definition to have a proper upgrade path.
+                    EnsureIndexVersionMatches(luceneDirectory);
+
+                    if (luceneDirectory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
                     {
-                        TryResettingIndex();
-                    }
-                    else
-                    {
-                        // We prepare in case we have to change the index definition to have a proper upgrade path.
-                        EnsureIndexVersionMatches(luceneDirectory);
+                        IndexWriter.Unlock(luceneDirectory);
 
-                        if (luceneDirectory.FileExists("write.lock")) // force lock release, because it was still open when we shut down
-                        {
-                            IndexWriter.Unlock(luceneDirectory);
-
-                            // for some reason, just calling unlock doesn't remove this file
-                            luceneDirectory.DeleteFile("write.lock");
-                        }
-
-                        if (luceneDirectory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
-                        {
-                            if (resetIndexOnUncleanShutdown)
-                                throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", name, path));
-
-                            CheckIndexAndTryToFix(luceneDirectory);
-                            luceneDirectory.DeleteFile("writing-to-index.lock");
-                        }
+                        // for some reason, just calling unlock doesn't remove this file
+                        luceneDirectory.DeleteFile("write.lock");
                     }
 
-                    return luceneDirectory;
+                    if (luceneDirectory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
+                    {
+                        if (resetIndexOnUncleanShutdown)
+                            throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", name, path));
+
+                        CheckIndexAndTryToFix(luceneDirectory);
+                        luceneDirectory.DeleteFile("writing-to-index.lock");
+                    }
                 }
-                catch
-                {
-                    luceneDirectory.Dispose();
-                    throw;
-                }
+
+                return luceneDirectory;
+            }
+            catch
+            {
+                luceneDirectory.Dispose();
+                throw;
             }
         }
 
@@ -471,11 +476,11 @@ namespace Raven.Database.FileSystem.Search
 
                 if (long.TryParse(value, out longValue))
                 {
-                    doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetLongValue(longValue));
+                    doc.Add(new NumericField(string.Format("{0}_numeric", key), Field.Store.NO, true).SetLongValue(longValue));
                 }
                 else if (double.TryParse(value, out doubleValue))
                 {
-                    doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetDoubleValue(doubleValue));
+                    doc.Add(new NumericField(string.Format("{0}_numeric", key), Field.Store.NO, true).SetDoubleValue(doubleValue));
                 }				
             }
         }
@@ -625,6 +630,14 @@ namespace Raven.Database.FileSystem.Search
 
         public void Backup(string backupDirectory)
         {
+            
+            if (configuration.RunInMemory)
+            {
+                var ramDirectory = directory as RAMDirectory;
+                if(ramDirectory != null)
+                    MakeRAMDirectoryPhysical(ramDirectory, indexDirectory);
+            }
+
             bool hasSnapshot = false;
             bool throwOnFinallyException = true;
             try
@@ -636,9 +649,7 @@ namespace Raven.Database.FileSystem.Search
                 if (File.Exists(allFilesPath))
                 {
                     foreach (var file in File.ReadLines(allFilesPath))
-                    {
                         existingFiles.Add(file);
-                    }
                 }
 
                 var neededFilePath = Path.Combine(saveToFolder, "index-files.required-for-index-restore");
@@ -647,11 +658,12 @@ namespace Raven.Database.FileSystem.Search
                 {
                     var segmentsFileName = "segments.gen";
                     var segmentsFullPath = Path.Combine(indexDirectory, segmentsFileName);
-                    File.Copy(segmentsFullPath, Path.Combine(saveToFolder, segmentsFileName));
+                    var saveToPath = Path.Combine(saveToFolder, segmentsFileName);
+                    File.Copy(segmentsFullPath, saveToPath);
 
                     allFilesWriter.WriteLine(segmentsFileName);
                     neededFilesWriter.WriteLine(segmentsFileName);
-
+                    
                     var versionFileName = "index.version";
                     var versionFullPath = Path.Combine(indexDirectory, versionFileName);
                     File.Copy(versionFullPath, Path.Combine(saveToFolder, versionFileName));

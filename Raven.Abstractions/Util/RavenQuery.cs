@@ -96,8 +96,7 @@ namespace Raven.Abstractions.Util
                         {
                             if (makePhrase)
                             {
-                                //If it is a phrase there is no need to double escape just escape the original term.
-                                return new StringBuilder(term).Insert(0,"\"").Append("\"").ToString();								
+                                return new StringBuilder(Escape(term, allowWildcards, false)).Insert(0,"\"").Append("\"").ToString();								
                             }
                             break;
                         }

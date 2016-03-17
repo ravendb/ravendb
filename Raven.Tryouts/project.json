@@ -12,6 +12,11 @@
   "commands": {
     "Raven.Tryouts": "Raven.Tryouts"
   },
+  
+  "runtimes": {
+    "win-x64": {
+    }
+  },
 
   "frameworks": {
     "dnxcore50": {

@@ -74,6 +74,7 @@ namespace Raven.Client.Connection.Implementation
         private string operationUrl;
 
         public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
+        private bool criticalError;
 
         /// <summary>
         /// Gets or sets the response headers.
@@ -198,7 +199,7 @@ namespace Raven.Client.Connection.Implementation
                         PostedData = postedData
                     });
                 }
-               
+
                 return cachedResult;
             }
 
@@ -281,6 +282,19 @@ namespace Raven.Client.Connection.Implementation
 
                     responseException = e;
                 }
+                catch (IndexCompilationException)
+                {
+                    throw;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception)
+                {
+                    criticalError = true;
+                    throw;
+                }
 
                 if (Response.StatusCode == HttpStatusCode.Forbidden)
                 {
@@ -333,7 +347,7 @@ namespace Raven.Client.Connection.Implementation
             {
                 if (factory.CanLogRequest)
                 {
-                    factory.OnLogRequest(owner,new RequestResultArgs
+                    factory.OnLogRequest(owner, new RequestResultArgs
                     {
                         DurationMilliseconds = CalculateDuration(),
                         Method = Method,
@@ -344,7 +358,7 @@ namespace Raven.Client.Connection.Implementation
                         PostedData = postedData
                     });
                 }
-               
+
 
                 throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
             }
@@ -373,7 +387,7 @@ namespace Raven.Client.Connection.Implementation
                         PostedData = postedData
                     });
                 }
-               
+
 
                 return result;
             }
@@ -788,6 +802,11 @@ namespace Raven.Client.Connection.Implementation
             });
         }
 
+        public Task<HttpResponseMessage> ExecuteRawResponseAsync(RavenJToken token)
+        {
+            return ExecuteRawResponseInternalAsync(new JsonContent(token));
+        }
+
         public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
         {
             return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
@@ -949,7 +968,11 @@ namespace Raven.Client.Connection.Implementation
 
             if (httpClient != null)
             {
-                factory.httpClientCache.ReleaseClient(httpClient, _credentials);
+                if (criticalError == false)
+                    factory.httpClientCache.ReleaseClient(httpClient, _credentials);
+                else
+                    httpClient.Dispose();
+
                 httpClient = null;
             }
         }

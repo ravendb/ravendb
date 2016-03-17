@@ -219,9 +219,9 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
             Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
-                                                                                                                {
-                                                                                                                    Resource = databaseName
-                                                                                                                }), new RavenJObject(), null);
+            {
+                Resource = databaseName
+            }), new RavenJObject(), null);
 
             DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 
@@ -271,7 +271,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                         RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 
-                    if (restoreRequest.GenerateNewDatabaseId) 
+                    if (restoreRequest.GenerateNewDatabaseId)
                         GenerateNewDatabaseId(databaseName);
 
                     if (replicationBundleRemoved)
@@ -427,11 +427,11 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/license/connectivity")]
         public HttpResponseMessage CheckConnectivityToLicenseServer()
         {
-            var request = (HttpWebRequest)WebRequest.Create("http://licensing.ravendb.net/Subscriptions.svc");
+            var request = (HttpWebRequest)WebRequest.Create("https://licensing.ravendb.net/Subscriptions.svc");
             try
             {
                 request.Timeout = 5000;
-                using (var response = (HttpWebResponse) request.GetResponse())
+                using (var response = (HttpWebResponse)request.GetResponse())
                 {
                     return GetMessageWithObject(new { Success = response.StatusCode == HttpStatusCode.OK });
                 }
@@ -478,7 +478,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     {
                         bool skipProgressReport = false;
                         bool isProgressReport = false;
-                        if(IsUpdateMessage(msg))
+                        if (IsUpdateMessage(msg))
                         {
                             isProgressReport = true;
                             var now = SystemTime.UtcNow;
@@ -490,7 +490,7 @@ namespace Raven.Database.Server.Controllers.Admin
                                 compactStatus.LastProgressMessage = msg;
                             }
                             else skipProgressReport = true;
-                            
+
                         }
                         if (!skipProgressReport)
                         {
@@ -836,8 +836,8 @@ namespace Raven.Database.Server.Controllers.Admin
                 var response = new HttpResponseMessage();
 
                 response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-                                   {
-                                       Headers =
+                {
+                    Headers =
                                        {
                                            ContentDisposition = new ContentDispositionHeaderValue("attachment")
                                                                 {
@@ -845,7 +845,7 @@ namespace Raven.Database.Server.Controllers.Admin
                                                                 },
                                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
                                        }
-                                   };
+                };
 
                 return response;
             }
@@ -873,12 +873,21 @@ namespace Raven.Database.Server.Controllers.Admin
 
                     ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
                     var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
+                    var ravenDbgHelp = Path.Combine(ravenDebugDir, "dbghelp.dll");
                     var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
 
                     Directory.CreateDirectory(ravenDebugDir);
 
-                    if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
-                    else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+                    if (Environment.Is64BitProcess)
+                    {
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x64.dbghelp.dll", ravenDbgHelp);
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
+                    }
+                    else
+                    {
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x86.dbghelp.dll", ravenDbgHelp);
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+                    }
 
                     var process = new Process
                     {
@@ -895,7 +904,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         EnableRaisingEvents = true
                     };
 
-                    
+
 
                     process.OutputDataReceived += (sender, args) => output += args.Data;
                     process.ErrorDataReceived += (sender, args) => output += args.Data;
@@ -983,7 +992,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
                 return GetMessageWithObject(connectionState);
             }
-            
+
             var watchCatogory = GetQueryStringValues("watch-category");
             var categoriesToWatch = watchCatogory.Select(
                 x =>
@@ -1059,11 +1068,11 @@ namespace Raven.Database.Server.Controllers.Admin
                 case BatchPerformanceTestRequest.Mode:
                     ioTestRequest = json.JsonDeserialization<BatchPerformanceTestRequest>();
                     break;
-                default: 
+                default:
                     return GetMessageWithObject(new
-                {
-                    Error = "test type is invalid: " + testType
-                }, HttpStatusCode.BadRequest);
+                    {
+                        Error = "test type is invalid: " + testType
+                    }, HttpStatusCode.BadRequest);
             }
 
             Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
@@ -1128,20 +1137,21 @@ namespace Raven.Database.Server.Controllers.Admin
             if (EnsureSystemDatabase() == false)
                 return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
 
-            return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
+            return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x => x.DatabaseName).Select(x => new
             {
                 DatabaseName = x.Key,
-                Types = x.GroupBy(y=>y.Name).Select(y=> new
+                Types = x.GroupBy(y => y.Name).Select(y => new
                 {
                     MemoryHandlerName = y.Key,
-                    MemoryHandlers = y.Select(z=> new {
-                    z.EstimatedUsedMemory,
-                    z.Metadata
+                    MemoryHandlers = y.Select(z => new
+                    {
+                        z.EstimatedUsedMemory,
+                        z.Metadata
                     })
                 })
             }));
 
-            
+
         }
     }
 }

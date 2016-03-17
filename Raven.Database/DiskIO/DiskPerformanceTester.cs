@@ -193,6 +193,7 @@ namespace Raven.Database.DiskIO
         {
             DisposeTimer();
             IOExtensions.DeleteFile(filePath);
+            linkedCts.Dispose();
         }
 
         protected void DisposeTimer()

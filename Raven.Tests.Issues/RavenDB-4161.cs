@@ -21,7 +21,6 @@ namespace Raven.Tests.Issues
             using (var store = NewDocumentStore())
             {
                 new Token_Id().Execute(store);
-
                 using (IDocumentSession session = store.OpenSession())
                 {
                     var token = new Token
@@ -50,6 +49,10 @@ namespace Raven.Tests.Issues
                     var fromQuery = session.Query<Token>().TransformWith<Token_Id, string>().ToArray().OrderBy(x => x).ToArray();
 
                     Assert.Equal(fooTokens, fromQuery, StringComparer.OrdinalIgnoreCase);
+
+                    Assert.Equal(token2.Id, session.Load<Token_Id,string>(token2.Id));
+
+                    Assert.Equal(token.Id, session.Advanced.Lazily.Load<Token_Id, string>(token.Id).Value);
 
                 }
             }
