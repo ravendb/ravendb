@@ -826,6 +826,8 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var id in documentIds)
                     {
+                        token.ThrowIfCancellationRequested();
+
                         var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
 
                         result.Results.Add(document);
