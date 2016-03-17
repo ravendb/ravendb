@@ -25,9 +25,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
         }
 
-        public AutoIndexDefinition CreateAutoIndexDefinition()
+        public AutoMapIndexDefinition CreateAutoIndexDefinition()
         {
-            return new AutoIndexDefinition(ForCollection, MapFields.Select(field =>
+            return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
                 new IndexField
                 {
                     Name = field.Name,

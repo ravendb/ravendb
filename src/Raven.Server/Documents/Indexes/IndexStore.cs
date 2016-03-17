@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public int CreateIndex(AutoIndexDefinition definition)
+        public int CreateIndex(AutoMapIndexDefinition definition)
         {
             lock (_locker)
             {
@@ -264,9 +264,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
+        public List<AutoMapIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
         {
-            return _indexes.GetDefinitionsOfTypeForCollection<AutoIndexDefinition>(collection);
+            return _indexes.GetDefinitionsOfTypeForCollection<AutoMapIndexDefinition>(collection);
         }
 
         public IEnumerable<Index> GetIndexesForCollection(string collection)

@@ -43,6 +43,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 
 namespace Raven.Client.Connection.Async
 {
@@ -142,7 +143,7 @@ namespace Raven.Client.Connection.Async
         {
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var operationUrl = operationMetadata.Url + "/indexes?start=" + start + "&pageSize=" + pageSize;
+                var operationUrl = operationMetadata.Url.IndexDefinition(null, start, pageSize);
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
@@ -671,9 +672,8 @@ namespace Raven.Client.Connection.Async
                 {
                     using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.IndexDefinition(name), HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                     {
-                        var indexDefinitionJson = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        var value = indexDefinitionJson.Value<RavenJObject>("Index");
-                        return convention.CreateSerializer().Deserialize<IndexDefinition>(new RavenJTokenReader(value));
+                        var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        return json.Deserialize<IndexDefinition[]>(convention)[0];
                     }
                 }
                 catch (ErrorResponseException we)

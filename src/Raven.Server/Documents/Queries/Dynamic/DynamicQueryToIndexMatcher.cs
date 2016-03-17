@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, AutoIndexDefinition definition, ExplainDelegate explain)
+        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, AutoMapIndexDefinition definition, ExplainDelegate explain)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;

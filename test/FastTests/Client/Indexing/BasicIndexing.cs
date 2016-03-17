@@ -6,6 +6,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
@@ -26,7 +27,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.GetResourceInternal(store.DefaultDatabase).ConfigureAwait(false);
 
-                var indexId = database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -47,7 +48,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.GetResourceInternal(store.DefaultDatabase).ConfigureAwait(false);
 
-                var indexId = database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -67,8 +68,8 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.GetResourceInternal(store.DefaultDatabase).ConfigureAwait(false);
 
-                database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
-                database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
 
                 var statuses = await store.AsyncDatabaseCommands.Admin.GetIndexesStatus().ConfigureAwait(false);
 
@@ -271,6 +272,73 @@ namespace FastTests.Client.Indexing
 
                 var stats = await store.AsyncDatabaseCommands.GetIndexStatisticsAsync(index.Name).ConfigureAwait(false);
                 Assert.Equal(2, stats.ErrorsCount);
+            }
+        }
+
+        [Fact]
+        public async Task GetDefinition()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session
+                        .Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                }
+
+                var database = await Server.ServerStore.DatabasesLandlord
+                    .GetResourceInternal(new StringSegment(store.DefaultDatabase, 0))
+                    .ConfigureAwait(false);
+
+                var index = database.IndexStore.GetIndexes().First();
+                var serverDefinition = index.GetIndexDefinition();
+
+                var definition = await store.AsyncDatabaseCommands.GetIndexAsync("do-not-exist").ConfigureAwait(false);
+                Assert.Null(definition);
+
+                definition = await store.AsyncDatabaseCommands.GetIndexAsync(index.Name).ConfigureAwait(false);
+                Assert.Equal(serverDefinition.Name, definition.Name);
+                Assert.Equal(serverDefinition.IsSideBySideIndex, definition.IsSideBySideIndex);
+                Assert.Equal(serverDefinition.IsTestIndex, definition.IsTestIndex);
+                Assert.Equal(serverDefinition.IndexVersion, definition.IndexVersion);
+                Assert.Equal(serverDefinition.Reduce, definition.Reduce);
+                Assert.Equal(serverDefinition.Type, definition.Type);
+                Assert.Equal(serverDefinition.IndexId, definition.IndexId);
+                Assert.Equal(serverDefinition.LockMode, definition.LockMode);
+                Assert.Equal(serverDefinition.MaxIndexOutputsPerDocument, definition.MaxIndexOutputsPerDocument);
+                Assert.Equal(serverDefinition.Maps, definition.Maps);
+
+                var keys = serverDefinition.Fields.Keys;
+                foreach (var key in keys)
+                {
+                    var serverField = serverDefinition.Fields[key];
+                    var field = definition.Fields[key];
+                    
+                    Assert.Equal(serverField.Indexing, field.Indexing);
+                    Assert.Equal(serverField.Analyzer, field.Analyzer);
+                    Assert.Equal(serverField.Sort, field.Sort);
+                    Assert.Equal(serverField.Spatial, field.Spatial);
+                    Assert.Equal(serverField.Storage, field.Storage);
+                    Assert.Equal(serverField.Suggestions, field.Suggestions);
+                    Assert.Equal(serverField.TermVector, field.TermVector);
+                }
+
+                var definitions = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128).ConfigureAwait(false);
+                Assert.Equal(1, definitions.Length);
+                Assert.Equal(index.Name, definitions[0].Name);
             }
         }
     }

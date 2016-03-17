@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -19,6 +20,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "GET")]
         public Task GetAll()
         {
+            var names = HttpContext.Request.Query["name"];
+            if (names.Count > 1)
+                throw new ArgumentException($"Query string value 'name' must appear exactly once");
+
             var start = GetStart();
             var pageSize = GetPageSize();
 
@@ -26,27 +31,37 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                IndexDefinition[] indexDefinitions;
+                if (names.Count == 0)
+                    indexDefinitions = Database.IndexStore
+                        .GetIndexes()
+                        .OrderBy(x => x.IndexId)
+                        .Skip(start)
+                        .Take(pageSize)
+                        .Select(x => x.GetIndexDefinition())
+                        .ToArray();
+                else
+                {
+                    var index = Database.IndexStore.GetIndex(names[0]);
+                    if (index == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
+
+                    indexDefinitions = new[] { index.GetIndexDefinition() };
+                }
+
                 writer.WriteStartArray();
 
                 var isFirst = true;
-                foreach (var index in Database.IndexStore.GetIndexes().OrderBy(x => x.IndexId).Skip(start).Take(pageSize))
+                foreach (var indexDefinition in indexDefinitions)
                 {
                     if (isFirst == false)
                         writer.WriteComma();
 
                     isFirst = false;
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(IndexDefinition.Name)));
-                    writer.WriteString(context.GetLazyString(index.Name));
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(IndexDefinition.IndexId)));
-                    writer.WriteInteger(index.IndexId);
-
-                    // TODO [ppekrol] more index definition fields
-
-                    writer.WriteEndObject();
+                    writer.WriteIndexDefinition(context, indexDefinition);
                 }
 
                 writer.WriteEndArray();
@@ -166,8 +181,6 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WritePropertyName(context.GetLazyString(nameof(stats.IsTestIndex)));
                 writer.WriteBool(stats.IsTestIndex);
-
-
 
                 writer.WriteEndObject();
             }

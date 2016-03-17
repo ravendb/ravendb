@@ -11,6 +11,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
+using Raven.Client.Indexing;
 
 namespace Raven.Client.Indexes
 {
@@ -80,7 +81,6 @@ namespace Raven.Client.Indexes
                 StoresStrings = StoresStrings,
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexesStrings = SpatialIndexesStrings,
-                DisableInMemoryIndexing = DisableInMemoryIndexing,
                 MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
             }.ToIndexDefinition(Conventions, validateMap: false);
             foreach (var map in maps.Select(generateMap => generateMap()))

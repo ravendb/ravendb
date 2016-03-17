@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -33,6 +34,34 @@ namespace Raven.Server.Documents.Indexes
         public IndexLockMode LockMode { get; set; }
 
         public abstract void Persist(TransactionOperationContext context);
+
+        public IndexDefinition ConvertToIndexDefinition(Index index)
+        {
+            var indexDefinition = new IndexDefinition();
+            indexDefinition.IndexId = index.IndexId;
+            indexDefinition.Name = index.Name;
+            indexDefinition.Fields = MapFields.ToDictionary(
+                x => x.Name,
+                x => new IndexFieldOptions
+                {
+                    Sort = x.SortOption,
+                    TermVector = x.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null
+                });
+
+            indexDefinition.Type = index.Type;
+            indexDefinition.LockMode = LockMode;
+
+            indexDefinition.IndexVersion = -1; // TODO [ppekrol]      
+            indexDefinition.IsSideBySideIndex = false; // TODO [ppekrol]
+            indexDefinition.IsTestIndex = false; // TODO [ppekrol]       
+            indexDefinition.MaxIndexOutputsPerDocument = null; // TODO [ppekrol]
+
+            FillIndexDefinition(indexDefinition);
+
+            return indexDefinition;
+        }
+
+        protected abstract void FillIndexDefinition(IndexDefinition indexDefinition);
 
         public bool ContainsField(string field)
         {

@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = LowLevel_CreateDocumentDatabase())
             {
-                var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -41,7 +41,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Throws<ObjectDisposedException>(() => index.Start());
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
-                index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -52,7 +52,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                    index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                     {
                         Name = "Name",
                         Highlighted = false,
@@ -72,13 +72,13 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name1",
                     Highlighted = false,
                     Storage = FieldStorage.No
                 } })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name2",
                     Highlighted = false,
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Indexing
                     Storage = FieldStorage.No,
                     SortOption = SortOptions.String
                 };
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name1 })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
                 var name2 = new IndexField
                 {
                     Name = "Name2",
@@ -108,7 +108,7 @@ namespace FastTests.Server.Documents.Indexing
                     Storage = FieldStorage.No,
                     SortOption = SortOptions.NumericDefault
                 };
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 })));
 
                 var index2 = database.IndexStore.GetIndex(2);
                 index2.SetLock(IndexLockMode.LockedError);
@@ -164,7 +164,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             var index1 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
             var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -172,7 +172,7 @@ namespace FastTests.Server.Documents.Indexing
 
             var index2 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
             var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -213,7 +213,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             var index1 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
             var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -221,7 +221,7 @@ namespace FastTests.Server.Documents.Indexing
 
             var index2 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
             var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -261,7 +261,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = LowLevel_CreateDocumentDatabase())
             {
-                using (var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -417,7 +417,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var index = AutoMapIndex.CreateNew(
                     1,
-                    new AutoIndexDefinition(
+                    new AutoMapIndexDefinition(
                         "Users",
                         new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
                     database))
@@ -449,7 +449,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var index = AutoMapIndex.CreateNew(
                     1,
-                    new AutoIndexDefinition(
+                    new AutoMapIndexDefinition(
                         "Users",
                         new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
                     database))
