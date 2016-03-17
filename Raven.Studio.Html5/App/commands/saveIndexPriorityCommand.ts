@@ -12,7 +12,7 @@ class saveIndexPriorityCommand extends commandBase {
     execute(): JQueryPromise<any> {
         this.reportInfo("Saving " + this.indexName + " priority ...");
         // Note: don't URL encode the priority. Doing so busts Raven's handler.
-        var url = "/indexes/set-priority/" + this.indexName + "?priority=" + index.priorityToString(this.priority);
+        var url = "/indexes-set-priority/" + this.indexName + "?priority=" + index.priorityToString(this.priority);
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {
                 this.reportSuccess("Saved " + this.indexName + ".");

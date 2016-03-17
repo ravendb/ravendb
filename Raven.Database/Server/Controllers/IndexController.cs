@@ -313,6 +313,13 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage >IndexPost(string id)
         {
             var index = id;
+            /*
+            This is a workaround to support version 30037 and below where index post conflicts with index set priorety
+            */
+            if (id.StartsWith("set-priority/"))
+            {
+                SetPriorityInternal(id.Substring("set-priority/".Length));
+            }
 
             if ("forceReplace".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
             {
@@ -387,6 +394,19 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("indexes/set-priority/{*id}")]
         [RavenRoute("databases/{databaseName}/indexes/set-priority/{*id}")]
         public HttpResponseMessage SetPriority(string id)
+        {
+            return SetPriorityInternal(id);
+        }
+
+        [HttpPost]
+        [RavenRoute("indexes-set-priority/{*id}")]
+        [RavenRoute("databases/{databaseName}/indexes-set-priority/{*id}")]
+        public HttpResponseMessage SetPriorityConflicFixed(string id)
+        {
+            return SetPriorityInternal(id);
+        }
+
+        private HttpResponseMessage SetPriorityInternal(string id)
         {
             var index = id;
 
