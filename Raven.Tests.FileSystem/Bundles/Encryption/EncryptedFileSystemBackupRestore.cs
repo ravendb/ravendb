@@ -120,7 +120,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 }
 
                 var opId = await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
-                await WaitForOperationAsync(store.Url, opId);
+                await WaitForOperationAsync(server.SystemDatabase.ServerUrl, opId);
 
                 string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS2");
 
