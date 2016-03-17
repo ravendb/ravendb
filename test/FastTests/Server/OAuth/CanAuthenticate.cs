@@ -23,7 +23,7 @@ namespace FastTests.Server.OAuth
                 var securedAuthenticator = new SecuredAuthenticator();
                 var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                     await securedAuthenticator.DoOAuthRequestAsync(store.Url + "/oauth/api-key", "super/secret"));
-                Assert.Contains("Could not find document apikeys/super", exception.Message);
+                Assert.Contains("Could not find api key: super", exception.Message);
 
                 var apiKey = new ApiKeyDefinition
                 {

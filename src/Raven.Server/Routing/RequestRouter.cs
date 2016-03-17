@@ -86,12 +86,12 @@ namespace Raven.Server.Routing
             if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
                 return true;
 
-            var authHeaderValues = context.Request.Headers["Authorization"];
+            var authHeaderValues = context.Request.Headers["Raven-Authorization"];
             var token = authHeaderValues.Count == 0 ? null : authHeaderValues[0];
 
             if (token == null)
             {
-                var oAuthTokenInCookieValues = context.Request.Cookies["OAuth-Token"];
+                var oAuthTokenInCookieValues = context.Request.Cookies["Raven-Authorization"];
                 token = oAuthTokenInCookieValues.Count == 0 ? null : oAuthTokenInCookieValues[0];
             }
 
@@ -130,20 +130,17 @@ namespace Raven.Server.Routing
             if (hasValue == false)
                 mode = AccessModes.None;
 
-            string text;
             switch (mode)
             {
                 case AccessModes.None:
                     context.Response.StatusCode = 403;
-                    text = $"Api Key {accessToken.Name} does not have access to {resourceName}";
-                    await context.Response.WriteAsync(text);
+                    await context.Response.WriteAsync($"Api Key {accessToken.Name} does not have access to {resourceName}");
                     return false;
                 case AccessModes.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
                         context.Response.StatusCode = 403;
-                        text = $"Api Key {accessToken.Name} does not have write access to {resourceName} but made a {context.Request.Method} request";
-                        await context.Response.WriteAsync(text);
+                        await context.Response.WriteAsync($"Api Key {accessToken.Name} does not have write access to {resourceName} but made a {context.Request.Method} request");
                         return false;
                     }
                     return true;

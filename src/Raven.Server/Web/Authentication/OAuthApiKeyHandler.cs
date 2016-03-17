@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Lucene.Net.Support;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -175,7 +174,7 @@ namespace Raven.Server.Web.Authentication
             if (challengeTimestamp + MaxChallengeAge < SystemTime.UtcNow || challengeTimestamp > SystemTime.UtcNow)
             {
                 throw new InvalidOperationException(
-                    "The challenge is either old or from the future in 'ChallengeResponse' message" +
+                    "The challenge is either too old or from the future in 'ChallengeResponse' message" +
                     $"challengeTimestamp={challengeTimestamp}, MaxChallengeAge={MaxChallengeAge}, SystemTime.UtcNow={SystemTime.UtcNow}");
             }
         }
@@ -205,11 +204,23 @@ namespace Raven.Server.Web.Authentication
 
         private async Task SendError(WebSocket webSocket, string errorMsg)
         {
+            if (webSocket.State != WebSocketState.Open)
+                return;
             var json = new DynamicJsonValue
             {
                 ["Error"] = errorMsg
             };
-            await SendResponse(webSocket, json).ConfigureAwait(false);
+            try
+            {
+                await SendResponse(webSocket, json).ConfigureAwait(false);
+                await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Server side error",
+                    ServerStore.ServerShutdown);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsDebugEnabled)
+                    Logger.DebugException("Error sending error to client using web socket", e);
+            }
         }
 
         private AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
@@ -224,19 +235,19 @@ namespace Raven.Server.Web.Authentication
 
                 if (apiDoc == null)
                 {
-                    throw new InvalidOperationException($"Could not find document {Constants.ApiKeyPrefix}{apiKeyName}");
+                    throw new InvalidOperationException($"Could not find api key: {apiKeyName}");
                 }
 
                 bool apiKeyDefinitionEnabled;
                 if (apiDoc.TryGet("Enabled", out apiKeyDefinitionEnabled) == false ||
                     apiKeyDefinitionEnabled == false)
                 {
-                    throw new InvalidOperationException("Unauthorized Client - Unknown API Key");
+                    throw new InvalidOperationException($"The api key {apiKeyName} has been disabled");
                 }
 
                 if (apiDoc.TryGet("Secret", out secret) == false)
                 {
-                    throw new InvalidOperationException("Missing 'Secret' property in " + Constants.ApiKeyPrefix + apiKeyName);
+                    throw new InvalidOperationException($"Missing 'Secret' property in api kye: {apiKeyName}");
                 }
 
                 var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
@@ -244,7 +255,7 @@ namespace Raven.Server.Web.Authentication
                 BlittableJsonReaderObject accessMode;
                 if (apiDoc.TryGet("ResourcesAccessMode", out accessMode) == false)
                 {
-                    throw new InvalidOperationException("Missing 'ResourcesAccessMode' property in " + Constants.ApiKeyPrefix + apiKeyName);
+                    throw new InvalidOperationException($"Missing 'ResourcesAccessMode' property in api key: {apiKeyName}");
                 }
 
                 for (var i = 0; i < accessMode.Count; i++)
@@ -254,8 +265,7 @@ namespace Raven.Server.Web.Authentication
                     string accessValue;
                     if (accessMode.TryGet(dbName.Item1, out accessValue) == false)
                     {
-                        throw new InvalidOperationException(
-                            "Missing value of dbName -'" + dbName.Item1 + "' property in " + Constants.ApiKeyPrefix + apiKeyName);
+                        throw new InvalidOperationException($"Missing value of dbName -'{dbName.Item1}' property in api key: {apiKeyName}");
                     }
                     AccessModes mode;
                     if (Enum.TryParse(accessValue, out mode) == false)
@@ -269,7 +279,7 @@ namespace Raven.Server.Web.Authentication
                 return new AccessToken
                 {
                     Name = apiKeyName,
-                    Token = "Bearer " + Guid.NewGuid(),
+                    Token = Guid.NewGuid().ToString(),
                     AuthorizedDatabases = databases,
                     Issued = Stopwatch.GetTimestamp()
                 };

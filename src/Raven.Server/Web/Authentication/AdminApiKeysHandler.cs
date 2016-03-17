@@ -10,7 +10,7 @@ namespace Raven.Server.Web.Authentication
 {
     public class AdminApiKeysHandler : RequestHandler
     {
-        [RavenAction("/admin/api-keys", "PUT", "/admin/api-keys?name={api-key-name:string}", NoAuthorizationRequired = true)]
+        [RavenAction("/admin/api-keys", "PUT", "/admin/api-keys?name={api-key-name:string}")]
         public Task PutApiKey()
         {
             TransactionOperationContext ctx;
@@ -43,7 +43,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/admin/api-keys", "GET", "/admin/api-keys?name={api-key-name:string}", NoAuthorizationRequired = true)]
+        [RavenAction("/admin/api-keys", "GET", "/admin/api-keys?name={api-key-name:string}")]
         public Task GetApiKey()
         {
             TransactionOperationContext ctx;

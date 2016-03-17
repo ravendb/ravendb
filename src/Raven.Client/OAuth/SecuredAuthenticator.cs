@@ -21,7 +21,6 @@ namespace Raven.Client.OAuth
     public class SecuredAuthenticator
     {
         public string CurrentToken { get; set; }
-        public string CurrentTokenWithBearer { get; set; }
         private static readonly ILog Logger = LogManager.GetLogger(typeof(SecuredAuthenticator));
         private bool disposed;
         private readonly CancellationTokenSource disposedToken = new CancellationTokenSource();
@@ -31,16 +30,6 @@ namespace Raven.Client.OAuth
         private string challenge;
         private const int MaxWebSocketRecvSize = 4096;
 
-        protected void SetAuthorization(WebRequestEventArgs e)
-        {
-            if (string.IsNullOrEmpty(CurrentToken))
-                return;
-
-            if (e.Client == null)
-                return;
-            SetAuthorization(e.Client);
-        }
-
         protected void SetAuthorization(HttpClient e)
         {
             if (string.IsNullOrEmpty(CurrentToken))
@@ -48,7 +37,7 @@ namespace Raven.Client.OAuth
 
             try
             {
-                e.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentToken);
+                e.DefaultRequestHeaders.Add("Raven-Authorization", CurrentToken);
             }
             catch (Exception ex)
             {
@@ -56,30 +45,11 @@ namespace Raven.Client.OAuth
             }
         }
 
-        protected static void SetHeader(WebHeaderCollection headers, string key, string value)
-        {
-            try
-            {
-                headers[key] = value;
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Could not set '" + key + "' = '" + value + "'", e);
-            }
-        }
-
-
         public void ConfigureRequest(object sender, WebRequestEventArgs e)
         {
             if (CurrentToken != null)
             {
-                SetAuthorization(e);
-                return;
-            }
-
-            if (e.Credentials?.ApiKey != null)
-            {
-                e.Client?.DefaultRequestHeaders.Add("Has-Api-Key", "true");
+                SetAuthorization(e.Client);
             }
         }
 
@@ -116,7 +86,7 @@ namespace Raven.Client.OAuth
                         Console.WriteLine(ex.ToString());
                     }
                     SetCurrentTokenFromReply(recvRavenJObject);
-                    return (Action<HttpClient>)(SetAuthorization);
+                    return SetAuthorization;
                 }
                 catch (Exception ex)
                 {
@@ -268,7 +238,6 @@ namespace Raven.Client.OAuth
                 throw new InvalidOperationException("Missing 'CurrentToken' in response message");
 
             CurrentToken = currentOauthToken;
-            CurrentTokenWithBearer = $"Bearer {CurrentToken}";
         }
     }
 }
