@@ -718,7 +718,11 @@ class editDocument extends viewModelBase {
                         nextIndex = 0;
                     }
 
-                    this.pageToItem(nextIndex, newTotalResultCount);
+                    if (newTotalResultCount > 0) {
+                        this.pageToItem(nextIndex, newTotalResultCount);
+                    } else {
+                        router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
+                    }
                 }
             });
             app.showDialog(viewModel, editDocument.editDocSelector);
