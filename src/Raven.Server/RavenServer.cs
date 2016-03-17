@@ -1,9 +1,14 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
 using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Hosting.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Routing;
@@ -18,6 +23,12 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
+        public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
+        public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
+
+
+        public Timer Timer;
+
         public readonly ServerStore ServerStore;
         private IApplication _application;
 
@@ -31,6 +42,22 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration);
             Metrics = new MetricsCountersManager(ServerStore.MetricsScheduler);
+            Timer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        }
+
+        private void ServerMaintenanceTimerByMinute(object state)
+        {
+            foreach (var accessToken in AccessTokensById.Values)
+            {
+                if (accessToken.IsExpired == false)
+                    continue;
+
+                AccessToken _;
+                if (AccessTokensById.TryRemove(accessToken.Token, out _))
+                {
+                    AccessTokensByName.TryRemove(accessToken.Name, out _);
+                }
+            }
         }
 
         public void Initialize()
@@ -94,6 +121,7 @@ namespace Raven.Server
             Metrics.Dispose();
             _application?.Dispose();
             ServerStore?.Dispose();
+            Timer?.Dispose();
         }
     }
 }

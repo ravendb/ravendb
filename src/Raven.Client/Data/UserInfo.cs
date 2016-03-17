@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Security.Principal;
+using Raven.Client.Data;
 
 namespace Raven.Abstractions.Data
 {
@@ -14,7 +15,7 @@ namespace Raven.Abstractions.Data
         public HashSet<string> AdminDatabases { get; set; }
         public HashSet<string> ReadOnlyDatabases { get; set; }
         public HashSet<string> ReadWriteDatabases { get; set; }
-        public AccessTokenBody AccessTokenBody { get; set; }
+        public AccessToken AccessToken { get; set; }
     }
 
     public class DatabaseInfo

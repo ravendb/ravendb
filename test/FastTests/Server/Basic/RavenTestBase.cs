@@ -17,6 +17,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Xunit;
 
 namespace Raven.Tests.Core
@@ -26,7 +27,7 @@ namespace Raven.Tests.Core
         public const string ServerName = "Raven.Tests.Core.Server";
 
         protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
-        protected static readonly HashSet<string> PathsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        protected static readonly ConcurrentSet<string> PathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static long _currentServerUsages;
         private static RavenServer _globalServer;
@@ -177,7 +178,7 @@ namespace Raven.Tests.Core
 
             if (_localServer != null)
             {
-                if(Interlocked.Decrement(ref _currentServerUsages)>0)
+                if (Interlocked.Decrement(ref _currentServerUsages) > 0)
                     return;
                 lock (ServerLocker)
                 {
@@ -196,9 +197,10 @@ namespace Raven.Tests.Core
 
             GC.Collect(2);
             GC.WaitForPendingFinalizers();
-
-            foreach (var pathToDelete in PathsToDelete)
+            var copy = PathsToDelete.ToArray();
+            foreach (var pathToDelete in copy)
             {
+                PathsToDelete.TryRemove(pathToDelete);
                 try
                 {
                     ClearDatabaseDirectory(pathToDelete);

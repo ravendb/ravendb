@@ -611,6 +611,21 @@ namespace Raven.Client.Connection
         ///     Begins a restore operation.
         /// </summary>
         Operation StartRestore(DatabaseRestoreRequest restoreRequest);
+
+        /// <summary>
+        /// Store new api key
+        /// </summary>
+        /// <param name="name">User Name</param>
+        /// <param name="apiKeyData">ApiKey containing Enabled, Secret, AccessMode</param>
+        /// <returns></returns>
+        void PutApiKey(string name, ApiKeyDefinition apiKeyData);
+
+        /// <summary>
+        /// Retrieve existing api key
+        /// </summary>
+        /// <param name="name">User Name</param>
+        /// <returns></returns>
+        ApiKeyDefinition GetApiKey(string name);
     }
 
     public interface IAdminDatabaseCommands

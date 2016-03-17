@@ -72,6 +72,10 @@ namespace Raven.Abstractions.Util.Encryptors
         void ImportParameters(RSAParameters parameters);
 
         RSAParameters ExportParameters(bool includePrivateParameters);
+
+        byte[] SignHash(byte[] data);
+
+        bool VerifyHash(byte[] hash, byte[] signature);
     }
 
 }

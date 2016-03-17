@@ -4,8 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Security;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.OAuth;
 using Raven.Client.Connection;
+using Raven.Client.OAuth;
 
 namespace Raven.Client.Extensions
 {
@@ -17,10 +17,8 @@ namespace Raven.Client.Extensions
             if (conventions.HandleUnauthorizedResponseAsync != null)
                 return; // already setup by the user
 
-            var basicAuthenticator = new BasicAuthenticator(requestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
             var securedAuthenticator = new SecuredAuthenticator();
 
-            requestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
             requestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
 
             conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
@@ -44,13 +42,6 @@ namespace Raven.Client.Extensions
                     oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
 #endif
 
-                // Legacy support
-                if (string.IsNullOrEmpty(oauthSource) == false &&
-                    oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
-                {
-                    return basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey);
-                }
-
                 if (credentials.ApiKey == null)
                 {
                     AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, credentials.Credentials);
@@ -60,7 +51,7 @@ namespace Raven.Client.Extensions
                 if (string.IsNullOrEmpty(oauthSource))
                     oauthSource = serverUrl + "/OAuth/API-Key";
 
-                return securedAuthenticator.DoOAuthRequestAsync(serverUrl, oauthSource, credentials.ApiKey);
+                return securedAuthenticator.DoOAuthRequestAsync(oauthSource, credentials.ApiKey);
             };
 
         }
