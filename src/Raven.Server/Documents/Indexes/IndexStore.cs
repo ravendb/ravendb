@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Utils;
@@ -73,7 +74,19 @@ namespace Raven.Server.Documents.Indexes
         {
             lock (_locker)
             {
-                // TODO [ppekrol] check if we do not have identical index
+                Index existingIndex;
+                ValidateIndexDefinition(definition, out existingIndex);
+
+                switch (GetIndexCreationOptions(definition, existingIndex))
+                {
+                    case IndexCreationOptions.Noop:
+                        return existingIndex.IndexId;
+                    case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+                        throw new NotImplementedException(); // TODO [ppekrol]
+                    case IndexCreationOptions.Update:
+                        DeleteIndex(existingIndex.IndexId);
+                        break;
+                }
 
                 var indexId = _indexes.GetNextIndexId();
 
@@ -89,6 +102,59 @@ namespace Raven.Server.Documents.Indexes
                 });
 
                 return indexId;
+            }
+        }
+
+        private static IndexCreationOptions GetIndexCreationOptions(IndexDefinitionBase indexDefinition, Index existingIndex)
+        {
+            if (existingIndex == null)
+                return IndexCreationOptions.Create;
+
+            //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
+            //    return IndexCreationOptions.Update;
+
+            var equals = existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
+            if (equals)
+                return IndexCreationOptions.Noop;
+
+            return existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
+                       ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
+                       : IndexCreationOptions.Update;
+        }
+
+        private void ValidateIndexDefinition(IndexDefinitionBase indexDefinition, out Index existingIndex)
+        {
+            ValidateIndexName(indexDefinition.Name);
+
+            if (_indexes.TryGetByName(indexDefinition.Name, out existingIndex))
+            {
+                switch (existingIndex.Definition.LockMode)
+                {
+                    case IndexLockMode.SideBySide:
+                        throw new NotImplementedException(); // TODO [ppekrol]
+                    case IndexLockMode.LockedIgnore:
+                        return;
+                    case IndexLockMode.LockedError:
+                        throw new InvalidOperationException("Can not overwrite locked index: " + indexDefinition.Name);
+                }
+            }
+        }
+
+        private void ValidateIndexName(string name)
+        {
+            if (name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index names starting with dynamic_ or dynamic/ are reserved!", nameof(name));
+            }
+
+            if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index name dynamic is reserved!", nameof(name));
+            }
+
+            if (name.Contains("//"))
+            {
+                throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index name cannot contain // (double slashes)", nameof(name));
             }
         }
 

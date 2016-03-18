@@ -104,6 +104,30 @@ namespace Raven.Server.Documents.Indexes.Auto
             indexDefinition.Maps.Add(map);
         }
 
+        public override bool Equals(IndexDefinitionBase other, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        {
+            var otherDefinition = other as AutoMapIndexDefinition;
+            if (otherDefinition == null)
+                return false;
+
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            if (CountOfMapFields != otherDefinition.CountOfMapFields)
+                return false;
+
+            if (Collections.SequenceEqual(otherDefinition.Collections) == false)
+                return false;
+
+            if (MapFields.SequenceEqual(otherDefinition.MapFields) == false)
+                return false;
+
+            return true;
+        }
+
         public static AutoMapIndexDefinition Load(StorageEnvironment environment)
         {
             using (var pool = new UnmanagedBuffersPool(nameof(AutoMapIndexDefinition)))

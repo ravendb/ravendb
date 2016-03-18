@@ -21,5 +21,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         protected override void FillIndexDefinition(IndexDefinition indexDefinition)
         {
         }
+
+        public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        {
+            return false;
+        }
     }
 }

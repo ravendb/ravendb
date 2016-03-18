@@ -78,5 +78,7 @@ namespace Raven.Server.Documents.Indexes
 
             return _fieldsByName[field];
         }
+
+        public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
     }
 }

@@ -482,10 +482,54 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
+        [Fact]
+        public void IndexCreationOptions()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+
+                var indexId1 = database.IndexStore.CreateIndex(definition1);
+                var indexId2 = database.IndexStore.CreateIndex(definition2);
+
+                Assert.Equal(indexId1, indexId2);
+                Assert.Equal(1, database.IndexStore.GetIndexes().Count());
+
+                var definition3 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.Yes } });
+
+                var indexId3 = database.IndexStore.CreateIndex(definition3);
+
+                Assert.NotEqual(indexId1, indexId3);
+                Assert.Null(database.IndexStore.GetIndex(indexId1));
+                Assert.Equal(1, database.IndexStore.GetIndexes().Count());
+            }
+        }
+
+        [Fact]
+        public void LockMode()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+
+                var indexId1 = database.IndexStore.CreateIndex(definition1);
+                var index1 = database.IndexStore.GetIndex(indexId1);
+                index1.SetLock(IndexLockMode.LockedIgnore);
+
+                var indexId2 = database.IndexStore.CreateIndex(definition2);
+                Assert.Equal(indexId1, indexId2);
+                Assert.Equal(1, database.IndexStore.GetIndexes().Count());
+
+                index1.SetLock(IndexLockMode.LockedError);
+                Assert.Throws<InvalidOperationException>(() => database.IndexStore.CreateIndex(definition2));
+            }
+        }
+
         private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
-
     }
 }
