@@ -17,14 +17,13 @@ namespace Raven.Server.Documents.Queries.Handlers
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
             var query = GetIndexQuery();
 
-            //TODO arek - cancellation token
-
             DocumentsOperationContext context;
+            using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
 
-                var result = runner.ExecuteQuery(indexName, query);
+                var result = runner.ExecuteQuery(indexName, query, token.Cancel);
 
                 HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 HttpContext.Response.Headers["ETag"] = "1"; // TODO arek

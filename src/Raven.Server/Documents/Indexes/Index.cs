@@ -13,6 +13,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
 using Raven.Server.Documents.Queries;
@@ -352,6 +353,18 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 return false;
+            }
+        }
+
+        public long GetLastMappedEtagFor(string collection)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.OpenReadTransaction())
+                {
+                    return ReadLastMappedEtag(tx, collection);
+                }
             }
         }
 
@@ -781,6 +794,11 @@ namespace Raven.Server.Documents.Indexes
             lastQueryingTime = time;
         }
 
+        public IndexDefinition GetIndexDefinition()
+        {
+            return Definition.ConvertToIndexDefinition(this);
+        }
+
         public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext documentsContext, CancellationToken token)
         {
             if (_disposed)
@@ -814,6 +832,8 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var id in documentIds)
                     {
+                        token.ThrowIfCancellationRequested();
+
                         var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
 
                         result.Results.Add(document);

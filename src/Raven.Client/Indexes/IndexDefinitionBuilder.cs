@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
+using Raven.Client.Indexing;
 
 namespace Raven.Client.Indexes
 {
@@ -88,7 +89,7 @@ namespace Raven.Client.Indexes
         public IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> Suggestions
         {
             get { return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions()); }
-            set { SuggestionsOptions = value.Keys.ToHashSet(); } 
+            set { SuggestionsOptions = value.Keys.ToHashSet(); }
         }
 
         public ISet<Expression<Func<TReduceResult, object>>> SuggestionsOptions { get; set; }
@@ -116,11 +117,6 @@ namespace Raven.Client.Indexes
         /// </summary>
         /// <value>The spatial options.</value>
         public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
-
-        /// <summary>
-        /// Prevent index from being kept in memory. Default: false
-        /// </summary>
-        public bool DisableInMemoryIndexing { get; set; }
 
         /// <summary>
         /// Gets or sets the index lock mode
@@ -172,67 +168,80 @@ namespace Raven.Client.Indexes
                 var indexDefinition = new IndexDefinition
                 {
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
-                    Indexes = ConvertToStringDictionary(Indexes),
-                    Stores = ConvertToStringDictionary(Stores),
-                    SortOptions = ConvertToStringDictionary(SortOptions),
-                    Analyzers = ConvertToStringDictionary(Analyzers),
-                    SuggestionsOptions = ConvertToStringSet(SuggestionsOptions),
-                    TermVectors = ConvertToStringDictionary(TermVectors),
-                    SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
-                    DisableInMemoryIndexing = DisableInMemoryIndexing,
+
                     MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
                     LockMode = LockMode,
                 };
+
+                var indexes = ConvertToStringDictionary(Indexes);
+                var stores = ConvertToStringDictionary(Stores);
+                var sortOptions = ConvertToStringDictionary(SortOptions);
+                var analyzers = ConvertToStringDictionary(Analyzers);
+                var suggestionsOptions = ConvertToStringSet(SuggestionsOptions).ToDictionary(x => x, x => true);
+                var termVectors = ConvertToStringDictionary(TermVectors);
+                var spatialOptions = ConvertToStringDictionary(SpatialIndexes);
 
                 if (convention.PrettifyGeneratedLinqExpressions)
                     indexDefinition.Reduce = IndexPrettyPrinter.TryFormat(indexDefinition.Reduce);
 
                 foreach (var indexesString in IndexesStrings)
                 {
-                    if (indexDefinition.Indexes.ContainsKey(indexesString.Key))
+                    if (indexes.ContainsKey(indexesString.Key))
                         throw new InvalidOperationException("There is a duplicate key in indexes: " + indexesString.Key);
-                    indexDefinition.Indexes.Add(indexesString);
+                    indexes.Add(indexesString);
                 }
 
                 foreach (var storeString in StoresStrings)
                 {
-                    if (indexDefinition.Stores.ContainsKey(storeString.Key))
+                    if (stores.ContainsKey(storeString.Key))
                         throw new InvalidOperationException("There is a duplicate key in stores: " + storeString.Key);
-                    indexDefinition.Stores.Add(storeString);
+                    stores.Add(storeString);
                 }
 
                 foreach (var analyzerString in AnalyzersStrings)
                 {
-                    if (indexDefinition.Analyzers.ContainsKey(analyzerString.Key))
+                    if (analyzers.ContainsKey(analyzerString.Key))
                         throw new InvalidOperationException("There is a duplicate key in analyzers: " + analyzerString.Key);
-                    indexDefinition.Analyzers.Add(analyzerString);
+                    analyzers.Add(analyzerString);
                 }
 
                 foreach (var termVectorString in TermVectorsStrings)
                 {
-                    if (indexDefinition.TermVectors.ContainsKey(termVectorString.Key))
+                    if (termVectors.ContainsKey(termVectorString.Key))
                         throw new InvalidOperationException("There is a duplicate key in term vectors: " + termVectorString.Key);
-                    indexDefinition.TermVectors.Add(termVectorString);
+                    termVectors.Add(termVectorString);
                 }
 
                 foreach (var spatialString in SpatialIndexesStrings)
                 {
-                    if (indexDefinition.SpatialIndexes.ContainsKey(spatialString.Key))
+                    if (spatialOptions.ContainsKey(spatialString.Key))
                         throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
-                    indexDefinition.SpatialIndexes.Add(spatialString);
+                    spatialOptions.Add(spatialString);
                 }
 
                 foreach (var sortOption in SortOptionsStrings)
                 {
-                    if (indexDefinition.SortOptions.ContainsKey(sortOption.Key))
+                    if (sortOptions.ContainsKey(sortOption.Key))
                         throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
-                    indexDefinition.SortOptions.Add(sortOption);
+                    sortOptions.Add(sortOption);
                 }
+
+                ApplyValues(indexDefinition, indexes, (options, value) => options.Indexing = value);
+                ApplyValues(indexDefinition, stores, (options, value) => options.Storage = value);
+                ApplyValues(indexDefinition, sortOptions, (options, value) => options.Sort = value);
+                ApplyValues(indexDefinition, analyzers, (options, value) => options.Analyzer = value);
+                ApplyValues(indexDefinition, termVectors, (options, value) => options.TermVector = value);
+                ApplyValues(indexDefinition, spatialOptions, (options, value) => options.Spatial = value);
+                ApplyValues(indexDefinition, suggestionsOptions, (options, value) => options.Suggestions = value);
 
                 if (Map != null)
                 {
-                    indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
-                        Map, convention, querySource, translateIdentityProperty: true);
+                    indexDefinition.Maps.Add(
+                        IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
+                            Map,
+                            convention,
+                            querySource,
+                            translateIdentityProperty: true));
 
 #if !DNXCORE50
                     if (convention.PrettifyGeneratedLinqExpressions)
@@ -244,6 +253,18 @@ namespace Raven.Client.Indexes
             catch (Exception e)
             {
                 throw new IndexCompilationException("Failed to create index " + indexName, e);
+            }
+        }
+
+        private void ApplyValues<TValue>(IndexDefinition indexDefinition, IDictionary<string, TValue> values, Action<IndexFieldOptions, TValue> action)
+        {
+            foreach (var kvp in values)
+            {
+                IndexFieldOptions field;
+                if (indexDefinition.Fields.TryGetValue(kvp.Key, out field) == false)
+                    indexDefinition.Fields[kvp.Key] = field = new IndexFieldOptions();
+
+                action(field, kvp.Value);
             }
         }
 
@@ -285,7 +306,7 @@ namespace Raven.Client.Indexes
             {
                 var propertyPath = value.ToPropertyPath('_');
                 result.Add(propertyPath);
-    }
+            }
             return result;
         }
     }

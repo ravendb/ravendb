@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Text.RegularExpressions;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
 
@@ -61,6 +62,13 @@ namespace Raven.Server.Config.Categories
             get { return dataDirectory; }
             set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
         }
+
+        [Description("The time to wait before canceling a database operation such as load (many) or query")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Raven/DatabaseOperationTimeoutInMin")]
+        [ConfigurationEntry("Raven/DatabaseOperationTimeout")]
+        public TimeSetting DatabaseOperationTimeout { get; set; }
 
         private static string CalculateWorkingDirectory(string workingDirectory)
         {

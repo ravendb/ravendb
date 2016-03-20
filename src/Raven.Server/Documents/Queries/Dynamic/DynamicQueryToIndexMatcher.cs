@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, AutoIndexDefinition definition, ExplainDelegate explain)
+        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, AutoMapIndexDefinition definition, ExplainDelegate explain)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;
@@ -122,11 +122,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var index = _indexStore.GetIndex(definition.Name);
 
-            IndexingPriority priority = IndexingPriority.None; // TODO arek: use index.Priority
+            var priority = index.Priority;
+            var stats = index.GetStats();
 
-            if (priority == IndexingPriority.Error ||
-                     priority == IndexingPriority.Disabled) //||
-                                                            // TODO: arekisInvalidIndex)
+            if (priority == IndexingPriority.Error || priority == IndexingPriority.Disabled || stats.IsInvalidIndex)
             {
                 explain(indexName, () => string.Format("Cannot do dynamic queries on disabled index or index with errors (index name = {0})", indexName));
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
@@ -134,11 +133,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var currentBestState = DynamicQueryMatchType.Complete;
 
-            if (query.MapFields.All(x => definition.ContainsField(x.Name)) == false) // TODO arek: x.From
+            if (query.MapFields.All(x => definition.ContainsField(x.Name)) == false)
             {
                 explain(indexName, () =>
                 {
-                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.Name) == false); //TODO are: x.From
+                    var missingFields = query.MapFields.Where(x => definition.ContainsField(x.Name) == false);
                     return $"The following fields are missing: {string.Join(", ", missingFields)}";
                 });
 
@@ -146,28 +145,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             //TODO arek: ignore highlighting for now
-            //if (indexQuery.HighlightedFields != null && indexQuery.HighlightedFields.Length > 0)
-            //{
-            //    var nonHighlightableFields = indexQuery
-            //        .HighlightedFields
-            //        .Where(x =>
-            //                !indexDefinition.Stores.ContainsKey(x.Field) ||
-            //                indexDefinition.Stores[x.Field] != FieldStorage.Yes ||
-            //                !indexDefinition.Indexes.ContainsKey(x.Field) ||
-            //                indexDefinition.Indexes[x.Field] != FieldIndexing.Analyzed ||
-            //                !indexDefinition.TermVectors.ContainsKey(x.Field) ||
-            //                indexDefinition.TermVectors[x.Field] != FieldTermVector.WithPositionsAndOffsets)
-            //        .Select(x => x.Field)
-            //        .ToArray();
-
-            //    if (nonHighlightableFields.Any())
-            //    {
-            //        explain(indexName,
-            //            () => "The following fields could not be highlighted because they are not stored, analyzed and using term vectors with positions and offsets: " +
-            //                  string.Join(", ", nonHighlightableFields));
-            //        return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
-            //    }
-            //}
 
             foreach (var sortInfo in query.SortDescriptors) // with matching sort options
             {
@@ -222,7 +199,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             return new DynamicQueryMatchResult(indexName, currentBestState)
             {
-                LastMappedEtag = index.GetLastMappedEtagsForDebug()[definition.Collections[0]], // TODO arek how to handle this?
+                LastMappedEtag = index.GetLastMappedEtagFor(collection),
                 NumberOfMappedFields = definition.CountOfMapFields
             };
         }

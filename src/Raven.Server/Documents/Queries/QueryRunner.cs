@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -20,12 +20,12 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public DocumentQueryResult ExecuteQuery(string indexName, IndexQuery query)
+        public DocumentQueryResult ExecuteQuery(string indexName, IndexQuery query, CancellationToken token)
         {
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
                 indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                var runner = new DynamicQueryRunner(_indexStore, _documentsStorage, _documentsContext);
+                var runner = new DynamicQueryRunner(_indexStore, _documentsStorage, _documentsContext, token);
 
                 return runner.Execute(indexName, query);
             }

@@ -54,9 +54,12 @@ namespace Raven.Client.Connection
             return $"{url}/indexes/set-priority?name={index}&priority={priority}";
         }
 
-        public static string IndexDefinition(this string url, string index)
+        public static string IndexDefinition(this string url, string index, int? start = null, int? pageSize = null)
         {
-            return $"{url}/indexes/{index}?definition=yes";
+            if (string.IsNullOrWhiteSpace(index) == false)
+                return $"{url}/indexes?name={index}";
+
+            return $"{url}/indexes?start={start}&pageSize={pageSize}";
         }
 
         public static string IndexingPerformanceStatistics(this string url)

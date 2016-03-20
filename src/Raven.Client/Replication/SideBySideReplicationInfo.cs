@@ -1,4 +1,5 @@
 using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 
 namespace Raven.Abstractions.Replication
 {
