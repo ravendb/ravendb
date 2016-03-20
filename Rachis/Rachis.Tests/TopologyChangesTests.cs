@@ -234,14 +234,17 @@ namespace Rachis.Tests
             using (var additionalNode = NewNodeFor(leader))
             {
                 var clusterChanged = WaitForToplogyChangeOnCluster();
-                var newNodeAdded = WaitForToplogyChange(additionalNode);
+                var newNodeAdded = WaitForNodeToBecomeVoter(additionalNode);
 
                 WriteLine("Adding the additional node (name = {0}) to cluster", additionalNode.Name);
                 leader.AddToClusterAsync(new NodeConnectionInfo { Name = additionalNode.Name }).Wait();
 
                 clusterChanged.Wait();
-                newNodeAdded.Wait();
-
+                var becameVoter = newNodeAdded.Wait(TimeSpan.FromSeconds((nodeCount + 1)*10));
+                if (!becameVoter)
+                {
+                    Assert.True(false,"New node never became a voter");
+                }
                 WriteLine("--> Cluster finished changing, new node added.");
 
                 var raftNodes = Nodes.ToList();

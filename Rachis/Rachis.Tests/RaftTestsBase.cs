@@ -79,6 +79,17 @@ namespace Rachis.Tests
             return mre;
         }
 
+        protected ManualResetEventSlim WaitForNodeToBecomeVoter(RaftEngine node)
+        {
+            var mre = new ManualResetEventSlim();
+            node.TopologyChanged += state =>
+            {
+                if (node.CurrentTopology.AllVotingNodes.Select(ni=>ni.Name).Contains(node.Name))
+                    mre.Set();
+            };
+            return mre;
+        }
+
         protected ManualResetEventSlim WaitForCommit(RaftEngine node, Func<DictionaryStateMachine, bool> predicate)
         {
             var cde = new ManualResetEventSlim();
