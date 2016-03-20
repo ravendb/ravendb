@@ -1,17 +1,27 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
+using System.Xml;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Http;
 using Microsoft.AspNet.WebSockets.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NLog.Config;
+using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
+using LogManager = NLog.LogManager;
 
 namespace Raven.Server
 {
     public class RavenServerStartup
     {
+        static RavenServerStartup()
+        {
+            SetupLoggingIfNeeded();
+        }
+
         public void ConfigureServices(IServiceCollection services)
         {
         }
@@ -57,6 +67,16 @@ namespace Raven.Server
                     await response.WriteAsync(e.ToString());
                 }
             });
+        }
+
+        private static void SetupLoggingIfNeeded()
+        {
+            if (File.Exists("NLog.config"))
+            {
+                var reader = XmlReader.Create("NLog.config");
+                var config = new XmlLoggingConfiguration(reader, null); 
+                LogManager.Configuration = config;
+            }
         }
     }
 }
