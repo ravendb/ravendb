@@ -6819,12 +6819,12 @@ body {
 }
 @media (max-device-height: 1024px) {
   .query-stats {
-    width: 80vw!important;
+    width: 80vw !important;
   }
 }
 @media (min-device-height: 1025px) {
   .query-stats {
-    width: 50vw!important;
+    width: 50vw !important;
   }
 }
 .query-stats .row {
@@ -6921,6 +6921,7 @@ body {
   cursor: pointer;
   border-radius: 2px;
   box-shadow: 0 0 5px 2px silver;
+  border-left: solid 5px silver;
   min-width: 160px;
   min-height: 70px;
   display: inline-block;
@@ -7042,6 +7043,9 @@ body {
 #resources-page .resources-container .resource.selected {
   box-shadow: 0 0 20px 0 #f36523;
 }
+#resources-page .resources-container .resource.isLoaded {
+  border-left: solid 5px #38B44A;
+}
 #resources-page .resources-container .resource.system-database {
   background-color: rgba(192, 192, 192, 0.21);
 }
@@ -7057,13 +7061,18 @@ body {
   cursor: default;
   text-decoration: line-through;
 }
+.index-lock-mode-disabled {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
+}
 #tenantNameLink {
   padding-left: 5px;
 }
 .resource-link {
   display: inline-block;
   padding-right: 2px;
-  overflow: hidden!important;
+  overflow: hidden !important;
   max-width: 250px;
   -ms-text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
@@ -7459,6 +7468,14 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #nprogress .peg {
   opacity: 0;
 }
+.collection-resize {
+  position: absolute;
+  right: 0;
+  height: 100%;
+  width: 10px;
+  top: 0;
+  cursor: col-resize;
+}
 .documents-page {
   margin-top: 10px;
 }
@@ -7525,8 +7542,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 #queryContainer .breadcrumb .dropdown-menu li,
 #reportingContainer .breadcrumb .dropdown-menu li {
-  overflow-x: visible!important;
-  max-width: none!important;
+  overflow-x: visible !important;
+  max-width: none !important;
 }
 #queryContainer .breadcrumb > li,
 #reportingContainer .breadcrumb > li {
@@ -8206,10 +8223,15 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 }*/
 #fileSystemFilesPage .files-select {
   text-align: center;
-  background-color: #ffffcc;
+  background-color: #ffc;
   margin-top: 5px;
   border: 1px solid;
-  border-radius: 25px;
+  padding: 5px;
+  border: 1px solid #999999;
+}
+#fileSystemFilesPage .files-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
 }
 #editFileContainer:focus {
   outline: 0;
@@ -8245,6 +8267,45 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   column-width: 10px;
 }
 #editFileContainer .documents-links-container .document-link {
+  margin-left: 10px;
+  width: 80%;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+}
+#editCounterContainer:focus {
+  outline: 0;
+}
+#editCounterContainer .counter-recent {
+  margin-top: 95px;
+  padding-top: 10px;
+  padding-bottom: 40px;
+  max-width: 41%;
+}
+#editCounterContainer hr {
+  margin-top: 5px;
+}
+#editCounterContainer .counter-recent-internal {
+  padding-top: 20px;
+}
+#editCounterContainer .counters-links-container {
+  -webkit-column-count: 2;
+  /* Chrome, Safari, Opera */
+  -moz-column-count: 2;
+  /* Firefox */
+  column-count: 2;
+  -webkit-column-gap: 30px;
+  /* Chrome, Safari, Opera */
+  -moz-column-gap: 30px;
+  /* Firefox */
+  column-gap: 30px;
+  -moz-column-width: 10px;
+  -webkit-column-width: 10px;
+  column-width: 10px;
+}
+#editCounterContainer .counters-links-container .counter-link {
   margin-left: 10px;
   width: 80%;
   overflow: hidden;
@@ -8433,7 +8494,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   white-space: pre-line;
 }
 .scrollable-resource-menu {
-  max-height: 150px;
+  max-height: 250px;
   overflow-x: hidden;
 }
 #resources-page .resources-container .resource.fs a {
@@ -8441,9 +8502,22 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 }
 #resources-page .resources-container .resource.fs:hover {
   box-shadow: 0 0 5px 0 #ab26f3;
+  -webkit-box-shadow: 0 0 5px 0 #ab26f3;
+  -moz-box-shadow: 0 0 5px 0 #ab26f3;
 }
 #resources-page .resources-container .resource.fs.selected {
   box-shadow: 0 0 20px 0 #7109AA;
+  -webkit-box-shadow: 0 0 20px 0 #7109AA;
+  -moz-box-shadow: 0 0 20px 0 #7109AA;
+}
+#resources-page .resources-container .resource.cs a {
+  color: #0f6716;
+}
+#resources-page .resources-container .resource.cs:hover {
+  box-shadow: 0 0 5px 0 #1cc029;
+}
+#resources-page .resources-container .resource.cs.selected {
+  box-shadow: 0 0 20px 0 #0f6716;
 }
 .form-checkbox-control {
   width: 35px;
@@ -8474,6 +8548,12 @@ a.global_help_link:focus {
 .negative-margin {
   margin-top: -10px;
 }
+.padd-top-10 {
+  padding-top: 10px;
+}
+.padd-right-10 {
+  padding-right: 10px;
+}
 #indexingPerformance {
   background-color: white;
 }
@@ -8498,6 +8578,97 @@ a.global_help_link:focus {
 .alert-danger a {
   color: white;
   text-decoration: underline;
+}
+.experimental {
+  font-size: 9px;
+  font-weight: bold;
+  color: red;
+}
+.time-series-label {
+  width: 55px;
+  display: inline-block;
+  font-weight: bold;
+}
+.auto-refresh {
+  position: relative;
+}
+.auto-refresh .circleRefresh {
+  position: absolute;
+  cursor: default;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  top: 50%;
+  left: 50%;
+  opacity: 0;
+  -webkit-transform: translateX(-50%) translateY(-50%);
+  -moz-transform: translateX(-50%) translateY(-50%);
+  -ms-transform: translateX(-50%) translateY(-50%);
+  -o-transform: translateX(-50%) translateY(-50%);
+  transform: translateX(-50%) translateY(-50%);
+  -webkit-transition: opacity .2s linear;
+  -moz-transition: opacity .2s linear;
+  -ms-transition: opacity .2s linear;
+  -o-transition: opacity .2s linear;
+  transition: opacity .2s linear;
+}
+.auto-refresh .circleRefresh svg circle {
+  fill: none;
+  stroke-width: 5;
+  stroke: #fff;
+}
+.auto-refresh .timer {
+  -ms-opacity: 1;
+  opacity: 1;
+}
+.auto-refresh svg path {
+  fill: none;
+  stroke-width: 5;
+  stroke: #f36523;
+  -webkit-transform: rotate(0deg);
+  -moz-transform: rotate(0deg);
+  -ms-transform: rotate(0deg);
+  -o-transform: rotate(0deg);
+  transform: rotate(0deg);
+}
+.auto-refresh .circleRefresh.dashed svg path {
+  stroke-dasharray: 18;
+  -webkit-animation: anim-rotate 4s infinite linear;
+  -moz-animation: anim-rotate 4s infinite linear;
+  -o-animation: anim-rotate 4s infinite linear;
+  animation: anim-rotate 4s infinite linear;
+}
+@-webkit-keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@-moz-keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@-o-keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@keyframes anim-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 .no-outline {
   outline-style: none;
