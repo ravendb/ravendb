@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Jint.Runtime;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -659,11 +659,50 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             }
         }
 
-        [Fact(Skip = "Waiting for indexes")]
-        public Task CanCreateDocumentsIfPatchingAppliedByIndex()
+        [Fact(Skip = "Waiting for static indexes")]
+        public async Task CanCreateDocumentsIfPatchingAppliedByIndex()
         {
-            // Implement
-            throw new NotImplementedException();
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new CustomType
+                    {
+                        Id = "Item/1",
+                        Value = 1
+                    });
+                    await session.StoreAsync(new CustomType
+                    {
+                        Id = "Item/2",
+                        Value = 2
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
+                {
+                    Map = @"from doc in docs 
+                            select new { doc.Value }"
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.Advanced.AsyncDocumentQuery<CustomType>("TestIndex")
+                        .WaitForNonStaleResults()
+                        .ToListAsync();
+                }
+
+                var operation = await store.AsyncDatabaseCommands.UpdateByIndexAsync("TestIndex",
+                    new IndexQuery {Query = "Value:1"},
+                    new PatchRequest {Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });"});
+                await operation.WaitForCompletionAsync();
+
+                var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
+                Assert.Equal(3, documents.Length);
+
+                var jsonDocument = store.DatabaseCommands.Get("NewItem/3");
+                Assert.Equal(1, jsonDocument.DataAsJson.Value<int>("CopiedValue"));
+            }
         }
 
         [Fact]
