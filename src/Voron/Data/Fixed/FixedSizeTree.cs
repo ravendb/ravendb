@@ -221,18 +221,7 @@ namespace Voron.Data.Fixed
                 var childPageNumber = PageValueFor(page, page.LastSearchPosition);
                 page = _tx.GetReadOnlyFixedSizeTreePage(childPageNumber);
             }
-#if DEBUG
-            if (page.LastMatch == 0 && _cursor.Count > 0)
-            {
-                var firstKey = KeyFor(page, 0);
-                var parentPage = _cursor.Peek();
-                var separatorKey = GetSeparatorKeyAtPosition(parentPage, parentPage.LastSearchPosition)[0];
-                if (separatorKey != firstKey && (separatorKey != long.MinValue || parentPage.LastSearchPosition != 0))
-                {
-                    throw new InvalidOperationException(string.Format("Separator key ({0}) must be the same as the first key ({1}) in the page", separatorKey, firstKey));
-                }
-            }
-#endif
+
             BinarySearch(page, key);
             return page;
         }
