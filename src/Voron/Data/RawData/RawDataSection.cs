@@ -77,8 +77,8 @@ namespace Voron.Data.RawData
                 var offset = sizeof(RawDataSmallPageHeader);
                 while (offset < _pageSize)
                 {
-                    var sizes = (short*)((byte*)pageHeader + offset);
-                    if (sizes[1] != -1)
+                    var sizes = (RawDataEntrySizes*)((byte*)pageHeader + offset);
+                    if (sizes->UsedSize != -1)
                     {
                         var currentId = (pageHeader->PageNumber * _pageSize) + offset;
 
@@ -92,7 +92,7 @@ namespace Voron.Data.RawData
                         if (ids.Count == _sectionHeader->NumberOfEntries)
                             break;
                     }
-                    offset += sizeof(short) * 2 + sizes[0];
+                    offset += sizeof(short) * 2 + sizes->AllocatedSize;
                 }
             }
             return ids;
@@ -165,7 +165,8 @@ namespace Voron.Data.RawData
             pageHeader = ModifyPage(pageHeader);
             writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
             // note that we have to do this calc again, pageHeader might have changed
-            ((short*)((byte*)pageHeader + posInPage))[1] = (short)size;
+            ((RawDataEntrySizes*)((byte*)pageHeader + posInPage))->UsedSize = (short)size;
+            
             return true;
         }
 
@@ -184,16 +185,16 @@ namespace Voron.Data.RawData
                 throw new InvalidDataException(
                     $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
-            var sizes = (short*)((byte*)pageHeader + posInPage);
-            if (sizes[1] < 0)
+            var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
+            if (sizes->UsedSize < 0)
                 throw new InvalidDataException(
                     $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
-            if (sizes[0] < sizes[1])
+            if (sizes->AllocatedSize < sizes->UsedSize)
                 throw new InvalidDataException(
                     $"Asked to load a value that where the allocated size is smaller than the used size: {id} from page {pageHeader->PageNumber}");
 
-            size = sizes[1];
+            size = sizes->UsedSize;
             return ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
         }
 
@@ -256,16 +257,16 @@ namespace Voron.Data.RawData
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException($"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
-            var sizes = (short*)((byte*)pageHeader + posInPage);
-            if (sizes[1] < 0)
+            var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
+            if (sizes->UsedSize < 0)
                 throw new InvalidDataException($"Asked to free a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
-            sizes[1] = -1;
+            sizes->UsedSize = -1;
             pageHeader->NumberOfEntries--;
 
             EnsureHeaderModified();
             _sectionHeader->NumberOfEntries--;
-            var sizeFreed = sizes[0] + (sizeof(short) * 2);
+            var sizeFreed = sizes->AllocatedSize + (sizeof(short) * 2);
             _sectionHeader->AllocatedSize -= sizeFreed;
             AvailableSpace[pageHeader->PageNumberInSection] += (ushort)sizeFreed;
 
