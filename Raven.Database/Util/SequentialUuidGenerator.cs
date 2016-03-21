@@ -24,6 +24,8 @@ namespace Raven.Database.Util
         private long sequentialUuidDocumentReferences;
         private long sequentialUuidSubscriptions;
         private long sequentialUuidLicensing;
+        private long sequentialUuidSupportCoverage;
+
         public long EtagBase
         {
             set
@@ -82,6 +84,9 @@ namespace Raven.Database.Util
                     break;
                 case UuidType.Licensing:
                     increment = Interlocked.Increment(ref sequentialUuidLicensing);
+                    break;
+                case UuidType.SupportCoverage:
+                    increment = Interlocked.Increment(ref sequentialUuidSupportCoverage);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);

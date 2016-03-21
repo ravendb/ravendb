@@ -285,6 +285,11 @@ interface licenseStatusDto {
     }
 }
 
+interface supportCoverageDto {
+    Status: string;
+    EndsAt: string;
+}
+
 interface HotSpareDto {
     ActivationMode: string;
     ActivationTime: string;
