@@ -15,11 +15,11 @@ namespace Raven.Server.Indexing
         {
             _name = name;
             _tx = tx;
-            var fileTempPath = Path.Combine(tempPath, name +"_" + Path.GetFileName(Path.GetTempFileName()));
+            var fileTempPath = Path.Combine(tempPath, name + "_" + Guid.NewGuid());
             //TODO: Pass this flag
             //const FileOptions FILE_ATTRIBUTE_TEMPORARY = (FileOptions)256;
             _file = new FileStream(fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite,
-                4096,FileOptions.DeleteOnClose);
+                4096, FileOptions.DeleteOnClose);
         }
 
         public override void FlushBuffer(byte[] b, int offset, int len)
@@ -35,7 +35,7 @@ namespace Raven.Server.Indexing
         }
 
         public override long Length => _file.Length;
-        
+
         public override void SetLength(long length)
         {
             _file.SetLength(length);
