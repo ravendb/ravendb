@@ -85,7 +85,7 @@ namespace Voron.Data.RawData
                         var posInPage = (int)(currentId % _tx.DataPager.PageSize);
 
                         if (posInPage >= pageHeader->NextAllocation)
-                            break; // TODO: create test for that condition
+                            break;
 
                         ids.Add(currentId);
                         
