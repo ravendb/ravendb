@@ -163,6 +163,43 @@ namespace FastTests.Voron.RawData
             }
         }
 
+        [Fact]
+        public void ShouldNotReturnMoreIdsThanTotalNumberOfEntriesInSection()
+        {
+            long pageNumber;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                pageNumber = section.PageNumber;
+                tx.Commit();
+            }
+
+            long newId;
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+
+                Assert.True(section.TryAllocate(16, out newId));
+                WriteValue(section, newId, 1.ToString("0000000000000"));
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var ids = section.GetAllIdsInSectionContaining(newId);
+
+                Assert.Equal(section.NumberOfEntries, ids.Count);
+
+                foreach (var id in ids)
+                {
+                    int size;
+                    section.DirectRead(id, out size);
+                }
+            }
+        }
+
         private static void WriteValue(ActiveRawDataSmallSection section, long id, string value)
         {
             var bytes = Encoding.UTF8.GetBytes(value);

@@ -71,7 +71,7 @@ namespace Voron.Data.RawData
             }
 
             var ids = new List<long>(_sectionHeader->NumberOfEntries);
-            for (int i = 0; i < _sectionHeader->NumberOfPages; i++)
+            for (int i = 0; i < _sectionHeader->NumberOfPages && ids.Count < _sectionHeader->NumberOfEntries; i++)
             {
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
                 var offset = sizeof(RawDataSmallPageHeader);
@@ -80,7 +80,17 @@ namespace Voron.Data.RawData
                     var sizes = (short*)((byte*)pageHeader + offset);
                     if (sizes[1] != -1)
                     {
-                        ids.Add((pageHeader->PageNumber * _pageSize) + offset);
+                        var currentId = (pageHeader->PageNumber * _pageSize) + offset;
+
+                        var posInPage = (int)(currentId % _tx.DataPager.PageSize);
+
+                        if (posInPage >= pageHeader->NextAllocation)
+                            break; // TODO: create test for that condition
+
+                        ids.Add(currentId);
+                        
+                        if (ids.Count == _sectionHeader->NumberOfEntries)
+                            break;
                     }
                     offset += sizeof(short) * 2 + sizes[0];
                 }
