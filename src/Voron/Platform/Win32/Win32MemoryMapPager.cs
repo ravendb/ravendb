@@ -231,7 +231,7 @@ namespace Voron.Platform.Win32
         {
             if (_fileInfo == null)
                 return "Unknown";
-            return "MemMap: " + _fileInfo.Name;
+            return "MemMap: " + _fileInfo.FullName;
         }
 
         public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
