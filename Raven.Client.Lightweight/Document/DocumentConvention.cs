@@ -891,6 +891,8 @@ namespace Raven.Client.Document
         /// <summary>
         ///  After updating a documents, will only accept queries which already indexed the updated value.
         /// </summary>
+        [Obsolete("Beware of AlwaysWaitForNonStaleResultsAsOfLastWrite overuse. " +
+                  "See: http://ravendb.net/docs/article-page/3.5/csharp/client-api/configuration/conventions/querying#defaultqueryingconsistency")]
         AlwaysWaitForNonStaleResultsAsOfLastWrite,
         /// <summary>
         /// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead
