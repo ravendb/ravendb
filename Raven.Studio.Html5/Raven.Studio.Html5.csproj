@@ -22,6 +22,7 @@
   </PropertyGroup>
   <ItemGroup>
     <TypeScriptCompile Include="App\commands\auth\verifyPrincipalCommand.ts" />
+    <TypeScriptCompile Include="App\commands\auth\getSupportCoverageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\backupCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersByGroupCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
@@ -47,7 +48,6 @@
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
-    <TypeScriptCompile Include="App\commands\auth\licenseCheckConnectivityCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStatusDebugTasksSummaryCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStudioConfig.ts" />
     <TypeScriptCompile Include="App\commands\database\index\saveIndexPriorityCommand.ts" />
@@ -705,15 +705,12 @@
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
     <Content Include="Scripts\jquery.dynatree.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
-    <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
     <TypeScriptCompile Include="App\commands\auth\getApiKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\getLicenseStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\getWindowsAuthCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\saveApiKeysCommand.ts" />
-    <TypeScriptCompile Include="App\commands\auth\saveWindowsAuthCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\licenseCheckConnectivityCommand.ts" />
-    <TypeScriptCompile Include="App\commands\auth\saveApiKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\saveWindowsAuthCommand.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\database\cluster\extendRaftClusterCommand.ts" />
@@ -895,9 +892,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\licensing\ActivateLicenseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\activateHotSpareCommand.ts" />
     <TypeScriptCompile Include="App\commands\licensing\GetHotSpareInformation.ts" />
-    <TypeScriptCompile Include="App\commands\licensing\TestLicenseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\testHotSpareCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\backupDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorCompactCommand.ts" />

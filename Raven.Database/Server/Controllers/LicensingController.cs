@@ -22,5 +22,18 @@ namespace Raven.Database.Server.Controllers
             // This method is NOT secured, and anyone can access it.
             return GetMessageWithObject(ValidateLicense.CurrentLicense);
         }
+
+        [HttpGet]
+        [RavenRoute("license/support")]
+        public HttpResponseMessage SupportStatus()
+        {
+            if (EnsureSystemDatabase() == false)
+                return
+                    GetMessageWithString(
+                        "The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database",
+                        HttpStatusCode.BadRequest);
+
+            return GetMessageWithObject(SupportCoverage.CurrentSupport);
+        }
     }
 }

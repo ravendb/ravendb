@@ -244,7 +244,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
             RequestManager.HotSpareValidator.ActivateHotSpareLicense();
-            return GetMessageWithObject(new {});
+            return GetEmptyMessage();
         }
 
         [HttpGet]
