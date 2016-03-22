@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public abstract class Index : IDisposable
+    public abstract class Index : IDocumentTombstoneAware, IDisposable
     {
         private class Schema
         {
@@ -202,6 +202,8 @@ namespace Raven.Server.Documents.Indexes
 
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
+                    DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
+
                     DocumentDatabase.Notifications.OnIndexChange += HandleIndexChange;
 
                     _initialized = true;
@@ -315,6 +317,8 @@ namespace Raven.Server.Documents.Indexes
 
                 _cancellationTokenSource?.Cancel();
 
+                DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
+
                 DocumentDatabase.Notifications.OnIndexChange -= HandleIndexChange;
 
                 _indexingThread?.Join();
@@ -382,27 +386,6 @@ namespace Raven.Server.Documents.Indexes
                     foreach (var collection in Collections)
                     {
                         etags[collection] = ReadLastMappedEtag(tx, collection);
-                    }
-
-                    return etags;
-                }
-            }
-        }
-
-        /// <summary>
-        /// This should only be used for testing purposes.
-        /// </summary>
-        internal Dictionary<string, long> GetLastTombstoneEtagsForDebug()
-        {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            {
-                using (var tx = context.OpenReadTransaction())
-                {
-                    var etags = new Dictionary<string, long>();
-                    foreach (var collection in Collections)
-                    {
-                        etags[collection] = ReadLastTombstoneEtag(tx, collection);
                     }
 
                     return etags;
@@ -840,6 +823,24 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     return result;
+                }
+            }
+        }
+
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var etags = new Dictionary<string, long>();
+                    foreach (var collection in Collections)
+                    {
+                        etags[collection] = ReadLastTombstoneEtag(tx, collection);
+                    }
+
+                    return etags;
                 }
             }
         }

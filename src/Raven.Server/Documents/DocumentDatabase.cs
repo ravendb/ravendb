@@ -22,6 +22,7 @@ namespace Raven.Server.Documents
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
+            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             
             Metrics = new MetricsCountersManager(metricsScheduler??new MetricsScheduler());
             Patch = new PatchDocument(this);
@@ -36,6 +37,8 @@ namespace Raven.Server.Documents
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
         public DocumentsStorage DocumentsStorage { get; }
+
+        public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; }
 
         public DocumentsNotifications Notifications { get; }
 
@@ -53,6 +56,7 @@ namespace Raven.Server.Documents
         {
             DocumentsStorage.Initialize(options);
             IndexStore.Initialize();
+            DocumentTombstoneCleaner.Initialize();
         }
 
         public void Dispose()
