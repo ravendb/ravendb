@@ -894,9 +894,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\licensing\ActivateLicenseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\activateHotSpareCommand.ts" />
     <TypeScriptCompile Include="App\commands\licensing\GetHotSpareInformation.ts" />
-    <TypeScriptCompile Include="App\commands\licensing\TestLicenseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\testHotSpareCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\backupDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorCompactCommand.ts" />
