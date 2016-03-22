@@ -21,7 +21,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow;
 using Voron;
 using Voron.Data.Tables;
 
@@ -339,25 +339,22 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
-            using (databaseContext.OpenReadTransaction())
+            foreach (var collection in Collections)
             {
-                foreach (var collection in Collections)
-                {
-                    var lastCollectionEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
-                    var lastProcessedCollectionEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+                var lastCollectionEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                var lastProcessedCollectionEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
 
-                    if (lastCollectionEtag > lastProcessedCollectionEtag)
-                        return true;
+                if (lastCollectionEtag > lastProcessedCollectionEtag)
+                    return true;
 
-                    var lastCollectionTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
-                    var lastProcessedCollectionTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
+                var lastCollectionTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
+                var lastProcessedCollectionTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
 
-                    if (lastCollectionTombstoneEtag > lastProcessedCollectionTombstoneEtag)
-                        return true;
-                }
-
-                return false;
+                if (lastCollectionTombstoneEtag > lastProcessedCollectionTombstoneEtag)
+                    return true;
             }
+
+            return false;
         }
 
         public long GetLastMappedEtagFor(string collection)
@@ -732,6 +729,13 @@ namespace Raven.Server.Documents.Indexes
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
+            {
+                return ReadStats(tx);
+            }
+        }
+
+        private IndexStats ReadStats(RavenTransaction tx)
+        {
             using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
             {
                 var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
@@ -744,10 +748,11 @@ namespace Raven.Server.Documents.Indexes
                 stats.ForCollections = Collections.ToArray();
                 stats.EntriesCount = reader.EntriesCount();
                 stats.IsInMemory = _environment.Options is StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions;
-                stats.CreatedTimestamp = DateTime.FromBinary(statsTree.Read(Schema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
+                stats.CreatedTimestamp =
+                    DateTime.FromBinary(statsTree.Read(Schema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
-                stats.ErrorsCount = (int)table.NumberOfEntries;
+                stats.ErrorsCount = (int) table.NumberOfEntries;
 
                 var lastIndexingTime = statsTree.Read(Schema.LastIndexingTimeSlice);
                 if (lastIndexingTime != null)
@@ -796,33 +801,83 @@ namespace Raven.Server.Documents.Indexes
             };
 
             using (_contextPool.AllocateOperationContext(out indexContext))
+            using (var tx = indexContext.OpenReadTransaction())
             {
-                using (var tx = indexContext.OpenReadTransaction())
+                documentsContext.OpenReadTransaction();
+
+                var stats = ReadStats(tx);
+
+                result.IsStale = IsStale(documentsContext, indexContext);
+                result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
+                result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
+                result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
+                    lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
+                    lastMappedEtags: Collections.Select(x => ReadLastMappedEtag(tx, x)));
+                
+                Reference<int> totalResults = new Reference<int>();
+                List<string> documentIds;
+
+                using (var indexRead = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
-                    result.IsStale = IsStale(documentsContext, indexContext);
+                    documentIds = indexRead.Query(query, token, totalResults).ToList();
+                }
 
-                    Reference<int> totalResults = new Reference<int>();
-                    List<string> documentIds;
+                result.TotalResults = totalResults.Value;
+                
+                foreach (var id in documentIds)
+                {
+                    token.ThrowIfCancellationRequested();
 
-                    using (var indexRead = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
-                    {
-                        documentIds = indexRead.Query(query, token, totalResults).ToList();
-                    }
+                    var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
 
-                    result.TotalResults = totalResults.Value;
+                    result.Results.Add(document);
+                }
+                
+                return result;
+            }
+        }
 
-                    documentsContext.OpenReadTransaction();
+        private static long CalculateIndexEtag(IndexDefinitionBase definition, bool isStale, IEnumerable<long> lastDocEtags, IEnumerable<long> lastMappedEtags)
+        {
+            var indexEtagBytes = new List<byte>();
 
-                    foreach (var id in documentIds)
-                    {
-                        token.ThrowIfCancellationRequested();
+            indexEtagBytes.AddRange(definition.GetDefinitionHash());
+            indexEtagBytes.AddRange(BitConverter.GetBytes(isStale));
 
-                        var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
+            foreach (var etag in lastDocEtags)
+            {
+                indexEtagBytes.AddRange(BitConverter.GetBytes(etag));
+            }
 
-                        result.Results.Add(document);
-                    }
+            foreach (var etag in lastMappedEtags)
+            {
+                indexEtagBytes.AddRange(BitConverter.GetBytes(etag));
+            }
 
-                    return result;
+            // TODO arek - reduce etags
+            // TODO arek - index touches?
+
+            unchecked
+            {
+                return (long)Hashing.XXHash64.Calculate(indexEtagBytes.ToArray());
+            }
+        }
+
+        public long GetIndexEtag()
+        {
+            DocumentsOperationContext documentContext;
+            TransactionOperationContext indexContext;
+
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentContext))
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            {
+                using (var indexTransation = indexContext.OpenReadTransaction())
+                using (documentContext.OpenReadTransaction())
+                {
+                    return CalculateIndexEtag(Definition, 
+                        IsStale(documentContext, indexContext),
+                        lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentContext, x)),
+                        lastMappedEtags: Collections.Select(x => ReadLastMappedEtag(indexTransation, x)));
                 }
             }
         }

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
@@ -14,6 +15,7 @@ namespace Raven.Server.Documents.Indexes
         protected static readonly Slice DefinitionSlice = "Definition";
 
         private readonly Dictionary<string, IndexField> _fieldsByName;
+        private byte[] _cachedHashCodeAsBytes;
 
         protected IndexDefinitionBase(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
         {
@@ -25,11 +27,11 @@ namespace Raven.Server.Documents.Indexes
             _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
         }
 
-        public string Name { get; set; }
+        public string Name { get; }
 
-        public string[] Collections { get; set; }
+        public string[] Collections { get; }
 
-        public IndexField[] MapFields { get; set; }
+        public IndexField[] MapFields { get; }
 
         public IndexLockMode LockMode { get; set; }
 
@@ -80,5 +82,25 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
+
+        public virtual byte[] GetDefinitionHash()
+        {
+            if (_cachedHashCodeAsBytes != null)
+                return _cachedHashCodeAsBytes;
+
+            _cachedHashCodeAsBytes = BitConverter.GetBytes(GetHashCode());
+            return _cachedHashCodeAsBytes;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (_fieldsByName != null ? _fieldsByName.GetDictionaryHashCode() : 0);
+                hashCode = (hashCode*397) ^ (Name != null ? Name.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (Collections != null ? Collections.GetEnumerableHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 }
