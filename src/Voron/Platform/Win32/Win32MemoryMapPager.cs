@@ -108,7 +108,8 @@ namespace Voron.Platform.Win32
 
         protected override PagerState AllocateMorePages(long newLength)
         {
-            ThrowObjectDisposedIfNeeded();
+            if (Disposed)
+                ThrowAlreadyDisposedException();
 
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
@@ -235,14 +236,19 @@ namespace Voron.Platform.Win32
 
         public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
         {
-            ThrowObjectDisposedIfNeeded();
+            if (Disposed)
+                ThrowAlreadyDisposedException();
+
+            if (pageNumber > NumberOfAllocatedPages)
+                ThrowOnInvalidPageNumber(pageNumber);
 
             return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
         }
 
         public override void Sync()
         {
-            ThrowObjectDisposedIfNeeded();
+            if (Disposed)
+                ThrowAlreadyDisposedException();
 
             foreach (var allocationInfo in PagerState.AllocationInfos)
             {
