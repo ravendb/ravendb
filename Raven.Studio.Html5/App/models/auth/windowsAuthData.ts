@@ -7,6 +7,8 @@ class windowsAuthData {
     databases = ko.observableArray<databaseAccess>();
     nameCustomValidity = ko.observable<string>('');
     needToShowSystemDatabaseWarning: KnockoutComputed<boolean>;
+    invalidName = ko.observable<boolean>(false);
+    verificationInProgress = ko.observable<boolean>(false);
 
     constructor(dto: windowsAuthDataDto) {
         this.name(dto.Name);

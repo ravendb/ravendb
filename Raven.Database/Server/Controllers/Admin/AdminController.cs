@@ -885,6 +885,21 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [HttpGet]
+        [RavenRoute("admin/verify-principal")]
+        public HttpResponseMessage VerifyPrincipal(string mode, string principal)
+        {
+            switch (mode)
+            {
+                case "user":
+                    return GetMessageWithObject(new {Valid = AccountVerifier.UserExists(principal) });
+                case "group":
+                    return GetMessageWithObject(new {Valid = AccountVerifier.GroupExists(principal) });
+                default:
+                    return GetMessageWithString("Unhandled mode: " + mode, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpGet]
         [RavenRoute("admin/tasks")]
         [RavenRoute("databases/{databaseName}/admin/tasks")]
         public HttpResponseMessage Tasks()

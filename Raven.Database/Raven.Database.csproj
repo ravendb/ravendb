@@ -190,6 +190,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data.Services.Client" />
     <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Management" />
@@ -478,6 +479,7 @@
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
+    <Compile Include="Server\Security\AccountVerifier.cs" />
     <Compile Include="Server\Tenancy\TimeSeriesLandlord.cs" />
     <Compile Include="Server\Controllers\DebugVoronController.cs" />
     <Compile Include="Server\Controllers\SmugglerController.cs" />
