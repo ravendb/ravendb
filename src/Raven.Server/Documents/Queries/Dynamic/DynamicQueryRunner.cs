@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes;
@@ -35,7 +36,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var result = new DocumentQueryResult
                 {
                     IndexName = collection,
-                    IsStale = false
+                    IsStale = false,
+                    ResultEtag = Environment.TickCount,
+                    LastQueryTime = DateTime.MinValue,
+                    IndexTimestamp = DateTime.MinValue
                 };
 
                 _context.OpenReadTransaction();

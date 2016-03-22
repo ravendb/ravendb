@@ -21,5 +21,17 @@ namespace Raven.Abstractions.Data
                 return new T[0];
             return self;
         }
+
+        public static int GetEnumerableHashCode<TKey>(this IEnumerable<TKey> self)
+        {
+            int result = 0;
+
+            foreach (var kvp in self)
+            {
+                result = (result * 397) ^ kvp.GetHashCode();
+            }
+
+            return result;
+        }
     }
 }
