@@ -21,6 +21,7 @@
     <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="App\commands\auth\getSupportCoverageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\backupCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersByGroupCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />

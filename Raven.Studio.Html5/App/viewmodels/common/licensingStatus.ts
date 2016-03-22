@@ -7,7 +7,10 @@ class licensingStatus extends dialogViewModelBase {
     bundleMap = { compression: "Compression", encryption: "Encryption:", documentExpiration: "Expiration", quotas: "Quotas", replication: "Replication", versioning: "Versioning", periodicBackup: "Periodic Export"};
     bundleString = "";
 
-    constructor(private licenseStatus: licenseStatusDto) {
+    supportClass = ko.observable<string>();
+    supportText = ko.observable<string>();
+
+    constructor(private licenseStatus: licenseStatusDto, supportCoverage: supportCoverageDto) {
         super();
         for (var key in licenseStatus.Attributes) {
             var name = this.bundleMap[key];
@@ -17,6 +20,23 @@ class licensingStatus extends dialogViewModelBase {
             }
         }
         this.bundleString = this.bundles.sort().join(", ");
+
+        switch (supportCoverage.Status) {
+            case "NoSupport":
+                this.supportClass('text-warning');
+                break;
+            case "LicenseNotFound":
+            case "InvalidStateSupportNotFound":
+                this.supportClass('license-error');
+                break;
+            case "PartialSupport":
+            case "ProfessionalSupport":
+            case "ProductionSupport":
+                this.supportClass('text-success');
+                break;
+        }
+
+        this.supportText(supportCoverage.Status);
     }
 
     cancel() {

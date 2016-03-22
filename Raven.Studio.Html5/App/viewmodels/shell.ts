@@ -43,6 +43,7 @@ import getServerBuildVersionCommand = require("commands/resources/getServerBuild
 import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
+import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
@@ -154,7 +155,16 @@ class shell extends viewModelBase {
     static serverMainVersion = ko.observable<number>(4);
     static serverMinorVersion = ko.observable<number>(5);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    localLicenseStatus = license.licenseStatus;
+    localLicenseAndSupportStatusError = ko.computed(() => {
+        var licenseStatus = license.licenseStatus();
+        var supportStatus = license.supportCoverage();
+
+        if (licenseStatus == null || supportStatus == null) {
+            return false;
+        }
+
+        return licenseStatus.Error || supportStatus.Status === "LicenseNotFound" || supportStatus.Status === "InvalidStateSupportNotFound";
+    }) ;
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
@@ -606,6 +616,7 @@ class shell extends viewModelBase {
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
+            this.fetchSupportCoverage();
             this.loadServerConfig();
 
             var databasesLoadTask = shell.reloadDatabases();
@@ -778,6 +789,7 @@ class shell extends viewModelBase {
                 this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
+                this.fetchSupportCoverage();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
             })
@@ -1084,6 +1096,14 @@ class shell extends viewModelBase {
             });
     }
 
+    fetchSupportCoverage() {
+        new getSupportCoverageCommand()
+            .execute()
+            .done((result: supportCoverageDto) => {
+                license.supportCoverage(result);
+            });
+    }
+
     fetchGoToDocSearchResults(query: string) {
         if (query.length >= 2) {
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.activeDatabase())
@@ -1115,7 +1135,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
-        var dialog = new licensingStatus(license.licenseStatus());
+        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage());
         app.showDialog(dialog);
     }
 

@@ -3,9 +3,12 @@
         <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
             <i class="fa fa-times"></i>
         </button>
-        <h4 class="modal-title">Licensing Status</h4>
+        <h4 class="modal-title">Licensing/Support Status</h4>
     </div>
     <div class="modal-body">
+
+
+        <label data-bind="attr: { class: supportClass }">Support: <span data-bind="text: supportText"></span></label><br/>
         <label data-bind="text: licenseStatus.Message, css: { 'license-error': licenseStatus.Error }"></label>
         <!-- ko with: licenseStatus.Details -->
         <div class="panel-group" id="detailsAccordion">
