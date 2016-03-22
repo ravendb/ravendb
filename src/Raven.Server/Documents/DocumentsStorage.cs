@@ -787,5 +787,23 @@ namespace Raven.Server.Documents
                 table.Delete(result.Id);
             }
         }
+
+        public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
+        {
+            using (var it = transaction.LowLevelTransaction.RootObjects.Iterate())
+            {
+                it.RequiredPrefix = "#";
+
+                if (it.Seek(Slice.BeforeAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    var tombstoneCollection = it.CurrentKey.ToString();
+                    yield return tombstoneCollection.Substring(1); // removing '#'
+                }
+                while (it.MoveNext());
+            }
+        }
     }
 }
