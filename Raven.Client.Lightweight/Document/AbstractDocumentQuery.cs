@@ -339,7 +339,9 @@ namespace Raven.Client.Document
 		    }
 #endif
 
+#pragma warning disable 618
 			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
+#pragma warning restore 618
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}

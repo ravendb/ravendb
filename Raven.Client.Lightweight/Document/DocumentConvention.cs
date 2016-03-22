@@ -824,19 +824,23 @@ namespace Raven.Client.Document
 		/// This is ensured by the server, and require no action from the client
 		/// </summary>
 		None,
-		/// <summary>
-		///  After updating a documents, will only accept queries which already indexed the updated value.
-		/// </summary>
-		AlwaysWaitForNonStaleResultsAsOfLastWrite,
-		/// <summary>
-		/// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead
-		/// </summary>
-		[Obsolete("Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead")]
+        /// <summary>
+        ///  After updating a documents, will only accept queries which already indexed the updated value.
+        /// </summary>
+        [Obsolete("Beware of AlwaysWaitForNonStaleResultsAsOfLastWrite overuse. " +
+                  "See: http://ravendb.net/docs/article-page/2.5/Csharp/client-api/querying/stale-indexes#setting-cut-off-point")]
+        AlwaysWaitForNonStaleResultsAsOfLastWrite,
+        /// <summary>
+        /// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead
+        /// </summary>
+#pragma warning disable 618
+        [Obsolete("Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead")]
 		QueryYourWrites = AlwaysWaitForNonStaleResultsAsOfLastWrite,
-		/// <summary>
-		/// Use None, instead
-		/// </summary>
-		[Obsolete("Use None, instead")]
+#pragma warning restore 618
+        /// <summary>
+        /// Use None, instead
+        /// </summary>
+        [Obsolete("Use None, instead")]
 		MonotonicRead = None
 	}
 }
