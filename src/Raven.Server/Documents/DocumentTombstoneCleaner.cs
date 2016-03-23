@@ -50,36 +50,50 @@ namespace Raven.Server.Documents
 
             try
             {
-                var tombstones = subscriptions
-                .SelectMany(x => x.GetLastProcessedDocumentTombstonesPerCollection())
-                .GroupBy(x => x.Key)
-                .Select(x => new
+                Dictionary<string, long> tombstones;
+                using (var tx = _documentDatabase.DocumentsStorage.Environment.ReadTransaction())
                 {
-                    Collection = x.Key,
-                    Etag = x.Min(y => y.Value)
-                })
-                .ToList();
+                    tombstones = _documentDatabase
+                        .DocumentsStorage
+                        .GetTombstoneCollections(tx)
+                        .ToDictionary(x => x, x => long.MaxValue, StringComparer.OrdinalIgnoreCase);
+                }
+
+                if (tombstones.Count == 0)
+                    return;
+
+                foreach (var subscription in subscriptions)
+                {
+                    foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
+                    {
+                        long v;
+                        if (tombstones.TryGetValue(tombstone.Key, out v) == false)
+                            tombstones[tombstone.Key] = tombstone.Value;
+                        else
+                            tombstones[tombstone.Key] = Math.Min(tombstone.Value, v);
+                    }
+                }
 
                 foreach (var tombstone in tombstones)
                 {
                     if (_disposed)
                         return;
 
-                    if (tombstone.Etag <= 0)
+                    if (tombstone.Value <= 0)
                         continue;
 
                     try
                     {
                         using (var tx = _documentDatabase.DocumentsStorage.Environment.WriteTransaction())
                         {
-                            _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Collection, tombstone.Etag, tx);
+                            _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, tombstone.Value, tx);
 
                             tx.Commit();
                         }
                     }
                     catch (Exception e)
                     {
-                        Log.ErrorException($"Could not delete tombstones for '{tombstone.Collection}' collection and '{tombstone.Etag}' etag.", e);
+                        Log.ErrorException($"Could not delete tombstones for '{tombstone.Key}' collection and '{tombstone.Value}' etag.", e);
                     }
                 }
             }

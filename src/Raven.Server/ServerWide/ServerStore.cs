@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
@@ -35,6 +36,8 @@ namespace Raven.Server.ServerWide
         public readonly RavenConfiguration Configuration;
         public readonly MetricsScheduler MetricsScheduler;
 
+        private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+
         public ServerStore(RavenConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
@@ -45,6 +48,8 @@ namespace Raven.Server.ServerWide
         }
 
         public TransactionContextPool ContextPool;
+
+        private Timer _timer;
 
         public void Initialize()
         {
@@ -84,6 +89,7 @@ namespace Raven.Server.ServerWide
 
             _pool = new UnmanagedBuffersPool("ServerStore");// 128MB should be more than big enough for the server store
             ContextPool = new TransactionContextPool(_pool, _env);
+            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
         }
 
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
@@ -152,7 +158,7 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
-            
+
             shutdownNotification.Cancel();
 
             ContextPool?.Dispose();
@@ -176,6 +182,74 @@ namespace Raven.Server.ServerWide
             }
             if (errors.Count != 0)
                 throw new AggregateException(errors);
+        }
+
+        private void IdleOperations(object state)
+        {
+            try
+            {
+                foreach (var db in DatabasesLandlord.ResourcesStoresCache)
+                {
+                    try
+                    {
+                        if (db.Value.Status != TaskStatus.RanToCompletion)
+                            continue;
+
+                        var database = db.Value.Result;
+
+                        if (DatabaseNeedToRunIdleOperations(database))
+                            database.RunIdleOperations();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.WarnException("Error during idle operation run for " + db.Key, e);
+                    }
+                }
+
+                try
+                {
+                    //var databasesToCleanup = DatabasesLandlord.LastRecentlyUsed
+                    //   .Where(x => SystemTime.UtcNow - x.Value > maxTimeDatabaseCanBeIdle)
+                    //   .Select(x => x.Key)
+                    //   .ToArray();
+
+                    //foreach (var databaseToCleanup in databasesToCleanup)
+                    //{
+                    //    // intentionally inside the loop, so we get better concurrency overall
+                    //    // since shutting down a database can take a while
+                    //    DatabasesLandlord.Cleanup(databaseToCleanup, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.RunInMemory);
+                    //}
+
+                    // TODO [ppekrol]
+                }
+                catch (Exception e)
+                {
+                    Log.WarnException("Error during idle operations for the server", e);
+                }
+            }
+            finally
+            {
+                try
+                {
+                    _timer.Change(_frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        }
+
+        private static bool DatabaseNeedToRunIdleOperations(DocumentDatabase database)
+        {
+            //var dateTime = SystemTime.UtcNow;
+            //if ((dateTime - database.WorkContext.LastWorkTime).TotalMinutes > 5)
+            //    return true;
+            //if ((dateTime - database.WorkContext.LastIdleTime).TotalHours > 2)
+            //    return true;
+            //return false;
+            // TODO [ppekrol]
+
+            return true;
         }
     }
 }

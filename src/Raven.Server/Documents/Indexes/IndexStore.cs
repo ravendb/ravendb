@@ -4,9 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Utils;
 
@@ -330,9 +332,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public List<AutoMapIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
+        public List<AutoMapIndexDefinition> GetAutoMapIndexDefinitionForCollection(string collection)
         {
-            return _indexes.GetDefinitionsOfTypeForCollection<AutoMapIndexDefinition>(collection);
+            return _indexes
+                .GetForCollection(collection)
+                .Where(x => x.Type == IndexType.AutoMap)
+                .Select(x => (AutoMapIndexDefinition)x.Definition)
+                .ToList();
         }
 
         public IEnumerable<Index> GetIndexesForCollection(string collection)
@@ -343,6 +349,99 @@ namespace Raven.Server.Documents.Indexes
         public IEnumerable<Index> GetIndexes()
         {
             return _indexes;
+        }
+
+        public void RunIdleOperations()
+        {
+            SetUnusedAutoIndexesToIdle();
+            //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
+        }
+
+        private void SetUnusedAutoIndexesToIdle()
+        {
+            var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+            var timeToWaitBeforeMarkingAutoIndexAsAbandoned = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsAbandoned;
+
+            var autoIndexesSortedByLastQueryTime = (from index in _indexes
+                                                    where index.Type == IndexType.AutoMap || index.Type == IndexType.AutoMapReduce
+                                                    where index.Priority != IndexingPriority.Disabled || index.Priority != IndexingPriority.Error || index.Priority != IndexingPriority.Forced
+                                                    let stats = index.GetStats()
+                                                    let lastQueryingTime = stats.LastQueryingTime ?? DateTime.MinValue
+                                                    orderby lastQueryingTime
+                                                    select new UnusedIndexState
+                                                    {
+                                                        LastQueryingTime = lastQueryingTime,
+                                                        Index = index,
+                                                        Priority = stats.Priority,
+                                                        CreationDate = stats.CreatedTimestamp
+                                                    }).ToList();
+
+            for (var i = 0; i < autoIndexesSortedByLastQueryTime.Count; i++)
+            {
+                var item = autoIndexesSortedByLastQueryTime[i];
+                var age = SystemTime.UtcNow - item.CreationDate;
+                var lastQuery = SystemTime.UtcNow - item.LastQueryingTime;
+
+                switch (item.Priority)
+                {
+                    case IndexingPriority.Normal:
+                        if (age < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                            HandleActiveAutoIndex(item.Index, age, lastQuery, timeToWaitBeforeMarkingAutoIndexAsIdle);
+                        else if (i < autoIndexesSortedByLastQueryTime.Count - 1)
+                        {
+                            // If it's a fairly established query then we need to determine whether there is any activity currently
+                            // If there is activity and this has not been queried against 'recently' it needs idling
+
+                            var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
+                            if (nextItem.LastQueryingTime - item.LastQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                                item.Index.SetPriority(IndexingPriority.Idle);
+                        }
+
+                        continue;
+                    case IndexingPriority.Idle:
+                        HandleIdleAutoIndex(item.Index, age, lastQuery, timeToWaitBeforeMarkingAutoIndexAsAbandoned);
+                        break;
+                }
+            }
+        }
+
+        private static void HandleActiveAutoIndex(Index index, TimeSpan age, TimeSpan lastQuery, TimeSetting timeToWaitBeforeMarkingAutoIndexAsIdle)
+        {
+            var timeToWaitForIdle = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.TotalMinutes;
+
+            if (age.TotalMinutes < timeToWaitForIdle * 2.5 && lastQuery.TotalMinutes < 1.5 * timeToWaitForIdle)
+                return;
+
+            if (age.TotalMinutes < timeToWaitForIdle * 6 && lastQuery.TotalMinutes < 2.5 * timeToWaitForIdle)
+                return;
+
+            index.SetPriority(IndexingPriority.Idle);
+        }
+
+        private void HandleIdleAutoIndex(Index index, TimeSpan age, TimeSpan lastQuery, TimeSetting timeToWaitBeforeMarkingAutoIndexAsAbandoned)
+        {
+            // relatively young index, haven't been queried for a while already
+            // can be safely removed, probably
+            if (age.TotalMinutes < 90 && lastQuery.TotalMinutes > 30)
+            {
+                DeleteIndex(index.IndexId);
+                return;
+            }
+
+            if (lastQuery < timeToWaitBeforeMarkingAutoIndexAsAbandoned.AsTimeSpan)
+                return;
+
+            // old enough, and haven't been queried for a while, mark it as abandoned
+
+            index.SetPriority(IndexingPriority.Abandoned);
+        }
+
+        private class UnusedIndexState
+        {
+            public DateTime LastQueryingTime { get; set; }
+            public Index Index { get; set; }
+            public IndexingPriority Priority { get; set; }
+            public DateTime CreationDate { get; set; }
         }
     }
 }

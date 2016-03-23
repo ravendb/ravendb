@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
+using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide.Context;
@@ -20,19 +22,29 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public DocumentQueryResult ExecuteQuery(string indexName, IndexQuery query, CancellationToken token)
+        public DocumentQueryResult ExecuteQuery(string indexName, IndexQuery query, StringValues includes, CancellationToken token)
         {
+            DocumentQueryResult result;
+
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
                 indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
             {
                 var runner = new DynamicQueryRunner(_indexStore, _documentsStorage, _documentsContext, token);
 
-                return runner.Execute(indexName, query);
+                result = runner.Execute(indexName, query);
             }
             else
             {
                 throw new InvalidOperationException("We don't support querying of static indexes for now");
             }
+
+            if (includes.Count > 0)
+            {
+                var includeDocs = new IncludeDocumentsCommand(_documentsStorage, _documentsContext, includes);
+                includeDocs.Execute(result.Results, result.Includes);
+            }
+
+            return result;
         }
     }
 }

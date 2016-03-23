@@ -29,6 +29,7 @@ namespace Voron.Data.Fixed
         private readonly int _maxEmbeddedEntries;
         private RootObjectType? _type;
         private Stack<FixedSizeTreePage> _cursor;
+        private int _changes;
 
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
@@ -130,6 +131,7 @@ namespace Voron.Data.Fixed
 
         public byte* DirectAdd(long key, out bool isNew)
         {
+            _changes++;
             byte* pos;
             switch (_type)
             {
@@ -671,6 +673,7 @@ namespace Voron.Data.Fixed
 
         public DeletionResult Delete(long key)
         {
+            _changes++;
             switch (_type)
             {
                 case null:
@@ -694,6 +697,7 @@ namespace Voron.Data.Fixed
 
         public DeletionResult DeleteRange(long start, long end)
         {
+            _changes++;
             if (start > end)
                 throw new InvalidOperationException("Start range cannot be greater than the end of the range");
 

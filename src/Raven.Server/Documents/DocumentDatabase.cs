@@ -14,6 +14,8 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public readonly PatchDocument Patch;
 
+        private readonly object _idleLocker = new object();
+
         public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler=null)
         {
             Name = name;
@@ -65,6 +67,21 @@ namespace Raven.Server.Documents
 
             DocumentsStorage?.Dispose();
             IndexStore?.Dispose();
+        }
+
+        public void RunIdleOperations()
+        {
+            if (Monitor.TryEnter(_idleLocker) == false)
+                return;
+
+            try
+            {
+                IndexStore?.RunIdleOperations();
+            }
+            finally
+            {
+                Monitor.Exit(_idleLocker);
+            }
         }
     }
 }

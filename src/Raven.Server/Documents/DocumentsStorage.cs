@@ -781,10 +781,26 @@ namespace Raven.Server.Documents
                 // TODO [ppekrol] how to handle missing collection?
                 return;
             }
+            if(_log.IsDebugEnabled)
+                _log.Debug($"Deleting tombstones earlier than {etag} in {collection}");
+            table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
+        }
 
-            foreach (var result in table.SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag))
+        public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
+        {
+            using (var it = transaction.LowLevelTransaction.RootObjects.Iterate())
             {
-                table.Delete(result.Id);
+                it.RequiredPrefix = "#";
+
+                if (it.Seek(Slice.BeforeAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    var tombstoneCollection = it.CurrentKey.ToString();
+                    yield return tombstoneCollection.Substring(1); // removing '#'
+                }
+                while (it.MoveNext());
             }
         }
     }

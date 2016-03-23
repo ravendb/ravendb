@@ -111,6 +111,16 @@ namespace Raven.Client.Connection
             return createRequestForSystemDatabase("/admin/api-keys?name=" + name, HttpMethods.Get);
         }
 
+        public HttpJsonRequest CreateDeleteApiKeyRequest(string name)
+        {
+            return createRequestForSystemDatabase("/admin/api-keys?name=" + name, HttpMethods.Delete);
+        }
+
+        public HttpJsonRequest CreateStreamApiKeysRequest()
+        {
+            return createRequestForSystemDatabase("/admin/apikeys/all", HttpMethods.Get);
+        }
+
         public HttpJsonRequest IndexesStatus(string serverUrl)
         {
             return createReplicationAwareRequest(serverUrl, "/indexes/status", HttpMethods.Get);
