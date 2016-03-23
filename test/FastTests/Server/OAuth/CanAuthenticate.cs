@@ -24,7 +24,7 @@ namespace FastTests.Server.OAuth
             Secret = "secret",
             ResourcesAccessMode =
             {
-                ["testDbName"] = AccessModes.Admin
+                ["db/CanGetTokenFromServer"] = AccessModes.Admin
             }
         };
 
@@ -92,7 +92,7 @@ namespace FastTests.Server.OAuth
                 // Verify successfull get with valid token
                 var authenticatedClient = new HttpClient();
                 oauth(authenticatedClient);
-                result = await client.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
+                result = await authenticatedClient.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
                 Assert.Equal(HttpStatusCode.OK, result.StatusCode);
             }
         }
