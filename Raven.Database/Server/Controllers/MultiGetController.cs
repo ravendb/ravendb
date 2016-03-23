@@ -152,8 +152,17 @@ namespace Raven.Database.Server.Controllers
 
                     var jsonContent = result.Content as JsonContent;
 
-                    if (jsonContent != null && jsonContent.Data != null)
-                        jsonContent.Data.WriteTo(writer, Default.Converters);
+                    if (jsonContent != null)
+                    {
+                        if (jsonContent.Data == null)
+                        {
+                            writer.WriteNull();
+                        }
+                        else
+                        {
+                            jsonContent.Data.WriteTo(writer, Default.Converters);
+                        } 
+                    }
                     else
                     {
                         var stringContent = result.Content as MultiGetSafeStringContent;
