@@ -462,6 +462,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     stats.AddWriteError(new IndexWriteException());
                     stats.AddAnalyzerError(new IndexAnalyzerException());
+                    
                     index.UpdateStats(SystemTime.UtcNow, stats);
 
                     var errors = index.GetErrors();

@@ -37,12 +37,26 @@ namespace Voron.Data.Tables
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
+#if DEBUG
+                if (totalSize < 0)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
+#endif
                 for (var i = 1; i < Count; i++)
                 {
                     int size;
                     value.Read(i + StartIndex, out size);
+#if DEBUG
+                    if(size < 0)
+                        throw new ArgumentOutOfRangeException(nameof(size), "Size cannot be negative");
+#endif
                     totalSize += size;
                 }
+#if DEBUG
+                if(totalSize < 0 || totalSize > value.Size)
+                    throw new ArgumentOutOfRangeException(nameof(value),"Reading a slice that is longer than the value");
+                if(totalSize > ushort.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Reading a slice that too big to be a slice");
+#endif
                 return new Slice(ptr, (ushort)totalSize);
             }
         }

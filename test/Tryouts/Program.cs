@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
+using FastTests.Voron.Tables;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
@@ -19,32 +21,12 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8081",
-                DefaultDatabase = "FooBar123"
-            })
-            {
-                store.Initialize();
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
-                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-                {
-                    Id = "FooBar123",
-                    Settings =
-                    {
-                        { "Raven/DataDir", "~\\FooBar123" }
-                    }
-                });
 
-                //BulkInsert(store, 1024 * 256).Wait();
-                int x = 0;
-                while (true)
-                {
-                    BulkInsert(store, 1024*16).Wait();
-                    Console.WriteLine(++x);
-                }
-
+            for (int i = 0; i < 1000; i++)
+            {
+                Console.WriteLine(i);
+                using (var x = new Bugs())
+                    x.CanInsertThenDeleteBySecondary2();
             }
         }
 
