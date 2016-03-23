@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -25,21 +27,36 @@ namespace Raven.Abstractions.Data
 
         public virtual void MarkProgress(string progress)
         {
+            lock (State)
+            {
+                MarkProgressInternal(progress);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void MarkProgressInternal(string progress)
+        {
             State["Progress"] = progress;
         }
 
         public void MarkCompleted(string state = null)
         {
             VerifyState();
-            MarkProgress(state);
+            lock(State)
+            {
+                MarkProgressInternal(state);
+            }
             Completed = true;
         }
 
         public void MarkFaulted(string error = null, Exception exception = null)
         {
             VerifyState();
-            MarkProgress(null);
-            State["Error"] = error;
+            lock (State)
+            {
+                MarkProgressInternal(null);
+                State["Error"] = error;
+            }
             Exception = exception;
             Completed = true;
             Faulted = true;
@@ -48,8 +65,11 @@ namespace Raven.Abstractions.Data
         public void MarkCanceled(string error = null)
         {
             VerifyState();
-            MarkProgress(null);
-            State["Error"] = error;
+            lock (State)
+            {
+                MarkProgressInternal(null);
+                State["Error"] = error;
+            }
             Completed = true;
             Canceled = true;
         }

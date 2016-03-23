@@ -34,7 +34,15 @@ namespace Raven.Database.Server.Controllers
             }
 
             var status = Database.Tasks.GetTaskState(id);
-            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+            if (status == null)
+            {
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+            }
+
+            lock (status.State)
+            {
+                return GetMessageWithObject(status);
+            }
         }
 
         [HttpGet]
@@ -52,7 +60,15 @@ namespace Raven.Database.Server.Controllers
                 }, HttpStatusCode.BadRequest);
             }
             var status = Database.Tasks.KillTask(id);
-            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+            if (status == null)
+            {
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+            }
+
+            lock (status.State)
+            {
+                return GetMessageWithObject(status);
+            }
         }
 
         [HttpGet]

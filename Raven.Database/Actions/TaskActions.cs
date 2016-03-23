@@ -49,18 +49,32 @@ namespace Raven.Database.Actions
 
         public List<PendingTaskDescriptionAndStatus> GetAll()
         {
-            return pendingTasks.Select(x => new PendingTaskDescriptionAndStatus
+            return pendingTasks.Select(x =>
             {
-                Id = x.Key,
-                TaskType = x.Value.Description.TaskType,
-                Description = x.Value.Description.Description,
-                StartTime = x.Value.Description.StartTime,
-                Status = x.Value.State.State,
-                Completed = x.Value.State.Completed,
-                Faulted = x.Value.State.Faulted,
-                Canceled = x.Value.State.Canceled,
-                Exception = x.Value.State.Exception,
-                Killable = x.Value.TokenSource != null && !x.Value.Task.IsCompleted
+                var task = new PendingTaskDescriptionAndStatus
+                {
+                    Id = x.Key,
+                    TaskType = x.Value.Description.TaskType,
+                    Description = x.Value.Description.Description,
+                    StartTime = x.Value.Description.StartTime,
+                    Status = x.Value.State.State,
+                    Completed = x.Value.State.Completed,
+                    Faulted = x.Value.State.Faulted,
+                    Canceled = x.Value.State.Canceled,
+                    Exception = x.Value.State.Exception,
+                    Killable = x.Value.TokenSource != null && !x.Value.Task.IsCompleted
+                };
+
+                // create thread safe copy of status to avoid InvalidOperationException during serialization 
+                if (task.Status != null)
+                {
+                    lock (task.Status)
+                    {
+                        task.Status = task.Status.CloneToken();
+                    }
+                }
+              
+                return task;
             }).ToList();
         }
 
@@ -85,7 +99,7 @@ namespace Raven.Database.Actions
         }
 
 
-        public object KillTask(long id)
+        public IOperationState KillTask(long id)
         {
             PendingTask value;
             if (pendingTasks.TryGetValue(id, out value))
@@ -103,7 +117,7 @@ namespace Raven.Database.Actions
             return null;
         }
 
-        public object GetTaskState(long id)
+        public IOperationState GetTaskState(long id)
         {
             PendingTask value;
             if (pendingTasks.TryGetValue(id, out value))

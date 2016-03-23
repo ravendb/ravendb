@@ -24,7 +24,15 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var status = FileSystem.Tasks.GetTaskState(id);
-            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+            if (status == null)
+            {
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+            }
+
+            lock (status.State)
+            {
+                return GetMessageWithObject(status);
+            }
         }
 
         [HttpGet]
@@ -41,7 +49,15 @@ namespace Raven.Database.FileSystem.Controllers
                 }, HttpStatusCode.BadRequest);
             }
             var status = FileSystem.Tasks.KillTask(id);
-            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+            if (status == null)
+            {
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+            }
+
+            lock (status.State)
+            {
+                return GetMessageWithObject(status);
+            }
         }
 
         [HttpGet]

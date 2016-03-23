@@ -252,7 +252,7 @@ namespace Raven.Database.Server.Controllers
             {
                 OperationProgress.ProcessedEntries = progress.ProcessedEntries;
                 OperationProgress.TotalEntries = progress.TotalEntries;
-                State["Progress"] = $"Processed {progress.ProcessedEntries}/{progress.TotalEntries} items";
+                MarkProgress($"Processed {progress.ProcessedEntries}/{progress.TotalEntries} items");
             }
         }
     }
