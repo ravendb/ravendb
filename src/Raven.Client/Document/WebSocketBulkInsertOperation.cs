@@ -48,10 +48,18 @@ namespace Raven.Client.Document
         {
             await socketConnectionTask;
             var closeBuffer = new byte[4096];
-            var result = await connection.ReceiveAsync(new ArraySegment<byte>(closeBuffer), cts.Token);
+            WebSocketReceiveResult result;
+            string msg;
+            do
+            {
+                result = await connection.ReceiveAsync(new ArraySegment<byte>(closeBuffer), cts.Token);
+                msg = Encoding.UTF8.GetString(closeBuffer, 0, result.Count);
+            }
+            while (result.MessageType == WebSocketMessageType.Text && msg.Equals("comitted"));
+
             if (result.MessageType != WebSocketMessageType.Close)
             {
-                var msg = $"Received unexpected message from a server (expected only message about closing, and got message of type == {result.MessageType})";
+                msg = $"Received unexpected message from a server (expected only message about closing, and got message of type == {result.MessageType})";
                 ReportProgress(msg);
 
                 try
@@ -68,8 +76,7 @@ namespace Raven.Client.Document
             if (result.CloseStatus == WebSocketCloseStatus.InternalServerError)
             {
                 var exceptionString = Encoding.UTF8.GetString(closeBuffer);
-                var msg =
-                    $"Bulk insert aborted because of server-side exception. Exception information from server : {Environment.NewLine} {exceptionString}";
+                msg = $"Bulk insert aborted because of server-side exception. Exception information from server : {Environment.NewLine} {exceptionString}";
                 ReportProgress(msg);
                 try
                 {
