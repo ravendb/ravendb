@@ -92,7 +92,7 @@ namespace Raven.Database.FileSystem.Actions
             pendingTasks.TryRemove(taskId, out value);
         }
 
-        public object KillTask(long id)
+        public IOperationState KillTask(long id)
         {
             PendingTaskWithStateAndDescription value;
             if (pendingTasks.TryGetValue(id, out value))
@@ -110,7 +110,7 @@ namespace Raven.Database.FileSystem.Actions
             return null;
         }
 
-        public object GetTaskState(long id)
+        public IOperationState GetTaskState(long id)
         {
             PendingTaskWithStateAndDescription value;
             if (pendingTasks.TryGetValue(id, out value))
