@@ -111,7 +111,7 @@ namespace Raven.Tests.Issues
                     {
                         Strategy = strategyToReplace
                     });
-
+                    store.Changes().WaitForAllPendingSubscriptions();
                     var items = new BlockingCollection<User>();
 
                     subscription.Subscribe(items.Add);

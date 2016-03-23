@@ -147,23 +147,26 @@ namespace Raven.Database.Actions
 
         public void AcknowledgeBatchProcessed(long id, Etag lastEtag)
         {
-            TransactionalStorage.Batch(accessor =>
+            using (LockSubscription(id))
             {
-                var config = GetSubscriptionConfig(id);
-                var options = GetBatchOptions(id);
+                TransactionalStorage.Batch(accessor =>
+                {
+                    var config = GetSubscriptionConfig(id);
+                    var options = GetBatchOptions(id);
 
-                var timeSinceBatchSent = SystemTime.UtcNow - config.TimeOfSendingLastBatch;
-                if(timeSinceBatchSent > options.AcknowledgmentTimeout)
-                    throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
+                    var timeSinceBatchSent = SystemTime.UtcNow - config.TimeOfSendingLastBatch;
+                    if (timeSinceBatchSent > options.AcknowledgmentTimeout)
+                        throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
 
 
-                if (config.AckEtag.CompareTo(lastEtag) < 0)
-                    config.AckEtag = lastEtag;
+                    if (config.AckEtag.CompareTo(lastEtag) < 0)
+                        config.AckEtag = lastEtag;
 
-                config.TimeOfLastClientActivity = SystemTime.UtcNow;
+                    config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-                SaveSubscriptionConfig(id, config);
-            });
+                    SaveSubscriptionConfig(id, config);
+                });
+            }
         }
 
         public void AssertOpenSubscriptionConnection(long id, string connection)
