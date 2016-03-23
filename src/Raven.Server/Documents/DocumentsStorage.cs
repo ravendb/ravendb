@@ -781,7 +781,8 @@ namespace Raven.Server.Documents
                 // TODO [ppekrol] how to handle missing collection?
                 return;
             }
-
+            if(_log.IsDebugEnabled)
+                _log.Debug($"Deleting tombstones earlier than {etag} in {collection}");
             table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
         }
 
