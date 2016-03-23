@@ -54,7 +54,7 @@ namespace FastTests.Server.OAuth
             }
         }
 
-        [NonLinuxFact]
+        [NonLinuxFact(Skip = "Cannot run because impacts other tests running concurrently")]
         public async Task CanGetTokenFromServer()
         {
             using (var store = await GetDocumentStore())
