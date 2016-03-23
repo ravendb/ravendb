@@ -166,7 +166,6 @@ namespace Raven.Server.Documents.Indexes
                     : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
 
                 options.SchemaVersion = 1;
-                options.ManualFlushing = true;
                 try
                 {
                     Initialize(new StorageEnvironment(options), documentDatabase);
@@ -640,17 +639,8 @@ namespace Raven.Server.Documents.Indexes
             if (table.NumberOfEntries <= MaxNumberOfKeptErrors)
                 return;
 
-            var take = table.NumberOfEntries - MaxNumberOfKeptErrors;
-            foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys))
-            {
-                foreach (var tvr in sr.Results)
-                {
-                    if (take-- <= 0)
-                        return;
-
-                    table.Delete(tvr.Id);
-                }
-            }
+            var numberOfEntriesToDelete = table.NumberOfEntries - MaxNumberOfKeptErrors;
+            table.DeleteForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys, numberOfEntriesToDelete);
         }
 
         public unsafe void SetPriority(IndexingPriority priority)
@@ -679,12 +669,30 @@ namespace Raven.Server.Documents.Indexes
 
                 Priority = priority;
 
-                if (priority == IndexingPriority.Error)
+                var notificationType = IndexChangeTypes.None;
+
+                switch (priority)
+                {
+                    case IndexingPriority.Abandoned:
+                        notificationType = IndexChangeTypes.IndexDemotedToAbandoned;
+                        break;
+                    case IndexingPriority.Disabled:
+                        notificationType = IndexChangeTypes.IndexDemotedToDisabled;
+                        break;
+                    case IndexingPriority.Error:
+                        notificationType = IndexChangeTypes.IndexMarkedAsErrored;
+                        break;
+                    case IndexingPriority.Idle:
+                        notificationType = IndexChangeTypes.IndexDemotedToIdle;
+                        break;
+                }
+
+                if (notificationType != IndexChangeTypes.None)
                 {
                     DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                     {
                         Name = Name,
-                        Type = IndexChangeTypes.IndexMarkedAsErrored
+                        Type = notificationType
                     });
                 }
             }
@@ -752,7 +760,7 @@ namespace Raven.Server.Documents.Indexes
                     DateTime.FromBinary(statsTree.Read(Schema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
                 stats.LockMode = Definition.LockMode;
                 stats.Priority = Priority;
-                stats.ErrorsCount = (int) table.NumberOfEntries;
+                stats.ErrorsCount = (int)table.NumberOfEntries;
 
                 var lastIndexingTime = statsTree.Read(Schema.LastIndexingTimeSlice);
                 if (lastIndexingTime != null)
@@ -813,7 +821,7 @@ namespace Raven.Server.Documents.Indexes
                 result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
                     lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
                     lastMappedEtags: Collections.Select(x => ReadLastMappedEtag(tx, x)));
-                
+
                 Reference<int> totalResults = new Reference<int>();
                 List<string> documentIds;
 
@@ -823,7 +831,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 result.TotalResults = totalResults.Value;
-                
+
                 foreach (var id in documentIds)
                 {
                     token.ThrowIfCancellationRequested();
@@ -832,7 +840,7 @@ namespace Raven.Server.Documents.Indexes
 
                     result.Results.Add(document);
                 }
-                
+
                 return result;
             }
         }
@@ -874,7 +882,7 @@ namespace Raven.Server.Documents.Indexes
                 using (var indexTransation = indexContext.OpenReadTransaction())
                 using (documentContext.OpenReadTransaction())
                 {
-                    return CalculateIndexEtag(Definition, 
+                    return CalculateIndexEtag(Definition,
                         IsStale(documentContext, indexContext),
                         lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentContext, x)),
                         lastMappedEtags: Collections.Select(x => ReadLastMappedEtag(indexTransation, x)));

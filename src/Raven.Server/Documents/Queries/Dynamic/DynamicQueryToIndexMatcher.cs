@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 });
             }
             
-            var autoIndexes = _indexStore.GetAutoIndexDefinitionsForCollection(query.ForCollection); // let us work with AutoIndexes only for now
+            var autoIndexes = _indexStore.GetAutoMapIndexDefinitionForCollection(query.ForCollection); // let us work with AutoIndexes only for now
 
             if (autoIndexes.Count == 0)
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);

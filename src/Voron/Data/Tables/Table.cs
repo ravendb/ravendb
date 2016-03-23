@@ -611,7 +611,7 @@ namespace Voron.Data.Tables
                         break;
 
                     if (deletedList.Count > 10 * 1024)
-                        return false;
+                        break;
 
                     deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
                 } while (it.MoveNext());
@@ -623,6 +623,70 @@ namespace Voron.Data.Tables
             }
 
             return true;
+        }
+
+        public void DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
+        {
+            if (numberOfEntriesToDelete < 0)
+                throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
+
+            if (numberOfEntriesToDelete == 0)
+                return;
+
+            var toDelete = new List<long>();
+            var fst = GetFixedSizeTree(index);
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(value) == false && it.SeekToLast() == false)
+                    return;
+
+                do
+                {
+                    toDelete.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                    numberOfEntriesToDelete--;
+                } while (numberOfEntriesToDelete > 0 && it.MovePrev());
+            }
+
+            foreach (var id in toDelete)
+                Delete(id);
+        }
+
+        public void DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
+        {
+            if (numberOfEntriesToDelete < 0)
+                throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
+
+            if (numberOfEntriesToDelete == 0)
+                return;
+
+            var toDelete = new List<long>();
+            var tree = GetTree(index);
+            using (var it = tree.Iterate())
+            {
+                if (it.Seek(value) == false)
+                    return;
+
+                do
+                {
+                    var fst = new FixedSizeTree(_tx.LowLevelTransaction, tree, it.CurrentKey, 0);
+                    using (var fstIt = fst.Iterate())
+                    {
+                        if (fstIt.Seek(long.MinValue) == false)
+                            break;
+
+                        do
+                        {
+                            toDelete.Add(fstIt.CurrentKey);
+                            numberOfEntriesToDelete--;
+                        }
+                        while (numberOfEntriesToDelete > 0 && fstIt.MoveNext());
+                    }
+                }
+                while (numberOfEntriesToDelete > 0 && it.MoveNext());
+            }
+
+            foreach (var id in toDelete)
+                Delete(id);
         }
     }
 }
