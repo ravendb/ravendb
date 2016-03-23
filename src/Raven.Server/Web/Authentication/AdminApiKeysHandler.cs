@@ -32,7 +32,7 @@ namespace Raven.Server.Web.Authentication
 
                 var apiKey = ctx.ReadForDisk(RequestBodyStream(), name[0]);
 
-                //TODO: Validate API Key Structure
+                //TODO: Adi - Validate API Key Structure
 
                 using (var tx = ctx.OpenWriteTransaction())
                 {
@@ -111,11 +111,11 @@ namespace Raven.Server.Web.Authentication
         }
 
 
-        [RavenAction("/admin/stream-apikeys", "GET", "/admin/stream-apikeys", NoAuthorizationRequired = true)]
-        public Task OauthStreamAllGetApiKey()
+        [RavenAction("/admin/stream-apikeys", "GET", "/admin/apikeys/all")]
+        public Task GetAllGetApiKey()
         {
             var start = GetStart();
-            var page = GetPageSize();
+            var pageSize = GetPageSize();
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -127,7 +127,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     writer.WriteStartArray();
                     bool first = true;
-                    foreach (var item in ServerStore.StartingWith(context, Constants.ApiKeyPrefix, start, page))
+                    foreach (var item in ServerStore.StartingWith(context, Constants.ApiKeyPrefix, start, pageSize))
                     {
                         if (first == false)
                             writer.WriteComma();

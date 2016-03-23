@@ -115,9 +115,9 @@ namespace Raven.Client.Connection
             AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteApiKeyAsync(name));
         }
 
-        public IEnumerable<NamedApiKeyDefinition> StreamApiKeys(int page, int start = 0)
+        public IEnumerable<NamedApiKeyDefinition> GetAllApiKeys()
         {
-            return  AsyncHelpers.RunSync(() => asyncAdminServerClient.StreamApiKeys(page, start));
+            return  AsyncHelpers.RunSync(() => asyncAdminServerClient.GetAllApiKeys());
         }
     }
 }

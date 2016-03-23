@@ -212,15 +212,14 @@ namespace Raven.Client.Connection.Async
         }
 
 
-        public async Task<IEnumerable<NamedApiKeyDefinition>> StreamApiKeys(int page, int start = 0,
-           CancellationToken token = default(CancellationToken))
+        public async Task<IEnumerable<NamedApiKeyDefinition>> GetAllApiKeys()
         {
             HttpJsonRequest request = null;
             HttpResponseMessage resp = null;
             Stream stream;
             try
             {
-                request = adminRequest.CreateStreamApiKeysRequest(start, page);
+                request = adminRequest.CreateStreamApiKeysRequest();
                 resp = await request.ExecuteRawResponseAsync();
                 stream = await resp.GetResponseStreamWithHttpDecompression();
                 return YieldResults(stream, request); // stream and request - must be disposed manually when YieldResults finishes

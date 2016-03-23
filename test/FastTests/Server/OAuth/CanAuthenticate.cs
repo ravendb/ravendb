@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -28,6 +29,8 @@ namespace FastTests.Server.OAuth
             }
         };
 
+        //TODO: Adi - test using only client api
+
         [Fact]
         public async Task CanStoreAndDeleteApiKeys()
         {
@@ -42,19 +45,12 @@ namespace FastTests.Server.OAuth
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("shlumper", apiKey);
                 store.DatabaseCommands.GlobalAdmin.DeleteApiKey("shlumper");
 
-                var apiKeysEnum = store.DatabaseCommands.GlobalAdmin.StreamApiKeys(100);
-                var enumerateApiKeys = apiKeysEnum.GetEnumerator();
-                
-                // we expect *d*uper to come before *s*uper
-                Assert.True(enumerateApiKeys.MoveNext());
-                Assert.Equal("duper", enumerateApiKeys.Current.UserName);
-                Assert.False(enumerateApiKeys.Current.Enabled);
-
-                Assert.True(enumerateApiKeys.MoveNext());
-                Assert.Equal("super", enumerateApiKeys.Current.UserName);
-                Assert.True(enumerateApiKeys.Current.Enabled);
-
-                Assert.False(enumerateApiKeys.MoveNext()); // Ensure Deletion
+                var apiKeys = store.DatabaseCommands.GlobalAdmin.GetAllApiKeys().ToList();
+                Assert.Equal(2, apiKeys.Count);
+                Assert.Equal("duper", apiKeys[0].UserName);
+                Assert.False(apiKeys[0].Enabled);
+                Assert.Equal("super", apiKeys[1].UserName);
+                Assert.True(apiKeys[1].Enabled);
             }
         }
 

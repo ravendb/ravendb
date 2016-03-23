@@ -638,7 +638,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Enumarate all existing api keys
         /// </summary>
-        IEnumerable<NamedApiKeyDefinition> StreamApiKeys(int page, int start = 0);
+        IEnumerable<NamedApiKeyDefinition> GetAllApiKeys();
     }
 
     public interface IAdminDatabaseCommands
