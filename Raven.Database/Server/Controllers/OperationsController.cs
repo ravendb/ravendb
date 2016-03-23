@@ -34,15 +34,7 @@ namespace Raven.Database.Server.Controllers
             }
 
             var status = Database.Tasks.GetTaskState(id);
-            if (status == null)
-            {
-                return GetEmptyMessage(HttpStatusCode.NotFound);
-            }
-
-            lock (status.State)
-            {
-                return GetMessageWithObject(status);
-            }
+            return GetOperationStatusMessage(status);
         }
 
         [HttpGet]
@@ -60,15 +52,7 @@ namespace Raven.Database.Server.Controllers
                 }, HttpStatusCode.BadRequest);
             }
             var status = Database.Tasks.KillTask(id);
-            if (status == null)
-            {
-                return GetEmptyMessage(HttpStatusCode.NotFound);
-            }
-
-            lock (status.State)
-            {
-                return GetMessageWithObject(status);
-            }
+            return GetOperationStatusMessage(status);
         }
 
         [HttpGet]
@@ -128,6 +112,24 @@ namespace Raven.Database.Server.Controllers
 
             Database.Documents.Put("Raven/Alerts", null, RavenJObject.FromObject(alerts), jsonDocument.Metadata, null);
             return GetEmptyMessage();
+        }
+
+        private HttpResponseMessage GetOperationStatusMessage(IOperationState status) 
+        {
+            if (status == null)
+            {
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+            }
+
+
+            if (status.State != null)
+            {
+                lock (status.State)
+                {
+                    return GetMessageWithObject(status);
+                }
+            }
+            return GetMessageWithObject(status);
         }
     }
 };
