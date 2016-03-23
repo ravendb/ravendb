@@ -111,7 +111,7 @@ namespace Raven.Server.Web.Authentication
         }
 
 
-        [RavenAction("/admin/stream-apikeys", "GET", "/admin/apikeys/all")]
+        [RavenAction("/admin/apikeys/all", "GET", "/admin/apikeys/all")]
         public Task GetAllGetApiKey()
         {
             var start = GetStart();
