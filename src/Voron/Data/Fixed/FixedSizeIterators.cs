@@ -21,12 +21,6 @@ namespace Voron.Data.Fixed
             bool MoveNext();
             bool MovePrev();
 
-			/// <summary>
-			/// Deletes the current key/value pair and returns true if there is 
-			/// another key after it
-			/// </summary>
-			bool DeleteCurrentAndMoveNext();
-
             ValueReader CreateReaderForCurrent();
 
 	        bool Skip(int count);
@@ -56,12 +50,7 @@ namespace Voron.Data.Fixed
                 return false;
             }
 
-            public bool DeleteCurrentAndMoveNext()
-	        {
-		        throw new InvalidOperationException("Invalid position, cannot read past end of tree");
-	        }
-
-	        public void Dispose()
+            public void Dispose()
             {
             }
 
@@ -82,10 +71,12 @@ namespace Voron.Data.Fixed
             private int _pos;
             private FixedSizeTreeHeader.Embedded* _header;
             private byte* _dataStart;
+            private int _changesAtStart;
 
             public EmbeddedIterator(FixedSizeTree fst)
             {
                 _fst = fst;
+                _changesAtStart = _fst._changes;
                 var ptr = _fst._parent.DirectRead(_fst._treeName);
                 _header = (FixedSizeTreeHeader.Embedded*)ptr;
                 _dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
@@ -132,27 +123,23 @@ namespace Voron.Data.Fixed
 
             public bool MovePrev()
             {
+                AssertNoChanges();
                 return --_pos >= 0;
+            }
+
+            private void AssertNoChanges()
+            {
+                if (_changesAtStart != _fst._changes)
+                    throw new InvalidOperationException();
             }
 
             public bool MoveNext()
             {
+                AssertNoChanges();
                 return ++_pos < _header->NumberOfEntries;
             }
 
-	        public bool DeleteCurrentAndMoveNext()
-	        {
-				var currentKey = CurrentKey;
-		        _fst.RemoveEmbeddedEntry(currentKey);
-				var ptr = _fst._parent.DirectRead(_fst._treeName);
-		        if (ptr == null)
-			        return false;
-		        _header = (FixedSizeTreeHeader.Embedded*)ptr;
-				_dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-				return Seek(currentKey);    
-	        }
-
-	        public ValueReader CreateReaderForCurrent()
+            public ValueReader CreateReaderForCurrent()
             {
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
@@ -174,11 +161,20 @@ namespace Voron.Data.Fixed
         {
             private readonly FixedSizeTree _parent;
             private FixedSizeTreePage _currentPage;
+            private int _changesAtStart;
 
             public LargeIterator(FixedSizeTree parent)
             {
                 _parent = parent;
+                _changesAtStart = _parent._changes;
             }
+
+            private void AssertNoChanges()
+            {
+                if (_changesAtStart != _parent._changes)
+                    throw new InvalidOperationException();
+            }
+
 
             public void Dispose()
             {
@@ -221,6 +217,8 @@ namespace Voron.Data.Fixed
 
             public bool MoveNext()
             {
+                AssertNoChanges();
+
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");
 
@@ -251,6 +249,8 @@ namespace Voron.Data.Fixed
 
             public bool MovePrev()
             {
+                AssertNoChanges();
+
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");
 
@@ -280,23 +280,7 @@ namespace Voron.Data.Fixed
             }
 
 
-            /// <summary>
-            /// Deletes the current key/value pair and returns true if there is 
-            /// another key after it
-            /// </summary>
-            public bool DeleteCurrentAndMoveNext()
-	        {
-				var currentKey = CurrentKey;
-				
-				_parent.RemoveLargeEntry(currentKey);
-				if (_parent._type == RootObjectType.FixedSizeTree)
-				{
-					return Seek(currentKey);
-				}
-				return true;
-	        }
-
-	        public ValueReader CreateReaderForCurrent()
+            public ValueReader CreateReaderForCurrent()
             {
                 if (_currentPage == null)
                     throw new InvalidOperationException("No current page was set");
