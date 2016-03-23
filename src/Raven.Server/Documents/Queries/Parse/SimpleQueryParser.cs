@@ -15,14 +15,14 @@ namespace Raven.Server.Documents.Queries.Parse
 {
     public class SimpleQueryParser
     {
-        private static readonly Analyzer queryAnalyzer = new KeywordAnalyzer();// TODO arek new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer());
+        private static readonly Analyzer QueryAnalyzer = new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer());
 
         public static HashSet<string> GetFields(IndexQuery query)
         {
             var hashSet = new HashSet<string>();
             if (string.IsNullOrWhiteSpace(query.Query))
                 return hashSet;
-            var q = QueryBuilder.BuildQuery(query.Query, query, queryAnalyzer);
+            var q = QueryBuilder.BuildQuery(query.Query, query, QueryAnalyzer);
             PopulateFields(q, hashSet);
             hashSet.Remove(string.Empty);
             return hashSet;
@@ -30,8 +30,7 @@ namespace Raven.Server.Documents.Queries.Parse
 
         private static void PopulateFields(Query query, HashSet<string> fields)
         {
-            if (/* TODO arek query is MatchNoDocsQuery || */
-                query is MatchAllDocsQuery ||
+            if (query is MatchAllDocsQuery ||
                 query is ConstantScoreQuery ||
                 query is CustomScoreQuery)
                 return;

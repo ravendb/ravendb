@@ -163,6 +163,91 @@ namespace FastTests.Voron.RawData
             }
         }
 
+        [Fact]
+        public void ShouldNotReturnMoreIdsThanTotalNumberOfEntriesInSection()
+        {
+            long pageNumber;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                pageNumber = section.PageNumber;
+                tx.Commit();
+            }
+
+            long newId;
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+
+                Assert.True(section.TryAllocate(16, out newId));
+                WriteValue(section, newId, 1.ToString("0000000000000"));
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var ids = section.GetAllIdsInSectionContaining(newId);
+
+                Assert.Equal(section.NumberOfEntries, ids.Count);
+                Assert.Equal(1, ids.Count);
+                Assert.Equal(newId, ids[0]);
+
+                AssertValueMatches(section, newId, 1.ToString("0000000000000"));
+            }
+        }
+
+        [Fact]
+        public void ShouldReturnValidIdsOfEntriesInSectionThatAreReadable()
+        {
+            long pageNumber;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                pageNumber = section.PageNumber;
+                tx.Commit();
+            }
+
+            long idWhichIsGoingToBeDeleted1;
+            long idWhichIsGoingToBeDeleted2;
+            long existingId;
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+
+                Assert.True(section.TryAllocate(2000, out idWhichIsGoingToBeDeleted1));
+                WriteValue(section, idWhichIsGoingToBeDeleted1, 1.ToString("0000000000000"));
+                Assert.True(section.TryAllocate(2000, out idWhichIsGoingToBeDeleted2));
+                WriteValue(section, idWhichIsGoingToBeDeleted2, 2.ToString("0000000000000"));
+                
+                Assert.True(section.TryAllocate(2000, out existingId));
+                WriteValue(section, existingId, 3.ToString("0000000000000"));
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+
+                section.Free(idWhichIsGoingToBeDeleted1);
+                section.Free(idWhichIsGoingToBeDeleted2);
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var ids = section.GetAllIdsInSectionContaining(existingId);
+
+                Assert.Equal(1, ids.Count);
+                Assert.Equal(existingId, ids[0]);
+
+                AssertValueMatches(section, existingId, 3.ToString("0000000000000"));
+            }
+        }
+
         private static void WriteValue(ActiveRawDataSmallSection section, long id, string value)
         {
             var bytes = Encoding.UTF8.GetBytes(value);

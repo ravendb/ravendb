@@ -1,8 +1,6 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Document;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -15,17 +13,8 @@ namespace FastTests.Server.Queries
         [Fact]
         public async Task String_where_clause()
         {
-            DocumentStore store =null;
-            try
+            using (var store = await GetDocumentStore())
             {
-                store = await GetDocumentStore();
-            }
-            catch (Exception ee)
-            {
-                Console.WriteLine(ee.Message);
-            }
-            //using (store)
-            //{
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Fitzchak" });
@@ -33,7 +22,7 @@ namespace FastTests.Server.Queries
 
                     await session.SaveChangesAsync();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name == "Arek").ToList();
@@ -41,7 +30,7 @@ namespace FastTests.Server.Queries
                     Assert.Equal(1, users.Count);
                     Assert.Equal("Arek", users[0].Name);
                 }
-            //}
+            }
         }
 
         [Fact]
@@ -212,7 +201,10 @@ namespace FastTests.Server.Queries
                     Assert.Equal("users/1", users[0].Id);
                     Assert.Equal("users/3", users[1].Id);
 
-                    // TODO arek - get indexes and check that there are two indexes
+                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+
+                    Assert.Equal("Auto/Users/ByNameSortByName", indexes[0].Name);
+                    Assert.Equal("Auto/Users/ByAgeAndNameSortByAgeName", indexes[1].Name);
                 }
             }
         }

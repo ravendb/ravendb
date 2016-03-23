@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = LowLevel_CreateDocumentDatabase())
             {
-                var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -41,7 +41,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Throws<ObjectDisposedException>(() => index.Start());
                 Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
 
-                index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -52,7 +52,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                    index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                     {
                         Name = "Name",
                         Highlighted = false,
@@ -72,13 +72,13 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name1",
                     Highlighted = false,
                     Storage = FieldStorage.No
                 } })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { new IndexField
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name2",
                     Highlighted = false,
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Indexing
                     Storage = FieldStorage.No,
                     SortOption = SortOptions.String
                 };
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name1 })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
                 var name2 = new IndexField
                 {
                     Name = "Name2",
@@ -108,7 +108,7 @@ namespace FastTests.Server.Documents.Indexing
                     Storage = FieldStorage.No,
                     SortOption = SortOptions.NumericDefault
                 };
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoIndexDefinition("Users", new[] { name2 })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 })));
 
                 var index2 = database.IndexStore.GetIndex(2);
                 index2.SetLock(IndexLockMode.LockedError);
@@ -164,7 +164,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             var index1 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
             var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -172,7 +172,7 @@ namespace FastTests.Server.Documents.Indexing
 
             var index2 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
             var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -213,7 +213,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             var index1 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
             var path1 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index1.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -221,7 +221,7 @@ namespace FastTests.Server.Documents.Indexing
 
             var index2 =
                 database.IndexStore.CreateIndex(
-                    new AutoIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                    new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
             var path2 = Path.Combine(database.Configuration.Indexing.IndexStoragePath, index2.ToString());
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -261,7 +261,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             using (var database = LowLevel_CreateDocumentDatabase())
             {
-                using (var index = AutoMapIndex.CreateNew(1, new AutoIndexDefinition("Users", new[] { new IndexField
+                using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
                     Highlighted = false,
@@ -298,6 +298,7 @@ namespace FastTests.Server.Documents.Indexing
 
                             tx.Commit();
                         }
+
                         var batchStats = new IndexingBatchStats();
                         index.DoIndexingWork(batchStats, CancellationToken.None);
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
@@ -380,7 +381,7 @@ namespace FastTests.Server.Documents.Indexing
 
                         batchStats = new IndexingBatchStats();
                         index.DoIndexingWork(batchStats, CancellationToken.None);
-                        Assert.Equal(4, index.GetLastTombstoneEtagsForDebug().Values.Min());
+                        Assert.Equal(4, index.GetLastProcessedDocumentTombstonesPerCollection().Values.Min());
                         Assert.Equal(0, batchStats.IndexingAttempts);
                         Assert.Equal(0, batchStats.IndexingSuccesses);
                         Assert.Equal(0, batchStats.IndexingErrors);
@@ -417,7 +418,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var index = AutoMapIndex.CreateNew(
                     1,
-                    new AutoIndexDefinition(
+                    new AutoMapIndexDefinition(
                         "Users",
                         new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
                     database))
@@ -449,7 +450,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var index = AutoMapIndex.CreateNew(
                     1,
-                    new AutoIndexDefinition(
+                    new AutoMapIndexDefinition(
                         "Users",
                         new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
                     database))
@@ -482,10 +483,54 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
+        [Fact]
+        public void IndexCreationOptions()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+
+                var indexId1 = database.IndexStore.CreateIndex(definition1);
+                var indexId2 = database.IndexStore.CreateIndex(definition2);
+
+                Assert.Equal(indexId1, indexId2);
+                Assert.Equal(1, database.IndexStore.GetIndexes().Count());
+
+                var definition3 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.Yes } });
+
+                var indexId3 = database.IndexStore.CreateIndex(definition3);
+
+                Assert.NotEqual(indexId1, indexId3);
+                Assert.Null(database.IndexStore.GetIndex(indexId1));
+                Assert.Equal(1, database.IndexStore.GetIndexes().Count());
+            }
+        }
+
+        [Fact]
+        public void LockMode()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+
+                var indexId1 = database.IndexStore.CreateIndex(definition1);
+                var index1 = database.IndexStore.GetIndex(indexId1);
+                index1.SetLock(IndexLockMode.LockedIgnore);
+
+                var indexId2 = database.IndexStore.CreateIndex(definition2);
+                Assert.Equal(indexId1, indexId2);
+                Assert.Equal(1, database.IndexStore.GetIndexes().Count());
+
+                index1.SetLock(IndexLockMode.LockedError);
+                Assert.Throws<InvalidOperationException>(() => database.IndexStore.CreateIndex(definition2));
+            }
+        }
+
         private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
-
     }
 }

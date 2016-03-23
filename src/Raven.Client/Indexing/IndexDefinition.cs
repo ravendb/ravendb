@@ -3,15 +3,18 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
-using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Indexing
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
+using Raven.Client.Data.Indexes;
+using Raven.Imports.Newtonsoft.Json;
+
+namespace Raven.Client.Indexing
 {
     /// <summary>
     /// A definition of a RavenIndex
@@ -42,25 +45,6 @@ namespace Raven.Abstractions.Indexing
         public int? IndexVersion { get; set; }
 
         /// <summary>
-        /// Index map function, if there is only one
-        /// </summary>
-        /// <remarks>
-        /// This property only exists for backward compatibility purposes
-        /// </remarks>
-        public string Map
-        {
-            get { return Maps.FirstOrDefault(); }
-            set
-            {
-                if (Maps.Count != 0)
-                {
-                    Maps.Remove(Maps.First());
-                }
-                Maps.Add(value);
-            }
-        }
-
-        /// <summary>
         /// All the map functions for this index
         /// </summary>
         public HashSet<string> Maps
@@ -74,120 +58,10 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         public string Reduce { get; set; }
 
-        /// <summary>
-        /// Gets a value indicating whether this instance is map reduce index definition
-        /// </summary>
-        /// <value>
-        /// 	<c>true</c> if this instance is map reduce; otherwise, <c>false</c>.
-        /// </value>
-        public bool IsMapReduce
+        public Dictionary<string, IndexFieldOptions> Fields
         {
-            get { return string.IsNullOrEmpty(Reduce) == false; }
-        }
-
-        /// <summary>
-        /// Internal use only.
-        /// </summary>
-        public bool IsCompiled { get; set; }
-
-        /// <summary>
-        /// Index field storage settings.
-        /// </summary>
-        public IDictionary<string, FieldStorage> Stores
-        {
-            get { return stores ?? (stores = new Dictionary<string, FieldStorage>()); }
-            set { stores = value; }
-        }
-
-        /// <summary>
-        /// Index field indexing settings.
-        /// </summary>
-        public IDictionary<string, FieldIndexing> Indexes
-        {
-            get { return indexes ?? (indexes = new Dictionary<string, FieldIndexing>()); }
-            set { indexes = value; }
-        }
-
-        /// <summary>
-        /// Index field sorting settings.
-        /// </summary>
-        public IDictionary<string, SortOptions> SortOptions
-        {
-            get { return sortOptions ?? (sortOptions = new Dictionary<string, SortOptions>()); }
-            set { sortOptions = value; }
-        }
-
-        /// <summary>
-        /// Index field analyzer settings.
-        /// </summary>
-        public IDictionary<string, string> Analyzers
-        {
-            get { return analyzers ?? (analyzers = new Dictionary<string, string>()); }
-            set { analyzers = value; }
-        }
-
-        /// <summary>
-        /// List of queryable fields in index.
-        /// </summary>
-        public IList<string> Fields
-        {
-            get { return fields ?? (fields = new List<string>()); }
+            get { return fields ?? (fields = new Dictionary<string, IndexFieldOptions>()); }
             set { fields = value; }
-        }
-
-        /// <summary>
-        /// Index field suggestion settings.
-        /// </summary>
-        [Obsolete("Use SuggestionsOptions")]
-        public IReadOnlyDictionary<string, SuggestionOptions> Suggestions
-        {
-            get
-            {
-                if (SuggestionsOptions == null || SuggestionsOptions.Count == 0)
-                    return null;
-
-                return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions());
-            }
-            set
-            {
-                if (value == null)
-                    return;
-                SuggestionsOptions = value.Keys.ToHashSet();
-            }
-        }
-
-        public ISet<string> SuggestionsOptions
-        {
-            get { return suggestionsOptions ?? (suggestionsOptions = new HashSet<string>()); }
-            set { suggestionsOptions = value; }
-        }
-
-        /// <summary>
-        /// Index field term vector settings.
-        /// </summary>
-        public IDictionary<string, FieldTermVector> TermVectors
-        {
-            get { return termVectors ?? (termVectors = new Dictionary<string, FieldTermVector>()); }
-            set { termVectors = value; }
-        }
-
-        /// <summary>
-        /// Index field spatial settings.
-        /// </summary>
-        public IDictionary<string, SpatialOptions> SpatialIndexes
-        {
-            get { return spatialIndexes ?? (spatialIndexes = new Dictionary<string, SpatialOptions>()); }
-            set { spatialIndexes = value; }
-        }
-
-        /// <summary>
-        /// Internal map of field names to expressions generating them
-        /// Only relevant for auto indexes and only used internally
-        /// </summary>
-        public IDictionary<string, string> InternalFieldsMapping
-        {
-            get { return internalFieldsMapping ?? (internalFieldsMapping = new Dictionary<string, string>()); }
-            set { internalFieldsMapping = value; }
         }
 
         /// <summary>
@@ -205,7 +79,6 @@ namespace Raven.Abstractions.Indexing
         /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
         /// <param name="ignoreFormatting">Comparision ignores formatting in both of the definitions</param>
         /// <param name="ignoreMaxIndexOutput">Comparision ignores MaxIndexOutputsPerDocument</param>
-        /// <returns></returns>
         public bool Equals(IndexDefinition other, bool compareIndexIds = true, bool ignoreFormatting = false, bool ignoreMaxIndexOutput = false)
         {
             if (ReferenceEquals(null, other))
@@ -228,15 +101,9 @@ namespace Raven.Abstractions.Indexing
                 mapsReduceEquals = Maps.SequenceEqual(other.Maps) && Equals(other.Reduce, Reduce);
             }
 
-            return mapsReduceEquals &&
-                    (ignoreMaxIndexOutput || other.MaxIndexOutputsPerDocument == MaxIndexOutputsPerDocument) &&
-                    DictionaryExtensions.ContentEquals(other.Stores, Stores) &&
-                    DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
-                    DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
-                    DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
-                    SetExtensions.ContentEquals(other.SuggestionsOptions, SuggestionsOptions) &&
-                    DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
-                    DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
+            return mapsReduceEquals
+                   && (ignoreMaxIndexOutput || other.MaxIndexOutputsPerDocument == MaxIndexOutputsPerDocument)
+                   && DictionaryExtensions.ContentEquals(other.Fields, Fields);
         }
 
         private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
@@ -246,16 +113,6 @@ namespace Raven.Abstractions.Indexing
             {
                 result = (result * 397) ^ kvp.Key.GetHashCode();
                 result = (result * 397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
-            }
-            return result;
-        }
-
-        private static int SetHashCode<TKey>(IEnumerable<TKey> x)
-        {
-            int result = 0;
-            foreach (var kvp in x)
-            {
-                result = (result * 397) ^ kvp.GetHashCode();
             }
             return result;
         }
@@ -281,23 +138,7 @@ namespace Raven.Abstractions.Indexing
         [JsonIgnore]
         private HashSet<string> maps;
         [JsonIgnore]
-        private IDictionary<string, FieldStorage> stores;
-        [JsonIgnore]
-        private IDictionary<string, FieldIndexing> indexes;
-        [JsonIgnore]
-        private IDictionary<string, SortOptions> sortOptions;
-        [JsonIgnore]
-        private IDictionary<string, string> analyzers;
-        [JsonIgnore]
-        private IList<string> fields;
-        [JsonIgnore]
-        private IDictionary<string, FieldTermVector> termVectors;
-        [JsonIgnore]
-        private IDictionary<string, SpatialOptions> spatialIndexes;
-        [JsonIgnore]
-        private IDictionary<string, string> internalFieldsMapping;
-        [JsonIgnore]
-        private ISet<string> suggestionsOptions;
+        private Dictionary<string, IndexFieldOptions> fields;
 
         /// <summary>
         /// Provide a cached version of the index hash code, which is used when generating
@@ -327,37 +168,13 @@ namespace Raven.Abstractions.Indexing
             {
                 int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
                 result = (result * 397) ^ Maps.Count;
-                result = (result * 397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
-                result = (result * 397) ^ DictionaryHashCode(Stores);
-                result = (result * 397) ^ DictionaryHashCode(Indexes);
-                result = (result * 397) ^ DictionaryHashCode(Analyzers);
-                result = (result * 397) ^ DictionaryHashCode(SortOptions);
-                result = (result * 397) ^ SetHashCode(SuggestionsOptions);
-                result = (result * 397) ^ DictionaryHashCode(TermVectors);
-                result = (result * 397) ^ DictionaryHashCode(SpatialIndexes);
+                result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
+                result = (result * 397) ^ DictionaryHashCode(Fields);
                 return result;
             }
         }
 
-        public string Type
-        {
-            get
-            {
-                var name = Name ?? string.Empty;
-                if (name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
-                    return "Auto";
-                if (IsCompiled)
-                    return "Compiled";
-                if (IsMapReduce)
-                    return "MapReduce";
-                return "Map";
-            }
-        }
-
-        /// <summary>
-        /// Prevent index from being kept in memory. Default: false
-        /// </summary>
-        public bool DisableInMemoryIndexing { get; set; }
+        public IndexType Type { get; set; }
 
         /// <summary>
         /// Whatever this is a temporary test only index
@@ -374,32 +191,55 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         public void RemoveDefaultValues()
         {
-            const FieldStorage defaultStorage = FieldStorage.No;
-            foreach (var toRemove in Stores.Where(x => x.Value == defaultStorage).ToArray())
+            var toRemove = new List<string>();
+            foreach (var kvp in Fields)
             {
-                Stores.Remove(toRemove);
+                var allDefault = true;
+                var field = kvp.Value;
+
+                if (field.Storage == FieldStorage.No)
+                    field.Storage = null;
+                else
+                    allDefault = false;
+
+                if (field.Indexing == FieldIndexing.Default)
+                    field.Indexing = null;
+                else
+                    allDefault = false;
+
+                if (string.IsNullOrWhiteSpace(field.Analyzer))
+                    field.Analyzer = null;
+                else
+                    allDefault = false;
+
+                if (field.Sort == SortOptions.None)
+                    field.Sort = null;
+                else
+                    allDefault = false;
+
+                if (field.TermVector == FieldTermVector.No)
+                    field.TermVector = null;
+                else
+                    allDefault = false;
+
+                if (field.Suggestions == false)
+                    field.Suggestions = null;
+                else
+                    allDefault = false;
+
+                allDefault = allDefault && (field.Spatial == null);
+
+                if (allDefault)
+                    toRemove.Add(kvp.Key);
             }
-            foreach (var toRemove in Indexes.Where(x => x.Value == FieldIndexing.Default).ToArray())
-            {
-                Indexes.Remove(toRemove);
-            }
-            foreach (var toRemove in SortOptions.Where(x => x.Value == Indexing.SortOptions.None).ToArray())
-            {
-                SortOptions.Remove(toRemove);
-            }
-            foreach (var toRemove in Analyzers.Where(x => string.IsNullOrEmpty(x.Value)).ToArray())
-            {
-                Analyzers.Remove(toRemove);
-            }
-            foreach (var toRemove in TermVectors.Where(x => x.Value == FieldTermVector.No).ToArray())
-            {
-                TermVectors.Remove(toRemove);
-            }
+
+            foreach (var key in toRemove)
+                Fields.Remove(key);
         }
 
         public override string ToString()
         {
-            return Name ?? Map;
+            return Name;
         }
     }
 }

@@ -23,13 +23,13 @@ namespace FastTests.Server.Queries
                 Storage = FieldStorage.No
             } };
 
-            Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition(null, null));
-            Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition("test", null));
-            Assert.Throws<ArgumentNullException>(() => new AutoIndexDefinition(null, fields));
+            Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition(null, null));
+            Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition("test", null));
+            Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition(null, fields));
 
-            Assert.Throws<ArgumentException>(() => new AutoIndexDefinition("test", new IndexField[0]));
+            Assert.Throws<ArgumentException>(() => new AutoMapIndexDefinition("test", new IndexField[0]));
 
-            new AutoIndexDefinition("test", fields);
+            new AutoMapIndexDefinition("test", fields);
         }
 
         [Fact]

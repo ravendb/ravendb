@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 
 namespace Raven.Client.Indexes
 {
@@ -538,39 +539,43 @@ namespace Raven.Client.Indexes
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexes = SpatialIndexes,
                 SpatialIndexesStrings = SpatialIndexesStrings,
-                DisableInMemoryIndexing = DisableInMemoryIndexing,
                 MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
             }.ToIndexDefinition(Conventions);
 
             var fields = Map.Body.Type.GenericTypeArguments.First().GetProperties();
             foreach (var field in fields)
             {
-                if (indexDefinition.SortOptions.ContainsKey(field.Name))
+                IndexFieldOptions options;
+                if (indexDefinition.Fields.TryGetValue(field.Name, out options) == false)
+                    indexDefinition.Fields[field.Name] = options = new IndexFieldOptions();
+
+                if (options.Sort.HasValue)
                     continue;
+
                 var fieldType = field.PropertyType;
                 if (fieldType == typeof(int))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
+                    options.Sort = SortOptions.NumericDefault;
                 }
                 else if (fieldType == typeof(long))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
+                    options.Sort = SortOptions.NumericDefault;
                 }
                 else if (fieldType == typeof(short))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
+                    options.Sort = SortOptions.NumericDefault;
                 }
                 else if (fieldType == typeof(decimal))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
+                    options.Sort = SortOptions.NumericDefault;
                 }
                 else if (fieldType == typeof(double))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
+                    options.Sort = SortOptions.NumericDefault;
                 }
                 else if (fieldType == typeof(float))
                 {
-                    indexDefinition.SortOptions.Add(field.Name, SortOptions.NumericDefault);
+                    options.Sort = SortOptions.NumericDefault;
                 }
             }
 

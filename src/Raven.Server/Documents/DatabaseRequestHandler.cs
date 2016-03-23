@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
-
+using System.Threading;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 
@@ -67,6 +69,11 @@ namespace Raven.Server.Documents
             }
 
             writer.WriteEndArray();
+        }
+
+        protected OperationCancelToken CreateTimeLimitedOperationToken()
+        {
+            return new OperationCancelToken(Database.Configuration.Core.DatabaseOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
         }
     }
 }

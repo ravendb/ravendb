@@ -29,7 +29,7 @@ namespace Raven.Client.Indexes
             IndexSuggestions = new HashSet<Expression<Func<TReduceResult, object>>>();
             TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
-            SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>(); 
+            SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
         }
 
@@ -107,7 +107,6 @@ namespace Raven.Client.Indexes
         /// </summary>
         protected IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
 
-
         /// <summary>
         /// Indexing options
         /// </summary>
@@ -118,13 +117,6 @@ namespace Raven.Client.Indexes
         /// </summary>
         protected IDictionary<string, FieldIndexing> IndexesStrings { get; set; }
 
-        /// <summary>
-        /// Prevent index from being kept in memory. Default: false
-        /// </summary>
-        public bool DisableInMemoryIndexing { get; set; }
-
-
-    
         /// <summary>
         /// Register a field to be indexed
         /// </summary>

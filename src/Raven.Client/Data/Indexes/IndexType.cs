@@ -3,6 +3,7 @@
     public enum IndexType
     {
         AutoMap,
+        AutoMapReduce,
         Map,
         MapReduce
     }

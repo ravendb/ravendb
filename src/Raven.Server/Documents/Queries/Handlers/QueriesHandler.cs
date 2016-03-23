@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -17,34 +18,28 @@ namespace Raven.Server.Documents.Queries.Handlers
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
             var query = GetIndexQuery();
 
-            //TODO arek - cancellation token
-
             DocumentsOperationContext context;
+            using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
 
-                var result = runner.ExecuteQuery(indexName, query);
+                var result = runner.ExecuteQuery(indexName, query, token.Cancel);
 
                 HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                HttpContext.Response.Headers["ETag"] = "1"; // TODO arek
+                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
-                    WriteDocuments(context, writer, result.Results);
+                    writer.WritePropertyName(context.GetLazyString("IndexName"));
+                    writer.WriteString(context.GetLazyString(result.IndexName));
 
                     writer.WriteComma();
 
-                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
-                    //WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
-
-                    //writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString("IsStale"));
-                    writer.WriteBool(result.IsStale);
+                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
+                    WriteDocuments(context, writer, result.Results);
 
                     writer.WriteComma();
 
@@ -53,8 +48,28 @@ namespace Raven.Server.Documents.Queries.Handlers
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("IndexName"));
-                    writer.WriteString(context.GetLazyString(result.IndexName));
+                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
+                    //WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
+
+                    //writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("IndexTimestamp"));
+                    writer.WriteString(context.GetLazyString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("LastQueryTime"));
+                    writer.WriteString(context.GetLazyString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite)));
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("IsStale"));
+                    writer.WriteBool(result.IsStale);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("ResultEtag"));
+                    writer.WriteInteger(result.ResultEtag);
 
                     writer.WriteEndObject();
                     writer.Flush();

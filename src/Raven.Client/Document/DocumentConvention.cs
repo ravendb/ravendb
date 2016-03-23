@@ -69,7 +69,6 @@ namespace Raven.Client.Document
             PrettifyGeneratedLinqExpressions = true;
             DisableProfiling = true;
             UseParallelMultiGet = true;
-            DefaultQueryingConsistency = ConsistencyOptions.None;
             FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
             ShouldCacheRequest = url => true;
             FindIdentityProperty = q => q.Name == "Id";
@@ -229,13 +228,6 @@ namespace Raven.Client.Document
         /// This is NOT recommended and provided for backward compatibility purposes only.
         /// </summary>
         public bool AllowQueriesOnId { get; set; }
-
-        /// <summary>
-        /// The consistency options used when querying the database by default
-        /// Note that this option impact only queries, since we have Strong Consistency model for the documents
-        /// </summary>
-        public ConsistencyOptions DefaultQueryingConsistency { get; set; }
-
 
         /// <summary>
         /// Whether UseOptimisticConcurrency is set to true by default for all opened sessions
@@ -827,35 +819,5 @@ namespace Raven.Client.Document
     {
         Equality,
         Range
-    }
-
-    /// <summary>
-    /// The consistency options for all queries, fore more details about the consistency options, see:
-    /// http://www.allthingsdistributed.com/2008/12/eventually_consistent.html
-    /// 
-    /// Note that this option impact only queries, since we have Strong Consistency model for the documents
-    /// </summary>
-    public enum ConsistencyOptions
-    {
-        /// <summary>
-        /// Ensures that after querying an index at time T, you will never see the results
-        /// of the index at a time prior to T.
-        /// This is ensured by the server, and require no action from the client
-        /// </summary>
-        None,
-        /// <summary>
-        ///  After updating a documents, will only accept queries which already indexed the updated value.
-        /// </summary>
-        AlwaysWaitForNonStaleResultsAsOfLastWrite,
-        /// <summary>
-        /// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead
-        /// </summary>
-        [Obsolete("Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead")]
-        QueryYourWrites = AlwaysWaitForNonStaleResultsAsOfLastWrite,
-        /// <summary>
-        /// Use None, instead
-        /// </summary>
-        [Obsolete("Use None, instead")]
-        MonotonicRead = None
     }
 }

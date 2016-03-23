@@ -768,5 +768,24 @@ namespace Raven.Server.Documents
                 Count = collectionTable.NumberOfEntries
             };
         }
+
+        public void DeleteTombstonesBefore(string collection, long etag, Transaction transaction)
+        {
+            Table table;
+            try
+            {
+                table = new Table(_tombstonesSchema, "#" + collection, transaction);
+            }
+            catch (InvalidDataException)
+            {
+                // TODO [ppekrol] how to handle missing collection?
+                return;
+            }
+
+            foreach (var result in table.SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag))
+            {
+                table.Delete(result.Id);
+            }
+        }
     }
 }

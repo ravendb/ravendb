@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoIndexDefinition : IndexDefinitionBase
+    public class AutoMapIndexDefinition : IndexDefinitionBase
     {
-        public AutoIndexDefinition(string collection, IndexField[] fields)
+        public AutoMapIndexDefinition(string collection, IndexField[] fields)
             : base(FindIndexName(collection, fields), new[] { collection }, IndexLockMode.Unlock, fields)
         {
             if (string.IsNullOrEmpty(collection))
@@ -97,9 +98,39 @@ namespace Raven.Server.Documents.Indexes.Auto
             }
         }
 
-        public static AutoIndexDefinition Load(StorageEnvironment environment)
+        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
         {
-            using (var pool = new UnmanagedBuffersPool(nameof(AutoIndexDefinition)))
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Name},Sort:{x.SortOption},Highlight:{x.Highlighted}>"))}]";
+            indexDefinition.Maps.Add(map);
+        }
+
+        public override bool Equals(IndexDefinitionBase other, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        {
+            var otherDefinition = other as AutoMapIndexDefinition;
+            if (otherDefinition == null)
+                return false;
+
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            if (CountOfMapFields != otherDefinition.CountOfMapFields)
+                return false;
+
+            if (Collections.SequenceEqual(otherDefinition.Collections) == false)
+                return false;
+
+            if (MapFields.SequenceEqual(otherDefinition.MapFields) == false)
+                return false;
+
+            return true;
+        }
+
+        public static AutoMapIndexDefinition Load(StorageEnvironment environment)
+        {
+            using (var pool = new UnmanagedBuffersPool(nameof(AutoMapIndexDefinition)))
             using (var context = new MemoryOperationContext(pool))
             using (var tx = environment.ReadTransaction())
             {
@@ -146,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                         fields[i] = field;
                     }
 
-                    return new AutoIndexDefinition(collection, fields)
+                    return new AutoMapIndexDefinition(collection, fields)
                     {
                         LockMode = (IndexLockMode)lockModeAsInt
                     };
