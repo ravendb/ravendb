@@ -626,6 +626,18 @@ namespace Raven.Client.Connection
         /// <param name="name">User Name</param>
         /// <returns></returns>
         ApiKeyDefinition GetApiKey(string name);
+
+        /// <summary>
+        /// Delete existing api key
+        /// </summary>
+        /// <param name="name">User Name</param>
+        /// <returns></returns>
+        void DeleteApiKey(string name);
+
+        /// <summary>
+        /// Enumarate all existing api keys
+        /// </summary>
+        IEnumerable<NamedApiKeyDefinition> StreamApiKeys(int page, int start = 0);
     }
 
     public interface IAdminDatabaseCommands

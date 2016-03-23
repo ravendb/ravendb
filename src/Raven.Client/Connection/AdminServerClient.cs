@@ -4,7 +4,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Data;
@@ -104,6 +108,16 @@ namespace Raven.Client.Connection
         public void PutApiKey(string name, ApiKeyDefinition apiKeyData)
         {
             AsyncHelpers.RunSync(() => asyncAdminServerClient.PutApiKeyAsync(name, apiKeyData));
+        }
+
+        public void DeleteApiKey(string name)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteApiKeyAsync(name));
+        }
+
+        public IEnumerable<NamedApiKeyDefinition> StreamApiKeys(int page, int start = 0)
+        {
+            return  AsyncHelpers.RunSync(() => asyncAdminServerClient.StreamApiKeys(page, start));
         }
     }
 }

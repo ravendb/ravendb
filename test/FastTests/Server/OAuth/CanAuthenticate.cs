@@ -18,66 +18,95 @@ namespace FastTests.Server.OAuth
 {
     public class CanAuthenticate : RavenTestBase
     {
+        private ApiKeyDefinition apiKey = new ApiKeyDefinition
+        {
+            Enabled = true,
+            Secret = "secret",
+            ResourcesAccessMode =
+            {
+                ["testDbName"] = AccessModes.Admin
+            }
+        };
+
+        [Fact]
+        public async Task CanStoreAndDeleteApiKeys()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
+                var doc = store.DatabaseCommands.GlobalAdmin.GetApiKey("super");
+                Assert.NotNull(doc);
+
+                apiKey.Enabled = false;
+                store.DatabaseCommands.GlobalAdmin.PutApiKey("duper", apiKey);
+                store.DatabaseCommands.GlobalAdmin.PutApiKey("shlumper", apiKey);
+                store.DatabaseCommands.GlobalAdmin.DeleteApiKey("shlumper");
+
+                var apiKeysEnum = store.DatabaseCommands.GlobalAdmin.StreamApiKeys(100);
+                var enumerateApiKeys = apiKeysEnum.GetEnumerator();
+                
+                // we expect *d*uper to come before *s*uper
+                Assert.True(enumerateApiKeys.MoveNext());
+                Assert.Equal("duper", enumerateApiKeys.Current.UserName);
+                Assert.False(enumerateApiKeys.Current.Enabled);
+
+                Assert.True(enumerateApiKeys.MoveNext());
+                Assert.Equal("super", enumerateApiKeys.Current.UserName);
+                Assert.True(enumerateApiKeys.Current.Enabled);
+
+                Assert.False(enumerateApiKeys.MoveNext()); // Ensure Deletion
+            }
+        }
+
         [NonLinuxFact]
         public async Task CanGetTokenFromServer()
         {
             using (var store = await GetDocumentStore())
             {
-                var apiKey = new ApiKeyDefinition
-                {
-                    Enabled = true,
-                    Secret = "secret",
-                    ResourcesAccessMode =
-                    {
-                        ["testDbName"] =AccessModes.Admin
-                    }
-                };
+                StoreSampleDoc(store, "test/1");
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new
-                    {
-                        Name = "test oauth"
-                    }, 
-                    "test/1");
-                    session.SaveChanges();
-                }
-
+                // Should get PreconditionFailed on Get without token
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
-
                 var client = new HttpClient();
                 var result = await client.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
-
                 Assert.Equal(HttpStatusCode.PreconditionFailed, result.StatusCode);
 
+                // Should throw on DoOAuthRequestAsync with unknown apiKey
                 var securedAuthenticator = new SecuredAuthenticator();
                 var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                     await securedAuthenticator.DoOAuthRequestAsync(store.Url + "/oauth/api-key", "super/secret"));
-
                 Assert.Contains("Could not find api key: super", exception.Message);
 
-
+                // Admin should be able to save apiKey
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
                 var doc = store.DatabaseCommands.GlobalAdmin.GetApiKey("super");
-
                 Assert.NotNull(doc);
 
-                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-
-
+                // Should get token
+                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
                 var oauth = await securedAuthenticator.DoOAuthRequestAsync(store.Url + "/oauth/api-key", "super/secret");
-
                 Assert.NotNull(securedAuthenticator.CurrentToken);
                 Assert.NotEqual("", securedAuthenticator.CurrentToken);
 
+                // Verify successfull get with valid token
                 var authenticatedClient = new HttpClient();
                 oauth(authenticatedClient);
-
                 result = await client.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
-
                 Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            }
+        }
+
+        private static void StoreSampleDoc(Raven.Client.Document.DocumentStore store, string docName)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new
+                {
+                    Name = "test oauth"
+                },
+                docName);
+                session.SaveChanges();
             }
         }
     }
