@@ -11,6 +11,7 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -69,6 +70,7 @@ namespace Raven.Tests.Core
             configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
             configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
             configuration.Storage.AllowOn32Bits = true;
+            configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 

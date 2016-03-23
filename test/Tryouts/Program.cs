@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
+using FastTests.Server.OAuth;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
@@ -24,8 +25,8 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new BasicIndexing())
-                    x.Errors();
+                using (var x = new CanAuthenticate())
+                    x.CanStoreAndDeleteApiKeys().Wait();
             }
         }
 
