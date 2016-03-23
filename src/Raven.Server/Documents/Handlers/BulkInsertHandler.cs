@@ -60,6 +60,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         }
                         buffer.Add(doc);
+                        int queueSize = 0;
                         while (true)
                         {
                             try
@@ -71,7 +72,11 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 break;// need to still process the current buffer
                             }
+                            queueSize += doc.Size;
                             buffer.Add(doc);
+                            if (queueSize >= 1024*1024 * 8) //todo configurable?
+                                                            //probably this value needs to be adjusted
+                                break;
                         }
                         if(Log.IsDebugEnabled)
                             Log.Debug($"Starting bulk insert batch with {buffer.Count} documents");

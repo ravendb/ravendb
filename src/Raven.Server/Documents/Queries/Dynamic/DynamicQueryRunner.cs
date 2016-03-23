@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
-using Microsoft.AspNet.Server.Kestrel.Networking;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -16,11 +14,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private readonly IndexStore _indexStore;
         private readonly DocumentsOperationContext _context;
         private readonly DocumentsStorage _documents;
+        private CancellationToken _token;
 
-        public DynamicQueryRunner(IndexStore indexStore, DocumentsStorage documents, DocumentsOperationContext context)
+        public DynamicQueryRunner(IndexStore indexStore, DocumentsStorage documents, DocumentsOperationContext context, CancellationToken token)
         {
             _indexStore = indexStore;
             _context = context;
+            _token = token;
             _documents = documents;
         }
 
@@ -36,7 +36,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var result = new DocumentQueryResult
                 {
                     IndexName = collection,
-                    IsStale = false
+                    IsStale = false,
+                    ResultEtag = Environment.TickCount,
+                    LastQueryTime = DateTime.MinValue,
+                    IndexTimestamp = DateTime.MinValue
                 };
 
                 _context.OpenReadTransaction();
@@ -47,6 +50,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 foreach (var document in _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize))
                 {
+                    _token.ThrowIfCancellationRequested();
+
                     result.Results.Add(document);
                 }
 
@@ -78,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             while (true)
             {
-                var result = index.Query(query, _context, CancellationToken.None); // TODO arek
+                var result = index.Query(query, _context, _token);
 
                 if (newAutoIndex == false ||
                     result.IsStale == false ||

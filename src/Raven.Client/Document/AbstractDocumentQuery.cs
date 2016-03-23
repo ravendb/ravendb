@@ -325,11 +325,6 @@ namespace Raven.Client.Document
             {
                 _defaultTimeout = defaultTimeout;
             }
-
-            if (conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
-            {
-                WaitForNonStaleResultsAsOfLastWrite();
-            }
         }
 
         private void UpdateStatsAndHighlightings(QueryResult queryResult)

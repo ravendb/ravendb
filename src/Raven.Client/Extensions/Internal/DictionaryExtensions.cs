@@ -41,6 +41,17 @@ namespace Raven.Abstractions.Extensions
             }
             
             return true;
-        } 
+        }
+
+        public static int GetDictionaryHashCode<TKey, TValue>(this IDictionary<TKey, TValue> self)
+        {
+            int result = 0;
+            foreach (var kvp in self)
+            {
+                result = (result * 397) ^ kvp.Key.GetHashCode();
+                result = (result * 397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
+            }
+            return result;
+        }
     }
 }

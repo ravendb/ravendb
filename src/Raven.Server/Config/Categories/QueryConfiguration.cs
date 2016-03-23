@@ -13,13 +13,15 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(true)] //Defaults to use our own implementation of the Lucene query parser
         [ConfigurationEntry("Raven/Query/UseLuceneASTParser")]
         [ConfigurationEntry("Raven/UseLuceneASTParser")]
-        public bool UseLuceneASTParser {
+        public bool UseLuceneASTParser
+        {
             get { return useLuceneASTParser; }
             set
             {
                 useLuceneASTParser = value;
                 Documents.Queries.QueryBuilder.UseLuceneASTParser = value;
-            } }
+            }
+        }
 
         private bool useLuceneASTParser = true;
     }

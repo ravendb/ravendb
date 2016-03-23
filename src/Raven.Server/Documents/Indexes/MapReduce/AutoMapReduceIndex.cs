@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             DocumentDatabase documentDatabase)
         {
             throw new NotImplementedException();
-            //var definition = AutoIndexDefinition.Load(environment);
+            //var definition = AutoMapIndexDefinition.Load(environment);
             //var instance = new AutoMapReduceIndex(indexId, definition);
             //instance.Initialize(environment, documentDatabase);
 

@@ -73,7 +73,8 @@ namespace Voron.Platform.Posix
 
         protected override PagerState AllocateMorePages(long newLength)
         {
-            ThrowObjectDisposedIfNeeded();
+            if (Disposed)
+                ThrowAlreadyDisposedException();
 
             var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
@@ -139,7 +140,11 @@ namespace Voron.Platform.Posix
 
         public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
         {
-            ThrowObjectDisposedIfNeeded();
+            if (Disposed)
+                ThrowAlreadyDisposedException();
+            if (pageNumber > NumberOfAllocatedPages)
+                ThrowOnInvalidPageNumber(pageNumber);
+
             return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
         }
 

@@ -24,6 +24,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection

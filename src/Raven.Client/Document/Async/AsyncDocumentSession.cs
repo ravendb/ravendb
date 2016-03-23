@@ -407,8 +407,7 @@ namespace Raven.Client.Document.Async
         {
             var ravenQueryInspector = ((IRavenQueryInspector)query);
             var indexQuery = ravenQueryInspector.GetIndexQuery(true);
-            bool waitForNonStaleResultsWasSetGloably = this.Advanced.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite;
-            if (!waitForNonStaleResultsWasSetGloably && (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow))
+            if (indexQuery.WaitForNonStaleResults || indexQuery.WaitForNonStaleResultsAsOfNow)
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 

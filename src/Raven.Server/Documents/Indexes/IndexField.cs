@@ -29,5 +29,46 @@ namespace Raven.Server.Documents.Indexes
         {
             Indexing = FieldIndexing.Default;
         }
+
+        protected bool Equals(IndexField other)
+        {
+            return string.Equals(Name, other.Name)
+                && SortOption == other.SortOption
+                && Highlighted == other.Highlighted
+                && MapReduceOperation == other.MapReduceOperation
+                && Storage == other.Storage
+                && Indexing == other.Indexing;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+            {
+                return false;
+            }
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+            if (obj.GetType() != GetType())
+            {
+                return false;
+            }
+            return Equals((IndexField)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Name?.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ SortOption.GetHashCode();
+                hashCode = (hashCode * 397) ^ Highlighted.GetHashCode();
+                hashCode = (hashCode * 397) ^ (int)MapReduceOperation;
+                hashCode = (hashCode * 397) ^ (int)Storage;
+                hashCode = (hashCode * 397) ^ (int)Indexing;
+                return hashCode;
+            }
+        }
     }
 }

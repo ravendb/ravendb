@@ -3,10 +3,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
-using Raven.Abstractions.Extensions;
+
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-using Raven.Server.Utils;
+
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 
 namespace Raven.Server.Config
@@ -54,6 +54,8 @@ namespace Raven.Server.Config
 
         public QuotasBundleConfiguration Quotas { get; }
 
+        public TombstoneConfiguration Tombstones { get; }
+
         protected IConfigurationRoot Settings { get; set; }
 
         public RavenConfiguration()
@@ -81,6 +83,7 @@ namespace Raven.Server.Config
             Databases = new DatabaseConfiguration();
             Licensing = new LicenseConfiguration();
             Quotas = new QuotasBundleConfiguration();
+            Tombstones = new TombstoneConfiguration();
         }
 
         public string DatabaseName { get; set; }
@@ -105,6 +108,7 @@ namespace Raven.Server.Config
             Databases.Initialize(Settings);
             Licensing.Initialize(Settings);
             Quotas.Initialize(Settings);
+            Tombstones.Initialize(Settings);
 
             PostInit();
 
