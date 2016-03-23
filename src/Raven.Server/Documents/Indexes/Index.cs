@@ -166,7 +166,6 @@ namespace Raven.Server.Documents.Indexes
                     : StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, IndexId.ToString()));
 
                 options.SchemaVersion = 1;
-                options.ManualFlushing = true;
                 try
                 {
                     Initialize(new StorageEnvironment(options), documentDatabase);
