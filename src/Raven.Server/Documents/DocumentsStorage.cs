@@ -782,10 +782,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            foreach (var result in table.SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag))
-            {
-                table.Delete(result.Id);
-            }
+            table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
         }
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)

@@ -639,17 +639,8 @@ namespace Raven.Server.Documents.Indexes
             if (table.NumberOfEntries <= MaxNumberOfKeptErrors)
                 return;
 
-            var take = table.NumberOfEntries - MaxNumberOfKeptErrors;
-            foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys))
-            {
-                foreach (var tvr in sr.Results)
-                {
-                    if (take-- <= 0)
-                        return;
-
-                    table.Delete(tvr.Id);
-                }
-            }
+            var numberOfEntriesToDelete = table.NumberOfEntries - MaxNumberOfKeptErrors;
+            table.DeleteForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys, numberOfEntriesToDelete);
         }
 
         public unsafe void SetPriority(IndexingPriority priority)
