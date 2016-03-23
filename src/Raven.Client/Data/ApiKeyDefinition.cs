@@ -20,4 +20,9 @@ namespace Raven.Client.Data
         ReadWrite,
         Admin
     }
+
+    public class NamedApiKeyDefinition : ApiKeyDefinition
+    {
+        public string UserName;
+    }
 }

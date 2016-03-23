@@ -55,7 +55,6 @@ namespace Raven.Client.OAuth
 
         public async Task<Action<HttpClient>> DoOAuthRequestAsync(string url, string apiKey)
         {
-            var sp = Stopwatch.StartNew();
             ThrowIfBadUrlOrApiKey(url, apiKey);
             uri = new Uri(url.Replace("http://", "ws://").Replace("https://", "wss://"));
 
