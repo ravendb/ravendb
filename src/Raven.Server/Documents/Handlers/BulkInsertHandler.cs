@@ -28,6 +28,7 @@ namespace Raven.Server.Documents.Handlers
     public class BulkInsertHandler : DatabaseRequestHandler
     {
         private readonly BlockingCollection<BlittableJsonReaderObject> _docs;		
+        private readonly ConcurrentQueue<BlittableJsonReaderObject> _toBeFreed = new ConcurrentQueue<BlittableJsonReaderObject>(); 
 
         public enum ResponseMessageType
         {
@@ -101,6 +102,7 @@ namespace Raven.Server.Documents.Handlers
                                     throw new InvalidDataException(message);
                                 }
                                 Database.DocumentsStorage.Put(context, docKey, null, reader);
+                                _toBeFreed.Enqueue(reader);
                             }
                             tx.Commit();
                         }
@@ -120,7 +122,7 @@ namespace Raven.Server.Documents.Handlers
 
         private DateTime SendHeartbeatIfNecessary(DateTime lastHeartbeat)
         {
-            if ((SystemTime.UtcNow - lastHeartbeat).TotalSeconds >= 15)
+            if ((SystemTime.UtcNow - lastHeartbeat).TotalSeconds >= 3)
             {
                 _webSocket.SendAsync(HeartbeatMessage, WebSocketMessageType.Text, false,
                     Database.DatabaseShutdown)
@@ -160,6 +162,12 @@ namespace Raven.Server.Documents.Handlers
 
                         while (true)
                         {
+                            BlittableJsonReaderObject docToFree;
+                            while (_toBeFreed.TryDequeue(out docToFree))
+                            {
+                                docToFree.Dispose();
+                            }
+
                             const string bulkInsertDocumentDebugTag = "bulk/insert/document";
                             var doc = new BlittableJsonDocumentBuilder(context,
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk,
@@ -168,28 +176,24 @@ namespace Raven.Server.Documents.Handlers
                             doc.ReadObject();
                             while (doc.Read() == false) //received partial document
                             {
-                                if(_webSocket.State != WebSocketState.Open)
-                                    break;
+                                if (_webSocket.State != WebSocketState.Open)
+                                    throw new EndOfStreamException();
                                 result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
                                 parser.SetBuffer(new ArraySegment<byte>(buffer.Array, buffer.Offset,
                                     result.Count));
                             }
-
-                            if (_webSocket.State == WebSocketState.Open)
+                            doc.FinalizeDocument();
+                            count++;
+                            var reader = doc.CreateReader();
+                            try
                             {
-                                doc.FinalizeDocument();
-                                count++;
-                                var reader = doc.CreateReader();
-                                try
-                                {
-                                    _docs.Add(reader);
-                                }
-                                catch (InvalidOperationException)
-                                {
-                                    // error in actual insert, abort
-                                    // actual handling is done below
-                                    break;
-                                }
+                                _docs.Add(reader);
+                            }
+                            catch (InvalidOperationException)
+                            {
+                                // error in actual insert, abort
+                                // actual handling is done below
+                                break;
                             }
                             if (result.EndOfMessage)
                                 break;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -19,7 +20,7 @@ namespace Tryouts
 
             using (var store = new DocumentStore
             {
-                Url = "http://localhost:8081",
+                Url = "http://127.0.0.1:8081",
                 DefaultDatabase = "FooBar123"
             })
             {
@@ -34,15 +35,15 @@ namespace Tryouts
                     }
                 });
 
-                BulkInsert(store, 1024 * 512).Wait();
+                BulkInsert(store, 1024 * 1024 * 10).Wait();
             }
         }
 
         public static async Task BulkInsert(DocumentStore store, int numOfItems)
         {
+            var sp = Stopwatch.StartNew();
             using (var bulkInsert = store.BulkInsert())
             {
-                Console.Write("Doing bulk-insert...");
                 int id = 1;
                 for (int i = 0; i < numOfItems; i++)
                     await bulkInsert.StoreAsync(new User
@@ -50,10 +51,8 @@ namespace Tryouts
                         FirstName = $"First Name - {i}",
                         LastName = $"Last Name - {i}"
                     }, $"users/{id++}");
-                Console.WriteLine("done");
-                Console.Write("Closing bulk-insert...");
             }
-            Console.WriteLine("done");
+            Console.WriteLine(sp.ElapsedMilliseconds);
         }
     }
 }
