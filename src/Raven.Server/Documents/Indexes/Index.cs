@@ -81,6 +81,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
+        private readonly object _lastPersistedQueryingTimeLocker = new object();
+
         private CancellationTokenSource _cancellationTokenSource;
 
         protected DocumentDatabase DocumentDatabase;
@@ -847,7 +849,7 @@ namespace Raven.Server.Documents.Indexes
             if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
                 return;
 
-            lock (_locker)
+            lock (_lastPersistedQueryingTimeLocker)
             {
                 if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
                     return;
