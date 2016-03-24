@@ -64,9 +64,9 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _databaseShutdown.Cancel();
+            IndexStore?.Dispose();
 
             DocumentsStorage?.Dispose();
-            IndexStore?.Dispose();
         }
 
         public void RunIdleOperations()

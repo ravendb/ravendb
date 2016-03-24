@@ -93,12 +93,12 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            Environment?.Dispose();
-            Environment = null;
             _unmanagedBuffersPool?.Dispose();
             _unmanagedBuffersPool = null;
             ContextPool?.Dispose();
             ContextPool = null;
+            Environment?.Dispose();
+            Environment = null;
         }
 
         public void Initialize()
