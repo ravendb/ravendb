@@ -849,7 +849,10 @@ namespace Raven.Server.Documents.Indexes
             if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
                 return;
 
-            lock (_lastPersistedQueryingTimeLocker)
+            if (Monitor.TryEnter(_lastPersistedQueryingTimeLocker) == false)
+                return;
+
+            try
             {
                 if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
                     return;
@@ -867,6 +870,10 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 _lastPersistedQueryingTime = lastQueryingTime;
+            }
+            finally
+            {
+                Monitor.Exit(_lastPersistedQueryingTimeLocker);
             }
         }
 
