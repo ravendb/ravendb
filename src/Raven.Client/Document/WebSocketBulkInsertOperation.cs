@@ -53,9 +53,11 @@ namespace Raven.Client.Document
             do
             {
                 result = await connection.ReceiveAsync(new ArraySegment<byte>(closeBuffer), cts.Token);
-                msg = Encoding.UTF8.GetString(closeBuffer, 0, result.Count);
+                if (result.MessageType != WebSocketMessageType.Text)
+                    break;
+                 msg = Encoding.UTF8.GetString(closeBuffer, 0, result.Count);
             }
-            while (result.MessageType == WebSocketMessageType.Text && msg.Equals("comitted"));
+            while (msg == "Heartbeat");
 
             if (result.MessageType != WebSocketMessageType.Close)
             {

@@ -40,8 +40,10 @@ namespace Raven.Server.Documents.Handlers
             _docs = new BlockingCollection<BlittableJsonReaderObject>(512);
         }
 
-        private static readonly ArraySegment<byte> heartbeatMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("comitted"));
-        private WebSocket webSocket;
+        private static readonly ArraySegment<byte> HeartbeatMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("Heartbeat"));
+
+        private WebSocket _webSocket;
+
         public void InsertDocuments()
         {
             var lastHeartbeat = SystemTime.UtcNow;
@@ -101,8 +103,8 @@ namespace Raven.Server.Documents.Handlers
                                 Database.DocumentsStorage.Put(context, docKey, null, reader);
                             }
                             tx.Commit();
-                            lastHeartbeat = SendHeartbeatIfNecessary(lastHeartbeat);
                         }
+                        lastHeartbeat = SendHeartbeatIfNecessary(lastHeartbeat);
                         if (Log.IsDebugEnabled)
                             Log.Debug($"Completed bulk insert batch with {buffer.Count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
 
@@ -120,8 +122,14 @@ namespace Raven.Server.Documents.Handlers
         {
             if ((SystemTime.UtcNow - lastHeartbeat).TotalSeconds >= 15)
             {
-                webSocket.SendAsync(heartbeatMessage, WebSocketMessageType.Text, false,
-                    Database.DatabaseShutdown);
+                _webSocket.SendAsync(HeartbeatMessage, WebSocketMessageType.Text, false,
+                    Database.DatabaseShutdown)
+                    .ContinueWith(t =>
+                    {
+                        // ignore the exception, we don't care here
+                        // this just force us to call the Exception property, thereby consuming the exception
+                        GC.KeepAlive(t.Exception);
+                    },TaskContinuationOptions.OnlyOnFaulted);
                 lastHeartbeat = SystemTime.UtcNow;
             }
 
@@ -132,7 +140,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task BulkInsert()
         {
             DocumentsOperationContext context;
-            using (webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            using (_webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             using (ContextPool.AllocateOperationContext(out context))
             {
                 Log.Debug("Starting bulk insert operation");
@@ -146,7 +154,7 @@ namespace Raven.Server.Documents.Handlers
                     const string bulkInsertDebugTag = "bulk/insert";
                     using (var parser = new UnmanagedJsonParser(context, state, bulkInsertDebugTag))
                     {
-                        var result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                        var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
                         parser.SetBuffer(new ArraySegment<byte>(buffer.Array, buffer.Offset,
                             result.Count));
 
@@ -160,14 +168,14 @@ namespace Raven.Server.Documents.Handlers
                             doc.ReadObject();
                             while (doc.Read() == false) //received partial document
                             {
-                                if(webSocket.State != WebSocketState.Open)
+                                if(_webSocket.State != WebSocketState.Open)
                                     break;
-                                result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                                result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
                                 parser.SetBuffer(new ArraySegment<byte>(buffer.Array, buffer.Offset,
                                     result.Count));
                             }
 
-                            if (webSocket.State == WebSocketState.Open)
+                            if (_webSocket.State == WebSocketState.Open)
                             {
                                 doc.FinalizeDocument();
                                 count++;
@@ -191,14 +199,14 @@ namespace Raven.Server.Documents.Handlers
                     await task;
                     var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
                     Log.Debug(msg);
-                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg, CancellationToken.None);
+                    await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg, CancellationToken.None);
                 }
                 catch (Exception e)
                 {
                     _docs.CompleteAdding();
                     try
                     {
-                        await webSocket.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
+                        await _webSocket.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
                             e.ToString(), Database.DatabaseShutdown);
                     }
                     catch (Exception)
