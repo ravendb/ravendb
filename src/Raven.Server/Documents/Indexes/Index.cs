@@ -235,15 +235,15 @@ namespace Raven.Server.Documents.Indexes
                 var lastQueryingTime = statsTree.Read(Schema.LastQueryingTimeSlice);
                 if (lastQueryingTime == null)
                 {
-                    var isIdleAutoIndex = Priority == IndexingPriority.Idle && (Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce);
-                    if (isIdleAutoIndex)
+                    var isAutoIndex = Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce;
+                    if (isAutoIndex)
                         MarkQueried(SystemTime.UtcNow);
                 }
                 else
                 {
                     var lastQuery = DateTime.FromBinary(lastQueryingTime.Reader.ReadLittleEndianInt64());
-                    var isIdleAutoIndex = Priority == IndexingPriority.Idle && (Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce);
-                    if (isIdleAutoIndex && SystemTime.UtcNow - lastQuery > DocumentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsAbandoned.AsTimeSpan)
+                    var isAutoIndex = Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce;
+                    if (isAutoIndex)
                         MarkQueried(SystemTime.UtcNow);
                     else
                         MarkQueried(lastQuery);
@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.Indexes
 
             writeErrors = Interlocked.Increment(ref writeErrors);
 
-            if (Priority == IndexingPriority.Error || Interlocked.Read(ref writeErrors) < WriteErrorsLimit)
+            if (Priority.HasFlag(IndexingPriority.Error) || Interlocked.Read(ref writeErrors) < WriteErrorsLimit)
                 return;
 
             SetPriority(IndexingPriority.Error);
@@ -697,25 +697,19 @@ namespace Raven.Server.Documents.Indexes
                     tx.Commit();
                 }
 
+                var oldPriority = Priority;
                 Priority = priority;
 
                 var notificationType = IndexChangeTypes.None;
 
-                switch (priority)
-                {
-                    case IndexingPriority.Abandoned:
-                        notificationType = IndexChangeTypes.IndexDemotedToAbandoned;
-                        break;
-                    case IndexingPriority.Disabled:
-                        notificationType = IndexChangeTypes.IndexDemotedToDisabled;
-                        break;
-                    case IndexingPriority.Error:
-                        notificationType = IndexChangeTypes.IndexMarkedAsErrored;
-                        break;
-                    case IndexingPriority.Idle:
-                        notificationType = IndexChangeTypes.IndexDemotedToIdle;
-                        break;
-                }
+                if (priority.HasFlag(IndexingPriority.Disabled))
+                    notificationType = IndexChangeTypes.IndexDemotedToDisabled;
+                else if (priority.HasFlag(IndexingPriority.Error))
+                    notificationType = IndexChangeTypes.IndexMarkedAsErrored;
+                else if (priority.HasFlag(IndexingPriority.Idle))
+                    notificationType = IndexChangeTypes.IndexDemotedToIdle;
+                else if (priority.HasFlag(IndexingPriority.Normal) && oldPriority.HasFlag(IndexingPriority.Idle))
+                    notificationType = IndexChangeTypes.IndexPromotedFromIdle;
 
                 if (notificationType != IndexChangeTypes.None)
                 {
@@ -829,6 +823,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
+
+            if (Priority.HasFlag(IndexingPriority.Idle) && Priority.HasFlag(IndexingPriority.Forced) == false)
+                SetPriority(IndexingPriority.Normal);
 
             MarkQueried(SystemTime.UtcNow);
 

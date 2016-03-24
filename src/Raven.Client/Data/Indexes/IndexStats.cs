@@ -117,8 +117,6 @@ namespace Raven.Client.Data.Indexes
 
         Idle = 4,
 
-        Abandoned = 8,
-
         Error = 16,
 
         Forced = 512,

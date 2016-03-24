@@ -462,7 +462,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     stats.AddWriteError(new IndexWriteException());
                     stats.AddAnalyzerError(new IndexAnalyzerException());
-                    
+
                     index.UpdateStats(SystemTime.UtcNow, stats);
 
                     var errors = index.GetErrors();
@@ -481,6 +481,83 @@ namespace FastTests.Server.Documents.Indexing
                     errors = index.GetErrors();
                     Assert.Equal(Index.MaxNumberOfKeptErrors, errors.Count);
                 }
+            }
+        }
+
+        [Fact]
+        public void AutoIndexesShouldBeMarkedAsIdleAndDeleted()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                var index0Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Job", Highlighted = false, Storage = FieldStorage.No } }));
+                var index0 = database.IndexStore.GetIndex(index0Id);
+
+                index0.SetPriority(IndexingPriority.Idle);
+
+                database.IndexStore.RunIdleOperations(); // young idle index should be removed
+
+                index0 = database.IndexStore.GetIndex(index0Id);
+                Assert.Null(index0);
+
+                var index1Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }));
+                var index2Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Age", Highlighted = false, Storage = FieldStorage.No } }));
+
+                var index1 = database.IndexStore.GetIndex(index1Id);
+                var index2 = database.IndexStore.GetIndex(index2Id);
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                {
+                    index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    context.Reset();
+                    index2.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                }
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Normal, index2.Priority);
+
+                database.IndexStore.RunIdleOperations(); // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Normal, index2.Priority);
+
+                SystemTime.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                {
+                    index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                }
+
+                database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Idle, index2.Priority);
+
+                var now = SystemTime.UtcNow;
+                SystemTime.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+
+                database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Idle, index2.Priority);
+
+                now = SystemTime.UtcNow;
+                SystemTime.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan);
+
+                database.IndexStore.RunIdleOperations(); // this will delete index2
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Null(index2);
             }
         }
 

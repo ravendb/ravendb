@@ -8,7 +8,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Utils;
 
@@ -353,87 +352,65 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
-            SetUnusedAutoIndexesToIdle();
+            HandleUnusedAutoIndexes();
             //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
         }
 
-        private void SetUnusedAutoIndexesToIdle()
+        private void HandleUnusedAutoIndexes()
         {
             var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
-            var timeToWaitBeforeMarkingAutoIndexAsAbandoned = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsAbandoned;
+            var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
+            var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
 
-            var autoIndexesSortedByLastQueryTime = (from index in _indexes
-                                                    where index.Type == IndexType.AutoMap || index.Type == IndexType.AutoMapReduce
-                                                    where index.Priority != IndexingPriority.Disabled || index.Priority != IndexingPriority.Error || index.Priority != IndexingPriority.Forced
-                                                    let stats = index.GetStats()
-                                                    let lastQueryingTime = stats.LastQueryingTime ?? DateTime.MinValue
-                                                    orderby lastQueryingTime
-                                                    select new UnusedIndexState
-                                                    {
-                                                        LastQueryingTime = lastQueryingTime,
-                                                        Index = index,
-                                                        Priority = stats.Priority,
-                                                        CreationDate = stats.CreatedTimestamp
-                                                    }).ToList();
+            var indexesSortedByLastQueryTime = (from index in _indexes
+                                                where index.Priority.HasFlag(IndexingPriority.Disabled) == false && index.Priority.HasFlag(IndexingPriority.Error) == false && index.Priority.HasFlag(IndexingPriority.Forced) == false
+                                                let stats = index.GetStats()
+                                                let lastQueryingTime = stats.LastQueryingTime ?? DateTime.MinValue
+                                                orderby lastQueryingTime
+                                                select new UnusedIndexState
+                                                {
+                                                    LastQueryingTime = lastQueryingTime,
+                                                    Index = index,
+                                                    Priority = stats.Priority,
+                                                    CreationDate = stats.CreatedTimestamp
+                                                }).ToList();
 
-            for (var i = 0; i < autoIndexesSortedByLastQueryTime.Count; i++)
+            for (var i = 0; i < indexesSortedByLastQueryTime.Count; i++)
             {
-                var item = autoIndexesSortedByLastQueryTime[i];
+                var item = indexesSortedByLastQueryTime[i];
+
+                if (item.Index.Type != IndexType.AutoMap && item.Index.Type != IndexType.AutoMapReduce)
+                    continue;
+
                 var age = SystemTime.UtcNow - item.CreationDate;
                 var lastQuery = SystemTime.UtcNow - item.LastQueryingTime;
 
-                switch (item.Priority)
+                if (item.Priority.HasFlag(IndexingPriority.Normal))
                 {
-                    case IndexingPriority.Normal:
-                        if (age < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
-                            HandleActiveAutoIndex(item.Index, age, lastQuery, timeToWaitBeforeMarkingAutoIndexAsIdle);
-                        else if (i < autoIndexesSortedByLastQueryTime.Count - 1)
-                        {
-                            // If it's a fairly established query then we need to determine whether there is any activity currently
-                            // If there is activity and this has not been queried against 'recently' it needs idling
+                    TimeSpan differenceBetweenNewestAndCurrentQueryingTime;
+                    if (i < indexesSortedByLastQueryTime.Count - 1)
+                    {
+                        var lastItem = indexesSortedByLastQueryTime[indexesSortedByLastQueryTime.Count - 1];
+                        differenceBetweenNewestAndCurrentQueryingTime = lastItem.LastQueryingTime - item.LastQueryingTime;
+                    }
+                    else
+                        differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
 
-                            var nextItem = autoIndexesSortedByLastQueryTime[i + 1];
-                            if (nextItem.LastQueryingTime - item.LastQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
-                                item.Index.SetPriority(IndexingPriority.Idle);
-                        }
+                    if (differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                    {
+                        if (lastQuery > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                            item.Index.SetPriority(IndexingPriority.Idle);
+                    }
 
-                        continue;
-                    case IndexingPriority.Idle:
-                        HandleIdleAutoIndex(item.Index, age, lastQuery, timeToWaitBeforeMarkingAutoIndexAsAbandoned);
-                        break;
+                    continue;
+                }
+
+                if (item.Priority.HasFlag(IndexingPriority.Idle))
+                {
+                    if (age < ageThreshold || lastQuery > timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                        DeleteIndex(item.Index.IndexId);
                 }
             }
-        }
-
-        private static void HandleActiveAutoIndex(Index index, TimeSpan age, TimeSpan lastQuery, TimeSetting timeToWaitBeforeMarkingAutoIndexAsIdle)
-        {
-            var timeToWaitForIdle = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.TotalMinutes;
-
-            if (age.TotalMinutes < timeToWaitForIdle * 2.5 && lastQuery.TotalMinutes < 1.5 * timeToWaitForIdle)
-                return;
-
-            if (age.TotalMinutes < timeToWaitForIdle * 6 && lastQuery.TotalMinutes < 2.5 * timeToWaitForIdle)
-                return;
-
-            index.SetPriority(IndexingPriority.Idle);
-        }
-
-        private void HandleIdleAutoIndex(Index index, TimeSpan age, TimeSpan lastQuery, TimeSetting timeToWaitBeforeMarkingAutoIndexAsAbandoned)
-        {
-            // relatively young index, haven't been queried for a while already
-            // can be safely removed, probably
-            if (age.TotalMinutes < 90 && lastQuery.TotalMinutes > 30)
-            {
-                DeleteIndex(index.IndexId);
-                return;
-            }
-
-            if (lastQuery < timeToWaitBeforeMarkingAutoIndexAsAbandoned.AsTimeSpan)
-                return;
-
-            // old enough, and haven't been queried for a while, mark it as abandoned
-
-            index.SetPriority(IndexingPriority.Abandoned);
         }
 
         private class UnusedIndexState
