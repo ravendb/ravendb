@@ -14,7 +14,7 @@ namespace Voron.Data.Fixed
     {
         public interface IFixedSizeIterator : IDisposable
         {
-	        bool SeekToLast();
+            bool SeekToLast();
             bool Seek(long key);
             long CurrentKey { get; }
             Slice Value { get; }
@@ -23,17 +23,17 @@ namespace Voron.Data.Fixed
 
             ValueReader CreateReaderForCurrent();
 
-	        bool Skip(int count);
+            bool Skip(int count);
         }
 
         public class NullIterator : IFixedSizeIterator
         {
-	        public bool SeekToLast()
-	        {
-		        return false;
-	        }
+            public bool SeekToLast()
+            {
+                return false;
+            }
 
-	        public bool Seek(long key)
+            public bool Seek(long key)
             {
                 return false;
             }
@@ -59,10 +59,10 @@ namespace Voron.Data.Fixed
                 throw new InvalidOperationException("No current page");
             }
 
-	        public bool Skip(int count)
-	        {
-				return false;
-	        }
+            public bool Skip(int count)
+            {
+                return false;
+            }
         }
 
         public class EmbeddedIterator : IFixedSizeIterator
@@ -82,21 +82,21 @@ namespace Voron.Data.Fixed
                 _dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
             }
 
-	        public bool SeekToLast()
-	        {
-				if (_header == null)
-					return false;
-		        _pos = _header->NumberOfEntries - 1;
-		        return true;
-	        }
-
-			public bool Seek(long key)
+            public bool SeekToLast()
             {
-	            if (_header == null)
-		            return false;
-	            _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
-				if (_fst._lastMatch > 0)
-					_pos++; // We didn't find the key.
+                if (_header == null)
+                    return false;
+                _pos = _header->NumberOfEntries - 1;
+                return true;
+            }
+
+            public bool Seek(long key)
+            {
+                if (_header == null)
+                    return false;
+                _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
+                if (_fst._lastMatch > 0)
+                    _pos++; // We didn't find the key.
                 return _pos != _header->NumberOfEntries;
             }
 
@@ -144,15 +144,15 @@ namespace Voron.Data.Fixed
                 return new ValueReader(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
             }
 
-	        public bool Skip(int count)
-	        {
-				if (count != 0)
-					_pos += count;
+            public bool Skip(int count)
+            {
+                if (count != 0)
+                    _pos += count;
 
-				return _pos < _header->NumberOfEntries;
-	        }
+                return _pos < _header->NumberOfEntries;
+            }
 
-	        public void Dispose()
+            public void Dispose()
             {
             }
         }
@@ -184,16 +184,16 @@ namespace Voron.Data.Fixed
             public bool Seek(long key)
             {
                 _currentPage = _parent.FindPageFor(key);
-	            return _currentPage.LastMatch <= 0 || MoveNext();
+                return _currentPage.LastMatch <= 0 || MoveNext();
             }
 
-	        public bool SeekToLast()
-	        {
-				_currentPage = _parent.FindPageFor(long.MaxValue);
-		        return true;
-	        }
+            public bool SeekToLast()
+            {
+                _currentPage = _parent.FindPageFor(long.MaxValue);
+                return true;
+            }
 
-			public long CurrentKey
+            public long CurrentKey
             {
                 get
                 {
@@ -288,22 +288,22 @@ namespace Voron.Data.Fixed
                 return new ValueReader(_currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
             }
 
-	        public bool Skip(int count)
-	        {
-				if (count != 0)
-				{
-					for (int i = 0; i < Math.Abs(count); i++)
-					{
-						if (!MoveNext())
-							break;
-					}
-				}
+            public bool Skip(int count)
+            {
+                if (count != 0)
+                {
+                    for (int i = 0; i < Math.Abs(count); i++)
+                    {
+                        if (!MoveNext())
+                            break;
+                    }
+                }
 
-				var seek = _currentPage != null && _currentPage.LastSearchPosition != _currentPage.NumberOfEntries;
-				if (seek == false)
-					_currentPage = null;
-				return seek;
-	        }
+                var seek = _currentPage != null && _currentPage.LastSearchPosition != _currentPage.NumberOfEntries;
+                if (seek == false)
+                    _currentPage = null;
+                return seek;
+            }
         }
     }
 }

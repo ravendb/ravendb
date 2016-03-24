@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Indexes.Persistance.Lucene;
@@ -39,8 +40,11 @@ namespace Raven.Server.Documents.Handlers
             _docs = new BlockingCollection<BlittableJsonReaderObject>(512);
         }
 
+        private static readonly ArraySegment<byte> heartbeatMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("comitted"));
+        private WebSocket webSocket;
         public void InsertDocuments()
         {
+            var lastHeartbeat = SystemTime.UtcNow;
             try
             {
                 var buffer = new List<BlittableJsonReaderObject>(_docs.BoundedCapacity);
@@ -97,6 +101,7 @@ namespace Raven.Server.Documents.Handlers
                                 Database.DocumentsStorage.Put(context, docKey, null, reader);
                             }
                             tx.Commit();
+                            lastHeartbeat = SendHeartbeatIfNecessary(lastHeartbeat);
                         }
                         if (Log.IsDebugEnabled)
                             Log.Debug($"Completed bulk insert batch with {buffer.Count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
@@ -111,11 +116,23 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private DateTime SendHeartbeatIfNecessary(DateTime lastHeartbeat)
+        {
+            if ((SystemTime.UtcNow - lastHeartbeat).TotalSeconds >= 15)
+            {
+                webSocket.SendAsync(heartbeatMessage, WebSocketMessageType.Text, false,
+                    Database.DatabaseShutdown);
+                lastHeartbeat = SystemTime.UtcNow;
+            }
+
+            return lastHeartbeat;
+        }
+
         [RavenAction("/databases/*/bulkInsert", "GET", "/databases/{databaseName:string}/bulkInsert")]
         public async Task BulkInsert()
         {
             DocumentsOperationContext context;
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            using (webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             using (ContextPool.AllocateOperationContext(out context))
             {
                 Log.Debug("Starting bulk insert operation");
