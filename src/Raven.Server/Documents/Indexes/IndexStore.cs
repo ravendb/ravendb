@@ -352,6 +352,9 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
+            foreach (var index in _indexes)
+                index.MaybePersistQueryingTime();
+
             HandleUnusedAutoIndexes();
             //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
         }

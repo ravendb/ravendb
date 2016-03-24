@@ -67,6 +67,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly TableSchema _errorsSchema = new TableSchema();
 
+        private static readonly TimeSpan LastQueryingTimePersitenceThreshold = TimeSpan.FromMinutes(10);
+
         private long writeErrors;
 
         private const long WriteErrorsLimit = 10;
@@ -97,7 +99,9 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
-        private DateTime? _lastQueryingTime; // TODO [ppekrol] do we need to persist this?
+        private DateTime? _lastQueryingTime;
+
+        private DateTime? _lastPersistedQueryingTime;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -222,7 +226,7 @@ namespace Raven.Server.Documents.Indexes
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
+            using (var tx = context.OpenReadTransaction())
             {
                 var statsTree = tx.InnerTransaction.CreateTree(Schema.StatsTree);
 
@@ -237,16 +241,18 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var isAutoIndex = Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce;
                     if (isAutoIndex)
-                        MarkQueried(SystemTime.UtcNow);
+                        _lastQueryingTime = SystemTime.UtcNow;
                 }
                 else
                 {
                     var lastQuery = DateTime.FromBinary(lastQueryingTime.Reader.ReadLittleEndianInt64());
+                    _lastPersistedQueryingTime = lastQuery;
+
                     var isAutoIndex = Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce;
                     if (isAutoIndex)
-                        MarkQueried(SystemTime.UtcNow);
+                        _lastQueryingTime = SystemTime.UtcNow; // to prevent auto indexes from cleanup
                     else
-                        MarkQueried(lastQuery);
+                        _lastQueryingTime = lastQuery;
                 }
             }
         }
@@ -366,6 +372,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected HashSet<string> Collections;
 
+        private volatile bool _indexingInProgress;
+
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             foreach (var collection in Collections)
@@ -469,6 +477,8 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
+                        _indexingInProgress = true;
+
                         if (Log.IsDebugEnabled)
                             Log.Debug($"Starting indexing for '{Name} ({IndexId})'.'");
 
@@ -522,6 +532,17 @@ namespace Raven.Server.Documents.Indexes
                         catch (Exception e)
                         {
                             Log.ErrorException($"Could not update stats for '{Name} ({IndexId})'.", e);
+                        }
+
+                        _indexingInProgress = false;
+
+                        try
+                        {
+                            MaybePersistQueryingTime();
+                        }
+                        catch (Exception e)
+                        {
+                            Log.ErrorException($"Could not update last querying time for '{Name} ({IndexId})'.", e);
                         }
 
                         try
@@ -812,6 +833,39 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _lastQueryingTime = time;
+        }
+
+        public unsafe void MaybePersistQueryingTime()
+        {
+            if (_indexingInProgress)
+                return;
+
+            var lastQueryingTime = _lastQueryingTime;
+            if (lastQueryingTime.HasValue == false)
+                return;
+
+            if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
+                return;
+
+            lock (_locker)
+            {
+                if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
+                    return;
+
+                TransactionOperationContext context;
+                using (_contextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
+
+                    var binaryDate = lastQueryingTime.Value.ToBinary();
+                    statsTree.Add(Schema.LastQueryingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
+
+                    tx.Commit();
+                }
+
+                _lastPersistedQueryingTime = lastQueryingTime;
+            }
         }
 
         public IndexDefinition GetIndexDefinition()
