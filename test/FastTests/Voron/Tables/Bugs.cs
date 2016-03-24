@@ -1,4 +1,6 @@
-﻿using Voron;
+﻿using System.Collections.Generic;
+
+using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
 using Xunit;
@@ -35,13 +37,15 @@ namespace FastTests.Voron.Tables
                 {
                     var docs = new Table(DocsSchema, "docs", tx);
 
+                    var ids = new List<long>();
                     foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], Slice.BeforeAllKeys))
                     {
                         foreach (var tvr in sr.Results)
-                        {
-                            docs.Delete(tvr.Id);
-                        }
+                            ids.Add(tvr.Id);
                     }
+
+                    foreach (var id in ids)
+                        docs.Delete(id);
 
                     tx.Commit();
                 }

@@ -323,7 +323,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(2, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
-                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
@@ -368,7 +368,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
-                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
@@ -403,7 +403,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
-                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
                     }
