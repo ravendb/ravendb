@@ -178,12 +178,17 @@ namespace Raven.Tests.Core
                 }
             }
 
+            string[] copy = new string[0];
             if (_localServer != null)
             {
                 if (Interlocked.Decrement(ref _currentServerUsages) > 0)
                     return;
                 lock (ServerLocker)
                 {
+                    if (Interlocked.CompareExchange(ref _currentServerUsages, 0, 0) != 0)
+                        return;
+
+                    copy = PathsToDelete.ToArray();
                     try
                     {
                         _globalServer.Dispose();
@@ -199,7 +204,6 @@ namespace Raven.Tests.Core
 
             GC.Collect(2);
             GC.WaitForPendingFinalizers();
-            var copy = PathsToDelete.ToArray();
             foreach (var pathToDelete in copy)
             {
                 PathsToDelete.TryRemove(pathToDelete);

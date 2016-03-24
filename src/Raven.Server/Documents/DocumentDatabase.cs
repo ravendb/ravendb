@@ -38,15 +38,15 @@ namespace Raven.Server.Documents
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
-        public DocumentsStorage DocumentsStorage { get; }
+        public DocumentsStorage DocumentsStorage { get; private set; }
 
-        public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; }
+        public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
 
         public DocumentsNotifications Notifications { get; }
 
-        public MetricsCountersManager Metrics { get; private set; }
+        public MetricsCountersManager Metrics { get; }
 
-        public IndexStore IndexStore { get; }
+        public IndexStore IndexStore { get; private set; }
 
         public void Initialize()
         {
@@ -65,8 +65,13 @@ namespace Raven.Server.Documents
         {
             _databaseShutdown.Cancel();
             IndexStore?.Dispose();
+            IndexStore = null;
+
+            DocumentTombstoneCleaner?.Dispose();
+            DocumentTombstoneCleaner = null;
 
             DocumentsStorage?.Dispose();
+            DocumentsStorage = null;
         }
 
         public void RunIdleOperations()

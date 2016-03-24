@@ -15,11 +15,9 @@ namespace Raven.Server.Documents
 
         private readonly object _locker = new object();
 
-        private bool _disposed;
-
         private readonly DocumentDatabase _documentDatabase;
 
-        private readonly ConcurrentSet<IDocumentTombstoneAware> subscriptions = new ConcurrentSet<IDocumentTombstoneAware>();
+        private readonly ConcurrentSet<IDocumentTombstoneAware> _subscriptions = new ConcurrentSet<IDocumentTombstoneAware>();
 
         private Timer _timer;
 
@@ -35,12 +33,12 @@ namespace Raven.Server.Documents
 
         public void Subscribe(IDocumentTombstoneAware subscription)
         {
-            subscriptions.Add(subscription);
+            _subscriptions.Add(subscription);
         }
 
         public void Unsubscribe(IDocumentTombstoneAware subscription)
         {
-            subscriptions.TryRemove(subscription);
+            _subscriptions.TryRemove(subscription);
         }
 
         internal void ExecuteCleanup(object state)
@@ -50,19 +48,26 @@ namespace Raven.Server.Documents
 
             try
             {
-                Dictionary<string, long> tombstones;
-                using (var tx = _documentDatabase.DocumentsStorage.Environment.ReadTransaction())
+                if (_timer == null)
+                    return;
+                var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                var storageEnvironment = _documentDatabase.DocumentsStorage.Environment;
+                if (storageEnvironment == null) // doc storage was disposed before us?
+                    return;
+                using (var tx = storageEnvironment.ReadTransaction())
                 {
-                    tombstones = _documentDatabase
+                    foreach (var tombstoneCollection in _documentDatabase
                         .DocumentsStorage
-                        .GetTombstoneCollections(tx)
-                        .ToDictionary(x => x, x => long.MaxValue, StringComparer.OrdinalIgnoreCase);
+                        .GetTombstoneCollections(tx))
+                    {
+                        tombstones[tombstoneCollection] = long.MaxValue;
+                    }
                 }
 
                 if (tombstones.Count == 0)
                     return;
 
-                foreach (var subscription in subscriptions)
+                foreach (var subscription in _subscriptions)
                 {
                     foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
                     {
@@ -76,16 +81,17 @@ namespace Raven.Server.Documents
 
                 foreach (var tombstone in tombstones)
                 {
-                    if (_disposed)
-                        return;
-
                     if (tombstone.Value <= 0)
                         continue;
 
                     try
                     {
-                        using (var tx = _documentDatabase.DocumentsStorage.Environment.WriteTransaction())
+
+                        using (var tx = storageEnvironment.WriteTransaction())
                         {
+                            if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                                return;
+
                             _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, tombstone.Value, tx);
 
                             tx.Commit();
@@ -105,8 +111,12 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _disposed = true;
-            _timer?.Dispose();
+            lock (_locker) // so we are sure we aren't running concurrently with the timer
+            {
+                _timer?.Dispose();
+                _timer = null;
+            }
+            
         }
     }
 

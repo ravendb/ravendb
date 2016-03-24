@@ -42,14 +42,14 @@ namespace Raven.Server.Documents.Indexes.Auto
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
             {
-                ExecuteCleanup(stats, cancellationToken, databaseContext, indexContext);
+                ExecuteCleanup(cancellationToken, databaseContext, indexContext);
                 ExecuteMap(stats, cancellationToken, databaseContext, indexContext);
 
                 tx.Commit();
             }
         }
 
-        private void ExecuteCleanup(IndexingBatchStats stats, CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        private void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
