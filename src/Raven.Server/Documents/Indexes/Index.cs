@@ -61,6 +61,8 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice LastIndexingTimeSlice = "LastIndexingTime";
 
             public static readonly Slice PrioritySlice = "Priority";
+
+            public static readonly Slice LastQueryingTimeSlice = "LastQueryingTime";
         }
 
         private readonly TableSchema _errorsSchema = new TableSchema();
@@ -95,7 +97,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
-        private DateTime? lastQueryingTime; // TODO [ppekrol] do we need to persist this?
+        private DateTime? _lastQueryingTime; // TODO [ppekrol] do we need to persist this?
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -198,6 +200,7 @@ namespace Raven.Server.Documents.Indexes
                     _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
 
                     CreateSchema();
+                    LoadValues();
 
                     IndexPersistence.Initialize(_environment, DocumentDatabase.Configuration.Indexing);
 
@@ -211,6 +214,39 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Dispose();
                     throw;
+                }
+            }
+        }
+
+        private void LoadValues()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var statsTree = tx.InnerTransaction.CreateTree(Schema.StatsTree);
+
+                var priority = statsTree.Read(Schema.PrioritySlice);
+                if (priority == null)
+                    Priority = IndexingPriority.Normal;
+                else
+                    Priority = (IndexingPriority)priority.Reader.ReadLittleEndianInt32();
+
+                var lastQueryingTime = statsTree.Read(Schema.LastQueryingTimeSlice);
+                if (lastQueryingTime == null)
+                {
+                    var isIdleAutoIndex = Priority == IndexingPriority.Idle && (Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce);
+                    if (isIdleAutoIndex)
+                        MarkQueried(SystemTime.UtcNow);
+                }
+                else
+                {
+                    var lastQuery = DateTime.FromBinary(lastQueryingTime.Reader.ReadLittleEndianInt64());
+                    var isIdleAutoIndex = Priority == IndexingPriority.Idle && (Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce);
+                    if (isIdleAutoIndex && SystemTime.UtcNow - lastQuery > DocumentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsAbandoned.AsTimeSpan)
+                        MarkQueried(SystemTime.UtcNow);
+                    else
+                        MarkQueried(lastQuery);
                 }
             }
         }
@@ -240,12 +276,6 @@ namespace Raven.Server.Documents.Indexes
                     var binaryDate = SystemTime.UtcNow.ToBinary();
                     statsTree.Add(Schema.CreatedTimestampSlice, new Slice((byte*)&binaryDate, sizeof(long)));
                 }
-
-                var priority = statsTree.Read(Schema.PrioritySlice);
-                if (priority == null)
-                    Priority = IndexingPriority.Normal;
-                else
-                    Priority = (IndexingPriority)priority.Reader.ReadLittleEndianInt32();
 
                 tx.InnerTransaction.CreateTree(Schema.EtagsMapTree);
                 tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
@@ -775,7 +805,7 @@ namespace Raven.Server.Documents.Indexes
                         stats.LastIndexedEtags[collection] = ReadLastMappedEtag(tx, collection);
                 }
 
-                stats.LastQueryingTime = lastQueryingTime;
+                stats.LastQueryingTime = _lastQueryingTime;
 
                 return stats;
             }
@@ -783,11 +813,11 @@ namespace Raven.Server.Documents.Indexes
 
         private void MarkQueried(DateTime time)
         {
-            if (lastQueryingTime != null &&
-                lastQueryingTime.Value >= time)
+            if (_lastQueryingTime != null &&
+                _lastQueryingTime.Value >= time)
                 return;
 
-            lastQueryingTime = time;
+            _lastQueryingTime = time;
         }
 
         public IndexDefinition GetIndexDefinition()

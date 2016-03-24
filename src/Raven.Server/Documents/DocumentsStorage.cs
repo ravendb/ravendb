@@ -262,7 +262,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = "@" + collection;
-            if(context.Transaction.InnerTransaction.ReadTree(collectionName)==null)
+            if (context.Transaction.InnerTransaction.ReadTree(collectionName) == null)
                 yield break;
 
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
@@ -328,11 +328,20 @@ namespace Raven.Server.Documents
 
         public long GetLastDocumentEtag(DocumentsOperationContext context, string collection)
         {
-            var table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
+            Table table;
+            try
+            {
+                table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
+            }
+            catch (InvalidDataException)
+            {
+                // TODO [ppekrol] how to handle missing collection?
+                return 0;
+            }
 
             var result = table
-                .SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
-                .FirstOrDefault();
+                        .SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
+                        .FirstOrDefault();
 
             if (result == null)
                 return 0;
@@ -630,7 +639,7 @@ namespace Raven.Server.Documents
                 int oldSize;
                 var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
                 var oldCollectionName = GetCollectionFromMetadata(key, oldDoc);
-                if(oldCollectionName != originalCollectionName)
+                if (oldCollectionName != originalCollectionName)
                     throw new InvalidOperationException(
                         $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
                         $"Delete the document and recreate the document {key}.");
@@ -781,7 +790,7 @@ namespace Raven.Server.Documents
                 // TODO [ppekrol] how to handle missing collection?
                 return;
             }
-            if(_log.IsDebugEnabled)
+            if (_log.IsDebugEnabled)
                 _log.Debug($"Deleting tombstones earlier than {etag} in {collection}");
             table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
         }
