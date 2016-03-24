@@ -153,11 +153,16 @@ for(var customFunction in customFunctions) {{
 
             var status = new ImportOperationStatus();
             var cts = new CancellationTokenSource();
-            
+            var user = CurrentOperationContext.User.Value;
+            var requestDisposables = CurrentOperationContext.RequestDisposables.Value;
+            var headers = CurrentOperationContext.Headers.Value;
             var task = Task.Run(async () =>
             {
                 try
                 {
+                    CurrentOperationContext.User.Value = user;
+                    CurrentOperationContext.RequestDisposables.Value = requestDisposables;
+                    CurrentOperationContext.Headers.Value = headers;
                     using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
                     {
                         var dataDumper = new DatabaseDataDumper(Database);
