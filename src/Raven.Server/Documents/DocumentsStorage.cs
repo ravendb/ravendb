@@ -430,12 +430,12 @@ namespace Raven.Server.Documents
 
             var jsonParserState = new JsonParserState();
             jsonParserState.FindEscapePositionsIn(str);
-            var keyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
+            var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
             var escapePositionsSize = jsonParserState.GetEscapePositionsSize();
             var buffer = context.GetNativeTempBuffer(
                 sizeof(char) * str.Length // for the lower calls
                 + byteCount // lower key
-                + keyLenSize // the size of var int for the len of the key
+                + maxKeyLenSize // the size of var int for the len of the key
                 + byteCount // actual key
                 + escapePositionsSize
                 , out lowerSize);
@@ -454,10 +454,19 @@ namespace Raven.Server.Documents
 
                 key = buffer + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
-                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + keyLenSize, byteCount);
+                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
+
+                var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
+                if (actualKeyLenSize < maxKeyLenSize)
+                {
+                    var movePtr = maxKeyLenSize - actualKeyLenSize;
+                    key += movePtr;
+                    writePos += movePtr;
+                }
+
                 JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
                 jsonParserState.WriteEscapePositionsTo(writePos + keySize);
-                keySize += escapePositionsSize + keyLenSize;
+                keySize += escapePositionsSize + maxKeyLenSize;
             }
         }
 

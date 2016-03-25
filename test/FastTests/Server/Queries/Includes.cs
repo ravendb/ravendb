@@ -240,7 +240,7 @@ namespace FastTests.Server.Queries
             }
         }
 
-        [Fact(Skip = "TODO arek - this throws Bad JSON escape sequence")]
+        [Fact]
         public async Task can_include_by_primary_list_of_valuetypes()
         {
             using (var store = await GetDocumentStore())
@@ -363,7 +363,7 @@ namespace FastTests.Server.Queries
             }
         }
 
-        [Fact(Skip = "TODO arek - this throws Bad JSON escape sequence")]
+        [Fact]
         public async Task can_include_by_list_of_secondary_valuetype_property()
         {
             using (var store = await GetDocumentStore())
