@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         var mappedResult = new DynamicJsonValue();
                         var reduceKey = new DynamicJsonValue();
-                        foreach (var indexField in _parent.Definition.MapFields)
+                        foreach (var indexField in _parent.Definition.MapFields.Values)
                         {
                             object result;
                             _parent._blittableTraverser.TryRead(document.Data, indexField.Name, out result);

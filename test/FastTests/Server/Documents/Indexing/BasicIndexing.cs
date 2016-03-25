@@ -130,20 +130,20 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(1, indexes[0].IndexId);
                 Assert.Equal(1, indexes[0].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[0].Definition.Collections[0]);
-                Assert.Equal(1, indexes[0].Definition.MapFields.Length);
-                Assert.Equal("Name1", indexes[0].Definition.MapFields[0].Name);
-                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields[0].SortOption);
-                Assert.True(indexes[0].Definition.MapFields[0].Highlighted);
+                Assert.Equal(1, indexes[0].Definition.MapFields.Count);
+                Assert.Equal("Name1", indexes[0].Definition.MapFields["Name1"].Name);
+                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].SortOption);
+                Assert.True(indexes[0].Definition.MapFields["Name1"].Highlighted);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(1, indexes[1].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[1].Definition.Collections[0]);
-                Assert.Equal(1, indexes[1].Definition.MapFields.Length);
-                Assert.Equal("Name2", indexes[1].Definition.MapFields[0].Name);
-                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields[0].SortOption);
-                Assert.False(indexes[1].Definition.MapFields[0].Highlighted);
+                Assert.Equal(1, indexes[1].Definition.MapFields.Count);
+                Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
+                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Name2"].SortOption);
+                Assert.False(indexes[1].Definition.MapFields["Name2"].Highlighted);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
             }

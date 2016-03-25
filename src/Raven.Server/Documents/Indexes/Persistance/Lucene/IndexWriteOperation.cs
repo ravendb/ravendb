@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 
 using Raven.Abstractions.Logging;
+using Raven.Server.Documents.Indexes.Persistance.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -24,11 +26,11 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         private readonly LuceneIndexWriter _writer;
         private readonly LuceneDocumentConverter _converter;
         private readonly LuceneIndexPersistence _persistence;
-        private readonly LowerCaseKeywordAnalyzer _analyzer;
+        private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        public IndexWriteOperation(object writeLock, string name, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
+        public IndexWriteOperation(object writeLock, string name, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
         {
             _writeLock = writeLock;
             _name = name;
@@ -38,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
             try
             {
-                _analyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer());
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields);
             }
             catch (Exception e)
             {

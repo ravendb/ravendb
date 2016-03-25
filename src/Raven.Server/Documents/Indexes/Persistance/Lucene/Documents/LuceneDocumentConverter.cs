@@ -29,9 +29,9 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
-        private readonly IndexField[] _fields;
+        private readonly ICollection<IndexField> _fields;
 
-        public LuceneDocumentConverter(IndexField[] fields)
+        public LuceneDocumentConverter(ICollection<IndexField> fields)
         {
             _fields = fields;
         }

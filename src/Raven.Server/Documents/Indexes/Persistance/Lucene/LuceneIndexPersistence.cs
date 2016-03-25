@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         {
             _indexId = indexId;
             _definition = indexDefinition;
-            _converter = new LuceneDocumentConverter(_definition.MapFields);
+            _converter = new LuceneDocumentConverter(_definition.MapFields.Values);
         }
 
         public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
             
-            return new IndexWriteOperation(_writeLock, _definition.Name, _directory, _indexWriter, _converter, writeTransaction, this); // TODO arek - 'this' :/
+            return new IndexWriteOperation(_writeLock, _definition.Name, _definition.MapFields, _directory, _indexWriter, _converter, writeTransaction, this); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
 
-            return new IndexReadOperation(_definition.Name, _directory, _indexSearcherHolder, readTransaction);
+            return new IndexReadOperation(_definition.Name, _definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
         }
 
         internal void RecreateSearcher()
