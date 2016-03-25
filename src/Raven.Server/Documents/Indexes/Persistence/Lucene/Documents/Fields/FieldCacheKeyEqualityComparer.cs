@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
     public class FieldCacheKeyEqualityComparer : IEqualityComparer<FieldCacheKey>
     {

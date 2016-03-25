@@ -249,7 +249,7 @@ namespace FastTests.Client.Indexing
                 batchStats.Errors[0].Timestamp = now;
                 batchStats.Errors[1].Timestamp = nowNext;
 
-                index.UpdateStats(SystemTime.UtcNow, batchStats);
+                index._indexStorage.UpdateStats(SystemTime.UtcNow, batchStats);
 
                 var error = await store.AsyncDatabaseCommands.GetIndexErrorsAsync(index.Name).ConfigureAwait(false);
                 Assert.Equal(index.Name, error.Name);

@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 
 using Raven.Abstractions.Logging;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Analyzers;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+
 using Voron.Impl;
+
 using Constants = Raven.Abstractions.Data.Constants;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexWriteOperation : IndexOperationBase
     {

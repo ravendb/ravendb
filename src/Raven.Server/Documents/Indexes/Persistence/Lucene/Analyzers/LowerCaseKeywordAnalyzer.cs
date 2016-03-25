@@ -2,7 +2,7 @@
 
 using Lucene.Net.Analysis;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Analyzers
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     public class LowerCaseKeywordAnalyzer : Analyzer
     {

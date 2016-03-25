@@ -1,18 +1,20 @@
 ﻿using System;
-using System.IO;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+
 using Voron;
 using Voron.Impl;
+
 using Version = Lucene.Net.Util.Version;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexPersistence : IDisposable
     {

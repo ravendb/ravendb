@@ -7,8 +7,8 @@ using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistance.Lucene;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Tests.Core;
 
 using Xunit;

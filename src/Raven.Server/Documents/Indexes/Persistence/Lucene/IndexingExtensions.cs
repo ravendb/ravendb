@@ -10,7 +10,7 @@ using System.Reflection;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public static class IndexingExtensions
     {

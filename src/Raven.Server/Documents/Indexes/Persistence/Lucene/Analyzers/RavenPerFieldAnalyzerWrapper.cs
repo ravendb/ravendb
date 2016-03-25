@@ -11,7 +11,7 @@ using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Analyzers
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
     {

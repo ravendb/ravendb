@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Threading;
+
 using Lucene.Net.Search;
+
 using Raven.Abstractions.Logging;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexSearcherHolder
     {

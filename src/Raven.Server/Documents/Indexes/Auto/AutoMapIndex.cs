@@ -60,8 +60,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 long lastMappedEtag;
                 long lastTombstoneEtag;
-                lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
-                lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
+                lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+                lastTombstoneEtag = _indexStorage.ReadLastTombstoneEtag(indexContext.Transaction, collection);
 
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 if (lastEtag <= lastTombstoneEtag)
                     return;
 
-                WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
+                _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
 
                 _mre.Set(); // might be more
             }
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                     Log.Debug($"Executing map for '{Name} ({IndexId})'. Collection: {collection}.");
 
                 long lastMappedEtag;
-                lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+                lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
 
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Executing map for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}.");
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing map for '{Name} ({IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
-                    WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+                    _indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
                 }
 
                 _mre.Set(); // might be more

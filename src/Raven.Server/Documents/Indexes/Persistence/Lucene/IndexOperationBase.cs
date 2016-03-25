@@ -8,9 +8,9 @@ using Lucene.Net.Analysis.Standard;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public abstract class IndexOperationBase : IDisposable
     {

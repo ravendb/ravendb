@@ -307,7 +307,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(0, batchStats.IndexingErrors);
 
                         var now = SystemTime.UtcNow;
-                        index.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, batchStats);
 
                         var stats = index.GetStats();
                         Assert.Equal(index.IndexId, stats.Id);
@@ -352,7 +352,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(0, batchStats.IndexingErrors);
 
                         now = SystemTime.UtcNow;
-                        index.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, batchStats);
 
                         stats = index.GetStats();
                         Assert.Equal(index.IndexId, stats.Id);
@@ -387,7 +387,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(0, batchStats.IndexingErrors);
 
                         now = SystemTime.UtcNow;
-                        index.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, batchStats);
 
                         stats = index.GetStats();
                         Assert.Equal(index.IndexId, stats.Id);
@@ -456,30 +456,30 @@ namespace FastTests.Server.Documents.Indexing
                     database))
                 {
                     var stats = new IndexingBatchStats();
-                    index.UpdateStats(SystemTime.UtcNow, stats);
+                    index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
 
                     Assert.Equal(0, index.GetErrors().Count);
 
                     stats.AddWriteError(new IndexWriteException());
                     stats.AddAnalyzerError(new IndexAnalyzerException());
 
-                    index.UpdateStats(SystemTime.UtcNow, stats);
+                    index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
 
                     var errors = index.GetErrors();
                     Assert.Equal(2, errors.Count);
                     Assert.Equal("Write", errors[0].Action);
                     Assert.Equal("Analyzer", errors[1].Action);
 
-                    for (int i = 0; i < Index.MaxNumberOfKeptErrors; i++)
+                    for (int i = 0; i < IndexStorage.MaxNumberOfKeptErrors; i++)
                     {
                         var now = SystemTime.UtcNow;
                         stats.Errors[0].Timestamp = now;
                         stats.Errors[1].Timestamp = now;
-                        index.UpdateStats(now, stats);
+                        index._indexStorage.UpdateStats(now, stats);
                     }
 
                     errors = index.GetErrors();
-                    Assert.Equal(Index.MaxNumberOfKeptErrors, errors.Count);
+                    Assert.Equal(IndexStorage.MaxNumberOfKeptErrors, errors.Count);
                 }
             }
         }
