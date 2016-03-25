@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
@@ -25,6 +26,8 @@ namespace Raven.Database.Actions
             new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
         private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
+
+        public readonly ConcurrentDictionary<long, OneTimeAcknowledgement> allowedOneTimeAcknowledgements = new ConcurrentDictionary<long, OneTimeAcknowledgement>();
 
         private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> forciblyReleasedSubscriptions = new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
 
@@ -106,7 +109,7 @@ namespace Raven.Database.Actions
                 SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
             {
                 // last connected client exceeded ACK timeout and didn't send at least two 'client-alive' notifications - let the requesting client to open it
-                ForceReleaseAndOpenForNewClient(id, options);
+                ForceReleaseAndOpenForNewClient(id, existingOptions, options, config, allowExistingClientToAcknowledge: false);
                 return;
             }
 
@@ -115,22 +118,40 @@ namespace Raven.Database.Actions
                 case SubscriptionOpeningStrategy.TakeOver:
                     if (existingOptions.Strategy != SubscriptionOpeningStrategy.ForceAndKeep)
                     {
-                        ForceReleaseAndOpenForNewClient(id, options);
+                        ForceReleaseAndOpenForNewClient(id, existingOptions, options, config, allowExistingClientToAcknowledge: true);
                         return;
                     }
                     break;
                 case SubscriptionOpeningStrategy.ForceAndKeep:
-                    ForceReleaseAndOpenForNewClient(id, options);
+                    ForceReleaseAndOpenForNewClient(id, existingOptions, options, config, allowExistingClientToAcknowledge: true);
                     return;
             }
 
             throw new SubscriptionInUseException("Subscription is already in use. There can be only a single open subscription connection per subscription.");
         }
 
-        private void ForceReleaseAndOpenForNewClient(long id, SubscriptionConnectionOptions options)
+        private void ForceReleaseAndOpenForNewClient(long id, SubscriptionConnectionOptions oldOptions, SubscriptionConnectionOptions newOptions, SubscriptionConfig config, bool allowExistingClientToAcknowledge = false)
         {
+            if (allowExistingClientToAcknowledge && config.TimeOfLastAcknowledgment < config.TimeOfSendingLastBatch)
+            {
+                // we know that there is active client with unconfirmed batch 
+                // allow him to send ack in nearest future if has enough time
+                var now = SystemTime.UtcNow;
+                var timeSinceBatchSent = now - config.TimeOfSendingLastBatch;
+
+                if (timeSinceBatchSent < oldOptions.BatchOptions.AcknowledgmentTimeout)
+                {
+                    var ackMustBeDeliveredBefore = config.TimeOfSendingLastBatch + oldOptions.BatchOptions.AcknowledgmentTimeout;
+                    allowedOneTimeAcknowledgements.TryAdd(id, new OneTimeAcknowledgement {
+                        ConnectionId = oldOptions.ConnectionId,
+                        ValidUntil = ackMustBeDeliveredBefore,
+                        AckDelivered = new ManualResetEventSlim(false)
+                    });
+                }
+            }
+
             ReleaseSubscription(id);
-            openSubscriptions.TryAdd(id, options);
+            openSubscriptions.TryAdd(id, newOptions);
             UpdateClientActivityDate(id);
         }
 
@@ -154,7 +175,9 @@ namespace Raven.Database.Actions
                     var config = GetSubscriptionConfig(id);
                     var options = GetBatchOptions(id);
 
-                    var timeSinceBatchSent = SystemTime.UtcNow - config.TimeOfSendingLastBatch;
+                    var now = SystemTime.UtcNow;
+                    
+                    var timeSinceBatchSent = now - config.TimeOfSendingLastBatch;
                     if (timeSinceBatchSent > options.AcknowledgmentTimeout)
                         throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
 
@@ -162,14 +185,21 @@ namespace Raven.Database.Actions
                     if (config.AckEtag.CompareTo(lastEtag) < 0)
                         config.AckEtag = lastEtag;
 
-                    config.TimeOfLastClientActivity = SystemTime.UtcNow;
+                    config.TimeOfLastClientActivity = now;
+                    config.TimeOfLastAcknowledgment = now;
 
                     SaveSubscriptionConfig(id, config);
                 });
+
+                OneTimeAcknowledgement allowance;
+                if (allowedOneTimeAcknowledgements.TryGetValue(id, out allowance))
+                {
+                    allowance.AckDelivered.Set();
+                }
             }
         }
 
-        public void AssertOpenSubscriptionConnection(long id, string connection)
+        public void AssertOpenSubscriptionConnection(long id, string connection, bool ackRequest = false)
         {
             SubscriptionConnectionOptions options;
             if (openSubscriptions.TryGetValue(id, out options) == false)
@@ -177,6 +207,13 @@ namespace Raven.Database.Actions
 
             if (options.ConnectionId.Equals(connection, StringComparison.OrdinalIgnoreCase) == false)
             {
+                OneTimeAcknowledgement allowance; 
+                if (ackRequest 
+                    && allowedOneTimeAcknowledgements.TryGetValue(id, out allowance) 
+                    && allowance.ValidFor(connection))
+                {
+                    return;
+                }
                 // prevent from concurrent work of multiple clients against the same subscription
                 throw new SubscriptionInUseException("Subscription is being opened for a different connection.");
             }
@@ -325,6 +362,19 @@ namespace Raven.Database.Actions
                 etag = GetSubscriptionConfig(id).AckEtag;
             });
             return etag;
+        }
+    }
+
+    public class OneTimeAcknowledgement
+    {
+        public string ConnectionId;
+        public DateTime ValidUntil;
+        public ManualResetEventSlim AckDelivered;
+
+        public bool ValidFor(string connection)
+        {
+            return connection.Equals(ConnectionId, StringComparison.OrdinalIgnoreCase)
+                   && ValidUntil > SystemTime.UtcNow;
         }
     }
 }
