@@ -25,7 +25,7 @@ namespace Raven.Client.Extensions
             {
                 if (credentials.ApiKey == null)
                 {
-                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, primaryCredentials);
+                    // AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, primaryCredentials);
                     return null;
                 }
 
@@ -44,7 +44,7 @@ namespace Raven.Client.Extensions
 
                 if (credentials.ApiKey == null)
                 {
-                    AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, credentials.Credentials);
+                    // AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, credentials.Credentials);
                     return null;
                 }
 
