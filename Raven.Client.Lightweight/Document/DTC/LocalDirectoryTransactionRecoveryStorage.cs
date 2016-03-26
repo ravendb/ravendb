@@ -30,7 +30,6 @@ namespace Raven.Client.Document.DTC
 
         public void DeleteFile(string name)
         {
-            name = Path.Combine(path, name);
             if (File.Exists(name) == false)
                 return;
             File.Delete(name);
@@ -43,7 +42,7 @@ namespace Raven.Client.Document.DTC
 
         public Stream OpenRead(string name)
         {
-            return File.Open(Path.Combine(path, name), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return File.Open(name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         }
 
         public byte[] GetRecoveryInformation(PreparingEnlistment preparingEnlistment)
