@@ -12,6 +12,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Logging;
@@ -88,6 +89,20 @@ namespace Raven.Database.Server.Controllers
         {
             Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
 
+            OneTimeAcknowledgement anotherProcessingInfo;
+            if (Database.Subscriptions.allowedOneTimeAcknowledgements.TryGetValue(id, out anotherProcessingInfo))
+            {
+                var timeToTimeout = anotherProcessingInfo.ValidUntil - SystemTime.UtcNow;
+                if (timeToTimeout > TimeSpan.Zero)
+                {
+                    anotherProcessingInfo.AckDelivered.Wait(timeToTimeout);
+                    // assert open subscription one more time, as it might changed during wait
+                    Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+                }
+                Database.Subscriptions.allowedOneTimeAcknowledgements.TryRemove(id, out anotherProcessingInfo);
+            }
+
+
             var pushStreamContent = new PushStreamContent((stream, content, transportContext) => StreamToClient(id, Database.Subscriptions, stream))
             {
                 Headers =
@@ -110,7 +125,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/subscriptions/acknowledgeBatch")]
         public HttpResponseMessage AcknowledgeBatch(long id, string lastEtag, string connection)
         {
-            Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection);
+            Database.Subscriptions.AssertOpenSubscriptionConnection(id, connection, ackRequest: true);
 
             try
             {
