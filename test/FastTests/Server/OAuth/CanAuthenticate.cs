@@ -69,7 +69,7 @@ namespace FastTests.Server.OAuth
 
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                var exception = Assert.Throws<InvalidOperationException>(() => StoreSampleDoc(store, "test/1"));
+                var exception = Assert.Throws<InvalidApiKeyException>(() => StoreSampleDoc(store, "test/1"));
                 Assert.Contains("Unable to authenticate api key", exception.Message);
             }
         }
