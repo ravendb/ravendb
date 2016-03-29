@@ -22,10 +22,10 @@ namespace Raven.Server.Documents
         protected static string DisposingLock = Guid.NewGuid().ToString();
 
         public readonly ConcurrentDictionary<StringSegment, Task<TResource>> ResourcesStoresCache =
-            new ConcurrentDictionary<StringSegment, Task<TResource>>();
+            new ConcurrentDictionary<StringSegment, Task<TResource>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
-            new ConcurrentDictionary<StringSegment, DateTime>();
+            new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
         protected readonly ConcurrentSet<string> Locks = 
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
