@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers
     public class DocumentsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs")]
-        public async Task GetDocuments()
+        public Task GetDocuments()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
                     HttpContext.Response.StatusCode = 304;
-                    return;
+                    return Task.CompletedTask;
                 }
                 HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
 
@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 WriteDocuments(context, documents);
             }
+            return Task.CompletedTask;
         }
 
         private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)

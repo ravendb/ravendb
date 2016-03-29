@@ -75,7 +75,7 @@ namespace Raven.Client.Connection
             if (maxNumberOfParallelIndexTasks.HasValue)
             {
                 throw new NotImplementedException();
-                url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
+               // url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
             }
 
             return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);

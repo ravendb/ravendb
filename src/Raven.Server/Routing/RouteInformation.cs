@@ -70,7 +70,7 @@ namespace Raven.Server.Routing
             {
                 throw new DatabaseDoesNotExistsException($"Database '{databaseName}' was not found");
             }
-            context.Database = await database;
+            context.Database = database;
         }
 
         public async Task<HandleRequest> CreateHandler(RequestHandlerContext context)

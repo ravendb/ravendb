@@ -35,7 +35,7 @@ namespace Raven.Server.Web.System
             return ReturnResources("ts/");
         }
 
-        private async Task ReturnResources(string prefix)
+        private Task ReturnResources(string prefix)
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -66,6 +66,7 @@ namespace Raven.Server.Web.System
                     writer.WriteEndArray();
                 }
             }
+            return Task.CompletedTask;
         }
     }
 }

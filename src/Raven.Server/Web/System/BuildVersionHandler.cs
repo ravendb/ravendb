@@ -17,9 +17,9 @@ namespace Raven.Server.Web.System
 {
     public class BuildVersionHandler : RequestHandler
     {
-        private static readonly Lazy<Task<byte[]>> VersionBuffer = new Lazy<Task<byte[]>>(GetVersionBuffer);
+        private static readonly Lazy<byte[]> VersionBuffer = new Lazy<byte[]>(GetVersionBuffer);
 
-        private static async Task<byte[]> GetVersionBuffer()
+        private static byte[] GetVersionBuffer()
         {
             using (var pool = new UnmanagedBuffersPool("build/version"))
             using (var context = new MemoryOperationContext(pool))
@@ -42,7 +42,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/build/version", "GET", "build-version", NoAuthorizationRequired = true)]
         public async Task Get()
         {
-            var versionBuffer = await VersionBuffer.Value;
+            var versionBuffer = VersionBuffer.Value;
             await ResponseBodyStream().WriteAsync(versionBuffer, 0, versionBuffer.Length);
         }
     }

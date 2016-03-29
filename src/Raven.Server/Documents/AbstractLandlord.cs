@@ -37,9 +37,7 @@ namespace Raven.Server.Documents
             ConcurrentResourceLoadTimeout = ServerStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
         }
 
-        public abstract Task<TResource> GetResourceInternal(StringSegment resourceName);
-
-        public abstract Task<Task<TResource>> TryGetOrCreateResourceStore(StringSegment resourceName);
+        public abstract Task<TResource> TryGetOrCreateResourceStore(StringSegment resourceName);
 
         public void Dispose()
         {
