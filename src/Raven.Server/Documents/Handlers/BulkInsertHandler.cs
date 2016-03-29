@@ -161,8 +161,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             const string bulkInsertDocumentDebugTag = "bulk/insert/document";
                             using (var doc = new BlittableJsonDocumentBuilder(context,
-                                BlittableJsonDocumentBuilder.UsageMode.CompressStrings | 
-                                BlittableJsonDocumentBuilder.UsageMode.ValidateDouble,
+                                BlittableJsonDocumentBuilder.UsageMode.ToDisk,
                                 bulkInsertDocumentDebugTag,
                                 parser, state))
                             {
