@@ -4,12 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
-using Lucene.Net.Analysis;
-using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Core.Utils.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -34,6 +30,112 @@ namespace Raven.Tests.Issues
                 index.Execute(store);
 
                 WaitForIndexing(store);
+            }
+        }
+
+        [Fact]
+        public void can_index_collections_larger_than_32768()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    for(var i = 0; i < 40000; i++)
+                        bulk.Store(new Order { CompanyId = i.ToString() });
+                }
+
+                //wait for indexing of Raven/DocumentsByEntityName
+                WaitForIndexing(store);
+
+                var index = new Orders_Index();
+                index.Execute(store);
+
+                WaitForIndexing(store);
+
+                var stats = store.DatabaseCommands.GetStatistics();
+                var ordersIndex = stats.Indexes.First(x => x.ForEntityName.Contains("Orders"));
+                Assert.Equal(40000, ordersIndex.DocsCount);
+            }
+        }
+
+        [Fact]
+        public void can_index_collections_smaller_than_32768()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    for (var i = 0; i < 30000; i++)
+                        bulk.Store(new Order { CompanyId = i.ToString() });
+                }
+
+                //wait for indexing of Raven/DocumentsByEntityName
+                WaitForIndexing(store);
+
+                var index = new Orders_Index();
+                index.Execute(store);
+
+                WaitForIndexing(store);
+
+                var stats = store.DatabaseCommands.GetStatistics();
+                var ordersIndex = stats.Indexes.First(x => x.ForEntityName.Contains("Orders"));
+                Assert.Equal(30000, ordersIndex.DocsCount);
+            }
+        }
+
+        [Fact]
+        public void can_index_collections_larger_than_predefined()
+        {
+            using (var store = NewDocumentStore(configureStore: documentStore =>
+            {
+                documentStore.Configuration.MaxPrecomputedBatchSizeForNewIndex = 10000;
+            }))
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    for (var i = 0; i < 10500; i++)
+                        bulk.Store(new Order { CompanyId = i.ToString() });
+                }
+
+                //wait for indexing of Raven/DocumentsByEntityName
+                WaitForIndexing(store);
+
+                var index = new Orders_Index();
+                index.Execute(store);
+
+                WaitForIndexing(store);
+
+                var stats = store.DatabaseCommands.GetStatistics();
+                var ordersIndex = stats.Indexes.First(x => x.ForEntityName.Contains("Orders"));
+                Assert.Equal(10500, ordersIndex.DocsCount);
+            }
+        }
+
+        [Fact]
+        public void can_index_collections_smaller_than_predefined()
+        {
+            using (var store = NewDocumentStore(configureStore: documentStore =>
+            {
+                documentStore.Configuration.MaxPrecomputedBatchSizeForNewIndex = 9000;
+            }))
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    for (var i = 0; i < 8999; i++)
+                        bulk.Store(new Order { CompanyId = i.ToString() });
+                }
+
+                //wait for indexing of Raven/DocumentsByEntityName
+                WaitForIndexing(store);
+
+                var index = new Orders_Index();
+                index.Execute(store);
+
+                WaitForIndexing(store);
+
+                var stats = store.DatabaseCommands.GetStatistics();
+                var ordersIndex = stats.Indexes.First(x => x.ForEntityName.Contains("Orders"));
+                Assert.Equal(8999, ordersIndex.DocsCount);
             }
         }
 

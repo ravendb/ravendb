@@ -632,7 +632,7 @@ namespace Raven.Database.Actions
                 {
                     op.Init();					
 
-                    if ((op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
+                    if (op.Header.TotalResults > pageSize)
                     {
                         // we don't apply this optimization if the total number of results 
                         // to index is more than the max numbers to index in a single batch. 
