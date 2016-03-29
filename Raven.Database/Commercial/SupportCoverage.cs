@@ -24,7 +24,7 @@ namespace Raven.Database.Commercial
     {
         private const string SupportCoverageList = "SupportCoverage";
         private const string SupportCoverageKeyPrefix = "Raven/SupportCoverageState";
-        private static readonly TimeSpan OneHour = TimeSpan.FromHours(1);
+        private static readonly TimeSpan OneDay = TimeSpan.FromDays(1);
 
         private static volatile Timer supportTimer;
         public static SupportCoverageResult CurrentSupport { get; private set; } = CreateDefaultSupportCoverageDocument();
@@ -66,7 +66,7 @@ namespace Raven.Database.Commercial
             licensingStatus = GetLicensingStatus();
             ValidateLicense.CurrentLicenseChanged += OnCurrentLicenseChanged;
             CheckSupportCoverage();
-            supportTimer = landlord.SystemDatabase.TimerManager.NewTimer(_ => CheckSupportCoverage(), OneHour, OneHour);
+            supportTimer = landlord.SystemDatabase.TimerManager.NewTimer(_ => CheckSupportCoverage(), OneDay, OneDay);
         }
 
         private void CheckSupportCoverage()
@@ -78,16 +78,23 @@ namespace Raven.Database.Commercial
                 return;
             }
 
-            var supportDoc = GetOrCreateSupportDocument(licenseId);
-            // using cached copy
-            if (supportDoc.EndsAt != null && supportDoc.EndsAt > SystemTime.UtcNow)
-            {
-                CurrentSupport = supportDoc;
-                return;
-            }
 
-            // query licensing for fresh data
-            supportDoc = QueryForSupportCoverage(licenseId);
+            SupportCoverageResult supportDoc;
+            try
+            {
+                //try using fresh copy
+                supportDoc = QueryForSupportCoverage(licenseId);
+            }
+            catch (Exception e)
+            {
+                log.WarnException("Failed to obtain support coverage information.", e);
+                // use persisted copy if still valid
+                supportDoc = GetSupportDocument(licenseId);
+                if (supportDoc == null || supportDoc.EndsAt < SystemTime.UtcNow)
+                {
+                    supportDoc = CreateDefaultSupportCoverageDocument();
+                }
+            }
             PutSupportCoverage(licenseId, supportDoc);
             CurrentSupport = supportDoc;
         }
@@ -140,7 +147,7 @@ namespace Raven.Database.Commercial
             licensingStatus = newLicense;
             DeactivateTimer();
             CheckSupportCoverage();
-            supportTimer = landlord.SystemDatabase.TimerManager.NewTimer(_ => CheckSupportCoverage(), OneHour, OneHour);
+            supportTimer = landlord.SystemDatabase.TimerManager.NewTimer(_ => CheckSupportCoverage(), OneDay, OneDay);
         }
 
         private bool LicenseEqual(LicensingStatus license1, LicensingStatus license2)
@@ -159,29 +166,23 @@ namespace Raven.Database.Commercial
             return id;
         }
 
-        private SupportCoverageResult GetOrCreateSupportDocument(string id)
+        private SupportCoverageResult GetSupportDocument(string id)
         {
             var docKey = GenerateSupportStatusDocKey(id);
-            SupportCoverageResult doc;
             ListItem listItem = null;
             landlord.SystemDatabase.TransactionalStorage.Batch(action =>
             {
                 listItem = action.Lists.Read(SupportCoverageList, docKey);
             });
-            if (listItem == null)
-            {
-                return CreateDefaultSupportCoverageDocument();
-            }
             try
             {
-                doc = listItem.Data.JsonDeserialization<SupportCoverageResult>();
+                return listItem?.Data.JsonDeserialization<SupportCoverageResult>();
             }
             catch (Exception)
             {
                 log.Warn("Failed to deserialize support coverage document");
-                return CreateDefaultSupportCoverageDocument();
+                return null;
             }
-            return doc;
         }
 
         private string GenerateSupportStatusDocKey(string id)
