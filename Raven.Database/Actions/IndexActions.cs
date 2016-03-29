@@ -514,7 +514,10 @@ namespace Raven.Database.Actions
         private Func<long> TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
             if (Database.Configuration.MaxPrecomputedBatchSizeForNewIndex <= 0) //precaution -> should never be lower than 0
+            {
+                index.IsMapIndexingInProgress = false;
                 return null;
+            }
 
             var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
             if (generator.ForEntityNames.Count == 0 && index.IsTestIndex == false)
@@ -629,7 +632,7 @@ namespace Raven.Database.Actions
                 {
                     op.Init();					
 
-                    if ((op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
+                    if (op.Header.TotalResults > pageSize)
                     {
                         // we don't apply this optimization if the total number of results 
                         // to index is more than the max numbers to index in a single batch. 
