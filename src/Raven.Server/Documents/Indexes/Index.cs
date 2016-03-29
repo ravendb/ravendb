@@ -38,8 +38,6 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : IDocumentTombstoneAware, IDisposable
     {
-        private static readonly TimeSpan LastQueryingTimePersitenceThreshold = TimeSpan.FromMinutes(10);
-
         private long writeErrors;
 
         private const long WriteErrorsLimit = 10;
@@ -49,8 +47,6 @@ namespace Raven.Server.Documents.Indexes
         protected readonly LuceneIndexPersistence IndexPersistence;
 
         private readonly object _locker = new object();
-
-        private readonly object _lastPersistedQueryingTimeLocker = new object();
 
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -71,8 +67,6 @@ namespace Raven.Server.Documents.Indexes
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         private DateTime? _lastQueryingTime;
-
-        private DateTime? _lastPersistedQueryingTime;
 
         protected readonly HashSet<string> Collections;
 
@@ -199,18 +193,7 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = context.OpenReadTransaction())
             {
                 Priority = _indexStorage.ReadPriority(tx);
-                var isAutoIndex = Type == IndexType.AutoMap || Type == IndexType.AutoMapReduce;
-                if (isAutoIndex)
-                    _lastQueryingTime = SystemTime.UtcNow; // to prevent auto indexes from cleanup
-                else
-                {
-                    var lastQueryingTime = _indexStorage.ReadLastQueryingTime(tx);
-                    if (lastQueryingTime.HasValue)
-                    {
-                        _lastQueryingTime = lastQueryingTime;
-                        _lastPersistedQueryingTime = lastQueryingTime;
-                    }
-                }
+                _lastQueryingTime = SystemTime.UtcNow;
             }
         }
 
@@ -416,15 +399,6 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            MaybePersistQueryingTime();
-                        }
-                        catch (Exception e)
-                        {
-                            Log.ErrorException($"Could not update last querying time for '{Name} ({IndexId})'.", e);
-                        }
-
-                        try
-                        {
                             _mre.Wait(cts.Token);
                         }
                         catch (OperationCanceledException)
@@ -578,36 +552,6 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             _lastQueryingTime = time;
-        }
-
-        public void MaybePersistQueryingTime()
-        {
-            if (_indexingInProgress)
-                return;
-
-            var lastQueryingTime = _lastQueryingTime;
-            if (lastQueryingTime.HasValue == false)
-                return;
-
-            if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
-                return;
-
-            if (Monitor.TryEnter(_lastPersistedQueryingTimeLocker) == false)
-                return;
-
-            try
-            {
-                if (_lastPersistedQueryingTime - lastQueryingTime < LastQueryingTimePersitenceThreshold)
-                    return;
-
-                _indexStorage.WriteLastQueryingTime(lastQueryingTime.Value);
-
-                _lastPersistedQueryingTime = lastQueryingTime;
-            }
-            finally
-            {
-                Monitor.Exit(_lastPersistedQueryingTimeLocker);
-            }
         }
 
         public IndexDefinition GetIndexDefinition()
