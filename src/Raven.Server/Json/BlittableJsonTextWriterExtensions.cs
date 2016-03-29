@@ -2,12 +2,13 @@
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Json
 {
     public static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteIndexDefinition(this BlittableJsonTextWriter writer, MemoryOperationContext context, IndexDefinition indexDefinition)
+        public static void WriteIndexDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition)
         {
             writer.WriteStartObject();
 
@@ -94,7 +95,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexStats(this BlittableJsonTextWriter writer, MemoryOperationContext context, IndexStats stats)
+        public static void WriteIndexStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
         {
             writer.WriteStartObject();
 
@@ -196,7 +197,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, MemoryOperationContext context, IndexFieldOptions options)
+        private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options)
         {
             writer.WriteStartObject();
 

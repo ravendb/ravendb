@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Json
@@ -12,14 +12,14 @@ namespace FastTests.Server.Json
     public class BlittableJsonTraverserTests : IDisposable
     {
         private readonly UnmanagedBuffersPool _pool;
-        private readonly MemoryOperationContext _ctx;
+        private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
         private readonly BlittableJsonTraverser _sut = new BlittableJsonTraverser();
 
         public BlittableJsonTraverserTests()
         {
             _pool = new UnmanagedBuffersPool("foo");
-            _ctx = new MemoryOperationContext(_pool);
+            _ctx = new JsonOperationContext(_pool);
         }
 
         [Fact]

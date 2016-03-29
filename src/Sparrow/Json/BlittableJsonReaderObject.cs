@@ -2,15 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Raven.Server.Routing;
-using Raven.Server.Json.Parsing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
@@ -36,7 +30,7 @@ namespace Raven.Server.Json
             return new StreamReader(memoryStream).ReadToEnd();
         }
 
-        public BlittableJsonReaderObject(byte* mem, int size, MemoryOperationContext context, 
+        public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, 
             BlittableJsonDocumentBuilder builder = null,
             CachedProperties cachedProperties = null)
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Server.Indexing.Corax.Analyzers;
 using Raven.Server.Json;
+using Sparrow.Json;
 using Voron;
 using Voron.Data.Tables;
 

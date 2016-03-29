@@ -13,9 +13,10 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.OAuth;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Authentication
 {
@@ -35,7 +36,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     try
                     {
-                        MemoryOperationContext context;
+                        JsonOperationContext context;
                         using (ServerStore.ContextPool.AllocateOperationContext(out context))
                         {
                             await SendInitialChallenge(webSocket);
@@ -123,7 +124,7 @@ namespace Raven.Server.Web.Authentication
         }
 
 
-        private async Task<AccessToken> ProcessToken(MemoryOperationContext context, WebSocket webSocket)
+        private async Task<AccessToken> ProcessToken(JsonOperationContext context, WebSocket webSocket)
         {
             using (var reader = await context.ReadFromWebSocket(webSocket, DebugTag, ServerStore.ServerShutdown))
             {
@@ -291,7 +292,7 @@ namespace Raven.Server.Web.Authentication
 
         private async Task SendResponse(WebSocket webSocket, DynamicJsonValue json)
         {
-            MemoryOperationContext context;
+            JsonOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 try

@@ -5,12 +5,10 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using Sparrow;
 
-namespace Raven.Server.Json
+namespace Sparrow.Compression
 {
     /// <summary>
     /// Based on https://github.com/antirez/smaz

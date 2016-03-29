@@ -5,10 +5,11 @@ using System.Threading.Tasks;
 using Raven.Client.Data.Indexes;
 using Raven.Database.Util;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/metrics", "GET")]
         public Task Metrics()
         {
-            MemoryOperationContext context;
+            JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

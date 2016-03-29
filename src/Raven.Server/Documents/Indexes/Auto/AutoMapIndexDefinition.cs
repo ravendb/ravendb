@@ -6,6 +6,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
@@ -131,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         public static AutoMapIndexDefinition Load(StorageEnvironment environment)
         {
             using (var pool = new UnmanagedBuffersPool(nameof(AutoMapIndexDefinition)))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var tx = environment.ReadTransaction())
             {
                 var tree = tx.CreateTree("Definition");

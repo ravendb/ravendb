@@ -62,19 +62,15 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #endregion
 
-using Sparrow;
-using Sparrow.Platform;
 using System;
 using System.Runtime.InteropServices;
-using Voron.Impl;
+using Sparrow.Platform;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable TooWideLocalVariableScope
 // ReSharper disable JoinDeclarationAndInitializer
 
-
-
-namespace Voron.Util
+namespace Sparrow.Compression
 {
     public unsafe class LZ4 : IDisposable
     {

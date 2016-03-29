@@ -14,6 +14,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
@@ -182,7 +183,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/rootMetrics", "GET")]
         public Task GetRootStats()
         {
-            MemoryOperationContext context;
+            JsonOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

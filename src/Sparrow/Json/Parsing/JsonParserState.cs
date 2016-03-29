@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Raven.Server.Utils;
 
-namespace Raven.Server.Json.Parsing
+namespace Sparrow.Json.Parsing
 {
     public unsafe class JsonParserState
     {

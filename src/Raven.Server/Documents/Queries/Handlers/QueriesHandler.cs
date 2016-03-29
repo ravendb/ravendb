@@ -7,6 +7,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Handlers
 {

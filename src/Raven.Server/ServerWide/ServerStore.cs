@@ -10,6 +10,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils.Metrics;
+using Sparrow.Json;
 using Voron;
 using Voron.Data;
 
@@ -137,7 +138,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static Item GetCurrentItem(MemoryOperationContext ctx, IIterator it)
+        private static Item GetCurrentItem(JsonOperationContext ctx, IIterator it)
         {
             var readerForCurrent = it.CreateReaderForCurrent();
             return new Item

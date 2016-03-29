@@ -1,9 +1,6 @@
 ﻿using System;
 
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public unsafe class BlittableJsonReaderBase
     {
@@ -12,7 +9,7 @@ namespace Raven.Server.Json
         protected int _size;
         protected byte* _propNames;
         protected int _propNamesDataOffsetSize;
-        protected MemoryOperationContext _context;
+        protected JsonOperationContext _context;
 
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
@@ -21,6 +18,7 @@ namespace Raven.Server.Json
                 BlittableJsonToken.PropertyIdSizeByte | 
                 BlittableJsonToken.PropertyIdSizeShort |
                 BlittableJsonToken.PropertyIdSizeInt;
+
             switch (currentType &mask)
             {
                 case BlittableJsonToken.PropertyIdSizeByte:
@@ -55,7 +53,7 @@ namespace Raven.Server.Json
             }
         }
 
-        internal const BlittableJsonToken TypesMask =
+        public const BlittableJsonToken TypesMask =
                 BlittableJsonToken.Boolean |
                 BlittableJsonToken.Float |
                 BlittableJsonToken.Integer |

@@ -1,8 +1,6 @@
-﻿using System;
-using System.Globalization;
-using System.Runtime.CompilerServices;
+﻿using System.Globalization;
 
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public class LazyDoubleValue
     {

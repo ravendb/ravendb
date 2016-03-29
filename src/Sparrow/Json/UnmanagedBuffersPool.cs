@@ -1,22 +1,16 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Raven.Abstractions.Logging;
-using Raven.Server.Config;
+using NLog;
 using Sparrow.Binary;
 
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public unsafe class UnmanagedBuffersPool : IDisposable
     {
         private readonly string _debugTag;
 
-        private static readonly ILog _log = LogManager.GetLogger(typeof(UnmanagedBuffersPool));
+        private static readonly Logger _log = LogManager.GetLogger(nameof(UnmanagedBuffersPool));
 
         private readonly ConcurrentStack<AllocatedMemoryData>[] _freeSegments;
 
@@ -64,10 +58,9 @@ namespace Raven.Server.Json
 
         public void SoftMemoryRelease()
         {
-
         }
 
-        public LowMemoryHandlerStatistics GetStats()
+        public long GetAllocatedMemorySize()
         {
             long size = 0;
             foreach (var stack in _freeSegments)
@@ -77,18 +70,17 @@ namespace Raven.Server.Json
                     size += allocatedMemoryData.SizeInBytes;
                 }
             }
-            return new LowMemoryHandlerStatistics
-            {
-                DatabaseName = _debugTag,
-                EstimatedUsedMemory = size,
-                Name = "UnmanagedBufferPool for " + _debugTag
-            };
+
+            // TODO: This was part of the MemoryStatistics when we moved Json parsing into Sparrow. Remember to reconstruct that when
+            //       we add statistics. 
+            return size;
         }
 
         ~UnmanagedBuffersPool()
         {
             if (_isDisposed == false)
                 _log.Warn("UnmanagedBuffersPool for {0} wasn't propertly disposed", _debugTag);
+
             Dispose();
         }
 

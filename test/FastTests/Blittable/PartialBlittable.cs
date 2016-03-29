@@ -9,10 +9,10 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Blittable
@@ -24,7 +24,7 @@ namespace FastTests.Blittable
         public void CanSkipWritingPropertyNames()
         {
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var ctx = new MemoryOperationContext(pool))
+            using (var ctx = new JsonOperationContext(pool))
             {
                 var buffer = Encoding.UTF8.GetBytes("{\"Name\":\"Oren\"}");
                 var state = new JsonParserState();
