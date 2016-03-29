@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
+using Raven.Abstractions.Connection;
 using Raven.Client.Data;
 using Raven.Client.OAuth;
 using Raven.Server.Config.Attributes;
@@ -69,7 +70,7 @@ namespace FastTests.Server.OAuth
 
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
 
-                var exception = Assert.Throws<InvalidOperationException>(() => StoreSampleDoc(store, "test/1"));
+                var exception = Assert.Throws<InvalidApiKeyException>(() => StoreSampleDoc(store, "test/1"));
                 Assert.Contains("Unable to authenticate api key", exception.Message);
             }
         }
@@ -136,6 +137,25 @@ namespace FastTests.Server.OAuth
                 oauth(authenticatedClient);
                 result = await authenticatedClient.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
                 Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task ThrowOnForbiddenRequest()
+        {
+            DoNotReuseServer();
+
+            Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+            using (var store = await GetDocumentStore(apiKey: "super/" + "secret"))
+            {
+                store.DatabaseCommands.GlobalAdmin.PutApiKey("super", apiKey);
+                var doc = store.DatabaseCommands.GlobalAdmin.GetApiKey("super");
+                Assert.NotNull(doc);
+
+                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
+
+                var exception = Assert.Throws<ErrorResponseException>(() => StoreSampleDoc(store, "test/1"));
+                Assert.Contains("Api Key super does not have access to db/ThrowOnForbiddenRequest", exception.Message);
             }
         }
 

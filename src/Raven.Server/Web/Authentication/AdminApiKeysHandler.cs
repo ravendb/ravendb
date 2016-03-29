@@ -31,6 +31,12 @@ namespace Raven.Server.Web.Authentication
                     return HttpContext.Response.WriteAsync("'name' query string must have exactly one value");
                 }
 
+                if (string.IsNullOrEmpty(name[0]))
+                {
+                    HttpContext.Response.StatusCode = 400;
+                    return HttpContext.Response.WriteAsync("'name' query string must be non-empty");
+                }
+
                 var apiKey = ctx.ReadForDisk(RequestBodyStream(), name[0]);
 
                 var errorTask = ValidateApiKeyStructure(name[0], apiKey);
@@ -175,6 +181,12 @@ namespace Raven.Server.Web.Authentication
                 return HttpContext.Response.WriteAsync("'ApiKey' must include 'Secret' property");
             }
 
+            if (string.IsNullOrEmpty(testStructureOfApiKey.Secret))
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'ApiKey' must include non-empty 'Secret' property");
+            }
+
             if (testStructureOfApiKey.Secret.Contains("/"))
             {
                 HttpContext.Response.StatusCode = 400;
@@ -203,6 +215,12 @@ namespace Raven.Server.Web.Authentication
                 {
                     HttpContext.Response.StatusCode = 400;
                     return HttpContext.Response.WriteAsync($"Missing value of dbName -'{dbName.Item1}' property");
+                }
+
+                if (string.IsNullOrEmpty(accessValue))
+                {
+                    HttpContext.Response.StatusCode = 400;
+                    return HttpContext.Response.WriteAsync("'ApiKey' must include non-empty 'AccessMode' DB Name' property");
                 }
 
                 AccessModes mode;
