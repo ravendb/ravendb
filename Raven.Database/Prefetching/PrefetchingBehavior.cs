@@ -1140,8 +1140,16 @@ namespace Raven.Database.Prefetching
 
             futureIndexBatch.Task.ContinueWith(t =>
             {
-                FutureBatchCompleted(t.Result.Count);
-            }, linkedToken.Token);
+                try
+                {
+                    if (linkedToken.IsCancellationRequested == false)
+                        FutureBatchCompleted(t.Result.Count);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // this is an expected race with the actual task, this is fine
+                }
+            });
 
             return futureIndexBatches.TryAdd(nextEtag, futureIndexBatch);
         }
