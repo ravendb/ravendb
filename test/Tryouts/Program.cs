@@ -22,7 +22,7 @@ namespace Tryouts
 
             using (var store = new DocumentStore
             {
-                Url = "http://localhost:8081",
+                Url = "http://127.0.0.1:8081",
                 DefaultDatabase = "FooBar123"
             })
             {
