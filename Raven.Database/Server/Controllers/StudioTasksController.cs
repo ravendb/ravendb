@@ -657,7 +657,7 @@ for(var customFunction in customFunctions) {{
 
             var collectionsTouchedByIndexer = Database.LastMapCompletedDatesPerCollection.GetLastChangedCollections(date.ToUniversalTime());
 
-            var collectionsUnion = new HashSet<string>(collections.Union(collectionsTouchedByIndexer, StringComparer.OrdinalIgnoreCase);
+            var collectionsUnion = new HashSet<string>(collections.Union(collectionsTouchedByIndexer, StringComparer.OrdinalIgnoreCase));
 
             var results = new ConcurrentBag<CollectionNameAndCount>();
 
