@@ -399,9 +399,9 @@ namespace Raven.Server.Documents.Indexes
                     else
                         differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
 
-                    if (differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                    if (differenceBetweenNewestAndCurrentQueryingTime >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                     {
-                        if (lastQuery > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                        if (lastQuery >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                         {
                             item.Index.SetPriority(IndexingPriority.Idle);
                             Log.Warn($"Changed index '{item.Index.Name} ({item.Index.IndexId})' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (item.Priority.HasFlag(IndexingPriority.Idle))
                 {
-                    if (age < ageThreshold || lastQuery > timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                    if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
                         DeleteIndex(item.Index.IndexId);
                         Log.Warn($"Deleted index '{item.Index.Name} ({item.Index.IndexId})' due to idleness. Age: {age}. Last query: {lastQuery}.");
