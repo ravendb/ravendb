@@ -40,9 +40,10 @@ namespace Tryouts
 
         public static async Task BulkInsert(DocumentStore store, int numOfItems)
         {
+            Console.Write("Doing bulk-insert...");
+            var sp = System.Diagnostics.Stopwatch.StartNew();
             using (var bulkInsert = store.BulkInsert())
             {
-                Console.Write("Doing bulk-insert...");
                 int id = 1;
                 for (int i = 0; i < numOfItems; i++)
                     await bulkInsert.StoreAsync(new User
@@ -50,10 +51,8 @@ namespace Tryouts
                         FirstName = $"First Name - {i}",
                         LastName = $"Last Name - {i}"
                     }, $"users/{id++}");
-                Console.WriteLine("done");
-                Console.Write("Closing bulk-insert...");
             }
-            Console.WriteLine("done");
+            Console.WriteLine("done in " + sp.Elapsed);
         }
     }
 }
