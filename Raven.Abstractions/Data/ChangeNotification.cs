@@ -123,6 +123,11 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public Etag Etag { get; set; }
 
+        /// <summary>
+        /// List of collections index worked on
+        /// </summary>
+        public HashSet<string> Collections { get; set; } 
+
         public override string ToString()
         {
             return string.Format("{0} on {1}", Type, Name);

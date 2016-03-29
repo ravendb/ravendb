@@ -253,6 +253,7 @@
     <Compile Include="Actions\ActionsBase.cs" />
     <Compile Include="Actions\AttachmentActions.cs" />
     <Compile Include="Actions\LastCollectionEtags.cs" />
+    <Compile Include="Actions\LastIndexDatesPerCollection.cs" />
     <Compile Include="Actions\MaintenanceActions.cs" />
     <Compile Include="Actions\DocumentActions.cs" />
     <Compile Include="Actions\IndexActions.cs" />

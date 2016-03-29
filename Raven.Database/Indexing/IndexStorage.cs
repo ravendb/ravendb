@@ -1182,7 +1182,8 @@ namespace Raven.Database.Indexing
                 context.RaiseIndexChangeNotification(new IndexChangeNotification
                 {
                     Name = value.PublicName,
-                    Type = IndexChangeTypes.MapCompleted
+                    Type = IndexChangeTypes.MapCompleted,
+                    Collections = batch.Collections
                 });
 
                 return performance;

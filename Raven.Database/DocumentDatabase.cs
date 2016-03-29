@@ -73,6 +73,8 @@ namespace Raven.Database
 
         private readonly LastCollectionEtags lastCollectionEtags;
 
+        private readonly LastMapCompletedDatesPerCollection lastMapCompletedDatesPerCollection;
+
         private readonly Prefetcher prefetcher;
 
         private readonly SequentialUuidGenerator uuidGenerator;
@@ -183,6 +185,8 @@ namespace Raven.Database
                     Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
                     Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
+
+                    lastMapCompletedDatesPerCollection = new LastMapCompletedDatesPerCollection(this);
 
                     ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
@@ -382,6 +386,8 @@ namespace Raven.Database
         public IndexingExecuter IndexingExecuter => indexingExecuter;
 
         public LastCollectionEtags LastCollectionEtags => lastCollectionEtags;
+
+        public LastMapCompletedDatesPerCollection LastMapCompletedDatesPerCollection => lastMapCompletedDatesPerCollection;
 
         public MaintenanceActions Maintenance { get; private set; }
 
