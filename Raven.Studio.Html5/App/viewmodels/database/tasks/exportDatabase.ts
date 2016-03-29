@@ -62,7 +62,7 @@ class exportDatabase extends viewModelBase {
         });
 
         this.exportCommand = ko.computed(() => {
-            var targetServer = appUrl.serverUrl();
+            var targetServer = appUrl.forServer();
             var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefualtFileName()) : "raven.dump"; 
             var commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
 

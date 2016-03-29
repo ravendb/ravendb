@@ -752,10 +752,6 @@ class appUrl {
         return "#counterstorages?" + counterStoragePart;
     }
 
-    static serverUrl(): string {
-        return window.location.protocol + "//" + window.location.host;
-    }
-
     static forIndexesRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
@@ -983,16 +979,7 @@ class appUrl {
     * Gets the server URL.
     */
     static forServer() {
-        // Ported this code from old Silverlight Studio. Do we still need this?
-        if (window.location.protocol === "file:") {
-            if (window.location.search.indexOf("fiddler")) {
-                return "http://localhost.fiddler:8080";
-            } else {
-                return "http://localhost:8080";
-            }
-        }
-
-        return window.location.protocol + "//" + window.location.host;
+        return window.location.protocol + "//" + window.location.host + appUrl.baseUrl;
     }
 
     /**
