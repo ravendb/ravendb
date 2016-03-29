@@ -118,7 +118,7 @@ class serverSmuggling extends viewModelBase {
         this.curlRequest = ko.computed(() => {
             var json = JSON.stringify(this.getJson(), null, 0).replaceAll("\"", "\\\"");
 
-            return "curl -i -H \"Accept: application/json\" -H \"Content-Type: application/json\" -X POST --data \"" + json + "\" " + appUrl.serverUrl() + "/admin/serverSmuggling";
+            return "curl -i -H \"Accept: application/json\" -H \"Content-Type: application/json\" -X POST --data \"" + json + "\" " + appUrl.forServer() + "/admin/serverSmuggling";
         });
 
         this.jsonRequest.subscribe(() => this.saveIntoLocalStorage());
