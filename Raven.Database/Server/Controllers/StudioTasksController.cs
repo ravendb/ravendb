@@ -655,9 +655,13 @@ for(var customFunction in customFunctions) {{
                 .LastCollectionEtags
                 .GetLastChangedCollections(date.ToUniversalTime());
 
+            var collectionsTouchedByIndexer = Database.LastMapCompletedDatesPerCollection.GetLastChangedCollections(date.ToUniversalTime());
+
+            var collectionsUnion = new HashSet<string>(collections.Union(collectionsTouchedByIndexer, StringComparer.OrdinalIgnoreCase);
+
             var results = new ConcurrentBag<CollectionNameAndCount>();
 
-            Parallel.ForEach(collections, collectionName =>
+            Parallel.ForEach(collectionsUnion, collectionName =>
             {
                 var result = Database
                     .Queries

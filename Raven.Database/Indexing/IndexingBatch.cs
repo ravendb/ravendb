@@ -12,6 +12,7 @@ namespace Raven.Database.Indexing
             Ids = new List<string>();
             Docs = new List<dynamic>();
             SkipDeleteFromIndex = new List<bool>();
+            Collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public readonly List<string> Ids;
@@ -19,12 +20,18 @@ namespace Raven.Database.Indexing
         public readonly List<bool> SkipDeleteFromIndex;
         public DateTime? DateTime;
         public readonly Etag HighestEtagBeforeFiltering;
+        public readonly HashSet<string> Collections;
 
         public void Add(JsonDocument doc, object asJson, bool skipDeleteFromIndex)
         {
             Ids.Add(doc.Key);
             Docs.Add(asJson);
             SkipDeleteFromIndex.Add(skipDeleteFromIndex);
+            var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+            if (entityName != null)
+            {
+                Collections.Add(entityName);
+            }
         }
     }
 }
