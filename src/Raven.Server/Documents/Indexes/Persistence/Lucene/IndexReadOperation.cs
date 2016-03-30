@@ -3,16 +3,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+
 using Lucene.Net.Search;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
+
 using Voron.Impl;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexReadOperation : IndexOperationBase
     {
@@ -23,13 +27,13 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
 
         private readonly string _indexName;
         private readonly IndexSearcher _searcher;
-        private readonly LowerCaseKeywordAnalyzer _analyzer;
+        private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
 
-        public IndexReadOperation(string indexName, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public IndexReadOperation(string indexName, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
         {
-            _analyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer());
+            _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
             _indexName = indexName;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher);

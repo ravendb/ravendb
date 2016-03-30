@@ -2,13 +2,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+
 using Lucene.Net.Documents;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class LuceneDocumentConverter : IDisposable
     {
@@ -29,9 +31,9 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents
 
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
-        private readonly IndexField[] _fields;
+        private readonly ICollection<IndexField> _fields;
 
-        public LuceneDocumentConverter(IndexField[] fields)
+        public LuceneDocumentConverter(ICollection<IndexField> fields)
         {
             _fields = fields;
         }

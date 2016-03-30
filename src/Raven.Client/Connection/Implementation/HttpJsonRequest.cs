@@ -286,19 +286,12 @@ namespace Raven.Client.Connection.Implementation
                         throw;
 
                     if (e.StatusCode != HttpStatusCode.Unauthorized &&
-                        e.StatusCode != HttpStatusCode.Forbidden &&
                         e.StatusCode != HttpStatusCode.PreconditionFailed)
                         throw;
 
                     responseException = e;
                 }
                 var responseStatusCode = Response.StatusCode;
-
-                if (responseStatusCode == HttpStatusCode.Forbidden)
-                {
-                    await HandleForbiddenResponseAsync(Response).ConfigureAwait(false);
-                    throw responseException;
-                }
 
                 if (await HandleUnauthorizedResponseAsync(Response).ConfigureAwait(false) == false)
                     throw responseException;
@@ -475,18 +468,6 @@ namespace Raven.Client.Connection.Implementation
             var configureHttpClient = await unauthorizedResponseAsync.ConfigureAwait(false);
             RecreateHttpClient(configureHttpClient);
             return true;
-        }
-
-        private async Task HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse)
-        {
-            if (conventions == null || conventions.HandleForbiddenResponseAsync == null)
-                return;
-
-            var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
-            if (forbiddenResponseAsync == null)
-                return;
-
-            await forbiddenResponseAsync.ConfigureAwait(false);
         }
 
         private void RecreateHttpClient(Action<HttpClient> configureHttpClient)

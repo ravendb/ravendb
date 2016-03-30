@@ -75,7 +75,7 @@ namespace Raven.Client.Connection
             if (maxNumberOfParallelIndexTasks.HasValue)
             {
                 throw new NotImplementedException();
-                url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
+               // url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
             }
 
             return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
@@ -109,6 +109,16 @@ namespace Raven.Client.Connection
         public HttpJsonRequest CreateGetApiKeyRequest(string name)
         {
             return createRequestForSystemDatabase("/admin/api-keys?name=" + name, HttpMethods.Get);
+        }
+
+        public HttpJsonRequest CreateDeleteApiKeyRequest(string name)
+        {
+            return createRequestForSystemDatabase("/admin/api-keys?name=" + name, HttpMethods.Delete);
+        }
+
+        public HttpJsonRequest CreateStreamApiKeysRequest()
+        {
+            return createRequestForSystemDatabase("/admin/apikeys/all", HttpMethods.Get);
         }
 
         public HttpJsonRequest IndexesStatus(string serverUrl)

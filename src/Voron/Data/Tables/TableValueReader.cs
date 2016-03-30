@@ -29,6 +29,10 @@ namespace Voron.Data.Tables
 
         public long Id;
 
+        public int Size => _size;
+
+        public byte Count => _count;
+
         public byte* Read(int index, out int size)
         {
             if (index < 0 || index >= _count)

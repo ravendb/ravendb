@@ -4,12 +4,18 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -196,12 +202,58 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public IAsyncDatabaseCommands Commands
+        public async Task DeleteApiKeyAsync(string name,
+           CancellationToken token = default(CancellationToken))
         {
-            get
+            using (var request = adminRequest.CreateDeleteApiKeyRequest(name))
             {
-                return innerAsyncServerClient;
+                await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
             }
         }
+
+
+        public async Task<IEnumerable<NamedApiKeyDefinition>> GetAllApiKeys()
+        {
+            HttpJsonRequest request = null;
+            HttpResponseMessage resp = null;
+            Stream stream;
+            try
+            {
+                request = adminRequest.CreateStreamApiKeysRequest();
+                resp = await request.ExecuteRawResponseAsync();
+                stream = await resp.GetResponseStreamWithHttpDecompression();
+                return YieldResults(stream, request); // stream and request - must be disposed manually when YieldResults finishes
+            }
+            catch (Exception)
+            {
+                request?.Dispose();
+                resp?.Dispose();
+                throw;
+            }
+        }
+
+        private IEnumerable<NamedApiKeyDefinition> YieldResults(Stream stream, HttpJsonRequest request)
+        {
+            using(request)
+            using(stream)
+            using (var jtr = new JsonTextReader(new StreamReader(stream)))
+            {
+                if (jtr.Read() == false || jtr.TokenType != JsonToken.StartArray)
+                    throw new InvalidOperationException("Expected start array");
+                while (true)
+                {
+                    if (jtr.Read() == false)
+                        throw new InvalidOperationException("Unexpected EOF");
+
+                    if (jtr.TokenType == JsonToken.EndArray)
+                        break;
+
+                    var ravenJObject = RavenJObject.Load(jtr);
+                    yield return ravenJObject.Deserialize<NamedApiKeyDefinition>(new DocumentConvention());
+                }
+            }
+        }
+
+        public IAsyncDatabaseCommands Commands => innerAsyncServerClient;
     }
 }

@@ -469,7 +469,7 @@ namespace Raven.Server.ServerWide.Context
         }
 
 
-        public async Task<BlittableJsonReaderObject[]> ParseMultipleDocuments(Stream stream, int count, BlittableJsonDocumentBuilder.UsageMode mode)
+        public  BlittableJsonReaderObject[] ParseMultipleDocuments(Stream stream, int count, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
             var returnedArray = new BlittableJsonReaderObject[count];

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
@@ -330,9 +331,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public List<AutoMapIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
+        public List<AutoMapIndexDefinition> GetAutoMapIndexDefinitionForCollection(string collection)
         {
-            return _indexes.GetDefinitionsOfTypeForCollection<AutoMapIndexDefinition>(collection);
+            return _indexes
+                .GetForCollection(collection)
+                .Where(x => x.Type == IndexType.AutoMap)
+                .Select(x => (AutoMapIndexDefinition)x.Definition)
+                .ToList();
         }
 
         public IEnumerable<Index> GetIndexesForCollection(string collection)
@@ -343,6 +348,80 @@ namespace Raven.Server.Documents.Indexes
         public IEnumerable<Index> GetIndexes()
         {
             return _indexes;
+        }
+
+        public void RunIdleOperations()
+        {
+            foreach (var index in _indexes)
+                index.MaybePersistQueryingTime();
+
+            HandleUnusedAutoIndexes();
+            //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
+        }
+
+        private void HandleUnusedAutoIndexes()
+        {
+            var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+            var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
+            var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
+
+            var indexesSortedByLastQueryTime = (from index in _indexes
+                                                where index.Priority.HasFlag(IndexingPriority.Disabled) == false && index.Priority.HasFlag(IndexingPriority.Error) == false && index.Priority.HasFlag(IndexingPriority.Forced) == false
+                                                let stats = index.GetStats()
+                                                let lastQueryingTime = stats.LastQueryingTime ?? DateTime.MinValue
+                                                orderby lastQueryingTime
+                                                select new UnusedIndexState
+                                                {
+                                                    LastQueryingTime = lastQueryingTime,
+                                                    Index = index,
+                                                    Priority = stats.Priority,
+                                                    CreationDate = stats.CreatedTimestamp
+                                                }).ToList();
+
+            for (var i = 0; i < indexesSortedByLastQueryTime.Count; i++)
+            {
+                var item = indexesSortedByLastQueryTime[i];
+
+                if (item.Index.Type != IndexType.AutoMap && item.Index.Type != IndexType.AutoMapReduce)
+                    continue;
+
+                var age = SystemTime.UtcNow - item.CreationDate;
+                var lastQuery = SystemTime.UtcNow - item.LastQueryingTime;
+
+                if (item.Priority.HasFlag(IndexingPriority.Normal))
+                {
+                    TimeSpan differenceBetweenNewestAndCurrentQueryingTime;
+                    if (i < indexesSortedByLastQueryTime.Count - 1)
+                    {
+                        var lastItem = indexesSortedByLastQueryTime[indexesSortedByLastQueryTime.Count - 1];
+                        differenceBetweenNewestAndCurrentQueryingTime = lastItem.LastQueryingTime - item.LastQueryingTime;
+                    }
+                    else
+                        differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
+
+                    if (differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                    {
+                        if (lastQuery > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                            item.Index.SetPriority(IndexingPriority.Idle);
+                    }
+
+                    continue;
+                }
+
+                if (item.Priority.HasFlag(IndexingPriority.Idle))
+                {
+                    if (age < ageThreshold || lastQuery > timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                        DeleteIndex(item.Index.IndexId);
+                }
+            }
+        }
+
+        private class UnusedIndexState
+        {
+            public DateTime LastQueryingTime { get; set; }
+            public Index Index { get; set; }
+            public IndexingPriority Priority { get; set; }
+            public DateTime CreationDate { get; set; }
         }
     }
 }

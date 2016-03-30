@@ -331,7 +331,7 @@ namespace FastTests.Server.Queries.Dynamic
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
 
             index.SetPriority(IndexingPriority.Normal);
-            index.UpdateStats(DateTime.UtcNow, new IndexingBatchStats()
+            index._indexStorage.UpdateStats(DateTime.UtcNow, new IndexingBatchStats()
             {
                 IndexingAttempts = 1000,
                 IndexingErrors = 900

@@ -1,10 +1,17 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RavenPerFieldAnalyzerWrapper.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 
-namespace Raven.Server.Documents.Queries.Parse
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
     {
@@ -50,20 +57,20 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer)
         {
-            this._defaultAnalyzer = defaultAnalyzer;
+            _defaultAnalyzer = defaultAnalyzer;
         }
 
-        public void AddAnalyzer(System.String fieldName, Analyzer analyzer)
+        public void AddAnalyzer(string fieldName, Analyzer analyzer)
         {
-            _analyzerMap[fieldName] = analyzer;
+            _analyzerMap.Add(fieldName, analyzer);
         }
 
-        public override TokenStream TokenStream(System.String fieldName, System.IO.TextReader reader)
+        public override TokenStream TokenStream(string fieldName, System.IO.TextReader reader)
         {
             return GetAnalyzer(fieldName).TokenStream(fieldName, reader);
         }
 
-        private Analyzer GetAnalyzer(string fieldName)
+        internal Analyzer GetAnalyzer(string fieldName)
         {
             if (_analyzerMap.Count == 0)
                 return _defaultAnalyzer;
@@ -91,6 +98,15 @@ namespace Raven.Server.Documents.Queries.Parse
         public override string ToString()
         {
             return "PerFieldAnalyzerWrapper(" + string.Join(",", _analyzerMap.Select(x => x.Key + " -> " + x.Value)) + ", default=" + _defaultAnalyzer + ")";
+        }
+
+        public override void Dispose()
+        {
+            _defaultAnalyzer?.Close();
+            foreach (var analyzer in _analyzerMap.Values)
+                analyzer?.Close();
+
+            base.Dispose();
         }
     }
 }

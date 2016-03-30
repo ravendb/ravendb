@@ -37,12 +37,26 @@ namespace Voron.Data.Tables
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
+#if DEBUG
+                if (totalSize < 0)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
+#endif
                 for (var i = 1; i < Count; i++)
                 {
                     int size;
                     value.Read(i + StartIndex, out size);
+#if DEBUG
+                    if (size < 0)
+                        throw new ArgumentOutOfRangeException(nameof(size), "Size cannot be negative");
+#endif
                     totalSize += size;
                 }
+#if DEBUG
+                if (totalSize < 0 || totalSize > value.Size)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Reading a slice that is longer than the value");
+                if (totalSize > ushort.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Reading a slice that too big to be a slice");
+#endif
                 return new Slice(ptr, (ushort)totalSize);
             }
         }
@@ -62,8 +76,6 @@ namespace Voron.Data.Tables
                 return EndianBitConverter.Big.ToInt64(ptr);
             }
         }
-
-
 
         private SchemaIndexDef _pk;
         private readonly Dictionary<string, SchemaIndexDef> _indexes = new Dictionary<string, SchemaIndexDef>();
@@ -127,7 +139,7 @@ namespace Voron.Data.Tables
 
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
             tableTree.Add(ActiveSectionSlice, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber));
-            var stats = (TableSchemaStats*) tableTree.DirectAdd(StatsSlice, sizeof (TableSchemaStats));
+            var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
             stats->NumberOfEntries = 0;
 
             if (_pk != null)
@@ -149,8 +161,8 @@ namespace Voron.Data.Tables
                 if (indexDef.IsGlobal == false)
                 {
                     var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof (TreeRootHeader));
-                    indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
+                    var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(TreeRootHeader));
+                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
                 }
                 else
                 {

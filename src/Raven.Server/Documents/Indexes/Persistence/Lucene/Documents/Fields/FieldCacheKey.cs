@@ -1,8 +1,10 @@
 ﻿using System.Runtime.CompilerServices;
+
 using Lucene.Net.Documents;
+
 using Sparrow;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
     public class FieldCacheKey
     {

@@ -1,7 +1,8 @@
 ﻿using System;
+
 using Lucene.Net.Documents;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
     public class CachedFieldItem<T> : IDisposable where T : AbstractField
     {

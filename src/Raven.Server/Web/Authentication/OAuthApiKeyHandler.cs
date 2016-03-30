@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
+using Raven.Client.OAuth;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
@@ -41,7 +42,7 @@ namespace Raven.Server.Web.Authentication
                             var accessToken = await ProcessToken(context, webSocket);
                             if (accessToken == null)
                             {
-                                await SendError(webSocket, "Unable to authenticate api key");
+                                await SendError(webSocket, "Unable to authenticate api key", "InvalidApiKeyException");
                                 return;
                             }
 
@@ -68,7 +69,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         if (Logger.IsWarnEnabled)
                             Logger.WarnException("Failed to authenticate api key", e);
-                        await SendError(webSocket, e.ToString());
+                        await SendError(webSocket, e.ToString(), "InvalidOperationException");
                     }
                 }
             }
@@ -202,13 +203,14 @@ namespace Raven.Server.Web.Authentication
             return encryptedData;
         }
 
-        private async Task SendError(WebSocket webSocket, string errorMsg)
+        private async Task SendError(WebSocket webSocket, string errorMsg, string exceptionType)
         {
             if (webSocket.State != WebSocketState.Open)
                 return;
             var json = new DynamicJsonValue
             {
-                ["Error"] = errorMsg
+                ["Error"] = errorMsg,
+                ["ExceptionType"] = exceptionType
             };
             try
             {

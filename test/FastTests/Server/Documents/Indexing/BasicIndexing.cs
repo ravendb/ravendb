@@ -130,20 +130,20 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(1, indexes[0].IndexId);
                 Assert.Equal(1, indexes[0].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[0].Definition.Collections[0]);
-                Assert.Equal(1, indexes[0].Definition.MapFields.Length);
-                Assert.Equal("Name1", indexes[0].Definition.MapFields[0].Name);
-                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields[0].SortOption);
-                Assert.True(indexes[0].Definition.MapFields[0].Highlighted);
+                Assert.Equal(1, indexes[0].Definition.MapFields.Count);
+                Assert.Equal("Name1", indexes[0].Definition.MapFields["Name1"].Name);
+                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].SortOption);
+                Assert.True(indexes[0].Definition.MapFields["Name1"].Highlighted);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(1, indexes[1].Definition.Collections.Length);
                 Assert.Equal("Users", indexes[1].Definition.Collections[0]);
-                Assert.Equal(1, indexes[1].Definition.MapFields.Length);
-                Assert.Equal("Name2", indexes[1].Definition.MapFields[0].Name);
-                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields[0].SortOption);
-                Assert.False(indexes[1].Definition.MapFields[0].Highlighted);
+                Assert.Equal(1, indexes[1].Definition.MapFields.Count);
+                Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
+                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Name2"].SortOption);
+                Assert.False(indexes[1].Definition.MapFields["Name2"].Highlighted);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
             }
@@ -307,7 +307,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(0, batchStats.IndexingErrors);
 
                         var now = SystemTime.UtcNow;
-                        index.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, batchStats);
 
                         var stats = index.GetStats();
                         Assert.Equal(index.IndexId, stats.Id);
@@ -323,7 +323,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(2, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
-                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
@@ -352,7 +352,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(0, batchStats.IndexingErrors);
 
                         now = SystemTime.UtcNow;
-                        index.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, batchStats);
 
                         stats = index.GetStats();
                         Assert.Equal(index.IndexId, stats.Id);
@@ -368,7 +368,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
-                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
@@ -387,7 +387,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(0, batchStats.IndexingErrors);
 
                         now = SystemTime.UtcNow;
-                        index.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, batchStats);
 
                         stats = index.GetStats();
                         Assert.Equal(index.IndexId, stats.Id);
@@ -403,7 +403,7 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
-                        Assert.Equal(null, stats.LastQueryingTime);
+                        Assert.NotNull(stats.LastQueryingTime);
                         Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
                     }
@@ -456,30 +456,108 @@ namespace FastTests.Server.Documents.Indexing
                     database))
                 {
                     var stats = new IndexingBatchStats();
-                    index.UpdateStats(SystemTime.UtcNow, stats);
+                    index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
 
                     Assert.Equal(0, index.GetErrors().Count);
 
                     stats.AddWriteError(new IndexWriteException());
                     stats.AddAnalyzerError(new IndexAnalyzerException());
-                    index.UpdateStats(SystemTime.UtcNow, stats);
+
+                    index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
 
                     var errors = index.GetErrors();
                     Assert.Equal(2, errors.Count);
                     Assert.Equal("Write", errors[0].Action);
                     Assert.Equal("Analyzer", errors[1].Action);
 
-                    for (int i = 0; i < Index.MaxNumberOfKeptErrors; i++)
+                    for (int i = 0; i < IndexStorage.MaxNumberOfKeptErrors; i++)
                     {
                         var now = SystemTime.UtcNow;
                         stats.Errors[0].Timestamp = now;
                         stats.Errors[1].Timestamp = now;
-                        index.UpdateStats(now, stats);
+                        index._indexStorage.UpdateStats(now, stats);
                     }
 
                     errors = index.GetErrors();
-                    Assert.Equal(Index.MaxNumberOfKeptErrors, errors.Count);
+                    Assert.Equal(IndexStorage.MaxNumberOfKeptErrors, errors.Count);
                 }
+            }
+        }
+
+        [Fact]
+        public void AutoIndexesShouldBeMarkedAsIdleAndDeleted()
+        {
+            using (var database = LowLevel_CreateDocumentDatabase())
+            {
+                var index0Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Job", Highlighted = false, Storage = FieldStorage.No } }));
+                var index0 = database.IndexStore.GetIndex(index0Id);
+
+                index0.SetPriority(IndexingPriority.Idle);
+
+                database.IndexStore.RunIdleOperations(); // young idle index should be removed
+
+                index0 = database.IndexStore.GetIndex(index0Id);
+                Assert.Null(index0);
+
+                var index1Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }));
+                var index2Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Age", Highlighted = false, Storage = FieldStorage.No } }));
+
+                var index1 = database.IndexStore.GetIndex(index1Id);
+                var index2 = database.IndexStore.GetIndex(index2Id);
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                {
+                    index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    context.Reset();
+                    index2.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                }
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Normal, index2.Priority);
+
+                database.IndexStore.RunIdleOperations(); // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Normal, index2.Priority);
+
+                SystemTime.UtcDateTime = () => DateTime.UtcNow.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
+                {
+                    index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                }
+
+                database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Idle, index2.Priority);
+
+                var now = SystemTime.UtcNow;
+                SystemTime.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
+
+                database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Equal(IndexingPriority.Idle, index2.Priority);
+
+                now = SystemTime.UtcNow;
+                SystemTime.UtcDateTime = () => now.Add(database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan);
+
+                database.IndexStore.RunIdleOperations(); // this will delete index2
+
+                index1 = database.IndexStore.GetIndex(index1Id);
+                index2 = database.IndexStore.GetIndex(index2Id);
+
+                Assert.Equal(IndexingPriority.Normal, index1.Priority);
+                Assert.Null(index2);
             }
         }
 

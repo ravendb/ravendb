@@ -1,18 +1,20 @@
 ﻿using System;
-using System.IO;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+
 using Voron;
 using Voron.Impl;
+
 using Version = Lucene.Net.Util.Version;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexPersistence : IDisposable
     {
@@ -44,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
         {
             _indexId = indexId;
             _definition = indexDefinition;
-            _converter = new LuceneDocumentConverter(_definition.MapFields);
+            _converter = new LuceneDocumentConverter(_definition.MapFields.Values);
         }
 
         public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)
@@ -87,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
             
-            return new IndexWriteOperation(_writeLock, _definition.Name, _directory, _indexWriter, _converter, writeTransaction, this); // TODO arek - 'this' :/
+            return new IndexWriteOperation(_writeLock, _definition.Name, _definition.MapFields, _directory, _indexWriter, _converter, writeTransaction, this); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
@@ -98,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Persistance.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
 
-            return new IndexReadOperation(_definition.Name, _directory, _indexSearcherHolder, readTransaction);
+            return new IndexReadOperation(_definition.Name, _definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
         }
 
         internal void RecreateSearcher()

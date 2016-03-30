@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
 
 namespace Raven.Server.Documents.Indexes
@@ -8,6 +9,8 @@ namespace Raven.Server.Documents.Indexes
         private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
 
         public string Name { get; set; }
+
+        public string Analyzer { get; set; }
 
         public SortOptions? SortOption { get; set; }
 
@@ -32,7 +35,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected bool Equals(IndexField other)
         {
-            return string.Equals(Name, other.Name)
+            return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(Analyzer, other.Analyzer, StringComparison.OrdinalIgnoreCase)
                 && SortOption == other.SortOption
                 && Highlighted == other.Highlighted
                 && MapReduceOperation == other.MapReduceOperation
@@ -61,7 +65,8 @@ namespace Raven.Server.Documents.Indexes
         {
             unchecked
             {
-                var hashCode = Name?.GetHashCode() ?? 0;
+                var hashCode = (Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0);
+                hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Analyzer) : 0);
                 hashCode = (hashCode * 397) ^ SortOption.GetHashCode();
                 hashCode = (hashCode * 397) ^ Highlighted.GetHashCode();
                 hashCode = (hashCode * 397) ^ (int)MapReduceOperation;

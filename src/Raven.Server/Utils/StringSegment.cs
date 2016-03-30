@@ -1,27 +1,61 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text;
+using Lucene.Net.Spatial.Util;
+using Sparrow;
+using Bits = Sparrow.Binary.Bits;
 
 namespace Raven.Server.Utils
 {
+    public class CaseInsensitiveStringSegmentEqualityComparer: IEqualityComparer<StringSegment>
+    {
+        public static CaseInsensitiveStringSegmentEqualityComparer Instance = new CaseInsensitiveStringSegmentEqualityComparer();
+        [ThreadStatic] private static char[] _buffer;
+
+
+        public bool Equals(StringSegment x, StringSegment y)
+        {
+            if (x.Length != y.Length)
+                return false;
+            var compare = string.Compare(x.String, x.Start, y.String, y.Start, x.Length, StringComparison.OrdinalIgnoreCase);
+            return compare == 0;
+        }
+
+        public unsafe int GetHashCode(StringSegment str)
+        {
+            if (_buffer == null || _buffer.Length < str.Length)
+                _buffer = new char[Bits.NextPowerOf2(str.Length)];
+
+            for (int i = 0; i < str.Length; i++)
+            {
+                _buffer[i] = char.ToUpperInvariant(str.String[str.Start + i]);
+            }
+            fixed (char* p = _buffer)
+            {
+                return (int)Hashing.XXHash32.CalculateInline((byte*) p, str.Length*sizeof (char));
+            }
+        }
+    }
+
     public struct StringSegment : IEquatable<StringSegment>
     {
-        private readonly string _string;
-
-        public int Length { get; }
-        public int Start { get; }
+        public readonly string String;
+        public readonly int Length;
+        public readonly int Start;
 
         private string _valueString;
-        public string Value => _valueString ?? (_valueString = _string.Substring(Start, Length));
+        public string Value => _valueString ?? (_valueString = String.Substring(Start, Length));
 
         public StringSegment(string s, int start, int count = -1)
         {
-            _string = s;
+            String = s;
             Start = start;
-            Length = count == -1 ? _string.Length - start : count;
+            Length = count == -1 ? String.Length - start : count;
             _valueString = null;			
 
-            if (Start + Length > _string.Length)
+            if (Start + Length > String.Length)
                 throw new IndexOutOfRangeException();
         }
 
@@ -30,10 +64,10 @@ namespace Raven.Server.Utils
         {
             if (length == -1)
                 length = Length - start;
-            else if (start + length > _string.Length)
+            else if (start + length > String.Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
 
-            return new StringSegment(_string,Start + start,length);
+            return new StringSegment(String,Start + start,length);
         }
 
         public char this[int index]
@@ -43,7 +77,7 @@ namespace Raven.Server.Utils
                 if (index < 0 || index >= Length)
                     throw new IndexOutOfRangeException();
 
-                return _string[Start + index];
+                return String[Start + index];
             }
         }
 
@@ -65,12 +99,12 @@ namespace Raven.Server.Utils
             var remainingSegmentLength = Length - startIndex;
 
             //out of boundary, nothing to check
-            if (Start + startIndex >= _string.Length ||
+            if (Start + startIndex >= String.Length ||
                 remainingSegmentLength <= 0)
                 return -1;
 
             //zero based index since we are in a segment
-            var indexOfAny = _string.IndexOfAny(charArray, Start + startIndex,remainingSegmentLength);
+            var indexOfAny = String.IndexOfAny(charArray, Start + startIndex,remainingSegmentLength);
             if (indexOfAny == -1)
                 return -1;
 
@@ -83,18 +117,11 @@ namespace Raven.Server.Utils
             return obj is StringSegment && Equals((StringSegment)obj);
         }
 
-        [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
-        public override int GetHashCode()
+        public override unsafe int GetHashCode()
         {
-            unchecked
+            fixed (char* p = String)
             {
-                int hashCode = 0;
-                for (int i = 0; i < Length; i++)
-                {
-                    hashCode = (hashCode * 397) ^ char.ToLowerInvariant(_string[Start + i]);
-
-                }
-                return hashCode;
+                return (int)Hashing.XXHash32.CalculateInline((byte*) p + (Start*sizeof (char)), Length * sizeof (char));
             }
         }
 
@@ -102,14 +129,14 @@ namespace Raven.Server.Utils
         {
             if (Length != other.Length)
                 return false;
-            return string.Compare(_string, Start, other, 0, Length, StringComparison.OrdinalIgnoreCase) == 0;
+            return string.Compare(String, Start, other, 0, Length, StringComparison.Ordinal) == 0;
         }
 
         public bool Equals(StringSegment other)
         {
             if (Length != other.Length)
                 return false;
-            return string.Compare(_string, Start, other._string, other.Start, Length, StringComparison.OrdinalIgnoreCase) == 0;
+            return string.Compare(String, Start, other.String, other.Start, Length, StringComparison.Ordinal) == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,13 +148,13 @@ namespace Raven.Server.Utils
 
         public bool IsNullOrWhiteSpace()
         {
-            if (_string == null)
+            if (String == null)
                 return true;
             if (Length == 0)
                 return true;
             for (int i = 0; i < Length; i++)
             {
-                if (char.IsWhiteSpace(_string[i + Start]) == false)
+                if (char.IsWhiteSpace(String[i + Start]) == false)
                     return false;
             }
             return true;

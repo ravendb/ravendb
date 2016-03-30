@@ -17,7 +17,7 @@ namespace Voron.Data.RawData
         protected RawDataSmallSectionPageHeader* _sectionHeader;
 
         [StructLayout(LayoutKind.Sequential)]
-        protected struct RawDataEntrySizes
+        public struct RawDataEntrySizes
         {
             public short AllocatedSize;
             public short UsedSize;
@@ -195,7 +195,7 @@ namespace Voron.Data.RawData
                     $"Asked to load a value that where the allocated size is smaller than the used size: {id} from page {pageHeader->PageNumber}");
 
             size = sizes->UsedSize;
-            return ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
+            return (byte*)pageHeader + posInPage + sizeof(RawDataEntrySizes);
         }
 
         public long GetSectionPageNumber(long id)

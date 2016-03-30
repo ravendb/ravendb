@@ -6,7 +6,7 @@ using Lucene.Net.Util;
 
 using Sparrow;
 
-namespace Raven.Server.Documents.Indexes.Persistance.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     public class LowerCaseKeywordTokenizer : Tokenizer
     {

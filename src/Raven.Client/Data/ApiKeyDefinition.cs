@@ -9,6 +9,7 @@ namespace Raven.Client.Data
     {
         public bool Enabled;
         public string Secret;
+        public bool ServerAdmin;
         public Dictionary<string, AccessModes> ResourcesAccessMode = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -19,5 +20,10 @@ namespace Raven.Client.Data
         ReadOnly,
         ReadWrite,
         Admin
+    }
+
+    public class NamedApiKeyDefinition : ApiKeyDefinition
+    {
+        public string UserName;
     }
 }

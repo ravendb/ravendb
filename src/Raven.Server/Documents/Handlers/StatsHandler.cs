@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers
                         // indexing - should be in its /stats/indexing
                         ["CountOfIndexes"] = indexes.Count,
                         ["StaleIndexes"] = new DynamicJsonArray(),
-                        ["CountOfIndexesExcludingDisabledAndAbandoned"] = indexes.Count(index => index.Priority != IndexingPriority.Disabled && index.Priority != IndexingPriority.Abandoned),
+                        ["CountOfIndexesExcludingDisabled"] = indexes.Count(index => index.Priority.HasFlag(IndexingPriority.Disabled) == false),
                         ["CountOfResultTransformers"] = 0,
                         ["InMemoryIndexingQueueSizes"] = new DynamicJsonArray(),
                         ["ApproximateTaskCount"] = 0,

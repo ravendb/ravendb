@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
 
-        public int CountOfMapFields => MapFields.Length;
+        public int CountOfMapFields => MapFields.Count;
 
         private static string FindIndexName(string collection, IReadOnlyCollection<IndexField> fields)
         {
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var field in MapFields)
+                foreach (var field in MapFields.Values)
                 {
                     if (first == false)
                         writer.WriteComma();
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         protected override void FillIndexDefinition(IndexDefinition indexDefinition)
         {
-            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Name},Sort:{x.SortOption},Highlight:{x.Highlighted}>"))}]";
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
             indexDefinition.Maps.Add(map);
         }
 

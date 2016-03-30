@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public long LastMappedEtag { get; set; }
 
-        public long NumberOfMappedFields { get; set;}
+        public long NumberOfMappedFields { get; set; }
     }
 
     public enum DynamicQueryMatchType
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         Partial,
         Failure
     }
-    
+
     public class DynamicQueryToIndexMatcher
     {
         private readonly IndexStore _indexStore;
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             public string Index { get; set; }
             public string Reason { get; set; }
         }
-        
+
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
             ExplainDelegate explain = (index, rejectionReason) => { };
@@ -61,8 +61,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     Reason = rejectionReason()
                 });
             }
-            
-            var autoIndexes = _indexStore.GetAutoIndexDefinitionsForCollection(query.ForCollection); // let us work with AutoIndexes only for now
+
+            var autoIndexes = _indexStore.GetAutoMapIndexDefinitionForCollection(query.ForCollection); // let us work with AutoIndexes only for now
 
             if (autoIndexes.Count == 0)
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var priority = index.Priority;
             var stats = index.GetStats();
 
-            if (priority == IndexingPriority.Error || priority == IndexingPriority.Disabled || stats.IsInvalidIndex)
+            if (priority.HasFlag(IndexingPriority.Error) || priority.HasFlag(IndexingPriority.Disabled) || stats.IsInvalidIndex)
             {
                 explain(indexName, () => string.Format("Cannot do dynamic queries on disabled index or index with errors (index name = {0})", indexName));
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            if (currentBestState == DynamicQueryMatchType.Complete && (priority == IndexingPriority.Idle || priority == IndexingPriority.Abandoned))
+            if (currentBestState == DynamicQueryMatchType.Complete && priority.HasFlag(IndexingPriority.Idle))
             {
                 currentBestState = DynamicQueryMatchType.Partial;
                 explain(indexName, () => $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match");

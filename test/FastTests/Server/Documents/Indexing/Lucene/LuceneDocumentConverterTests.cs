@@ -5,7 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;

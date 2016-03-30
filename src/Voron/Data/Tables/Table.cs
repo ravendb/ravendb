@@ -15,6 +15,7 @@ namespace Voron.Data.Tables
     public unsafe class Table
     {
         private Dictionary<Slice, Tree> _treesBySlice;
+        private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>();
 
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
@@ -32,7 +33,8 @@ namespace Voron.Data.Tables
             get
             {
                 if (_fstKey == null)
-                    _fstKey = new FixedSizeTree(_tx.LowLevelTransaction, _tableTree, _schema.Key.NameAsSlice, sizeof(long));
+                    _fstKey = GetFixedSizeTree(_tableTree, _schema.Key.NameAsSlice, sizeof(long));
+
                 return _fstKey;
             }
         }
@@ -42,11 +44,8 @@ namespace Voron.Data.Tables
             get
             {
                 if (_inactiveSections == null)
-                {
-                    var inactiveSectionSlice = TableSchema.InactiveSectionSlice;
-                    _inactiveSections = new FixedSizeTree(_tx.LowLevelTransaction,
-                        _tableTree, inactiveSectionSlice, 0);
-                }
+                    _inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0);
+
                 return _inactiveSections;
             }
         }
@@ -57,10 +56,8 @@ namespace Voron.Data.Tables
             get
             {
                 if (_activeCandidateSection == null)
-                {
-                    var availableSectionSlice = TableSchema.ActiveCandidateSection;
-                    _activeCandidateSection = new FixedSizeTree(_tx.LowLevelTransaction, _tableTree, availableSectionSlice, 0);
-                }
+                    _activeCandidateSection = GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSection, 0);
+
                 return _activeCandidateSection;
             }
         }
@@ -300,7 +297,7 @@ namespace Voron.Data.Tables
                 var indexTree = GetTree(indexDef);
                 var val = indexDef.GetSlice(value);
 
-                var fst = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
+                var fst = GetFixedSizeTree(indexTree, val, 0);
                 fst.Delete(id);
             }
 
@@ -365,7 +362,7 @@ namespace Voron.Data.Tables
             {
                 var val = indexDef.GetSlice(value);
                 var indexTree = GetTree(indexDef);
-                var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
+                var index = GetFixedSizeTree(indexTree, val, 0);
                 index.Add(id);
             }
 
@@ -380,12 +377,27 @@ namespace Voron.Data.Tables
         private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
             if (indexDef.IsGlobal)
-            {
-                return new FixedSizeTree(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects, indexDef.NameAsSlice, sizeof(long));
-            }
+                return GetFixedSizeTree(_tx.LowLevelTransaction.RootObjects, indexDef.NameAsSlice, sizeof(long));
+
             var tableTree = _tx.ReadTree(Name);
-            var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof(long));
-            return index;
+            return GetFixedSizeTree(tableTree, indexDef.NameAsSlice, sizeof(long));
+        }
+
+        private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize)
+        {
+            Dictionary<Slice, FixedSizeTree> cache;
+            var parentName = parent.Name ?? Constants.RootTreeName;
+            if (_fixedSizeTreeCache.TryGetValue(parentName, out cache) == false)
+            {
+                _fixedSizeTreeCache[parentName] = cache = new Dictionary<Slice, FixedSizeTree>();
+                return cache[name] = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize);
+            }
+
+            FixedSizeTree tree;
+            if (cache.TryGetValue(name, out tree) == false)
+                return cache[name] = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize);
+
+            return tree;
         }
 
         private long AllocateFromSmallActiveSection(int size)
@@ -462,7 +474,7 @@ namespace Voron.Data.Tables
 
         private IEnumerable<TableValueReader> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
-            var fstIndex = new FixedSizeTree(_tx.LowLevelTransaction, tree, value, 0);
+            var fstIndex = GetFixedSizeTree(tree, value, 0);
             using (var it = fstIndex.Iterate())
             {
                 if (it.Seek(long.MinValue) == false)
@@ -611,7 +623,7 @@ namespace Voron.Data.Tables
                         break;
 
                     if (deletedList.Count > 10 * 1024)
-                        return false;
+                        break;
 
                     deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
                 } while (it.MoveNext());
@@ -623,6 +635,70 @@ namespace Voron.Data.Tables
             }
 
             return true;
+        }
+
+        public void DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
+        {
+            if (numberOfEntriesToDelete < 0)
+                throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
+
+            if (numberOfEntriesToDelete == 0)
+                return;
+
+            var toDelete = new List<long>();
+            var fst = GetFixedSizeTree(index);
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(value) == false && it.SeekToLast() == false)
+                    return;
+
+                do
+                {
+                    toDelete.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                    numberOfEntriesToDelete--;
+                } while (numberOfEntriesToDelete > 0 && it.MovePrev());
+            }
+
+            foreach (var id in toDelete)
+                Delete(id);
+        }
+
+        public void DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
+        {
+            if (numberOfEntriesToDelete < 0)
+                throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
+
+            if (numberOfEntriesToDelete == 0)
+                return;
+
+            var toDelete = new List<long>();
+            var tree = GetTree(index);
+            using (var it = tree.Iterate())
+            {
+                if (it.Seek(value) == false)
+                    return;
+
+                do
+                {
+                    var fst = GetFixedSizeTree(tree, it.CurrentKey, 0);
+                    using (var fstIt = fst.Iterate())
+                    {
+                        if (fstIt.Seek(long.MinValue) == false)
+                            break;
+
+                        do
+                        {
+                            toDelete.Add(fstIt.CurrentKey);
+                            numberOfEntriesToDelete--;
+                        }
+                        while (numberOfEntriesToDelete > 0 && fstIt.MoveNext());
+                    }
+                }
+                while (numberOfEntriesToDelete > 0 && it.MoveNext());
+            }
+
+            foreach (var id in toDelete)
+                Delete(id);
         }
     }
 }

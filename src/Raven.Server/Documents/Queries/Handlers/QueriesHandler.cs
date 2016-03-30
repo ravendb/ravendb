@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Handlers
             {
                 var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
 
-                var result = runner.ExecuteQuery(indexName, query, token.Cancel);
+                var result = runner.ExecuteQuery(indexName, query, GetStringValuesQueryString("include", required: false), token.Cancel);
 
                 HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
@@ -33,42 +33,42 @@ namespace Raven.Server.Documents.Queries.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(context.GetLazyString("IndexName"));
+                    writer.WritePropertyName(context.GetLazyString(nameof(result.IndexName)));
                     writer.WriteString(context.GetLazyString(result.IndexName));
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
+                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Results)));
                     WriteDocuments(context, writer, result.Results);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("TotalResults"));
+                    writer.WritePropertyName(context.GetLazyString(nameof(result.TotalResults)));
                     writer.WriteInteger(result.TotalResults);
 
                     writer.WriteComma();
 
-                    //writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
-                    //WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
+                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Includes)));
+                    WriteDocuments(context, writer, result.Includes);
 
-                    //writer.WriteComma();
+                    writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("IndexTimestamp"));
+                    writer.WritePropertyName(context.GetLazyString(nameof(result.IndexTimestamp)));
                     writer.WriteString(context.GetLazyString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("LastQueryTime"));
+                    writer.WritePropertyName(context.GetLazyString(nameof(result.LastQueryTime)));
                     writer.WriteString(context.GetLazyString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite)));
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("IsStale"));
+                    writer.WritePropertyName(context.GetLazyString(nameof(result.IsStale)));
                     writer.WriteBool(result.IsStale);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(context.GetLazyString("ResultEtag"));
+                    writer.WritePropertyName(context.GetLazyString(nameof(result.ResultEtag)));
                     writer.WriteInteger(result.ResultEtag);
 
                     writer.WriteEndObject();
@@ -124,8 +124,6 @@ namespace Raven.Server.Documents.Queries.Handlers
                         case "sort":
                             result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
                             break;
-                        // TODO arek: SortHints - RavenDB-4371
-
                         // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
                         // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
                         // TODO: We also need to make sure that we aren't using headers

@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
             writer.WriteStartArray();
 
             bool first = true;
-            for (int index = start; index < count; index++)
+            for (int index = start, written = 0; written < count; index++, written++)
             {
                 var document = documents[index];
                 if (document == null)

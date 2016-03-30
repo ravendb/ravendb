@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Client.Document;
 
 namespace Tryouts
@@ -15,14 +13,16 @@ namespace Tryouts
             public string FirstName { get; set; }
 
             public string LastName { get; set; }
+
+            public string[] Tags { get; set; }
         }
 
         public static void Main(string[] args)
         {
-            
+
             using (var store = new DocumentStore
             {
-                Url = "http://localhost:8081",
+                Url = "http://127.0.0.1:8081",
                 DefaultDatabase = "FooBar123"
             })
             {
@@ -37,33 +37,29 @@ namespace Tryouts
                     }
                 });
 
-                //BulkInsert(store, 1024 * 256).Wait();
-                int x = 0;
-                while (true)
-                {
-                    BulkInsert(store, 1024*16).Wait();
-                    Console.WriteLine(++x);
-                }
-
+                BulkInsert(store, 1024  *512).Wait();
             }
         }
 
         public static async Task BulkInsert(DocumentStore store, int numOfItems)
         {
+            Console.Write("Doing bulk-insert...");
+
+            string[] tags = null;// Enumerable.Range(0, 1024*8).Select(x => "Tags i" + x).ToArray();
+
+            var sp = System.Diagnostics.Stopwatch.StartNew();
             using (var bulkInsert = store.BulkInsert())
             {
-                Console.Write("Doing bulk-insert...");
                 int id = 1;
                 for (int i = 0; i < numOfItems; i++)
                     await bulkInsert.StoreAsync(new User
                     {
                         FirstName = $"First Name - {i}",
-                        LastName = $"Last Name - {i}"
+                        LastName = $"Last Name - {i}",
+                        Tags = tags
                     }, $"users/{id++}");
-                Console.WriteLine("done");
-                Console.Write("Closing bulk-insert...");
             }
-            Console.WriteLine("done");
+            Console.WriteLine("done in " + sp.Elapsed);
         }
     }
 }
