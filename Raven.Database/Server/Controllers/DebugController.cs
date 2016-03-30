@@ -21,6 +21,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Config;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.WebApi;
@@ -61,6 +62,13 @@ namespace Raven.Database.Server.Controllers
         {
             Database.WorkContext.ShowTimingByDefaultUntil = null;
             return GetMessageWithObject(new { Enabled = false });
+        }
+
+        [HttpGet]
+        [RavenRoute("debug/memory-statistics-thread-state")]
+        public HttpResponseMessage GetMemoryStatisticsThreadState()
+        {
+            return GetMessageWithObject(MemoryStatistics.LowMemoryWatcherThreadState.ToString());
         }
 
         [HttpGet]

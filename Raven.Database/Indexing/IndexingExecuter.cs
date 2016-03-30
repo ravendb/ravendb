@@ -338,69 +338,94 @@ namespace Raven.Database.Indexing
                     TimeSpan indexingDuration = TimeSpan.Zero;
                     var lastEtag = Etag.Empty;
 
-                    List<JsonDocument> jsonDocs;
                     IndexingBatchInfo batchInfo = null;
 
-                    using (MapIndexingInProgress(indexesToWorkOn))
-                    using (prefetchingBehavior.DocumentBatchFrom(indexingGroup.LastIndexedEtag, out jsonDocs))
+                    try
                     {
-                        try
+                        using (MapIndexingInProgress(indexesToWorkOn))
                         {
-                            if (Log.IsDebugEnabled)
+                            List<JsonDocument> jsonDocs;
+                            using (prefetchingBehavior.DocumentBatchFrom(indexingGroup.LastIndexedEtag, out jsonDocs))
                             {
-                                Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-                                    jsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+                                try
+                                {
+                                    if (Log.IsDebugEnabled)
+                                    {
+                                        Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+                                            jsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", jsonDocs.Select(x => x.Key)));
+                                    }
+
+                                    batchInfo = context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
+
+                                    context.CancellationToken.ThrowIfCancellationRequested();
+
+                                    if (jsonDocs.Count <= 0)
+                                    {
+                                        return;
+                                    }
+
+                                    var sw = Stopwatch.StartNew();
+
+                                    lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs, batchInfo);
+
+                                    indexingDuration = sw.Elapsed;
+                                }
+                                catch (InvalidDataException e)
+                                {
+                                    Log.ErrorException("Failed to index because of data corruption. ", e);
+                                    indexesToWorkOn.ForEach(index =>
+                                        context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    operationCanceled = true;
+                                }
+                                catch (AggregateException e)
+                                {
+                                    var anyOperationsCanceled = e
+                                        .InnerExceptions
+                                        .OfType<OperationCanceledException>()
+                                        .Any();
+
+                                    if (anyOperationsCanceled == false)
+                                        throw;
+
+                                    operationCanceled = true;
+                                }
+                                catch (Exception)
+                                {
+                                    //we should not clean docs from prefetching behavior because something
+                                    //unexpected has thrown
+                                    //logging will be done in catch in the outer scope
+                                    operationCanceled = true;
+                                    // ReSharper disable once ThrowingSystemException
+                                    throw;
+                                }
+                                finally
+                                {
+                                    if (operationCanceled == false && jsonDocs != null && jsonDocs.Count > 0)
+                                    {
+                                        prefetchingBehavior.CleanupDocuments(lastEtag);
+                                        prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
+                                    }
+
+                                    prefetchingBehavior.BatchProcessingComplete();
+                                    if (batchInfo != null)
+                                        context.ReportIndexingBatchCompleted(batchInfo);
+                                }
                             }
-
-                            batchInfo = context.ReportIndexingBatchStarted(jsonDocs.Count, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
-
-                            context.CancellationToken.ThrowIfCancellationRequested();
-
-                            if (jsonDocs.Count <= 0)
-                            {
-                                return;
-                            }
-
-                            var sw = Stopwatch.StartNew();
-
-                            lastEtag = DoActualIndexing(indexesToWorkOn, jsonDocs, batchInfo);
-
-                            indexingDuration = sw.Elapsed;
                         }
-                        catch (InvalidDataException e)
-                        {
-                            Log.ErrorException("Failed to index because of data corruption. ", e);
-                            indexesToWorkOn.ForEach(index =>
-                                context.AddError(index.IndexId, index.Index.PublicName, null, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            operationCanceled = true;
-                        }
-                        catch (AggregateException e)
-                        {
-                            var anyOperationsCanceled = e
-                                .InnerExceptions
-                                .OfType<OperationCanceledException>()
-                                .Any();
-
-                            if (anyOperationsCanceled == false)
-                                throw;
-
-                            operationCanceled = true;
-                        }
-                        finally
-                        {
-                            if (operationCanceled == false && jsonDocs != null && jsonDocs.Count > 0)
-                            {
-                                prefetchingBehavior.CleanupDocuments(lastEtag);
-                                prefetchingBehavior.UpdateAutoThrottler(jsonDocs, indexingDuration);
-                            }
-
-                            prefetchingBehavior.BatchProcessingComplete();
-                            if (batchInfo != null)
-                                context.ReportIndexingBatchCompleted(batchInfo);
-                        }
+                    }
+                    catch (Exception e)
+                    {
+                        //this is a precaution, no exception should happen at this point
+                        var message = string.Format("Unexpected exception happened during execution of indexing batch...this is not supposed to happen. Reason: {0}", e);
+                        Log.Error(message, e);
+                        indexesToWorkOn.ForEach(index => context.AddError(index.IndexId, index.Index.PublicName, null, message));
+                        
+                        //rethrow because we do not want to interrupt the existing exception flow
+                        // ReSharper disable once ThrowingSystemException
+                        throw;
                     }
                 }
             });
