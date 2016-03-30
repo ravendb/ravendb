@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -23,9 +22,18 @@ namespace Raven.Server.Documents.Queries.Handlers
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
+                var existingResultEtag = GetLongFromHeaders("If-None-Match");
+                var includes = GetStringValuesQueryString("include", required: false);
 
-                var result = await runner.ExecuteQuery(indexName, query, GetStringValuesQueryString("include", required: false), token.Cancel).ConfigureAwait(false);
+                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
+                
+                var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token.Cancel).ConfigureAwait(false);
+
+                if (result.NotModified)
+                {
+                    HttpContext.Response.StatusCode = 304;
+                    return;
+                }
 
                 HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();

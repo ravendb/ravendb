@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQuery query, StringValues includes, CancellationToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQuery query, StringValues includes, long? existingResultEtag, CancellationToken token)
         {
             DocumentQueryResult result;
 
@@ -32,14 +32,14 @@ namespace Raven.Server.Documents.Queries
             {
                 var runner = new DynamicQueryRunner(_indexStore, _documentsStorage, _documentsContext, token);
 
-                result = await runner.Execute(indexName, query).ConfigureAwait(false);
+                result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
             }
             else
             {
                 throw new InvalidOperationException("We don't support querying of static indexes for now");
             }
 
-            if (includes.Count > 0)
+            if (result.NotModified == false && includes.Count > 0)
             {
                 var includeDocs = new IncludeDocumentsCommand(_documentsStorage, _documentsContext, includes);
                 includeDocs.Execute(result.Results, result.Includes);
