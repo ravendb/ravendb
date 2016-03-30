@@ -55,7 +55,7 @@ namespace Voron.Data.Compact
             if (@this->IsInternal)
             {
                 int handleLength = tree.GetHandleLength(@this);
-                return tree.Handle(refNode).SubVector(0, handleLength);
+                return tree.Name(refNode).SubVector(0, handleLength);
             }
             else
             {
@@ -108,8 +108,8 @@ namespace Voron.Data.Compact
                 return ((Internal*)@this)->ExtentLength;
             }
             else
-            {
-                return tree.GetKeySize(((Leaf*)@this)->DataPtr);
+            {                
+                return ((Leaf*)@this)->KeySize;
             }
         }
 
@@ -186,7 +186,7 @@ namespace Voron.Data.Compact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Intersects(Node* @this, int x)
+        public static bool Intersects(this PrefixTree tree, Node* @this, int x)
         {
             if (@this->IsInternal)
                 return x >= @this->NameLength && x <= ((Internal*)@this)->ExtentLength;

@@ -108,7 +108,7 @@ namespace Sparrow.Collections
             {
                 ResizeIfNeeded();                
 
-                // We shrink the signature to the proper size (31 bits)
+                // We shrink the signature to the proper size (30 bits)
                 signature = signature & kSignatureMask;
 
                 int hash = (int)(signature & kHashMask);
@@ -446,6 +446,8 @@ namespace Sparrow.Collections
                     size++;
                 }
 
+                Debug.Assert(this._size == size);
+
                 this._capacity = entries.Length;
                 this._size = size;
                 this._entries = entries;
@@ -454,6 +456,8 @@ namespace Sparrow.Collections
                 this._numberOfDeleted = 0;
 
                 this._nextGrowthThreshold = _capacity * 4 / tLoadFactor;
+
+                
             }
 
 
