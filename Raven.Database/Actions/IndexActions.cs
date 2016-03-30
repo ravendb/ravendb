@@ -528,15 +528,20 @@ namespace Raven.Database.Actions
                 return null;
             }
 
-            lock (precomputedLock)
+            //only one precomputed batch can run at a time except for test indexes
+            if (index.IsTestIndex == false)
             {
-                if (isPrecomputedBatchForNewIndexIsRunning)
+                lock (precomputedLock)
                 {
-                    index.IsMapIndexingInProgress = false;
-                    return null;
-                }
 
-                isPrecomputedBatchForNewIndexIsRunning = true;
+                    if (isPrecomputedBatchForNewIndexIsRunning)
+                    {
+                        index.IsMapIndexingInProgress = false;
+                        return null;
+                    }
+
+                    isPrecomputedBatchForNewIndexIsRunning = true;
+                }
             }
 
             try
@@ -566,7 +571,8 @@ namespace Raven.Database.Actions
                     }
                     finally
                     {
-                        isPrecomputedBatchForNewIndexIsRunning = false;
+                        if (index.IsTestIndex == false)
+                            isPrecomputedBatchForNewIndexIsRunning = false;
                         index.IsMapIndexingInProgress = false;
                         WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
                         WorkContext.NotifyAboutWork();
@@ -598,7 +604,8 @@ namespace Raven.Database.Actions
                     catch (Exception)
                     {
                         index.IsMapIndexingInProgress = false;
-                        isPrecomputedBatchForNewIndexIsRunning = false;
+                        if (index.IsTestIndex == false)
+                            isPrecomputedBatchForNewIndexIsRunning = false;
                         throw;
                     }
                 };
@@ -606,7 +613,8 @@ namespace Raven.Database.Actions
             catch (Exception)
             {
                 index.IsMapIndexingInProgress = false;
-                isPrecomputedBatchForNewIndexIsRunning = false;
+                if (index.IsTestIndex == false)
+                    isPrecomputedBatchForNewIndexIsRunning = false;
                 throw;
             }
         }
@@ -632,7 +640,7 @@ namespace Raven.Database.Actions
                 {
                     op.Init();					
 
-                    if (op.Header.TotalResults > pageSize)
+                    if (op.Header.TotalResults > (index.IsTestIndex == false ? pageSize : int.MaxValue))
                     {
                         // we don't apply this optimization if the total number of results 
                         // to index is more than the max numbers to index in a single batch. 
