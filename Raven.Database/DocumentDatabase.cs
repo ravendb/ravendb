@@ -44,6 +44,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Json.Linq;
+using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Database
 {
@@ -541,7 +542,9 @@ namespace Raven.Database
                     Errors = workContext.Errors,
                     DatabaseId = TransactionalStorage.Id,
                     SupportsDtc = TransactionalStorage.SupportsDtc,
-                    Is64Bit = Environment.Is64BitProcess
+                    Is64Bit = Environment.Is64BitProcess,
+                    IsMemoryStatisticThreadRuning = MemoryStatistics.LowMemoryWatcherThreadState == ThreadState.Background
+
                 };
 
                 TransactionalStorage.Batch(actions =>
