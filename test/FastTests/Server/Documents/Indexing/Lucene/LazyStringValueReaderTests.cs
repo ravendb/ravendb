@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields;
+
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Xunit;

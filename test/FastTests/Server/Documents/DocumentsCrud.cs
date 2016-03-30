@@ -35,6 +35,7 @@ namespace FastTests.Server.Documents
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
+        [InlineData("users/111112222233333333333444444445555556")]
         public void PutAndGetDocumentById(string key)
         {
             using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))

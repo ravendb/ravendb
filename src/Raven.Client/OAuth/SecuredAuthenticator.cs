@@ -55,7 +55,6 @@ namespace Raven.Client.OAuth
 
         public async Task<Action<HttpClient>> DoOAuthRequestAsync(string url, string apiKey)
         {
-            var sp = Stopwatch.StartNew();
             ThrowIfBadUrlOrApiKey(url, apiKey);
             uri = new Uri(url.Replace("http://", "ws://").Replace("https://", "wss://"));
 
@@ -102,7 +101,7 @@ namespace Raven.Client.OAuth
                 throw new InvalidOperationException("DoAuthRequest provided with invalid url");
 
             if (apiKey == null)
-                throw new InvalidOperationException("DoAuthRequest provided with null apiKey");
+                throw new InvalidApiKeyException("DoAuthRequest provided with null apiKey");
         }
 
         private async Task Send(ClientWebSocket webSocket, string command, string commandParameter)
@@ -168,7 +167,7 @@ namespace Raven.Client.OAuth
             }
 
             if (apiKeyParts.Length < 2)
-                throw new InvalidOperationException("Invalid Api-Key. Contains less then two parts separated with slash");
+                throw new InvalidApiKeyException("Invalid Api-Key. Contains less then two parts separated with slash");
 
             return apiKeyParts;
         }
@@ -230,7 +229,14 @@ namespace Raven.Client.OAuth
             var errorMsg = recvRavenJObject.Value<string>("Error");
 
             if (errorMsg != null)
-                throw new InvalidOperationException("Server returned error: " + errorMsg);
+            {
+                var exceptionType = recvRavenJObject.Value<string>("ExceptionType");
+                if (exceptionType == null || exceptionType.Equals("InvalidOperationException"))
+                    throw new InvalidOperationException("Server returned error: " + errorMsg);
+
+                if (exceptionType.Equals("InvalidApiKeyException"))
+                    throw new InvalidApiKeyException(errorMsg);
+            }
 
             var currentOauthToken = recvRavenJObject.Value<string>("CurrentToken");
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -19,6 +20,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "GET")]
         public Task GetAll()
         {
+            var names = HttpContext.Request.Query["name"];
+            if (names.Count > 1)
+                throw new ArgumentException($"Query string value 'name' must appear exactly once");
+
             var start = GetStart();
             var pageSize = GetPageSize();
 
@@ -26,27 +31,37 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                IndexDefinition[] indexDefinitions;
+                if (names.Count == 0)
+                    indexDefinitions = Database.IndexStore
+                        .GetIndexes()
+                        .OrderBy(x => x.IndexId)
+                        .Skip(start)
+                        .Take(pageSize)
+                        .Select(x => x.GetIndexDefinition())
+                        .ToArray();
+                else
+                {
+                    var index = Database.IndexStore.GetIndex(names[0]);
+                    if (index == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
+
+                    indexDefinitions = new[] { index.GetIndexDefinition() };
+                }
+
                 writer.WriteStartArray();
 
                 var isFirst = true;
-                foreach (var index in Database.IndexStore.GetIndexes().OrderBy(x => x.IndexId).Skip(start).Take(pageSize))
+                foreach (var indexDefinition in indexDefinitions)
                 {
                     if (isFirst == false)
                         writer.WriteComma();
 
                     isFirst = false;
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(IndexDefinition.Name)));
-                    writer.WriteString(context.GetLazyString(index.Name));
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(IndexDefinition.IndexId)));
-                    writer.WriteInteger(index.IndexId);
-
-                    // TODO [ppekrol] more index definition fields
-
-                    writer.WriteEndObject();
+                    writer.WriteIndexDefinition(context, indexDefinition);
                 }
 
                 writer.WriteEndArray();
@@ -70,106 +85,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.ForCollections)));
-                writer.WriteStartArray();
-                var isFirst = true;
-                foreach (var collection in stats.ForCollections)
-                {
-                    if (isFirst == false)
-                        writer.WriteComma();
-
-                    isFirst = false;
-                    writer.WriteString(context.GetLazyString(collection));
-                }
-                writer.WriteEndArray();
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.IsInMemory)));
-                writer.WriteBool(stats.IsInMemory);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.LastIndexedEtags)));
-                writer.WriteStartObject();
-                isFirst = true;
-                foreach (var kvp in stats.LastIndexedEtags)
-                {
-                    if (isFirst == false)
-                        writer.WriteComma();
-
-                    isFirst = false;
-
-                    writer.WritePropertyName(context.GetLazyString(kvp.Key));
-                    writer.WriteInteger(kvp.Value);
-                }
-                writer.WriteEndObject();
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.LastIndexingTime)));
-                if (stats.LastIndexingTime.HasValue)
-                    writer.WriteString(context.GetLazyString(stats.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true)));
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.LastQueryingTime)));
-                if (stats.LastQueryingTime.HasValue)
-                    writer.WriteString(context.GetLazyString(stats.LastQueryingTime.Value.GetDefaultRavenFormat(isUtc: true)));
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.LockMode)));
-                writer.WriteString(context.GetLazyString(stats.LockMode.ToString()));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.Name)));
-                writer.WriteString(context.GetLazyString(stats.Name));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.Priority)));
-                writer.WriteString(context.GetLazyString(stats.Priority.ToString()));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.Type)));
-                writer.WriteString(context.GetLazyString(stats.Type.ToString()));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.CreatedTimestamp)));
-                writer.WriteString(context.GetLazyString(stats.CreatedTimestamp.GetDefaultRavenFormat(isUtc: true)));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.EntriesCount)));
-                writer.WriteInteger(stats.EntriesCount);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.Id)));
-                writer.WriteInteger(stats.Id);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.IndexingAttempts)));
-                writer.WriteInteger(stats.IndexingAttempts);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.IndexingErrors)));
-                writer.WriteInteger(stats.IndexingErrors);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.IndexingSuccesses)));
-                writer.WriteInteger(stats.IndexingSuccesses);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.ErrorsCount)));
-                writer.WriteInteger(stats.ErrorsCount);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(stats.IsTestIndex)));
-                writer.WriteBool(stats.IsTestIndex);
-
-
-
-                writer.WriteEndObject();
+                writer.WriteIndexStats(context, stats);
             }
 
             return Task.CompletedTask;

@@ -25,9 +25,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
         }
 
-        public AutoIndexDefinition CreateAutoIndexDefinition()
+        public AutoMapIndexDefinition CreateAutoIndexDefinition()
         {
-            return new AutoIndexDefinition(ForCollection, MapFields.Select(field =>
+            return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
                 new IndexField
                 {
                     Name = field.Name,
@@ -40,8 +40,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
         {
             var extendedMapFields = new List<DynamicQueryMappingItem>(MapFields);
-  
-            foreach (var field in definitionOfExistingIndex.MapFields)
+
+            foreach (var field in definitionOfExistingIndex.MapFields.Values)
             {
                 if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)))
                     continue;
@@ -56,11 +56,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var extendedSortDescriptors = new List<DynamicSortInfo>(SortDescriptors);
 
-            foreach (var field in definitionOfExistingIndex.MapFields)
+            // TODO iterate once?
+            foreach (var field in definitionOfExistingIndex.MapFields.Values)
             {
                 if (field.SortOption == null)
                     continue;
-                
+
                 if (extendedSortDescriptors.Any(x => x.Field.Equals(field.Name, StringComparison.OrdinalIgnoreCase)))
                     continue;
 
@@ -132,7 +133,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 //To = IndexField.ReplaceInvalidCharactersInFieldName(x.Item2),
                 //QueryFrom = EscapeParentheses(x.Item2),
                 Name = x.Item1.EndsWith("_Range") ? x.Item1.Substring(0, x.Item1.Length - "_Range".Length) : x.Item1
-        }).OrderByDescending(x => x.Name.Length).ToArray();
+            }).OrderByDescending(x => x.Name.Length).ToArray();
 
         }
 

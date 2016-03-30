@@ -65,7 +65,7 @@ namespace Raven.Server.Utils.Metrics
                     millisecondsDelay = (int) (_tickIntervalInNanoseconds - elapsedNanoseconds)/Clock.NanosecondsInMillisecond;
                 } while (_done.WaitOne(Math.Max(millisecondsDelay,0)) == false);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //TODO: error logging
             }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -92,6 +93,30 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(AnonymousUserAccessModeValues.Admin)]
         [ConfigurationEntry("Raven/AnonymousAccess")]
         public AnonymousUserAccessModeValues AnonymousUserAccessMode { get; internal set; }
+
+        public IDisposable SetAccessMode(AnonymousUserAccessModeValues newVal)
+        {
+            var old = AnonymousUserAccessMode;
+            AnonymousUserAccessMode = newVal;
+            return new RestoreAccessMode(this, old);
+        }
+
+        public struct RestoreAccessMode : IDisposable
+        {
+            private readonly ServerConfiguration _parent;
+            private readonly AnonymousUserAccessModeValues _valToRestore;
+
+            public RestoreAccessMode(ServerConfiguration parent, AnonymousUserAccessModeValues valToRestore)
+            {
+                _parent = parent;
+                _valToRestore = valToRestore;
+            }
+
+            public void Dispose()
+            {
+                _parent.AnonymousUserAccessMode = _valToRestore;
+            }
+        }
 
         public override void Initialize(IConfigurationRoot settings)
         {

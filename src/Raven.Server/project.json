@@ -44,7 +44,7 @@
         "Microsoft.Extensions.Configuration.FileProviderExtensions": "1.0.0-rc1-final",
         "Microsoft.Extensions.Configuration.Json": "1.0.0-rc1-final",
         "Microsoft.AspNet.WebSockets.Server": "1.0.0-rc1-final",
-
+        "NLog": "4.4.0-*",
         "System.Data.SqlClient": "4.0.0-beta-*"
       }
     }

@@ -90,6 +90,7 @@ namespace Raven.Server
                     .UseServices(services => services.AddInstance(Router))
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
+                Log.Info("Initialized Server...");
             }
             catch (Exception e)
             {

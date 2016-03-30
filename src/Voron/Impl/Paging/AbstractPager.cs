@@ -22,19 +22,21 @@ namespace Voron.Impl.Paging
         {
             get
             {
-                ThrowObjectDisposedIfNeeded();
+                if (Disposed)
+                    ThrowAlreadyDisposedException();
                 return _pagerState;
             }
             set
             {
-                ThrowObjectDisposedIfNeeded();
-                
+                if (Disposed)
+                    ThrowAlreadyDisposedException();
+
                 _debugInfo = GetSourceName();
                 _pagerState = value;
             }
         }
 
-	    private string _debugInfo;
+        private string _debugInfo;
 
         public string DebugInfo
         {
@@ -46,7 +48,7 @@ namespace Voron.Impl.Paging
             Debug.Assert((pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
             PageSize = pageSize;
-	        PageMaxSpace = PageSize - Constants.TreePageHeaderSize;
+            PageMaxSpace = PageSize - Constants.TreePageHeaderSize;
             NodeMaxSize = PageMaxSpace/2 - 1;
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
@@ -116,7 +118,8 @@ namespace Voron.Impl.Paging
 
         public PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages)
         {
-            ThrowObjectDisposedIfNeeded();
+            if (Disposed)
+                ThrowAlreadyDisposedException();
 
             if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
                 return null;
@@ -197,7 +200,8 @@ namespace Voron.Impl.Paging
 
         public int WriteDirect(byte* p, long pagePosition, int pagesToWrite)
         {
-            ThrowObjectDisposedIfNeeded();
+            if (Disposed)
+                ThrowAlreadyDisposedException();
 
             int toCopy = pagesToWrite * PageSize;
             Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, p, toCopy);
@@ -211,11 +215,20 @@ namespace Voron.Impl.Paging
             _tasks.Add(run);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void ThrowObjectDisposedIfNeeded()
+        public static void ThrowAlreadyDisposedException()
         {
-            if (Disposed)
-                throw new ObjectDisposedException("The pager is already disposed");
+            // this is a separate method because we don't want to have an exception throwing in the hot path
+            throw new ObjectDisposedException("The pager is already disposed");
+        }
+
+
+        protected void ThrowOnInvalidPageNumber(long pageNumber)
+        {
+            // this is a separate method because we don't want to have an exception throwing in the hot path
+
+            throw new ArgumentOutOfRangeException(nameof(pageNumber),
+                "The page " + pageNumber + " was not allocated, allocated pages: " + NumberOfAllocatedPages + " in " +
+                GetSourceName());
         }
 
         public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
@@ -224,7 +237,7 @@ namespace Voron.Impl.Paging
         public static int GetMaxKeySize()
         {
             // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-		    return 2038;
+            return 2038;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

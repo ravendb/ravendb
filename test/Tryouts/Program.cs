@@ -1,39 +1,65 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Client.Indexing;
-using FastTests.Server.Documents.Patching;
-using NetTopologySuite.Utilities;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
-using Raven.Client.Data;
 using Raven.Client.Document;
 
 namespace Tryouts
 {
     public class Program
     {
-       
-        class CustomType
+        public class User
         {
-            public string Id { get; set; }
-            public string Owner { get; set; }
-            public int Value { get; set; }
-            public List<string> Comments { get; set; }
-            public DateTime Date { get; set; }
-            public DateTimeOffset DateOffset { get; set; }
+            public string FirstName { get; set; }
+
+            public string LastName { get; set; }
+
+            public string[] Tags { get; set; }
         }
-
-
-        private const int numOfItems = 100;
 
         public static void Main(string[] args)
         {
-            using (var x = new BasicIndexing())
+
+            using (var store = new DocumentStore
             {
-                x.GetErrors().Wait();
+                Url = "http://127.0.0.1:8081",
+                DefaultDatabase = "FooBar123"
+            })
+            {
+                store.Initialize();
+                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
+                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                {
+                    Id = "FooBar123",
+                    Settings =
+                    {
+                        { "Raven/DataDir", "~\\FooBar123" }
+                    }
+                });
+
+                BulkInsert(store, 1024  *512).Wait();
             }
+        }
+
+        public static async Task BulkInsert(DocumentStore store, int numOfItems)
+        {
+            Console.Write("Doing bulk-insert...");
+
+            string[] tags = null;// Enumerable.Range(0, 1024*8).Select(x => "Tags i" + x).ToArray();
+
+            var sp = System.Diagnostics.Stopwatch.StartNew();
+            using (var bulkInsert = store.BulkInsert())
+            {
+                int id = 1;
+                for (int i = 0; i < numOfItems; i++)
+                    await bulkInsert.StoreAsync(new User
+                    {
+                        FirstName = $"First Name - {i}",
+                        LastName = $"Last Name - {i}",
+                        Tags = tags
+                    }, $"users/{id++}");
+            }
+            Console.WriteLine("done in " + sp.Elapsed);
         }
     }
 }

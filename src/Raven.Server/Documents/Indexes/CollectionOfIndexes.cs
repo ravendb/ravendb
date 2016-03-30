@@ -68,11 +68,6 @@ namespace Raven.Server.Documents.Indexes
             return indexes;
         }
 
-        public List<T> GetDefinitionsOfTypeForCollection<T>(string collection) where T : IndexDefinitionBase
-        {
-            return GetForCollection(collection).Where(x => x.Definition is T).Select(x => (T)x.Definition).ToList();
-        }
-
         public int GetNextIndexId()
         {
             return _nextIndexId;

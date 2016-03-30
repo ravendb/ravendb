@@ -93,12 +93,12 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            Environment?.Dispose();
-            Environment = null;
             _unmanagedBuffersPool?.Dispose();
             _unmanagedBuffersPool = null;
             ContextPool?.Dispose();
             ContextPool = null;
+            Environment?.Dispose();
+            Environment = null;
         }
 
         public void Initialize()
@@ -262,7 +262,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = "@" + collection;
-            if(context.Transaction.InnerTransaction.ReadTree(collectionName)==null)
+            if (context.Transaction.InnerTransaction.ReadTree(collectionName) == null)
                 yield break;
 
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
@@ -328,11 +328,20 @@ namespace Raven.Server.Documents
 
         public long GetLastDocumentEtag(DocumentsOperationContext context, string collection)
         {
-            var table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
+            Table table;
+            try
+            {
+                table = new Table(_docsSchema, "@" + collection, context.Transaction.InnerTransaction);
+            }
+            catch (InvalidDataException)
+            {
+                // TODO [ppekrol] how to handle missing collection?
+                return 0;
+            }
 
             var result = table
-                .SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
-                .FirstOrDefault();
+                        .SeekBackwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], long.MaxValue)
+                        .FirstOrDefault();
 
             if (result == null)
                 return 0;
@@ -421,12 +430,12 @@ namespace Raven.Server.Documents
 
             var jsonParserState = new JsonParserState();
             jsonParserState.FindEscapePositionsIn(str);
-            var keyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
+            var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
             var escapePositionsSize = jsonParserState.GetEscapePositionsSize();
             var buffer = context.GetNativeTempBuffer(
                 sizeof(char) * str.Length // for the lower calls
                 + byteCount // lower key
-                + keyLenSize // the size of var int for the len of the key
+                + maxKeyLenSize // the size of var int for the len of the key
                 + byteCount // actual key
                 + escapePositionsSize
                 , out lowerSize);
@@ -445,10 +454,19 @@ namespace Raven.Server.Documents
 
                 key = buffer + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
-                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + keyLenSize, byteCount);
+                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
+
+                var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
+                if (actualKeyLenSize < maxKeyLenSize)
+                {
+                    var movePtr = maxKeyLenSize - actualKeyLenSize;
+                    key += movePtr;
+                    writePos += movePtr;
+                }
+
                 JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
                 jsonParserState.WriteEscapePositionsTo(writePos + keySize);
-                keySize += escapePositionsSize + keyLenSize;
+                keySize += escapePositionsSize + maxKeyLenSize;
             }
         }
 
@@ -630,7 +648,7 @@ namespace Raven.Server.Documents
                 int oldSize;
                 var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
                 var oldCollectionName = GetCollectionFromMetadata(key, oldDoc);
-                if(oldCollectionName != originalCollectionName)
+                if (oldCollectionName != originalCollectionName)
                     throw new InvalidOperationException(
                         $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
                         $"Delete the document and recreate the document {key}.");
@@ -767,6 +785,41 @@ namespace Raven.Server.Documents
                 Name = collectionName.Substring(1),
                 Count = collectionTable.NumberOfEntries
             };
+        }
+
+        public void DeleteTombstonesBefore(string collection, long etag, Transaction transaction)
+        {
+            Table table;
+            try
+            {
+                table = new Table(_tombstonesSchema, "#" + collection, transaction);
+            }
+            catch (InvalidDataException)
+            {
+                // TODO [ppekrol] how to handle missing collection?
+                return;
+            }
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Deleting tombstones earlier than {etag} in {collection}");
+            table.DeleteBackwardFrom(_tombstonesSchema.FixedSizeIndexes["CollectionEtags"], etag, long.MaxValue);
+        }
+
+        public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
+        {
+            using (var it = transaction.LowLevelTransaction.RootObjects.Iterate())
+            {
+                it.RequiredPrefix = "#";
+
+                if (it.Seek(Slice.BeforeAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    var tombstoneCollection = it.CurrentKey.ToString();
+                    yield return tombstoneCollection.Substring(1); // removing '#'
+                }
+                while (it.MoveNext());
+            }
         }
     }
 }

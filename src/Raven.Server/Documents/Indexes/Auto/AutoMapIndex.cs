@@ -9,14 +9,14 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoMapIndex : Index<AutoIndexDefinition>
+    public class AutoMapIndex : Index<AutoMapIndexDefinition>
     {
-        private AutoMapIndex(int indexId, AutoIndexDefinition definition)
+        private AutoMapIndex(int indexId, AutoMapIndexDefinition definition)
             : base(indexId, IndexType.AutoMap, definition)
         {
         }
 
-        public static AutoMapIndex CreateNew(int indexId, AutoIndexDefinition definition, DocumentDatabase documentDatabase)
+        public static AutoMapIndex CreateNew(int indexId, AutoMapIndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = new AutoMapIndex(indexId, definition);
             instance.Initialize(documentDatabase);
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public static AutoMapIndex Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
-            var definition = AutoIndexDefinition.Load(environment);
+            var definition = AutoMapIndexDefinition.Load(environment);
             var instance = new AutoMapIndex(indexId, definition);
             instance.Initialize(environment, documentDatabase);
 
@@ -42,14 +42,14 @@ namespace Raven.Server.Documents.Indexes.Auto
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
             {
-                ExecuteCleanup(stats, cancellationToken, databaseContext, indexContext);
+                ExecuteCleanup(cancellationToken, databaseContext, indexContext);
                 ExecuteMap(stats, cancellationToken, databaseContext, indexContext);
 
                 tx.Commit();
             }
         }
 
-        private void ExecuteCleanup(IndexingBatchStats stats, CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        private void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
             var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
@@ -60,8 +60,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 long lastMappedEtag;
                 long lastTombstoneEtag;
-                lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
-                lastTombstoneEtag = ReadLastTombstoneEtag(indexContext.Transaction, collection);
+                lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+                lastTombstoneEtag = _indexStorage.ReadLastTombstoneEtag(indexContext.Transaction, collection);
 
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 if (lastEtag <= lastTombstoneEtag)
                     return;
 
-                WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
+                _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
 
                 _mre.Set(); // might be more
             }
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                     Log.Debug($"Executing map for '{Name} ({IndexId})'. Collection: {collection}.");
 
                 long lastMappedEtag;
-                lastMappedEtag = ReadLastMappedEtag(indexContext.Transaction, collection);
+                lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
 
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Executing map for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}.");
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing map for '{Name} ({IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
-                    WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+                    _indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
                 }
 
                 _mre.Set(); // might be more

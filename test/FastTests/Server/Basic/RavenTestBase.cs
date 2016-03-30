@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,8 +33,16 @@ namespace Raven.Tests.Core
         private static long _currentServerUsages;
         private static RavenServer _globalServer;
         private static readonly object ServerLocker = new object();
+        private static readonly object AvailableServerPortsLocker = new object();
         private RavenServer _localServer;
         private static int _pathCount;
+
+        public void DoNotReuseServer() => _doNotReuseServer = true;
+        private bool _doNotReuseServer;
+        private int NonReusedServerPort { get; set; }
+        private const int MaxParallelServer = 79;
+        private static List<int> _usedServerPorts = new List<int>();
+        private static List<int> _availableServerPorts = null;
 
         public RavenServer Server
         {
@@ -41,6 +50,24 @@ namespace Raven.Tests.Core
             {
                 if (_localServer != null)
                     return _localServer;
+
+                if (_doNotReuseServer)
+                {
+                    if (_availableServerPorts == null)
+                    {
+                        lock (AvailableServerPortsLocker)
+                        {
+                            if (_availableServerPorts == null)
+                                _availableServerPorts =
+                                    Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
+                        }
+                    }
+
+                    NonReusedServerPort = GetAvailablePort();
+                    _localServer = CreateServer(NonReusedServerPort);
+                    return _localServer;
+                }
+
                 if (_globalServer != null)
                 {
                     Interlocked.Increment(ref _currentServerUsages);
@@ -50,7 +77,7 @@ namespace Raven.Tests.Core
                 lock (ServerLocker)
                 {
                     if (_globalServer == null)
-                        _globalServer = CreateServer();
+                        _globalServer = CreateServer(8080);
                     Interlocked.Increment(ref _currentServerUsages);
                     _localServer = _globalServer;
                 }
@@ -58,15 +85,45 @@ namespace Raven.Tests.Core
             }
         }
 
-        private static RavenServer CreateServer()
+        private static int GetAvailablePort()
+        {
+            int available;
+            lock (AvailableServerPortsLocker)
+            {
+                if (_availableServerPorts.Count != 0)
+                {
+                    available = _availableServerPorts[0];
+                    _usedServerPorts.Add(available);
+                    _availableServerPorts.RemoveAt(0);
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Maximum allowed parallel servers pool in test is exhausted (max={MaxParallelServer}");
+                }
+            }
+            return available;
+        }
+
+        private static void RemoveUsedPort(int port)
+        {
+            lock (AvailableServerPortsLocker)
+            {
+                _availableServerPorts.Add(port);
+                _usedServerPorts.Remove(port);
+            }
+        }
+
+        private static RavenServer CreateServer(int port)
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
 
-            configuration.Core.ServerUrl = "http://localhost:8080";
+            configuration.Core.ServerUrl = $"http://localhost:{port}";
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
-            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
+            string postfix = port == 8080 ? "" : "_" + port;
+            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{postfix}");
             configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
             configuration.Storage.AllowOn32Bits = true;
 
@@ -84,7 +141,7 @@ namespace Raven.Tests.Core
 
 
         protected virtual async Task<DocumentStore> GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null,
-           Action<DatabaseDocument> modifyDatabaseDocument = null)
+           Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
         {
             if (dbSuffixIdentifier != null)
                 databaseName = string.Format("{0}_{1}", databaseName, dbSuffixIdentifier);
@@ -104,6 +161,7 @@ namespace Raven.Tests.Core
             {
                 Url = UseFiddler(Server.Configuration.Core.ServerUrl),
                 DefaultDatabase = databaseName,
+                ApiKey = apiKey
             };
             ModifyStore(store);
             store.Initialize();
@@ -152,7 +210,7 @@ namespace Raven.Tests.Core
         {
             prefix = prefix?.Replace("<", "").Replace(">", "");
 
-            var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "TestDatabase", Interlocked.Increment(ref _pathCount)));
+            var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? $"TestDatabase_{NonReusedServerPort}", Interlocked.Increment(ref _pathCount)));
             if (forceCreateDir && Directory.Exists(newDataDir) == false)
                 Directory.CreateDirectory(newDataDir);
             PathsToDelete.Add(newDataDir);
@@ -178,6 +236,21 @@ namespace Raven.Tests.Core
 
             if (_localServer != null)
             {
+                if (_doNotReuseServer)
+                {
+                    try
+                    {
+                        _localServer.Dispose();
+                        _localServer = null;
+                        RemoveUsedPort(NonReusedServerPort);
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
+
                 if (Interlocked.Decrement(ref _currentServerUsages) > 0)
                     return;
                 lock (ServerLocker)

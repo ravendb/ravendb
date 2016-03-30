@@ -258,26 +258,26 @@ function checkDnx () {
 			sudo ldconfig
 			cd -
 			printf "\nRechecking libuv installation:\n"
-			echoTestPkg "libuv (for kestrel)"
-			if [ -f /usr/local/lib/libuv.a ]
-			then
-				echoOkPkg
-			else
-				echoErrorPkg
-			fi
-			if [ ${OP_SKIP_ERRORS} == 0 ]
-			then
-				exit 105
-			fi
-			echoSkippingErros
-		else
-			if [ ${OP_SKIP_ERRORS} == 0 ]
-			then
-				exit 106
-			fi
-			echoSkippingErros
-		fi
-	fi	
+                        echoTestPkg "libuv (for kestrel)"
+                        if [ -f /usr/local/lib/libuv.a ]
+                        then
+                                echoOkPkg
+                        else
+                                echoErrorPkg
+                                if [ ${OP_SKIP_ERRORS} == 0 ]
+                                then
+                                        exit 105
+                                fi
+                                echoSkippingErros
+                        fi
+                else
+                        if [ ${OP_SKIP_ERRORS} == 0 ]
+                        then
+                                exit 106
+                        fi
+                        echoSkippingErros
+                fi
+        fi
 }
 
 function echoTestPkg () {

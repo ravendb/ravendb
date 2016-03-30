@@ -29,6 +29,7 @@ namespace Voron.Data.Fixed
         private readonly int _maxEmbeddedEntries;
         private RootObjectType? _type;
         private Stack<FixedSizeTreePage> _cursor;
+        private int _changes;
 
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
@@ -130,6 +131,7 @@ namespace Voron.Data.Fixed
 
         public byte* DirectAdd(long key, out bool isNew)
         {
+            _changes++;
             byte* pos;
             switch (_type)
             {
@@ -173,6 +175,7 @@ namespace Voron.Data.Fixed
                 // now we know we have enough space, or we need to split the parent pageNum
                 var addLargeEntry = AddLargeEntry(key, out isNew);
                 isNew = true;
+                ValidateTree();
                 return addLargeEntry;
             }
 
@@ -189,6 +192,39 @@ namespace Voron.Data.Fixed
             isNew = true;
             *((long*)(page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize))) = key;
             return (page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long));
+        }
+
+        [Conditional("VALIDATE")]
+        private void ValidateTree()
+        {
+            if (_type != RootObjectType.FixedSizeTree)
+                return;
+
+            var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
+
+            var stack = new Stack<FixedSizeTreePage>();
+            stack.Push(_tx.GetReadOnlyFixedSizeTreePage(header->RootPageNumber));
+            while (stack.Count > 0)
+            {
+                var cur = stack.Pop();
+
+                if (cur.NumberOfEntries == 0)
+                    throw new InvalidOperationException($"Page {cur.PageNumber} has no entries");
+
+                var prev = KeyFor(cur, 0);
+                if(cur.IsBranch)
+                    stack.Push(_tx.GetReadOnlyFixedSizeTreePage(PageValueFor(cur, 0)));
+
+                for (int i = 1; i < cur.NumberOfEntries; i++)
+                {
+                    var curKey = KeyFor(cur, i);
+                    if (prev >= curKey)
+                        throw new InvalidOperationException($"Page {cur.PageNumber} is not sorted");
+
+                    if (cur.IsBranch)
+                        stack.Push(_tx.GetReadOnlyFixedSizeTreePage(PageValueFor(cur, i)));
+                }
+            }
         }
 
         private void ResetStartPosition(FixedSizeTreePage page)
@@ -221,18 +257,7 @@ namespace Voron.Data.Fixed
                 var childPageNumber = PageValueFor(page, page.LastSearchPosition);
                 page = _tx.GetReadOnlyFixedSizeTreePage(childPageNumber);
             }
-#if DEBUG
-            if (page.LastMatch == 0 && _cursor.Count > 0)
-            {
-                var firstKey = KeyFor(page, 0);
-                var parentPage = _cursor.Peek();
-                var separatorKey = GetSeparatorKeyAtPosition(parentPage, parentPage.LastSearchPosition)[0];
-                if (separatorKey != firstKey && (separatorKey != long.MinValue || parentPage.LastSearchPosition != 0))
-                {
-                    throw new InvalidOperationException(string.Format("Separator key ({0}) must be the same as the first key ({1}) in the page", separatorKey, firstKey));
-                }
-            }
-#endif
+
             BinarySearch(page, key);
             return page;
         }
@@ -386,6 +411,7 @@ namespace Voron.Data.Fixed
             }
 
             var entriesToMove = parentPage.NumberOfEntries - (position);
+            ResetStartPosition(parentPage);
             var newEntryPos = parentPage.Pointer + parentPage.StartPosition + ((position) * BranchEntrySize);
             if (entriesToMove > 0)
             {
@@ -567,7 +593,8 @@ namespace Voron.Data.Fixed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long PageValueFor(FixedSizeTreePage page, int num)
         {
-            var lp = (long*)((page.Pointer + page.StartPosition) + (num * (BranchEntrySize)) + sizeof(long));
+            //page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize) + sizeof(long);
+            var lp = (long*)(page.Pointer + page.StartPosition + num * BranchEntrySize + sizeof(long));
             return lp[0];
         }
 
@@ -646,6 +673,7 @@ namespace Voron.Data.Fixed
 
         public DeletionResult Delete(long key)
         {
+            _changes++;
             switch (_type)
             {
                 case null:
@@ -669,6 +697,7 @@ namespace Voron.Data.Fixed
 
         public DeletionResult DeleteRange(long start, long end)
         {
+            _changes++;
             if (start > end)
                 throw new InvalidOperationException("Start range cannot be greater than the end of the range");
 

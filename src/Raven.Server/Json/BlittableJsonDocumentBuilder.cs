@@ -736,5 +736,10 @@ namespace Raven.Server.Json
         {
             return "Building json for " + _debugTag;
         }
+
+        public unsafe void CopyTo(IntPtr ptr)
+        {
+            _stream.CopyTo((byte*)ptr);
+        }
     }
 }

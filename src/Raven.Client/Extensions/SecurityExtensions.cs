@@ -21,17 +21,6 @@ namespace Raven.Client.Extensions
 
             requestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
 
-            conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
-            {
-                if (credentials.ApiKey == null)
-                {
-                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, primaryCredentials);
-                    return null;
-                }
-
-                return null;
-            };
-
             conventions.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
             {
                 var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
@@ -44,7 +33,6 @@ namespace Raven.Client.Extensions
 
                 if (credentials.ApiKey == null)
                 {
-                    AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, credentials.Credentials);
                     return null;
                 }
 
@@ -54,39 +42,6 @@ namespace Raven.Client.Extensions
                 return securedAuthenticator.DoOAuthRequestAsync(oauthSource, credentials.ApiKey);
             };
 
-        }
-
-        private static void AssertForbiddenCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
-        {
-            if (credentials == null)
-                return;
-
-            var requiredAuth = response.Headers.GetFirstValue("Raven-Required-Auth");
-            if (requiredAuth == "Windows")
-            {
-                // we are trying to do windows auth, but we didn't get the windows auth headers
-                throw new SecurityException(
-                    "Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
-                    Environment.NewLine +
-                    "If you are running inside IIS, make sure to enable Windows authentication.");
-            }
-        }
-
-        private static void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
-        {
-            if (credentials == null)
-                return;
-
-            var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
-            if (authHeaders == null || (authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false))
-            {
-                // we are trying to do windows auth, but we didn't get the windows auth headers
-                throw new SecurityException(
-                    "Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
-                    + " but either wrong credentials were entered or the specified server does not support Windows authentication." +
-                    Environment.NewLine +
-                    "If you are running inside IIS, make sure to enable Windows authentication.");
-            }
         }
     }
 }

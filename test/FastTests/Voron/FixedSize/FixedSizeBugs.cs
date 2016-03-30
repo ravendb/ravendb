@@ -1,6 +1,4 @@
-﻿using System;
-using Voron;
-using Xunit;
+﻿using Xunit;
 
 namespace FastTests.Voron.FixedSize
 {
@@ -11,7 +9,7 @@ namespace FastTests.Voron.FixedSize
         {
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize:8);
+                var fst = tx.FixedTreeFor("test", valSize: 8);
 
                 fst.Add(2, new byte[8]);
                 fst.Add(3, new byte[8]);
@@ -48,5 +46,33 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
+        [Fact]
+        public void CanAddDuplicate_Many()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                for (var i = 0; i < 300; i++)
+                {
+                    var fst = tx.FixedTreeFor("test", valSize: 8);
+
+                    fst.Add(i, new byte[8]);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                for (var i = 0; i < 300; i++)
+                {
+                    var fst = tx.FixedTreeFor("test", valSize: 8);
+
+                    fst.Delete(i);
+                    fst.Add(i, new byte[8]);
+                }
+
+                tx.Commit();
+            }
+        }
     }
 }

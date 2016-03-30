@@ -10,14 +10,13 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
-using StringSegment = Raven.Server.Utils.StringSegment;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -95,7 +94,8 @@ namespace Raven.Server.Documents.Handlers
                 documents.Add(Database.DocumentsStorage.Get(context, id));
             }
 
-            LoadIncludes(context, documents, includes);
+            var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includes);
+            includeDocs.Execute(documents, documents);
 
             long actualEtag = ComputeEtagsFor(documents);
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
@@ -125,31 +125,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
-        }
-
-        private void LoadIncludes(DocumentsOperationContext context, List<Document> documents, StringValues includes)
-        {
-            // ReSharper disable LoopCanBeConvertedToQuery
-            var includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var include in includes)
-            {
-                foreach (var doc in documents)
-                {
-                    IncludeUtil.GetDocIdFromInclude(doc.Data, new StringSegment(include, 0), includedIds);
-                }
-            }
-
-            foreach (var includedDocId in includedIds)
-            {
-                if (includedDocId == null) //precaution, should not happen
-                    continue;
-                var includedDoc = Database.DocumentsStorage.Get(context, includedDocId);
-                if (includedDoc == null)
-                    continue;
-
-                documents.Add(includedDoc);
-            }
-            // ReSharper restore LoopCanBeConvertedToQuery
         }
 
         private unsafe long ComputeEtagsFor(List<Document> documents)

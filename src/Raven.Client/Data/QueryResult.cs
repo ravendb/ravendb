@@ -59,7 +59,7 @@ namespace Raven.Abstractions.Data
         /// The ETag value for this index current state, which include what docs were indexed,
         /// what document were deleted, etc.
         /// </summary>
-        public long? ResultEtag { get; set; }
+        public long ResultEtag { get; set; }
 
         /// <summary>
         /// Highlighter results (if requested).

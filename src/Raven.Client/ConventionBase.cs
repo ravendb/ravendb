@@ -38,11 +38,5 @@ namespace Raven.Client
         /// in async manner
         /// </summary>
         public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleUnauthorizedResponseAsync { get; set; }
-
-        /// <summary>
-        /// Begins handling of forbidden responses
-        /// in async manner
-        /// </summary>
-        public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleForbiddenResponseAsync { get; set; }
     }
 }

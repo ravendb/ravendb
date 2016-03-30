@@ -24,6 +24,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -626,6 +627,18 @@ namespace Raven.Client.Connection
         /// <param name="name">User Name</param>
         /// <returns></returns>
         ApiKeyDefinition GetApiKey(string name);
+
+        /// <summary>
+        /// Delete existing api key
+        /// </summary>
+        /// <param name="name">User Name</param>
+        /// <returns></returns>
+        void DeleteApiKey(string name);
+
+        /// <summary>
+        /// Enumarate all existing api keys
+        /// </summary>
+        IEnumerable<NamedApiKeyDefinition> GetAllApiKeys();
     }
 
     public interface IAdminDatabaseCommands

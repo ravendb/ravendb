@@ -107,7 +107,6 @@ namespace Raven.Client.Data.Indexes
         public bool IsInvalidIndex => IndexFailureInformation.CheckIndexInvalid(IndexingAttempts, IndexingErrors);
     }
 
-    [Flags]
     public enum IndexingPriority
     {
         None = 0,
@@ -117,8 +116,6 @@ namespace Raven.Client.Data.Indexes
         Disabled = 2,
 
         Idle = 4,
-
-        Abandoned = 8,
 
         Error = 16,
 

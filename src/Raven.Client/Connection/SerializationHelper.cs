@@ -134,25 +134,24 @@ namespace Raven.Client.Connection
             //TODO arek
             var result = new QueryResult
             {
-                IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
-                //IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-                //IndexEtag = long.Parse(json.Value<string>("IndexEtag")),
-                //Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
-                TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
-                IndexName = json.Value<string>("IndexName"),
-                //ResultEtag = long.Parse(json.Value<string>("ResultEtag")),
+                IsStale = Convert.ToBoolean(json[nameof(QueryResult.IsStale)].ToString()),
+                IndexTimestamp = json.Value<DateTime>(nameof(QueryResult.IndexTimestamp)),
+                Includes = ((RavenJArray)json[nameof(QueryResult.Includes)]).Cast<RavenJObject>().ToList(),
+                TotalResults = Convert.ToInt32(json[nameof(QueryResult.TotalResults)].ToString()),
+                IndexName = json.Value<string>(nameof(QueryResult.IndexName)),
+                ResultEtag = long.Parse(json.Value<string>(nameof(QueryResult.ResultEtag))),
                 //SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
                 //Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
                 //    .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),
                 //ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())
                 //.JsonDeserialization<Dictionary<string, string>>(),
-                TimingsInMilliseconds = (json.Value<RavenJObject>("TimingsInMilliseconds") ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>(),
-                //LastQueryTime = json.Value<DateTime>("LastQueryTime")
+                TimingsInMilliseconds = (json.Value<RavenJObject>(nameof(QueryResult.TimingsInMilliseconds)) ?? new RavenJObject()).JsonDeserialization<Dictionary<string, double>>(),
+                LastQueryTime = json.Value<DateTime>(nameof(QueryResult.LastQueryTime))
             };
 
             result.ResultSize = numberOfCharactersRead;
 
-            foreach (var r in ((RavenJArray)json["Results"]))
+            foreach (var r in ((RavenJArray)json[nameof(QueryResult.Results)]))
             {
                 if (r.Type == JTokenType.Null)
                     result.Results.Add(null);

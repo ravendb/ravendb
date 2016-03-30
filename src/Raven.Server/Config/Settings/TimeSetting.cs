@@ -39,11 +39,11 @@ namespace Raven.Server.Config.Settings
                     AsTimeSpan = TimeSpan.FromDays(value);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("unit", unit, "Unknown TimeUnit value");
+                    throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown TimeUnit value");
             }
         }
 
-        public TimeSpan AsTimeSpan { get; private set; }
+        public readonly TimeSpan AsTimeSpan;
     }
 
     public enum TimeUnit

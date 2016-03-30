@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
@@ -15,7 +16,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override void Persist(TransactionOperationContext context)
         {
+        }
 
+        protected override void FillIndexDefinition(IndexDefinition indexDefinition)
+        {
+        }
+
+        public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        {
+            return false;
         }
     }
 }

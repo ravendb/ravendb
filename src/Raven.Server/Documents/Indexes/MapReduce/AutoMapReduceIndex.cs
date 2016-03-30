@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             DocumentDatabase documentDatabase)
         {
             throw new NotImplementedException();
-            //var definition = AutoIndexDefinition.Load(environment);
+            //var definition = AutoMapIndexDefinition.Load(environment);
             //var instance = new AutoMapReduceIndex(indexId, definition);
             //instance.Initialize(environment, documentDatabase);
 
@@ -107,12 +106,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 foreach (var collection in _parent.Collections)
                 {
                     long lastMappedEtag;
-                    lastMappedEtag = _parent.ReadLastMappedEtag(indexContext.Transaction, collection);
+                    lastMappedEtag = _parent._indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
 
                     _cancellationToken.ThrowIfCancellationRequested();
 
                     var lastEtag = DoMap(collection, lastMappedEtag);
-                    _parent.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+                    _parent._indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
                 }
 
                 var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
@@ -230,7 +229,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         var mappedResult = new DynamicJsonValue();
                         var reduceKey = new DynamicJsonValue();
-                        foreach (var indexField in _parent.Definition.MapFields)
+                        foreach (var indexField in _parent.Definition.MapFields.Values)
                         {
                             object result;
                             _parent._blittableTraverser.TryRead(document.Data, indexField.Name, out result);
@@ -283,8 +282,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             break;
                         }
-                        
-                        
+
+
                     }
                 }
                 return lastEtag;

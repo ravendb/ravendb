@@ -58,60 +58,16 @@ namespace Raven.Server.Json.Parsing
             _pos = segment.Offset;
         }
 
+
         public bool Read()
         {
-            switch (_state.Continuation)
+            if (_state.Continuation != JsonParserTokenContinuation.None) // parse normally
             {
-                case JsonParserTokenContinuation.None:
-                    break;// parse normally
-                case JsonParserTokenContinuation.PartialNaN:
-                    if (EnsureRestOfToken() == false)
-                        return false;
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    _state.CurrentTokenType = JsonParserToken.Float;
-                    _stringBuffer.EnsureSingleChunk(_state);
-                    return true;
-                case JsonParserTokenContinuation.PartialNumber:
-                    if (ParseNumber() == false)
-                        return false;
-                    if (_state.CurrentTokenType == JsonParserToken.Float)
-                        _stringBuffer.EnsureSingleChunk(_state);
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    return true;
-                case JsonParserTokenContinuation.PartialPreamble:
-                    if (EnsureRestOfToken() == false)
-                        return false;
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    break; // single case where we don't return 
-                case JsonParserTokenContinuation.PartialString:
-                    if (ParseString() == false)
-                        return false;
-                    _stringBuffer.EnsureSingleChunk(_state);
-                    _state.CurrentTokenType = JsonParserToken.String;
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    return true;
-                case JsonParserTokenContinuation.PartialFalse:
-                    if (EnsureRestOfToken() == false)
-                        return false;
-                    _state.CurrentTokenType = JsonParserToken.False;
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    return true;
-                case JsonParserTokenContinuation.PartialTrue:
-                    if (EnsureRestOfToken() == false)
-                        return false;
-                    _state.CurrentTokenType = JsonParserToken.True;
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    return true;
-                case JsonParserTokenContinuation.PartialNull:
-                    if (EnsureRestOfToken() == false)
-                        return false;
-                    _state.CurrentTokenType = JsonParserToken.Null;
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    return true;
-                default:
-                    throw CreateException("Somehow got continuation for single byte token " + _state.Continuation);
+                bool read;
+                if (ContinueParsingValue(out read))
+                    return read;
             }
-
+            
             _state.Continuation = JsonParserTokenContinuation.None;
             if (_line == 0)
             {
@@ -280,6 +236,100 @@ namespace Raven.Server.Json.Parsing
             }
         }
 
+        private bool ContinueParsingValue(out bool read)
+        {
+            read = false;
+            switch (_state.Continuation)
+            {
+                case JsonParserTokenContinuation.PartialNaN:
+                {
+                    if (EnsureRestOfToken() == false)
+                        return true;
+
+                    _state.Continuation = JsonParserTokenContinuation.None;
+                    _state.CurrentTokenType = JsonParserToken.Float;
+                    _stringBuffer.EnsureSingleChunk(_state);
+
+                    read = true;
+                    return true;
+                }
+                case JsonParserTokenContinuation.PartialNumber:
+                {
+                    if (ParseNumber() == false)
+                        return true;
+
+                    if (_state.CurrentTokenType == JsonParserToken.Float)
+                        _stringBuffer.EnsureSingleChunk(_state);
+
+                    _state.Continuation = JsonParserTokenContinuation.None;
+
+                    read = true;
+                    return true;
+
+                }
+                case JsonParserTokenContinuation.PartialPreamble:
+                {
+                    if (EnsureRestOfToken() == false)
+                        return true;
+
+                    _state.Continuation = JsonParserTokenContinuation.None;
+
+                    break; // single case where we don't return 
+                }
+                case JsonParserTokenContinuation.PartialString:
+                {
+                    if (ParseString() == false)
+                        return true;
+
+                    _stringBuffer.EnsureSingleChunk(_state);
+                    _state.CurrentTokenType = JsonParserToken.String;
+                    _state.Continuation = JsonParserTokenContinuation.None;
+  
+                    read = true;
+                    return true;
+
+                }
+                case JsonParserTokenContinuation.PartialFalse:
+                {
+                    if (EnsureRestOfToken() == false)
+                        return true;
+
+                    _state.CurrentTokenType = JsonParserToken.False;
+                    _state.Continuation = JsonParserTokenContinuation.None;
+
+                    read = true;
+                    return true;
+
+                }
+                case JsonParserTokenContinuation.PartialTrue:
+                {
+                    if (EnsureRestOfToken() == false)
+                        return true;
+
+                    _state.CurrentTokenType = JsonParserToken.True;
+                    _state.Continuation = JsonParserTokenContinuation.None;
+
+                    read = true;
+                    return true;
+                }
+                case JsonParserTokenContinuation.PartialNull:
+                {
+                    if (EnsureRestOfToken() == false)
+                        return true;
+
+                    _state.CurrentTokenType = JsonParserToken.Null;
+                    _state.Continuation = JsonParserTokenContinuation.None;
+
+                    read = true;
+                    return true;
+                }
+                default:
+                    throw CreateException("Somehow got continuation for single byte token " + _state.Continuation);
+            }
+
+            return false;
+        }
+
 
         private bool ParseNumber()
         {
@@ -372,93 +422,96 @@ namespace Raven.Server.Json.Parsing
 
         private bool ParseString()
         {
-            while (true)
+            fixed (byte* inputBufferPtr = _inputBuffer)
             {
-                _currentStrStart = _pos;
-                while (_pos < _bufSize)
+                while (true)
                 {
-                    var b = _inputBuffer[_pos++];
-                    _charPos++;
-                    if (_escapeMode == false)
+                    _currentStrStart = _pos;
+                    while (_pos < _bufSize)
                     {
-                        if (b == _currentQuote)
-                        {
-                            _stringBuffer.Write(_inputBuffer, _currentStrStart, _pos - _currentStrStart - 1
-                                /*don't include the last quote*/);
-                            return true;
-                        }
-                        if (b == (byte) '\\')
-                        {
-                            _escapeMode = true;
-                            _stringBuffer.Write(_inputBuffer, _currentStrStart, _pos - _currentStrStart - 1
-                                /*don't include the escape */);
-                            _currentStrStart = _pos;
-                        }
-                    }
-                    else 
-                    {
-                        _currentStrStart++;
-                        _escapeMode = false;
+                        var b = inputBufferPtr[_pos++];
                         _charPos++;
-                        if (b != (byte)'u')
+                        if (_escapeMode == false)
                         {
-                            _state.EscapePositions.Add(_stringBuffer.SizeInBytes - _prevEscapePosition);
-                            _prevEscapePosition = _stringBuffer.SizeInBytes + 1;
+                            if (b == _currentQuote)
+                            {
+                                _stringBuffer.Write(inputBufferPtr + _currentStrStart, _pos - _currentStrStart - 1
+                                    /*don't include the last quote*/);
+                                return true;
+                            }
+                            if (b == (byte)'\\')
+                            {
+                                _escapeMode = true;
+                                _stringBuffer.Write(inputBufferPtr + _currentStrStart, _pos - _currentStrStart - 1
+                                    /*don't include the escape */);
+                                _currentStrStart = _pos;
+                            }
                         }
-
-                        switch (b)
+                        else
                         {
-                            case (byte)'r':
-                                _stringBuffer.WriteByte((byte)'\r');
-                                break;
-                            case (byte)'n':
-                                _stringBuffer.WriteByte((byte)'\n');
-                                break;
-                            case (byte)'b':
-                                _stringBuffer.WriteByte((byte)'\b');
-                                break;
-                            case (byte)'f':
-                                _stringBuffer.WriteByte((byte)'\f');
-                                break;
-                            case (byte)'t':
-                                _stringBuffer.WriteByte((byte)'\t');
-                                break;
-                            case (byte)'"':
-                            case (byte)'\\':
-                            case (byte)'/':
-                                _stringBuffer.WriteByte(b);
-                                break;
-                            case (byte)'\r':// line continuation, skip
-                                // flush the buffer, but skip the \,\r chars
-                                if (_pos >= _bufSize)
-                                    return false;
+                            _currentStrStart++;
+                            _escapeMode = false;
+                            _charPos++;
+                            if (b != (byte)'u')
+                            {
+                                _state.EscapePositions.Add(_stringBuffer.SizeInBytes - _prevEscapePosition);
+                                _prevEscapePosition = _stringBuffer.SizeInBytes + 1;
+                            }
 
-                                _line++;
-                                _charPos = 1;
-                                if (_pos >= _bufSize)
-                                    return false;
+                            switch (b)
+                            {
+                                case (byte)'r':
+                                    _stringBuffer.WriteByte((byte)'\r');
+                                    break;
+                                case (byte)'n':
+                                    _stringBuffer.WriteByte((byte)'\n');
+                                    break;
+                                case (byte)'b':
+                                    _stringBuffer.WriteByte((byte)'\b');
+                                    break;
+                                case (byte)'f':
+                                    _stringBuffer.WriteByte((byte)'\f');
+                                    break;
+                                case (byte)'t':
+                                    _stringBuffer.WriteByte((byte)'\t');
+                                    break;
+                                case (byte)'"':
+                                case (byte)'\\':
+                                case (byte)'/':
+                                    _stringBuffer.WriteByte(b);
+                                    break;
+                                case (byte)'\r':// line continuation, skip
+                                                // flush the buffer, but skip the \,\r chars
+                                    if (_pos >= _bufSize)
+                                        return false;
 
-                                if (_inputBuffer[_pos] == (byte)'\n')
-                                    _pos++; // consume the \,\r,\n
-                                break;
-                            case (byte)'\n':
-                                _line++;
-                                _charPos = 1;
-                                break;// line continuation, skip
-                            case (byte)'u':// unicode value
-                                if (ParseUnicodeValue() == false)
-                                    return false;
+                                    _line++;
+                                    _charPos = 1;
+                                    if (_pos >= _bufSize)
+                                        return false;
 
-                                break;
-                            default:
-                                throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
+                                    if (inputBufferPtr[_pos] == (byte)'\n')
+                                        _pos++; // consume the \,\r,\n
+                                    break;
+                                case (byte)'\n':
+                                    _line++;
+                                    _charPos = 1;
+                                    break;// line continuation, skip
+                                case (byte)'u':// unicode value
+                                    if (ParseUnicodeValue() == false)
+                                        return false;
+
+                                    break;
+                                default:
+                                    throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
+                            }
                         }
                     }
+                    // copy the buffer to the native code, then refill
+                    _stringBuffer.Write(inputBufferPtr + _currentStrStart, _pos - _currentStrStart);
+                    if (_pos >= _bufSize)
+                        return false;
                 }
-                // copy the buffer to the native code, then refill
-                _stringBuffer.Write(_inputBuffer, _currentStrStart, _pos - _currentStrStart);
-                if (_pos >= _bufSize)
-                    return false;
             }
         }
 

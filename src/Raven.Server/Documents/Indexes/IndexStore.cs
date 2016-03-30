@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Utils;
@@ -69,11 +71,23 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public int CreateIndex(AutoIndexDefinition definition)
+        public int CreateIndex(AutoMapIndexDefinition definition)
         {
             lock (_locker)
             {
-                // TODO [ppekrol] check if we do not have identical index
+                Index existingIndex;
+                ValidateIndexDefinition(definition, out existingIndex);
+
+                switch (GetIndexCreationOptions(definition, existingIndex))
+                {
+                    case IndexCreationOptions.Noop:
+                        return existingIndex.IndexId;
+                    case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+                        throw new NotImplementedException(); // TODO [ppekrol]
+                    case IndexCreationOptions.Update:
+                        DeleteIndex(existingIndex.IndexId);
+                        break;
+                }
 
                 var indexId = _indexes.GetNextIndexId();
 
@@ -89,6 +103,59 @@ namespace Raven.Server.Documents.Indexes
                 });
 
                 return indexId;
+            }
+        }
+
+        private static IndexCreationOptions GetIndexCreationOptions(IndexDefinitionBase indexDefinition, Index existingIndex)
+        {
+            if (existingIndex == null)
+                return IndexCreationOptions.Create;
+
+            //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
+            //    return IndexCreationOptions.Update;
+
+            var equals = existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
+            if (equals)
+                return IndexCreationOptions.Noop;
+
+            return existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
+                       ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
+                       : IndexCreationOptions.Update;
+        }
+
+        private void ValidateIndexDefinition(IndexDefinitionBase indexDefinition, out Index existingIndex)
+        {
+            ValidateIndexName(indexDefinition.Name);
+
+            if (_indexes.TryGetByName(indexDefinition.Name, out existingIndex))
+            {
+                switch (existingIndex.Definition.LockMode)
+                {
+                    case IndexLockMode.SideBySide:
+                        throw new NotImplementedException(); // TODO [ppekrol]
+                    case IndexLockMode.LockedIgnore:
+                        return;
+                    case IndexLockMode.LockedError:
+                        throw new InvalidOperationException("Can not overwrite locked index: " + indexDefinition.Name);
+                }
+            }
+        }
+
+        private void ValidateIndexName(string name)
+        {
+            if (name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index names starting with dynamic_ or dynamic/ are reserved!", nameof(name));
+            }
+
+            if (name.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index name dynamic is reserved!", nameof(name));
+            }
+
+            if (name.Contains("//"))
+            {
+                throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index name cannot contain // (double slashes)", nameof(name));
             }
         }
 
@@ -264,9 +331,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public List<AutoIndexDefinition> GetAutoIndexDefinitionsForCollection(string collection)
+        public List<AutoMapIndexDefinition> GetAutoMapIndexDefinitionForCollection(string collection)
         {
-            return _indexes.GetDefinitionsOfTypeForCollection<AutoIndexDefinition>(collection);
+            return _indexes
+                .GetForCollection(collection)
+                .Where(x => x.Type == IndexType.AutoMap)
+                .Select(x => (AutoMapIndexDefinition)x.Definition)
+                .ToList();
         }
 
         public IEnumerable<Index> GetIndexesForCollection(string collection)
@@ -277,6 +348,80 @@ namespace Raven.Server.Documents.Indexes
         public IEnumerable<Index> GetIndexes()
         {
             return _indexes;
+        }
+
+        public void RunIdleOperations()
+        {
+            foreach (var index in _indexes)
+                index.MaybePersistQueryingTime();
+
+            HandleUnusedAutoIndexes();
+            //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
+        }
+
+        private void HandleUnusedAutoIndexes()
+        {
+            var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+            var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
+            var ageThreshold = timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan.Add(timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan); // idle * 2
+
+            var indexesSortedByLastQueryTime = (from index in _indexes
+                                                where index.Priority.HasFlag(IndexingPriority.Disabled) == false && index.Priority.HasFlag(IndexingPriority.Error) == false && index.Priority.HasFlag(IndexingPriority.Forced) == false
+                                                let stats = index.GetStats()
+                                                let lastQueryingTime = stats.LastQueryingTime ?? DateTime.MinValue
+                                                orderby lastQueryingTime
+                                                select new UnusedIndexState
+                                                {
+                                                    LastQueryingTime = lastQueryingTime,
+                                                    Index = index,
+                                                    Priority = stats.Priority,
+                                                    CreationDate = stats.CreatedTimestamp
+                                                }).ToList();
+
+            for (var i = 0; i < indexesSortedByLastQueryTime.Count; i++)
+            {
+                var item = indexesSortedByLastQueryTime[i];
+
+                if (item.Index.Type != IndexType.AutoMap && item.Index.Type != IndexType.AutoMapReduce)
+                    continue;
+
+                var age = SystemTime.UtcNow - item.CreationDate;
+                var lastQuery = SystemTime.UtcNow - item.LastQueryingTime;
+
+                if (item.Priority.HasFlag(IndexingPriority.Normal))
+                {
+                    TimeSpan differenceBetweenNewestAndCurrentQueryingTime;
+                    if (i < indexesSortedByLastQueryTime.Count - 1)
+                    {
+                        var lastItem = indexesSortedByLastQueryTime[indexesSortedByLastQueryTime.Count - 1];
+                        differenceBetweenNewestAndCurrentQueryingTime = lastItem.LastQueryingTime - item.LastQueryingTime;
+                    }
+                    else
+                        differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
+
+                    if (differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                    {
+                        if (lastQuery > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                            item.Index.SetPriority(IndexingPriority.Idle);
+                    }
+
+                    continue;
+                }
+
+                if (item.Priority.HasFlag(IndexingPriority.Idle))
+                {
+                    if (age < ageThreshold || lastQuery > timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                        DeleteIndex(item.Index.IndexId);
+                }
+            }
+        }
+
+        private class UnusedIndexState
+        {
+            public DateTime LastQueryingTime { get; set; }
+            public Index Index { get; set; }
+            public IndexingPriority Priority { get; set; }
+            public DateTime CreationDate { get; set; }
         }
     }
 }
