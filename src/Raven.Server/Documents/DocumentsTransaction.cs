@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
 using Voron.Impl;
 
 namespace Raven.Server.Documents
@@ -47,7 +46,9 @@ namespace Raven.Server.Documents
         private void AfterCommit()
         {
             foreach (var notification in _afterCommitNotifications)
+            {
                 _notifications.RaiseNotifications(notification);
+            }
         }
     }
 }

@@ -77,6 +77,8 @@ namespace Raven.Server.Json.Parsing
             Items.Enqueue(obj);
         }
 
+        public int Count => Items.Count;
+
         public IEnumerator<object> GetEnumerator()
         {
             throw new NotImplementedException();
@@ -87,6 +89,7 @@ namespace Raven.Server.Json.Parsing
             return GetEnumerator();
         }
     }
+
     public unsafe class ObjectJsonParser : IJsonParser
     {
         private readonly JsonParserState _state;

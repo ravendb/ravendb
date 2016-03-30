@@ -258,7 +258,8 @@ namespace Raven.Abstractions.Data
 
         public class SqlReplication
         {
-            public const string SqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+            public const string SqlReplicationConnections = "Raven/SqlReplication/Connections";
+            public const string SqlReplicationConfigurationPrefix = "Raven/SqlReplication/Configuration/";
         }
 
         public class PeriodicExport

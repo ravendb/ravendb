@@ -95,7 +95,6 @@ namespace Raven.Server.Json
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
         {
             return TryGet((string) indexes[0], out result);
-
         }
     }
 }
