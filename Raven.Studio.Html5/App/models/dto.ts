@@ -268,6 +268,10 @@ interface licenseStatusDto {
         compression: string;
         quotas: string;
         authorization: string;
+        fips: string;
+        counters: string;
+        timeSeries: string;
+        globalConfiguration: string;
         documentExpiration: string;
         replication: string;
         versioning: string;
@@ -280,7 +284,8 @@ interface licenseStatusDto {
         maxParallelism: string;
         ravenfs: string;
         counterStorage: string;
-        timeSeries: string;
+        monitoring: string;
+        cluster: string;
         hotSpare: string;
     }
 }
