@@ -33,11 +33,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        public IndexWriteOperation(object writeLock, string name, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, LuceneIndexWriter writer, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
+        public IndexWriteOperation(object writeLock, string name, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
         {
             _writeLock = writeLock;
             _name = name;
-            _writer = writer;
             _converter = converter;
             _persistence = persistence;
 
@@ -56,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-                _persistence.EnsureIndexWriter();
+                _writer = _persistence.EnsureIndexWriter();
 
                 _locker = directory.MakeLock("writing-to-index.lock");
 
