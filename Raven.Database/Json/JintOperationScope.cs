@@ -87,8 +87,9 @@ namespace Raven.Database.Json
                         var originalJsValue = property.Value;
                         if (originalJsValue.IsNumber() && Math.Abs(num - originalJsValue.AsNumber()) < double.Epsilon)
                             return originalValue;
-
-                        if (originalValue.Type == JTokenType.Integer)
+                        //We might have change the type of num from Integer to long in the script by design 
+                        //Making sure the number isn't a real float before returning it as integer
+                        if (originalValue.Type == JTokenType.Integer && (Math.Abs(num - Math.Floor(num)) <= double.Epsilon || Math.Abs(num - Math.Ceiling(num)) <= double.Epsilon))
                             return new RavenJValue((long)num);
                         return new RavenJValue(num);//float
                     }
