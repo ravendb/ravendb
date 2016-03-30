@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
+using FastTests.Client.BulkInsert;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 
@@ -19,7 +21,11 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-
+            //using (var x = new BulkInserts())
+            //{
+            //    x.SimpleBulkInsertShouldWork().Wait();
+            //}
+            //return;
             using (var store = new DocumentStore
             {
                 Url = "http://127.0.0.1:8081",

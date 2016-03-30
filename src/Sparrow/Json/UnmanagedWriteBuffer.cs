@@ -108,6 +108,11 @@ namespace Sparrow.Json
             _current.Used++;
         }
 
+        public int CopyTo(IntPtr pointer)
+        {
+            return CopyTo((byte*) pointer);
+        }
+
         public int CopyTo(byte* pointer)
         {
             var whereToWrite = pointer + _sizeInBytes;
