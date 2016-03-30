@@ -7,45 +7,154 @@
     </div>
     <div class="modal-body">
 
-
-        <label data-bind="attr: { class: supportClass }">Support: <span data-bind="text: supportText"></span></label><br/>
-        <label data-bind="text: licenseStatus.Message, css: { 'license-error': licenseStatus.Error }"></label>
-        <!-- ko with: licenseStatus.Details -->
-        <div class="panel-group" id="detailsAccordion">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <a data-toggle="collapse" data-parent="#detailsAccordion" href="#collapseDetails">
-                        <h3 class="panel-title">
-                            Details
-                        </h3>
-                    </a>
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="text-center">
+                    <div class="roundborder dev-only"> <i class="fa fa-wrench"></i> </div>
+                    <h3>LICENCE</h3>
+                    <h4>Development only</h4>
+                    <div class="roundborder commercial"> <i class="fa fa-file-text-o"></i> </div>
+                    <h3>LICENCE</h3>
+                    <h4>Commercial - something</h4>
+                    <div class="roundborder expired"> <i class="fa fa-hourglass-half"></i> </div>
+                    <h3>LICENCE</h3>
+                    <h4>Commercial - expire</h4>
                 </div>
-                <div id="collapseDetails" class="panel-collapse collapse">
-                    <div class="panel-body">
-                        <div class="form-group">
-                            <div class="col-lg-12">
-                                <p class="form-control-static" data-bind="text: $data"></p>
-                            </div>
-                        </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="text-center">
+                    <div class="roundborder no-support"> <i class="fa fa-times"></i> </div>
+                    <h3>SUPPORT</h3>
+                    <h4>No support</h4>
+                    <div class="roundborder production-support"> <i class="fa fa-life-ring"></i> </div>
+                    <h3>SUPPORT</h3>
+                    <h4>Production support</h4>
+                    <div class="roundborder professional-support"> <i class="fa fa-life-ring"></i> </div>
+                    <h3>SUPPORT</h3>
+                    <h4>Professional support</h4>
+                    <div class="roundborder partial-support"> <i class="fa fa-life-ring"></i> </div>
+                    <h3>SUPPORT</h3>
+                    <h4>Partial support</h4>
+                    <div class="roundborder"> <i class="fa fa-question-circle"></i> </div>
+                    <h3>SUPPORT</h3>
+                    <h4>Licence not found</h4>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray">
+            <div class="row">
+                <div class="col-sm-6">
+                    <div class="padding">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" class="alternate-align table-half">
+                            <tbody>
+                            <tr>
+                                <td>RAM</td>
+                                <td><strong>12 GB</strong></td>
+                            </tr>
+                            <tr>
+                                <td>CPU cores</td>
+                                <td><strong>Up to <strong>6</strong></strong></td>
+                            </tr>
+                            <tr>
+                                <td>Databases</td>
+                                <td><i class="fa fa-infinity"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Database size</td>
+                                <td><i class="fa fa-infinity"></i></td>
+                            </tr>
+                            <tr>
+                                <td>RavenFS</td>
+                                <td><i class="fa fa-check"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Periodic Backup</td>
+                                <td><i class="fa fa-check"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Sharding</td>
+                                <td><i class="fa fa-check"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Expiration</td>
+                                <td><i class="fa fa-times"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Replication</td>
+                                <td><i class="fa fa-check"></i></td>
+                            </tr>
+                            <tr>
+                                <td>SQL Replication</td>
+                                <td><i class="fa fa-check"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Encryption</td>
+                                <td><i class="fa fa-times"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Compression</td>
+                                <td><i class="fa fa-times"></i></td>
+                            </tr>
+                            <tr>
+                                <td>FIPS Compliance</td>
+                                <td><i class="fa fa-times"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Quotas</td>
+                                <td><i class="fa fa-times"></i></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="padding">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table">
+                            <tbody>
+                            <tr>
+                                <td class="active"><span class="text-muted">CURRENT</span></td>
+                                <td colspan="2"></td>
+                            </tr>
+                            <tr>
+                                <th scope="col" class="active" width="33.3%">
+                                    <h4>Community</h4>
+                                    Essential support to get started
+                                </th>
+                                <th scope="col" width="33.3%">
+                                    <h4>Professional</h4>
+                                    Priority support for professional projects
+                                </th>
+                                <th scope="col">
+                                    <h4>Production</h4>
+                                    Top-tier support for enterprise and mission-critical projects
+                                </th>
+                            </tr>
+                            <tr>
+                                <td class="active"><i class="fa fa-group"></i> Support via our comunity forum</td>
+                                <td colspan="2"><i class="fa fa-users"></i> Access to RavenDB core developers</td>
+                            </tr>
+                            <tr>
+                                <td class="active"></td>
+                                <td colspan="2"><i class="fa fa-phone"></i> Email & Phone support</td>
+                            </tr>
+                            <tr>
+                                <td class="active"></td>
+                                <td>
+                                    <i class="fa fa-clock-o"></i>Next day SLA<br>
+                                    <small class="text-muted">Sun-Thu | 8:00-18:00 GMT+2</small>
+                                </td>
+                                <td><i class="fa fa-clock-o"></i>2 hour SLA <small class="text-muted">We're there for you 24/7</small></td>
+                            </tr>
+                            <tr>
+                                <td class="active"><a href="#" class="btn btn-info btn-block">ACCESS</a></td>
+                                <td colspan="2"><a href="#" class="btn btn-primary btn-block">UPGRADE</a></td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- /ko -->
-        <!-- ko if: licenseStatus.IsCommercial -->
-        <div data-bind="text: 'Version: ' + licenseStatus.Attributes.version"></div>
-        <div data-bind="text: 'Bundles: ' + bundleString + '.'"></div>
-        <div data-bind="text: 'RavenFS: ' + licenseStatus.Attributes.ravenfs"></div>
-        <div data-bind="text: 'FIPS compatible: ' + licenseStatus.Attributes.fips"></div>
-        <div data-bind="text: 'Authorization: ' + licenseStatus.Attributes.authorization"></div>
-        <div data-bind="text: 'Max Ram Utilization: ' + licenseStatus.Attributes.maxRamUtilization"></div>
-        <div data-bind="text: 'Max Parallelism: ' + licenseStatus.Attributes.maxParallelism"></div>
-        <div data-bind="text: 'Max Size in MB: ' + licenseStatus.Attributes.maxSizeInMb"></div>
-        <div data-bind="text: 'Windows Clustering Allowed: ' + licenseStatus.Attributes.allowWindowsClustering"></div>
-        <div data-bind="text: 'OEM: ' + licenseStatus.Attributes.OEM"></div>
-        <div data-bind="text: 'Number of Databases: ' + licenseStatus.Attributes.numberOfDatabases"></div>
-        <div data-bind="text: 'Updates Expiration: ' + licenseStatus.Attributes.updatesExpiration"></div>
-        <!-- /ko -->
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-bind="click: ok">OK</button>

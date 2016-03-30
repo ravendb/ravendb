@@ -342,8 +342,16 @@
             <ul class="nav navbar-nav navbar-right" style="margin-right: 10px;">
                 <!-- ko with: $root -->
                 <li data-bind="visible: isInCluster()"><a class="navbar-link" href="#" data-bind="click: navigateToClusterSettings" title="This server is part of cluster"><span class="text-danger"><i class="fa fa-cubes"></i> Cluster</span></a></li>
-                <li class="licensing-status">
-                    <a class="navbar-link" href="#" data-bind="css: { 'license-error': localLicenseAndSupportStatusError }, text: 'License/Support', click: $root.showLicenseStatusDialog.bind($root)"></a>
+                <li>
+                    <button type="button" data-bind="attr: { class: 'btn btn-default ' + licenseStatus() }, click: $root.showLicenseStatusDialog.bind($root)">
+                        <div class="roundborder"> <i class="fa fa-file-text-o"></i>
+                        </div>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" data-bind="attr: { class: 'btn btn-default ' + supportStatus() }, click: $root.showLicenseStatusDialog.bind($root)">
+                        <div class="roundborder "> <i class="fa fa-comments-o"></i> </div>
+                    </button>
                 </li>
                 <li class="server-build-link" data-bind="with: serverBuildVersion"><a class="navbar-link" data-bind="text: 'Server Build #' + BuildVersion"></a></li>
                 <li class="client-build-link" data-bind="with: clientBuildVersion"><a class="navbar-link" data-bind="text: 'Client Build #' + BuildVersion"></a></li>

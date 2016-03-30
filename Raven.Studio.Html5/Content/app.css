@@ -8172,9 +8172,6 @@ footer ul {
   background-color: #eeeeee !important;
   border-color: #e2e2e2 !important;
 }
-.licensing-status {
-  max-height: 60vh !important;
-}
 .licensing-status .form-group {
   max-height: 30vh !important;
   overflow-x: hidden;
