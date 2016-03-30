@@ -638,8 +638,9 @@ namespace Raven.Database.Actions
                     ShouldSkipDuplicateChecking = true
                 })
                 {
-                    op.Init();					
+                    op.Init();
 
+                    //if we are working on a test index, apply the optimization anyway, as the index is capped by small number of results
                     if (index.IsTestIndex == false && op.Header.TotalResults > pageSize)
                     {
                         // we don't apply this optimization if the total number of results 
