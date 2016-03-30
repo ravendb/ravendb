@@ -256,6 +256,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Backup -Type directory | Out-Null
     New-Item $build_dir\Output\Migration -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\Traffic -Type directory | Out-Null
+    New-Item $build_dir\Output\Diag\ApiToken -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
     New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
@@ -288,6 +289,12 @@ task CopyMigration {
 task CopyRavenTraffic {
     Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Traffic
     Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Traffic
+}
+
+task CopyRavenApiToken {
+    Copy-Item $base_dir\Tools\Raven.ApiToken\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\ApiToken
+    Copy-Item $base_dir\Tools\Raven.ApiToken\bin\$global:configuration\Raven.ApiToken.??? $build_dir\Output\Diag\ApiToken
+    Copy-Item $base_dir\Tools\Raven.ApiToken\token_test.ps1 $build_dir\Output\Diag\ApiToken
 }
 
 task CopyStorageExporter {
@@ -469,6 +476,7 @@ task DoReleasePart1 -depends Compile, `
     SignServer, `
     CopyRootFiles, `
     CopyRavenTraffic, `
+    CopyRavenApiToken, `
     CopyStorageExporter, `
     ZipOutput { 
     
