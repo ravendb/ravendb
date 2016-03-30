@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                     // TODO [ppekrol] support for IndexReaderWarmer?
-                    _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, 1024, null);
+                    _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, null);
                 }
             }
             catch (Exception e)
