@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 long lastMappedEtag;
                 long lastTombstoneEtag;
                 lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
-                lastTombstoneEtag = _indexStorage.ReadLastTombstoneEtag(indexContext.Transaction, collection);
+                lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");

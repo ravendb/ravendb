@@ -101,7 +101,6 @@ namespace Raven.Client.Document
                 queryText = new StringBuilder(queryText.ToString()),
                 start = start,
                 timeout = timeout,
-                cutoff = cutoff,
                 cutoffEtag = cutoffEtag,
                 queryStats = queryStats,
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
@@ -144,34 +143,25 @@ namespace Raven.Client.Document
 
         protected override void ExecuteActualQuery()
         {
-            var results = new bool[ShardDatabaseCommands.Count];
-            while (true)
-            {
-                var currentCopy = results;
-                results = shardStrategy.ShardAccessStrategy.Apply(ShardDatabaseCommands,
-                    new ShardRequestData
-                    {
-                        EntityType = typeof(T),
-                        Query = IndexQuery,
-                        IndexName = indexName
-                    }, (dbCmd, i) =>
+            shardStrategy.ShardAccessStrategy.Apply(ShardDatabaseCommands,
+                new ShardRequestData
                 {
-                    if (currentCopy[i]) // if we already got a good result here, do nothing
-                        return true;
-
+                    EntityType = typeof(T),
+                    Query = IndexQuery,
+                    IndexName = indexName
+                }, (dbCmd, i) =>
+                {
                     var queryOp = shardQueryOperations[i];
 
                     using (queryOp.EnterQueryContext())
                     {
                         queryOp.LogQuery();
                         var result = dbCmd.Query(indexName, queryOp.IndexQuery, includes.ToArray());
-                        return queryOp.IsAcceptable(result);
+                        queryOp.EnsureIsAcceptable(result);
+
+                        return result;
                     }
                 });
-                if (results.All(acceptable => acceptable))
-                    break;
-                Thread.Sleep(100);
-            }
 
             AssertNoDuplicateIdsInResults(shardQueryOperations);
 

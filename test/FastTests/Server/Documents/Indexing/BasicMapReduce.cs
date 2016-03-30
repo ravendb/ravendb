@@ -1,5 +1,5 @@
 ﻿using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents;
@@ -18,7 +18,7 @@ namespace FastTests.Server.Documents.Indexing
         //TODO: Create base class for indexing tests with methods like
         //TODO: LowLevel_CreateDocumentDatabase
         [Fact(Skip = "Need to do a lot more here")]
-        public void CanUseSimpleReduction()
+        public async Task CanUseSimpleReduction()
         {
             using (var db = LowLevel_CreateDocumentDatabase())
             {
@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                     {
-                        var query = mri.Query(new  IndexQuery(), context, CancellationToken.None);
+                        var query = await mri.Query(new  IndexQuery(), context, CancellationToken.None);
                         Assert.Equal(1L, query.ResultSize);
                     }
                 }

@@ -70,10 +70,8 @@ namespace Raven.Client.Document.Batches
 
             var queryResult = shardStrategy.MergeQueryResults(queryOperation.IndexQuery, list);
 
-            RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;
-            if (RequiresRetry)
-                return;
-
+            queryOperation.EnsureIsAcceptable(queryResult);
+            
             if (afterQueryExecuted != null)
                 afterQueryExecuted(queryResult);
             Result = queryOperation.Complete<T>();
@@ -98,9 +96,7 @@ namespace Raven.Client.Document.Batches
 
         private void HandleResponse(QueryResult queryResult)
         {
-            RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;
-            if (RequiresRetry)
-                return;
+            queryOperation.EnsureIsAcceptable(queryResult);
 
             if (afterQueryExecuted != null)
                 afterQueryExecuted(queryResult);

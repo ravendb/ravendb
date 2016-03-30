@@ -257,26 +257,13 @@ namespace Raven.Client.Document.SessionOperations
             currentQueryResults.EnsureSnapshot();
         }
 
-        public bool IsAcceptable(QueryResult result)
+        public void EnsureIsAcceptable(QueryResult result)
         {
             if (waitForNonStaleResults && result.IsStale)
             {
-                if (sp.Elapsed > timeout)
-                {
-                    sp.Stop();
+                sp.Stop();
 
-                    throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
-                }
-
-                if (log.IsDebugEnabled)
-                {
-                    log.Debug( "Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried",
-                            indexQuery.Query,
-                            indexName,
-                            sessionOperations.StoreIdentifier);
-
-                }
-                return false;
+                throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
             }
             
             currentQueryResults = result;
@@ -286,8 +273,6 @@ namespace Raven.Client.Document.SessionOperations
             {
                 log.Debug("Query returned {0}/{1} {2}results", result.Results.Count, result.TotalResults, result.IsStale ? "stale " : "");
             }
-            
-            return true;
         }
     }
 }

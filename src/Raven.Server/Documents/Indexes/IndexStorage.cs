@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
-        public long ReadLastTombstoneEtag(RavenTransaction tx, string collection)
+        public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
             return ReadLastEtag(tx, Schema.EtagsTombstoneTree, collection);
         }

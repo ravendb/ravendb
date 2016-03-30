@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -20,7 +21,9 @@ using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Collections;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes
@@ -275,21 +278,32 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null)
         {
             foreach (var collection in Collections)
             {
-                var lastCollectionEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
-                var lastProcessedCollectionEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                var lastProcessedDocEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
 
-                if (lastCollectionEtag > lastProcessedCollectionEtag)
-                    return true;
+                if (cutoff == null)
+                {
+                    if (lastDocEtag > lastProcessedDocEtag)
+                        return true;
 
-                var lastCollectionTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
-                var lastProcessedCollectionTombstoneEtag = _indexStorage.ReadLastTombstoneEtag(indexContext.Transaction, collection);
+                    var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
+                    var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
-                if (lastCollectionTombstoneEtag > lastProcessedCollectionTombstoneEtag)
-                    return true;
+                    if (lastTombstoneEtag > lastProcessedTombstoneEtag)
+                        return true;
+                }
+                else
+                {
+                    if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedDocEtag)
+                        return true;
+
+                    if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(indexContext, collection, cutoff.Value) > 0)
+                        return true;
+                }
             }
 
             return false;
@@ -366,7 +380,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         catch (OutOfMemoryException oome)
                         {
-                            Log.WarnException($"Out of memory occured for '{Name} ({IndexId})'.", oome);
+                            Log.WarnException($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
                             // TODO [ppekrol] GC?
                         }
                         catch (IndexWriteException iwe)
@@ -383,7 +397,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         catch (Exception e)
                         {
-                            Log.WarnException($"Exception occured for '{Name} ({IndexId})'.", e);
+                            Log.WarnException($"Exception occurred for '{Name} ({IndexId})'.", e);
                         }
 
                         try
@@ -559,7 +573,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
-        public DocumentQueryResult Query(IndexQuery query, DocumentsOperationContext documentsContext, CancellationToken token)
+        public async Task<DocumentQueryResult> Query(IndexQuery query, DocumentsOperationContext documentsContext, CancellationToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -569,47 +583,89 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
-            TransactionOperationContext indexContext;
             var result = new DocumentQueryResult
             {
                 IndexName = Name
             };
 
+            TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
-            using (var tx = indexContext.OpenReadTransaction())
             {
-                documentsContext.OpenReadTransaction();
-
-                var stats = ReadStats(tx);
-
-                result.IsStale = IsStale(documentsContext, indexContext);
-                result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
-                result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
-                result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
-                    lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
-                    lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(tx, x)));
-
-                Reference<int> totalResults = new Reference<int>();
-                List<string> documentIds;
-
-                using (var indexRead = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                var queryDuration = Stopwatch.StartNew();
+                AsyncWaitForIndexing wait = null;
+                
+                while (true)
                 {
-                    documentIds = indexRead.Query(query, token, totalResults).ToList();
+                    using (var indexTx = indexContext.OpenReadTransaction())
+                    {
+                        documentsContext.OpenReadTransaction(); // we have to open read tx for documents _after_ we open index tx
+
+                        if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                            query.CutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+
+                        result.IsStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+
+                        if (WillResultBeAcceptable(result, query, wait) == false)
+                        {
+                            documentsContext.Reset();
+                            indexContext.Reset();
+
+                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                            if (wait == null)
+                                wait = new AsyncWaitForIndexing(Name, queryDuration, query.WaitForNonStaleResultsTimeout.Value, DocumentDatabase.Notifications);
+  
+                            await wait.WaitForIndexingAsync().ConfigureAwait(false);
+                            continue;
+                        }
+
+                        wait?.Dispose();
+
+                        var stats = ReadStats(indexTx);
+
+                        result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
+                        result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
+                        result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
+                            lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
+                            lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
+
+                        Reference<int> totalResults = new Reference<int>();
+                        List<string> documentIds;
+
+                        using (var indexRead = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+                        {
+                            documentIds = indexRead.Query(query, token, totalResults).ToList();
+                        }
+
+                        result.TotalResults = totalResults.Value;
+
+                        foreach (var id in documentIds)
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
+
+                            result.Results.Add(document);
+                        }
+
+                        return result;
+                    }
                 }
-
-                result.TotalResults = totalResults.Value;
-
-                foreach (var id in documentIds)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
-
-                    result.Results.Add(document);
-                }
-
-                return result;
             }
+        }
+
+        private static bool WillResultBeAcceptable(DocumentQueryResult result, IndexQuery query, AsyncWaitForIndexing wait)
+        {
+            if (result.IsStale == false)
+                return true;
+
+            if (query.WaitForNonStaleResultsTimeout == null)
+                return true;
+
+            if (wait != null && wait.TimeoutExceeded)
+                return true;
+
+            return false;
         }
 
         private static long CalculateIndexEtag(IndexDefinitionBase definition, bool isStale, IEnumerable<long> lastDocEtags, IEnumerable<long> lastMappedEtags)
@@ -667,7 +723,7 @@ namespace Raven.Server.Documents.Indexes
                     var etags = new Dictionary<string, long>();
                     foreach (var collection in Collections)
                     {
-                        etags[collection] = _indexStorage.ReadLastTombstoneEtag(tx, collection);
+                        etags[collection] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
                     }
 
                     return etags;

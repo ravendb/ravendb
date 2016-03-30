@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _initialized;
 
         private string _path;
+        private bool _run = true;
 
         public IndexStore(DocumentDatabase documentDatabase)
         {
@@ -95,7 +96,9 @@ namespace Raven.Server.Documents.Indexes
                 var indexId = _indexes.GetNextIndexId();
 
                 var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
-                index.Start();
+
+                if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
+                    index.Start();
 
                 _indexes.Add(index);
 
@@ -245,6 +248,8 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
 
+            _run = true;
+
             Parallel.ForEach(indexes, index => index.Start());
         }
 
@@ -285,6 +290,8 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
+
+            _run = false;
 
             Parallel.ForEach(indexes, index => index.Stop());
         }
