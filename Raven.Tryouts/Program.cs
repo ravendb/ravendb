@@ -1,42 +1,69 @@
 using System;
-#if !DNXCORE50
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Client.Document;
 
-using Raven.Tests.Core;
-using Raven.Tests.Core.Commands;
-using Raven.Tests.Issues;
-using Raven.Tests.MailingList;
-using Raven.Tests.FileSystem.ClientApi;
-#endif
-
-namespace Raven.Tryouts
+namespace Tryouts
 {
     public class Program
     {
+        public class User
+        {
+            public string FirstName { get; set; }
+
+            public string LastName { get; set; }
+        }
+
         public static void Main(string[] args)
         {
-#if !DNXCORE50
-            for (int i = 0; i < 10; i++)
+
+            using (var store = new DocumentStore
             {
-                Console.WriteLine("i = " + i);
-                using (var testServerFixture = new TestServerFixture())
+                Url = "http://127.0.0.1:8080",
+                DefaultDatabase = "FooBar123"
+            })
+            {
+                store.Initialize();
+                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
+                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
                 {
-                    for (int j = 0; j < 10; j++)
+                    Id = "FooBar123",
+                    Settings =
                     {
-                        Console.WriteLine("j = " + j);
-                        using (var querying = new Querying())
-                        {
-                            querying.SetFixture(testServerFixture);
-                            querying.CanStreamQueryResult();
-                        }
-                        using (var querying = new Querying())
-                        {
-                            querying.SetFixture(testServerFixture);
-                            querying.CanGetFacets();
-                        }
+                        { "Raven/DataDir", "~\\FooBar123" }
                     }
+                });
+
+                BulkInsert(store, 5);
+                using (var file = File.CreateText("results.csv"))
+                {
+                    file.WriteLine("Count,ElapsedMs");
+                    for (int count = 1; count < 1024 * 128; count += (1024 * 4))
+                    {
+                        var sw = Stopwatch.StartNew();
+                        BulkInsert(store, count);
+                        file.WriteLine(String.Format("{0},{1}", count, sw.ElapsedMilliseconds));
+                        Console.WriteLine(count);
+                    }
+                    file.Flush();
                 }
             }
-#endif
+        }
+
+        static int id = 1;
+        public static void BulkInsert(DocumentStore store, int numOfItems)
+        {
+            using (var bulkInsert = store.BulkInsert())
+            {
+                for (int i = 0; i < numOfItems; i++)
+                    bulkInsert.Store(new User
+                    {
+                        FirstName = String.Format("First Name - {0}", i),
+                        LastName = String.Format("Last Name - {0}", i)
+                    }, String.Format("users/{0}", id++));
+            }
         }
     }
 }

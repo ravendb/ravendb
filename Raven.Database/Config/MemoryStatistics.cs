@@ -64,6 +64,12 @@ namespace Raven.Database.Config
 
         private static readonly IntPtr currentProcessHandle = GetCurrentProcess();
 
+        private static readonly Thread lowMemoryWatcherThread;
+
+        public static System.Threading.ThreadState LowMemoryWatcherThreadState
+        {
+            get { return lowMemoryWatcherThread.ThreadState; }
+        }
 
         static MemoryStatistics()
         {
@@ -75,55 +81,65 @@ namespace Raven.Database.Config
 
             if (lowMemoryNotificationHandle == null)
                 throw new Win32Exception();
-
-            new Thread(() =>
+            
+            lowMemoryWatcherThread = new Thread(() =>
             {
                 const UInt32 WAIT_FAILED = 0xFFFFFFFF;
                 const UInt32 WAIT_TIMEOUT = 0x00000102;
                 while (true)
                 {
-                    var waitForResult = WaitForMultipleObjects(4,
-                        new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent, SoftMemoryReleaseEvent }, false,
-                        5 * 60 * 1000);
-
-                    handleWaitResults:
-                    switch (waitForResult)
+                    try
                     {
-                        case 0: // lowMemoryNotificationHandle
-                            log.Warn("Low memory detected, will try to reduce memory usage...");
+                        var waitForResult = WaitForMultipleObjects(4,
+                            new[] { lowMemoryNotificationHandle, appDomainUnloadEvent, LowMemorySimulationEvent, SoftMemoryReleaseEvent }, false,
+                            5 * 60 * 1000);
 
-                            RunLowMemoryHandlers();
-                            // prevent triggering the event too frequent when the low memory notification object 
-                            // is in the signaled state
-                            waitForResult = WaitForMultipleObjects(2,
-                                new[] { appDomainUnloadEvent, LowMemorySimulationEvent }, false,
-                                60 * 1000);
-                            goto handleWaitResults;
-                        case 1:
-                            // app domain unload
-                            return;
-                        case 2: // LowMemorySimulationEvent
-                            log.Warn("Low memory simulation, will try to reduce memory usage...");
+                        handleWaitResults:
+                        switch (waitForResult)
+                        {
+                            case 0: // lowMemoryNotificationHandle
+                                log.Warn("Low memory detected, will try to reduce memory usage...");
 
-                            RunLowMemoryHandlers();
-                            break;
-                        case 3://SoftMemoryReleaseEvent
-                            log.Warn("Releasing memory before Garbage Collection operation");
-                            RunLowMemoryHandlers();
-                            break;
-                        case WAIT_TIMEOUT:
-                            ClearInactiveHandlers();
-                            break;
-                        case WAIT_FAILED:
-                            log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
-                            break;
+                                RunLowMemoryHandlers();
+                                // prevent triggering the event too frequent when the low memory notification object 
+                                // is in the signaled state
+                                waitForResult = WaitForMultipleObjects(2,
+                                    new[] { appDomainUnloadEvent, LowMemorySimulationEvent }, false,
+                                    60 * 1000);
+                                goto handleWaitResults;
+                            case 1:
+                                // app domain unload
+                                return;
+                            case 2: // LowMemorySimulationEvent
+                                log.Warn("Low memory simulation, will try to reduce memory usage...");
+
+                                RunLowMemoryHandlers();
+                                break;
+                            case 3://SoftMemoryReleaseEvent
+                                log.Warn("Releasing memory before Garbage Collection operation");
+                                RunLowMemoryHandlers();
+                                break;
+                            case WAIT_TIMEOUT:
+                                ClearInactiveHandlers();
+                                
+                                break;
+                            case WAIT_FAILED:
+                                log.Warn("Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+                                break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        log.Error("Something really bad happened, caught exception in MemoryStatistics watcher thread.",e);
                     }
                 }
             })
             {
                 IsBackground = true,
                 Name = "Low memory notification thread"
-            }.Start();
+            };
+
+            lowMemoryWatcherThread.Start();
         }
 
         public static void SimulateLowMemoryNotification()
@@ -216,6 +232,7 @@ namespace Raven.Database.Config
         private static void ClearInactiveHandlers()
         {
             var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+            var countBefore = LowMemoryHandlers.Count;
 
             foreach (var lowMemoryHandler in LowMemoryHandlers)
             {
@@ -225,6 +242,10 @@ namespace Raven.Database.Config
             }
 
             inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+            var countAfter = LowMemoryHandlers.Count;
+
+            if(log.IsDebugEnabled)
+                log.Debug(string.Format("Cleaning inactive low-memory handlers, count before: {0}, count after: {1}",countBefore, countAfter));
         }
 
         public static bool IsLowMemory

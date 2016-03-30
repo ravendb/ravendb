@@ -350,8 +350,9 @@ namespace Raven.Database.Util
                     {
                         Default = prefetchingBehavior.IsDefault,
                         Indexes = indexesText,
-                        LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
+                        prefetchingBehavior.LastIndexedEtag,
                         LastTimeUsed = lastTimeUsed,
+                        prefetchingBehavior.DocumentsToRemoveCount,
                         Age = age,
                         TotalDocs = totalLoadedInBatch,
                         PrefetchedDocsCount = prefetcherDocs.Count(),
