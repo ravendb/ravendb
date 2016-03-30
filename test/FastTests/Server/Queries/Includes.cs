@@ -188,6 +188,7 @@ namespace FastTests.Server.Queries
                 {
                     var orders = session.Query<Order2>()
                         .Customize(x => x.Include<Order2, Customer2>(o => o.Customer2Id))
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.TotalPrice > 100)
                         .ToList();
 

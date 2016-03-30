@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
                     if (i + j >= documents.Count)
                         break;
                     var document = documents[i + j];
-                    buffer[i] = document?.Etag ?? -1;
+                    buffer[j] = document?.Etag ?? -1;
                 }
                 // we don't care if we didn't get to the end and have values from previous iteration
                 // it will still be consistent, and that is what we care here.

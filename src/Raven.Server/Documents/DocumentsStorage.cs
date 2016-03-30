@@ -87,6 +87,11 @@ namespace Raven.Server.Documents
                 StartIndex = 1,
                 IsGlobal = true
             });
+            _tombstonesSchema.DefineFixedSizeIndex("DeletedEtags", new TableSchema.FixedSizeSchemaIndexDef()
+            {
+                StartIndex = 2,
+                IsGlobal = false
+            });
         }
 
         public StorageEnvironment Environment { get; private set; }
@@ -374,6 +379,23 @@ namespace Raven.Server.Documents
             int size;
             var ptr = result.Read(1, out size);
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
+        }
+
+        public long GetNumberOfTombstonesWithDocumentEtagLowerThan(TransactionOperationContext context, string collection, long etag)
+        {
+            Table table;
+            try
+            {
+                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+            }
+            catch (InvalidDataException)
+            {
+                // TODO [ppekrol] how to handle missing collection?
+                return 0;
+            }
+            return table
+                    .SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["DeletedEtags"], etag)
+                    .Count();
         }
 
         private Slice GetSliceFromKey(DocumentsOperationContext context, string key)

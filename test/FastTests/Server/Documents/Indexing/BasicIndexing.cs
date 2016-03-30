@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Indexing
     public class BasicIndexing : RavenTestBase
     {
         [Fact]
-        public void CheckDispose()
+        public async Task CheckDispose()
         {
             using (var database = LowLevel_CreateDocumentDatabase())
             {
@@ -39,7 +39,9 @@ namespace FastTests.Server.Documents.Indexing
                 index.Dispose();// can dispose twice
 
                 Assert.Throws<ObjectDisposedException>(() => index.Start());
-                Assert.Throws<ObjectDisposedException>(() => index.Query(new IndexQuery(), null, CancellationToken.None));
+
+                var ex = await Record.ExceptionAsync(() => index.Query(new IndexQuery(), null, CancellationToken.None));
+                Assert.IsType<ObjectDisposedException>(ex);
 
                 index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
@@ -485,7 +487,7 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Fact]
-        public void AutoIndexesShouldBeMarkedAsIdleAndDeleted()
+        public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted()
         {
             using (var database = LowLevel_CreateDocumentDatabase())
             {
@@ -506,9 +508,9 @@ namespace FastTests.Server.Documents.Indexing
                 var index2 = database.IndexStore.GetIndex(index2Id);
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                 {
-                    index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    await index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
                     context.Reset();
-                    index2.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    await index2.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
                 }
 
                 Assert.Equal(IndexingPriority.Normal, index1.Priority);
@@ -526,7 +528,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                 {
-                    index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    await index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
                 }
 
                 database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle

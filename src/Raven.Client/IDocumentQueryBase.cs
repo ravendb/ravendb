@@ -511,25 +511,6 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WaitForNonStaleResults(TimeSpan waitTimeout);
 
         /// <summary>
-        ///     Instructs the query to wait for non stale results as of the cutoff date.
-        /// </summary>
-        /// <param name="cutOff">
-        ///     Index will be considered stale if modification date of last indexed document is greater than this
-        ///     value.
-        /// </param>
-        TSelf WaitForNonStaleResultsAsOf(DateTime cutOff);
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
-        /// </summary>
-        /// <param name="cutOff">
-        ///     Index will be considered stale if modification date of last indexed document is greater than this
-        ///     value.
-        /// </param>
-        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        TSelf WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
-
-        /// <summary>
         ///     Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
         /// <param name="cutOffEtag">

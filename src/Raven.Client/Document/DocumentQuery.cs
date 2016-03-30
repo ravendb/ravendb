@@ -91,7 +91,6 @@ namespace Raven.Client.Document
                 queryText = new StringBuilder(queryText.ToString()),
                 start = start,
                 timeout = timeout,
-                cutoff = cutoff,
                 cutoffEtag = cutoffEtag,
                 queryStats = queryStats,
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
@@ -185,7 +184,6 @@ namespace Raven.Client.Document
                 queryText = new StringBuilder(queryText.ToString()),
                 start = start,
                 timeout = timeout,
-                cutoff = cutoff,
                 cutoffEtag = cutoffEtag,
                 queryStats = queryStats,
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
@@ -1031,28 +1029,6 @@ namespace Raven.Client.Document
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOfNow(waitTimeout);
-            return this;
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff date.
-        /// </summary>
-        /// <param name="cutOff">The cut off.</param>
-        /// <returns></returns>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff)
-        {
-            WaitForNonStaleResultsAsOf(cutOff);
-            return this;
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
-        /// </summary>
-        /// <param name="cutOff">The cut off.</param>
-        /// <param name="waitTimeout">The wait timeout.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOf(cutOff, waitTimeout);
             return this;
         }
 

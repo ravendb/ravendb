@@ -102,31 +102,6 @@ namespace Raven.Server.Documents.Indexes
             return (IndexingPriority)priority.Reader.ReadLittleEndianInt32();
         }
 
-        public unsafe void WriteLastQueryingTime(DateTime lastQueryingTime)
-        {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
-
-                var binaryDate = lastQueryingTime.ToBinary();
-                statsTree.Add(Schema.LastQueryingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
-
-                tx.Commit();
-            }
-        }
-
-        public DateTime? ReadLastQueryingTime(RavenTransaction tx)
-        {
-            var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
-            var lastQueryingTime = statsTree.Read(Schema.LastQueryingTimeSlice);
-            if (lastQueryingTime == null)
-                return null;
-
-            return DateTime.FromBinary(lastQueryingTime.Reader.ReadLittleEndianInt64());
-        }
-
         public void WriteLock(IndexLockMode mode)
         {
             TransactionOperationContext context;
@@ -212,7 +187,7 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
-        public long ReadLastTombstoneEtag(RavenTransaction tx, string collection)
+        public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
             return ReadLastEtag(tx, Schema.EtagsTombstoneTree, collection);
         }
@@ -342,8 +317,6 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice LastIndexingTimeSlice = "LastIndexingTime";
 
             public static readonly Slice PrioritySlice = "Priority";
-
-            public static readonly Slice LastQueryingTimeSlice = "LastQueryingTime";
         }
     }
 }

@@ -53,6 +53,7 @@ namespace Raven.Server.Documents.Handlers
                     documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
                 }
                 WriteDocuments(context, documents);
+                return Task.CompletedTask;
             }
             return Task.CompletedTask;
         }

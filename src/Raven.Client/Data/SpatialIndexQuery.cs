@@ -60,7 +60,7 @@ namespace Raven.Abstractions.Data
         {
             Query = query.Query;
             Start = query.Start;
-            Cutoff = query.Cutoff;
+            WaitForNonStaleResultsTimeout = query.WaitForNonStaleResultsTimeout;
             WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow;
             CutoffEtag = query.CutoffEtag;
             PageSize = query.PageSize;

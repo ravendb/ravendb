@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly int _indexId;
 
         private readonly IndexDefinitionBase _definition;
-        
+
         private readonly LuceneDocumentConverter _converter;
 
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
@@ -88,8 +88,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
-            
-            return new IndexWriteOperation(_writeLock, _definition.Name, _definition.MapFields, _directory, _indexWriter, _converter, writeTransaction, this); // TODO arek - 'this' :/
+
+            return new IndexWriteOperation(_writeLock, _definition.Name, _definition.MapFields, _directory, _converter, writeTransaction, this); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
@@ -116,16 +116,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        internal void EnsureIndexWriter()
+        internal LuceneIndexWriter EnsureIndexWriter()
         {
+            if (_indexWriter != null)
+                return _indexWriter;
+
             try
             {
-                if (_indexWriter == null)
-                {
-                    _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-                    // TODO [ppekrol] support for IndexReaderWarmer?
-                    _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, 1024, null);
-                }
+                _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+                // TODO [ppekrol] support for IndexReaderWarmer?
+                return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, null);
             }
             catch (Exception e)
             {

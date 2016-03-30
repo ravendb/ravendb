@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Queries.Handlers
     public class QueriesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/indexes/$", "GET")]
-        public Task Get()
+        public async Task Get()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
             var query = GetIndexQuery();
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries.Handlers
             {
                 var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
 
-                var result = runner.ExecuteQuery(indexName, query, GetStringValuesQueryString("include", required: false), token.Cancel);
+                var result = await runner.ExecuteQuery(indexName, query, GetStringValuesQueryString("include", required: false), token.Cancel).ConfigureAwait(false);
 
                 HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
@@ -75,8 +75,6 @@ namespace Raven.Server.Documents.Queries.Handlers
                     writer.WriteEndObject();
                     writer.Flush();
                 }
-
-                return Task.CompletedTask;
             }
         }
 
@@ -103,17 +101,14 @@ namespace Raven.Server.Documents.Queries.Handlers
                         case PageSizeParameter:
                             result.PageSize = int.Parse(item.Value[0]);
                             break;
-                        case "cutOff":
-                            result.Cutoff = DateTime.Parse(item.Value[0]);
-                            break;
                         case "cutOffEtag":
                             result.CutoffEtag = long.Parse(item.Value[0]);
                             break;
                         case "waitForNonStaleResultsAsOfNow":
                             result.WaitForNonStaleResultsAsOfNow = bool.Parse(item.Value[0]);
-
-                            if (result.WaitForNonStaleResultsAsOfNow)
-                                result.Cutoff = SystemTime.UtcNow;
+                            break;
+                        case "waitForNonStaleResultsTimeout":
+                            result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
                             break;
                         case "fetch":
                             result.FieldsToFetch = item.Value;

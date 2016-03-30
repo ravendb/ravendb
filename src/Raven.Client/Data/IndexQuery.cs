@@ -87,11 +87,6 @@ namespace Raven.Abstractions.Data
         public SortedField[] SortedFields { get; set; }
 
         /// <summary>
-        /// Used to calculate index staleness. Index will be considered stale if modification date of last indexed document is greater than this value.
-        /// </summary>
-        public DateTime? Cutoff { get; set; }
-
-        /// <summary>
         /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
         /// </summary>
         public bool WaitForNonStaleResultsAsOfNow { get; set; }
@@ -100,6 +95,8 @@ namespace Raven.Abstractions.Data
         /// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
         /// </summary>
         public bool WaitForNonStaleResults { get; set; }
+
+        public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
 
         /// <summary>
         /// Gets or sets the cutoff etag.
@@ -268,18 +265,19 @@ namespace Raven.Abstractions.Data
                 }
             }
 
-            if (Cutoff != null)
-            {
-                var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
-                path.Append("&cutOff=").Append(cutOffAsString);
-            }
             if (CutoffEtag != null)
             {
                 path.Append("&cutOffEtag=").Append(CutoffEtag);
             }
+
             if (WaitForNonStaleResultsAsOfNow)
             {
                 path.Append("&waitForNonStaleResultsAsOfNow=true");
+            }
+
+            if (WaitForNonStaleResultsTimeout != null)
+            {
+                path.AppendLine("&waitForNonStaleResultsTimeout=" + WaitForNonStaleResultsTimeout);
             }
 
             HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
@@ -350,7 +348,7 @@ namespace Raven.Abstractions.Data
                    Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
                    Equals(SortedFields, other.SortedFields) &&
-                   Cutoff.Equals(other.Cutoff) && 
+                   WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout && 
                    WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
                    WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
                    Equals(CutoffEtag, other.CutoffEtag) && 
@@ -387,7 +385,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
+                hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
