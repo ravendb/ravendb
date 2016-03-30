@@ -89,7 +89,7 @@ namespace Raven.Database.Json
                             return originalValue;
                         //We might have change the type of num from Integer to long in the script by design 
                         //Making sure the number isn't a real float before returning it as integer
-                        if (originalValue.Type == JTokenType.Integer && num - Math.Floor(num) <= double.Epsilon)
+                        if (originalValue.Type == JTokenType.Integer && (num - Math.Floor(num) <= double.Epsilon || num - Math.Ceiling(num) <= double.Epsilon))
                             return new RavenJValue((long)num);
                         return new RavenJValue(num);//float
                     }
