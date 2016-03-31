@@ -56,7 +56,7 @@ namespace Raven.Client.Counters.Operations
             OperationId = Guid.NewGuid();
             disposed = false;
             batchOperationTask = StartBatchOperation();
-            if (AsyncHelpers.RunSync(() => streamingStarted.WaitAsync(DefaultOptions.StreamingInitializeTimeout)) == false ||
+            if (AsyncHelpers.RunSync(() => streamingStarted.WaitAsync(TimeSpan.FromMilliseconds(DefaultOptions.StreamingInitializeTimeout))) == false ||
                 batchOperationTask.IsFaulted)
             {
                 throw new InvalidOperationException("Failed to start streaming batch.", batchOperationTask.Exception);

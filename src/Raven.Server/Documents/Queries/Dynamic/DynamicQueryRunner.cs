@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _documents = documents;
         }
 
-        public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQuery query)
+        public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQuery query, long? existingResultEtag)
         {
             var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
@@ -60,8 +60,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 return new CompletedTask<DocumentQueryResult>(result);
             }
             
-            bool newAutoIndex = false;
-
             Index index;
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
@@ -70,14 +68,24 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(autoIndexDef);
                 index = _indexStore.GetIndex(id);
 
-                newAutoIndex = true;
+                if (query.WaitForNonStaleResultsTimeout == null)
+                    query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
+            }
+            else
+            {
+                var currentIndexEtag = index.GetIndexEtag();
+
+                if (existingResultEtag == currentIndexEtag)
+                {
+                    return new CompletedTask<DocumentQueryResult>(new DocumentQueryResult
+                    {
+                        NotModified = true
+                    });
+                }
             }
 
             query = EnsureValidQuery(query, map);
-
-            if (newAutoIndex && query.WaitForNonStaleResultsTimeout == null)
-                query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
-
+            
             return index.Query(query, _context, _token);
         }
         

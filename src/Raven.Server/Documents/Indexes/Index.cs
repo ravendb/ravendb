@@ -52,6 +52,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
+        private readonly AsyncManualResetEvent _indexingBatchCompleted = new AsyncManualResetEvent();
+
         private CancellationTokenSource _cancellationTokenSource;
 
         protected DocumentDatabase DocumentDatabase;
@@ -279,6 +281,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public bool IsStale(DocumentsOperationContext databaseContext)
+        {
+            Debug.Assert(databaseContext.Transaction != null);
+
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (indexContext.OpenReadTransaction())
+            {
+                return IsStale(databaseContext, indexContext);
+            }
+        }
+
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null)
         {
             foreach (var collection in Collections)
@@ -367,6 +381,9 @@ namespace Raven.Server.Documents.Indexes
                             cts.Token.ThrowIfCancellationRequested();
 
                             DoIndexingWork(stats, cts.Token);
+
+                            _indexingBatchCompleted.SetByAsyncCompletion();
+                            _indexingBatchCompleted.Reset();
 
                             DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                             {
@@ -594,7 +611,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                
+
                 while (true)
                 {
                     using (var indexTx = indexContext.OpenReadTransaction())
@@ -614,13 +631,11 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(Name, queryDuration, query.WaitForNonStaleResultsTimeout.Value, DocumentDatabase.Notifications);
-  
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, _indexingBatchCompleted);
+
                             await wait.WaitForIndexingAsync().ConfigureAwait(false);
                             continue;
                         }
-
-                        wait?.Dispose();
 
                         var stats = ReadStats(indexTx);
 
@@ -628,7 +643,7 @@ namespace Raven.Server.Documents.Indexes
                         result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
                         result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
                             lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
-                            lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
+                                    lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
 
                         Reference<int> totalResults = new Reference<int>();
                         List<string> documentIds;
