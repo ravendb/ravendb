@@ -2495,15 +2495,55 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
         color: @text-color;
         font-family: inherit;
         font-size: 32px;
+        margin-top:-7px;
+		top:7px;
+		position:relative;
+		display:inline-block;
+    }
+}
+
+.border-danger {
+    border:2px dashed darken(@gray-lighter,10%);
+    border-radius:8px;
+    font-size:13px;
+    margin-bottom:10px;
+
+    .icon-xl {
+        margin:20px 0;
+        .fa {
+            font-size:62px !important;
+            color:darken(@gray-lighter,9%);
+
+            &.text-danger{
+                color:lighten(@brand-danger,10%);
+            }
+        }
     }
 }
 
 #licenceSupportModal {
     width:840px !important;
 
-    .table-half {
-        td {
-            width: 50%;
+    .path {
+        word-break:break-word;
+        font-size:15px;
+        color:@gray;
+        font-weight:bold;
+    }
+
+    .expire-date {
+        font-size:11px;
+        color:@gray-light;
+    }
+
+    .licence-table {
+        overflow-y:auto;
+        max-height:450px;
+
+        table {
+            td {
+                width: 50%;
+            }
         }
     }
 
@@ -2513,16 +2553,22 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     }
 
     .padding {
-        padding: 0;
+        padding: 20px;
     }
 
 
     .roundborder {
-        margin-top: 30px;
+        
         display: inline-block;
-        width: 150px;
-        height: 150px;
+        width: 100px;
+        height: 100px;
         position: relative;
+
+        @media (min-height:900px) {
+            margin-top: 30px;
+            width: 150px;
+            height: 150px;
+        }
 
 
         & + hr {
@@ -2612,7 +2658,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
         .fa {
             color: @gray;
-            font-size: 70px;
+            font-size: 50px;
             position: absolute;
             top: 50%;
             left: 50%;
@@ -2621,16 +2667,22 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
             -o-transform: translateX(-50%) translateY(-50%);
             -ms-transform: translateX(-50%) translateY(-50%);
             transform: translateX(-50%) translateY(-50%);
+
+            @media (min-height:900px) {
+                font-size: 70px;
+                }
         }
     }
 
 
     .bg-gray {
-        margin-top: 30px;
+
+        @media (min-height:900px) {
+            margin-top: 30px;
+        }
 
         .fa {
             font-size: 18px;
-            line-height: 12px;
         }
 
         th {
@@ -2659,6 +2711,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
                 margin: 10px;
                 font-size: 22px;
                 color: darken(@gray-lighter,20%);
+               line-height: 12px;
             }
 
             .text-muted {
@@ -2700,13 +2753,14 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
             }
         }
     }
+    .modal-body {
+        h3 {
+            color: @gray;
+        }
 
-    h3 {
-        color: @gray;
-    }
-
-    h4 {
-        color: @gray;
+        h4 {
+            color: @gray;
+        }
     }
 
     .fa-times {

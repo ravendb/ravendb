@@ -31,6 +31,7 @@
                         <h3>LICENCE</h3>
                         <h4 data-bind="text: licenseStatusText"></h4>
                     </div>
+                    <div class="expire-date">EXPIRES: 01.10.2017</div>
                 </div>
             </div>
             <div class="col-sm-6">
@@ -70,38 +71,60 @@
                         <h3>SUPPORT</h3>
                         <h4>Licence not found</h4>
                     </div>
+                    <div class="expire-date">EXPIRES: 01.10.2017</div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="bg-gray">
+    <div class="bg-gray padding">
         <div class="row">
             <div class="col-sm-6">
-                <div class="padding" data-bind="visible: !isDevelopmentOnly">
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" class="alternate-align table-half">
+                <div class="text-center" data-bind="">
+                    <div class="border-danger padding">
+                       
+                        <div class="icon-xl"><i class="fa fa-exclamation-triangle"></i></div>
+                        <h3 class="text-danger">We couldn't find a license at <span class="path">{path}</span></h3>
+                        <p class="text-muted">
+                            Only Open Source / Development work is permitted<br />
+                            AGPL license restrictions apply
+                        </p>
+                    </div>
+
+                    <div class="padding border-danger">
+                       
+                        <div class="icon-xl"><i class="fa fa-server"></i> <i class="fa fa-server"></i> <i class="fa fa-server text-danger"></i></div>
+                        <h3 class="text-danger">We have detected that you own more server than support licenses.</h3>
+                        <p class="text-muted">Please contact support to resolve this issue.</p>
+                        <a href="#" class="btn btn-primary btn-sm">CONTACT</a>
+                    </div>
+                    
+                </div>
+                <div class="licence-table" data-bind="visible: !isDevelopmentOnly">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" class="alternate-align">
                         <tbody>
-                        <tr>
-                            <td>RAM</td>
-                            <td><strong><span data-bind="html: attrRam"></span> GB</strong></td>
-                        </tr>
-                        <tr>
-                            <td>CPU cores</td>
-                            <td><strong>Up to <strong data-bind="html: attrCpus"></strong></strong></td>
-                        </tr>
-                        <!-- ko foreach: attributes -->
-                        <tr>
-                            <td data-bind="text: displayName"></td>
-                            <td data-bind="html: value"></td>
-                        </tr>
-                        <!-- /ko -->
+                            <tr>
+                                <td>RAM</td>
+                                <td><strong><span data-bind="html: attrRam"></span> GB</strong></td>
+                            </tr>
+                            <tr>
+                                <td>CPU cores</td>
+                                <td><strong>Up to <strong data-bind="html: attrCpus"></strong></strong></td>
+                            </tr>
+                            <!-- ko foreach: attributes -->
+                            <tr>
+                                <td data-bind="text: displayName"></td>
+                                <td data-bind="html: value"></td>
+                            </tr>
+                            <!-- /ko -->
                         </tbody>
                     </table>
                 </div>
+
             </div>
             <div class="col-sm-6">
-                <div class="padding">
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isCommunitySupport">
-                        <tbody>
+
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isCommunitySupport">
+                    <tbody>
                         <tr>
                             <td class="active"><span class="text-muted">CURRENT</span></td>
                             <td colspan="2"></td>
@@ -140,11 +163,11 @@
                             <td class="active"><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block">ACCESS</a></td>
                             <td colspan="2"><a href="http://ravendb.net/support" target="_blank" class="btn btn-primary btn-block">UPGRADE</a></td>
                         </tr>
-                        </tbody>
-                    </table>
+                    </tbody>
+                </table>
 
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isProfessionalSupport">
-                        <tbody>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isProfessionalSupport">
+                    <tbody>
                         <tr>
                             <td class="active"><span class="text-muted">CURRENT</span></td>
                             <td></td>
@@ -178,39 +201,35 @@
                             <td class="active"><a href="http://ravendb.net/support/supportrequest" target="_blank" class="btn btn-primary btn-block">SEND TICKET</a></td>
                             <td><a href="http://ravendb.net/support" target="_blank" class="btn btn-primary btn-block">UPGRADE</a></td>
                         </tr>
-                        </tbody>
-                    </table>
+                    </tbody>
+                </table>
 
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isProductionSupport">
-                        <tbody>
-                            <tr>
-                                <td class="active"><span class="text-muted">CURRENT</span></td>
-                            </tr>
-                            <tr>
-                                <th class="active" scope="col">
-                                    <h4>Production</h4>
-                                    Top-tier support for enterprise and mission-critical projects
-                                </th>
-                            </tr>
-                            <tr>
-                                <td class="active"><i class="fa fa-users"></i> Access to RavenDB core developers</td>
-                            </tr>
-                            <tr>
-                                <td class="active"><i class="fa fa-phone"></i> Email & Phone support</td>
-                            </tr>
-                            <tr>
-                                <td class="active"><i class="fa fa-clock-o"></i>2 hour SLA <small class="text-muted">We're there for you 24/7</small></td>
-                            </tr>
-                            <tr>
-                                <td class="active"><a href="http://ravendb.net/support/supportrequest" target="_blank" class="btn btn-primary btn-block">SEND TICKET</a></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isProductionSupport">
+                    <tbody>
+                        <tr>
+                            <td class="active"><span class="text-muted">CURRENT</span></td>
+                        </tr>
+                        <tr>
+                            <th class="active" scope="col">
+                                <h4>Production</h4>
+                                Top-tier support for enterprise and mission-critical projects
+                            </th>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-users"></i> Access to RavenDB core developers</td>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-phone"></i> Email & Phone support</td>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-clock-o"></i>2 hour SLA <small class="text-muted">We're there for you 24/7</small></td>
+                        </tr>
+                        <tr>
+                            <td class="active"><a href="http://ravendb.net/support/supportrequest" target="_blank" class="btn btn-primary btn-block">SEND TICKET</a></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bind="click: ok">Close</button>
     </div>
 </div>

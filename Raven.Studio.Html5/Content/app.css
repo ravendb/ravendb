@@ -8678,11 +8678,45 @@ a.global_help_link:focus {
   color: #555555;
   font-family: inherit;
   font-size: 32px;
+  margin-top: -7px;
+  top: 7px;
+  position: relative;
+  display: inline-block;
+}
+.border-danger {
+  border: 2px dashed #d5d5d5;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.border-danger .icon-xl {
+  margin: 20px 0;
+}
+.border-danger .icon-xl .fa {
+  font-size: 62px !important;
+  color: #d7d7d7;
+}
+.border-danger .icon-xl .fa.text-danger {
+  color: #e66258;
 }
 #licenceSupportModal {
   width: 840px !important;
 }
-#licenceSupportModal .table-half td {
+#licenceSupportModal .path {
+  word-break: break-word;
+  font-size: 15px;
+  color: #555555;
+  font-weight: bold;
+}
+#licenceSupportModal .expire-date {
+  font-size: 11px;
+  color: #999999;
+}
+#licenceSupportModal .licence-table {
+  overflow-y: auto;
+  max-height: 450px;
+}
+#licenceSupportModal .licence-table table td {
   width: 50%;
 }
 #licenceSupportModal .bg-gray {
@@ -8690,14 +8724,20 @@ a.global_help_link:focus {
   overflow: hidden;
 }
 #licenceSupportModal .padding {
-  padding: 0;
+  padding: 20px;
 }
 #licenceSupportModal .roundborder {
-  margin-top: 30px;
   display: inline-block;
-  width: 150px;
-  height: 150px;
+  width: 100px;
+  height: 100px;
   position: relative;
+}
+@media (min-height: 900px) {
+  #licenceSupportModal .roundborder {
+    margin-top: 30px;
+    width: 150px;
+    height: 150px;
+  }
 }
 #licenceSupportModal .roundborder:after,
 #licenceSupportModal .roundborder:before {
@@ -8760,7 +8800,7 @@ a.global_help_link:focus {
 }
 #licenceSupportModal .roundborder .fa {
   color: #555555;
-  font-size: 70px;
+  font-size: 50px;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -8770,12 +8810,18 @@ a.global_help_link:focus {
   -ms-transform: translateX(-50%) translateY(-50%);
   transform: translateX(-50%) translateY(-50%);
 }
-#licenceSupportModal .bg-gray {
-  margin-top: 30px;
+@media (min-height: 900px) {
+  #licenceSupportModal .roundborder .fa {
+    font-size: 70px;
+  }
+}
+@media (min-height: 900px) {
+  #licenceSupportModal .bg-gray {
+    margin-top: 30px;
+  }
 }
 #licenceSupportModal .bg-gray .fa {
   font-size: 18px;
-  line-height: 12px;
 }
 #licenceSupportModal .bg-gray th {
   color: #772953;
@@ -8796,6 +8842,7 @@ a.global_help_link:focus {
   margin: 10px;
   font-size: 22px;
   color: #bbbbbb;
+  line-height: 12px;
 }
 #licenceSupportModal .bg-gray .support-table .text-muted {
   color: #a2a2a2;
@@ -8822,10 +8869,10 @@ a.global_help_link:focus {
 #licenceSupportModal table.alternate-align td:nth-of-type(2n-1) {
   text-align: right;
 }
-#licenceSupportModal h3 {
+#licenceSupportModal .modal-body h3 {
   color: #555555;
 }
-#licenceSupportModal h4 {
+#licenceSupportModal .modal-body h4 {
   color: #555555;
 }
 #licenceSupportModal .fa-times {
