@@ -1,4 +1,5 @@
 ﻿using Raven.Abstractions.Extensions;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
@@ -8,6 +9,92 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTextWriterExtensions
     {
+        public static void WriteDatabaseStatistics(this BlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfIndexes)));
+            writer.WriteInteger(statistics.CountOfIndexes);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.ApproximateTaskCount)));
+            writer.WriteInteger(statistics.ApproximateTaskCount);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfDocuments)));
+            writer.WriteInteger(statistics.CountOfDocuments);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CountOfTransformers)));
+            writer.WriteInteger(statistics.CountOfTransformers);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CurrentNumberOfItemsToIndexInSingleBatch)));
+            writer.WriteInteger(statistics.CurrentNumberOfItemsToIndexInSingleBatch);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CurrentNumberOfItemsToReduceInSingleBatch)));
+            writer.WriteInteger(statistics.CurrentNumberOfItemsToReduceInSingleBatch);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.CurrentNumberOfParallelTasks)));
+            writer.WriteInteger(statistics.CurrentNumberOfParallelTasks);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.DatabaseId)));
+            writer.WriteString(context.GetLazyString(statistics.DatabaseId.ToString()));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.Is64Bit)));
+            writer.WriteBool(statistics.Is64Bit);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.LastDocEtag)));
+            if (statistics.LastDocEtag.HasValue)
+                writer.WriteInteger(statistics.LastDocEtag.Value);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(statistics.Indexes)));
+            writer.WriteStartArray();
+            var isFirstInternal = true;
+            foreach (var index in statistics.Indexes)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(index.IsStale)));
+                writer.WriteBool(index.IsStale);
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(index.Name)));
+                writer.WriteString(context.GetLazyString(index.Name));
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(index.IndexId)));
+                writer.WriteInteger(index.IndexId);
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(index.LockMode)));
+                writer.WriteString(context.GetLazyString(index.LockMode.ToString()));
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(index.Priority)));
+                writer.WriteString(context.GetLazyString(index.Priority.ToString()));
+
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+        }
+
+
         public static void WriteIndexDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition)
         {
             writer.WriteStartObject();

@@ -279,6 +279,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public bool IsStale(DocumentsOperationContext databaseContext)
+        {
+            Debug.Assert(databaseContext.Transaction != null);
+
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (indexContext.OpenReadTransaction())
+            {
+                return IsStale(databaseContext, indexContext);
+            }
+        }
+
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null)
         {
             foreach (var collection in Collections)
@@ -594,7 +606,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                
+
                 while (true)
                 {
                     using (var indexTx = indexContext.OpenReadTransaction())
@@ -615,7 +627,7 @@ namespace Raven.Server.Documents.Indexes
 
                             if (wait == null)
                                 wait = new AsyncWaitForIndexing(Name, queryDuration, query.WaitForNonStaleResultsTimeout.Value, DocumentDatabase.Notifications);
-  
+
                             await wait.WaitForIndexingAsync().ConfigureAwait(false);
                             continue;
                         }
@@ -628,7 +640,7 @@ namespace Raven.Server.Documents.Indexes
                         result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
                         result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
                             lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
-                            lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
+                                    lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
 
                         Reference<int> totalResults = new Reference<int>();
                         List<string> documentIds;

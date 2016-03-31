@@ -2,14 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 
-using Raven.Client.Data.Indexes;
+using Raven.Client.Data;
 using Raven.Database.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -20,41 +18,39 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                var indexes = Database.IndexStore.GetIndexes().ToList();
+
+                var stats = new DatabaseStatistics();
+                stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
+                stats.ApproximateTaskCount = 0; // TODO [ppekrol]
+                stats.CountOfIndexes = indexes.Count;
+                stats.CountOfTransformers = 0; // TODO [ppekrol]
+                stats.CurrentNumberOfItemsToIndexInSingleBatch = 1; // TODO [ppekrol]
+                stats.CurrentNumberOfItemsToReduceInSingleBatch = 1; // TODO [ppekrol]
+                stats.CurrentNumberOfParallelTasks = 1; // TODO [ppekrol]
+                stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
+                stats.Is64Bit = IntPtr.Size == sizeof(long);
+
+                stats.Indexes = new IndexInformation[indexes.Count];
+                for (var i = 0; i < indexes.Count; i++)
                 {
-                    var indexes = Database.IndexStore.GetIndexes().ToList();
-
-                    //TODO: Implement properly and split to dedicated endpoints
-                    //TODO: So we don't get so much stuff to ignore in the stats
-                    context.Write(writer, new DynamicJsonValue
+                    var index = indexes[i];
+                    stats.Indexes[i] = new IndexInformation
                     {
-                        // storage
-                        ["StorageEngine"] = "Voron 4.0",
-                        ["DatabaseTransactionVersionSizeInMB"] = -1,
-
-                        // indexing - should be in its /stats/indexing
-                        ["CountOfIndexes"] = indexes.Count,
-                        ["StaleIndexes"] = new DynamicJsonArray(),
-                        ["CountOfIndexesExcludingDisabled"] = indexes.Count(index => index.Priority.HasFlag(IndexingPriority.Disabled) == false),
-                        ["CountOfResultTransformers"] = 0,
-                        ["InMemoryIndexingQueueSizes"] = new DynamicJsonArray(),
-                        ["ApproximateTaskCount"] = 0,
-                        ["CurrentNumberOfParallelTasks"] = 1,
-                        ["CurrentNumberOfItemsToIndexInSingleBatch"] = 1,
-                        ["CurrentNumberOfItemsToReduceInSingleBatch"] = 1,
-
-                        ["Prefetches"] = new DynamicJsonArray(),
-
-                        // documents
-                        ["LastDocEtag"] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
-                        ["CountOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
-                        ["DatabaseId"] = Database.DocumentsStorage.Environment.DbId.ToString(),
-                        ["Is64Bits"] = IntPtr.Size == sizeof (long)
-                    });
+                        Priority = index.Priority,
+                        IsStale = index.IsStale(context),
+                        Name = index.Name,
+                        IndexId = index.IndexId,
+                        LockMode = index.Definition.LockMode
+                    };
                 }
+
+                writer.WriteDatabaseStatistics(context, stats);
             }
+
             return Task.CompletedTask;
         }
 
@@ -67,7 +63,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, Database.Metrics.CreateMetricsStatsJsonValue());
             }
-            
+
             return Task.CompletedTask;
         }
     }
