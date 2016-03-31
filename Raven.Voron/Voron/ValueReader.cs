@@ -14,12 +14,12 @@ namespace Voron
 
         [ThreadStatic]
         private static byte[] smallTempBuffer;
-        
+
         private int _pos;
         private readonly byte[] _buffer;
-        
+
         private readonly int _len;
-        private readonly byte* _val;        
+        private readonly byte* _val;
 
         public byte* Base { get { return _val; } }
 
@@ -41,7 +41,7 @@ namespace Voron
             stream.Position = position;
 
             _pos = 0;
-            _val = null;            
+            _val = null;
         }
 
         public ValueReader(byte[] array, int len)
@@ -227,14 +227,14 @@ namespace Voron
         private static int SwapBitShift(int value)
         {
             uint uvalue = (uint)value;
-            uint swapped = (0x000000FF) & (uvalue << 24) |
-                           (0x0000FF00) & (uvalue << 8) |
-                           (0x00FF0000) & (uvalue >> 8) |
-                           (0xFF000000) & (uvalue >> 24);
-            return (int)swapped;                             
+            uint swapped = ((0x000000FF) & (uvalue >> 24) |
+                            (0x0000FF00) & (uvalue >> 8) |
+                            (0x00FF0000) & (uvalue << 8) |
+                            (0xFF000000) & (uvalue << 24));
+            return (int)swapped;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]                             
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static short SwapBitShift(short value)
         {
             uint uvalue = (uint)value;
@@ -287,7 +287,7 @@ namespace Voron
         private void EnsureSmallTempBuffer()
         {
             if (smallTempBuffer == null)
-                smallTempBuffer = new byte[sizeof(long)];            
+                smallTempBuffer = new byte[sizeof(long)];
         }
 
         public string ToStringValue()
@@ -387,7 +387,7 @@ namespace Voron
         {
             if (_len >= ushort.MaxValue)
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
-            
+
             if (_buffer != null)
                 return new Slice(_buffer, (ushort)_len);
 
@@ -400,9 +400,9 @@ namespace Voron
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
 
             if (_buffer != null)
-                return new Slice(_buffer, (ushort)(_len-removeFromEnd));
+                return new Slice(_buffer, (ushort)(_len - removeFromEnd));
 
             return new Slice(_val, (ushort)(_len - removeFromEnd));
+        }
     }
-}
 }
