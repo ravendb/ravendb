@@ -52,6 +52,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly object _locker = new object();
 
+        private readonly AsyncManualResetEvent _indexingBatchCompleted = new AsyncManualResetEvent();
+
         private CancellationTokenSource _cancellationTokenSource;
 
         protected DocumentDatabase DocumentDatabase;
@@ -380,6 +382,9 @@ namespace Raven.Server.Documents.Indexes
 
                             DoIndexingWork(stats, cts.Token);
 
+                            _indexingBatchCompleted.SetByAsyncCompletion();
+                            _indexingBatchCompleted.Reset();
+
                             DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                             {
                                 Name = Name,
@@ -626,13 +631,11 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(Name, queryDuration, query.WaitForNonStaleResultsTimeout.Value, DocumentDatabase.Notifications);
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, _indexingBatchCompleted);
 
                             await wait.WaitForIndexingAsync().ConfigureAwait(false);
                             continue;
                         }
-
-                        wait?.Dispose();
 
                         var stats = ReadStats(indexTx);
 
