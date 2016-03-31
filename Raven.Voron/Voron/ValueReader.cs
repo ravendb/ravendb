@@ -224,11 +224,11 @@ namespace Voron
         private static int SwapBitShift(int value)
         {
             uint uvalue = (uint)value;
-            uint swapped = (0x000000FF) & (uvalue << 24) |
-                           (0x0000FF00) & (uvalue << 8)  |
-                           (0x00FF0000) & (uvalue >> 8)  |
-                           (0xFF000000) & (uvalue >> 24);
-            return (int)swapped;                             
+            uint swapped = ((0x000000FF) & (uvalue >> 24) |
+                            (0x0000FF00) & (uvalue >> 8) |
+                            (0x00FF0000) & (uvalue << 8) |
+                            (0xFF000000) & (uvalue << 24));
+            return (int)swapped;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]                             
