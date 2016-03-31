@@ -48,7 +48,7 @@ namespace Raven.Database.Commercial
             {
                 try
                 {
-                    landlord.SystemDatabase.TimerManager.ReleaseTimer(supportTimer);
+                    landlord?.SystemDatabase.TimerManager.ReleaseTimer(supportTimer);
                 }
                 catch (InvalidOperationException)
                 {

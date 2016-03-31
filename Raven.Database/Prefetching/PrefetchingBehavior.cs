@@ -1131,9 +1131,11 @@ namespace Raven.Database.Prefetching
                 }, linkedToken.Token)
                 .ContinueWith(t =>
                 {
-                    t.AssertNotFailed();
-                    cts.Dispose();
-                    linkedToken.Dispose();
+                    using (cts)
+                    using (linkedToken)
+                    {
+                        t.AssertNotFailed();
+                    }
                     return t.Result;
                 })
             };
