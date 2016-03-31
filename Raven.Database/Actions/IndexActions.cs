@@ -515,8 +515,11 @@ namespace Raven.Database.Actions
         private Func<long> TryCreateTaskForApplyingPrecomputedBatchForNewIndex(Index index, IndexDefinition definition)
         {
             if (Database.Configuration.MaxPrecomputedBatchSizeForNewIndex <= 0) //precaution -> should never be lower than 0
+            {
+                index.IsMapIndexingInProgress = false;
                 return null;
-
+            } 
+                
             var generator = IndexDefinitionStorage.GetViewGenerator(definition.IndexId);
             if (generator.ForEntityNames.Count == 0 && index.IsTestIndex == false)
             {
@@ -526,15 +529,20 @@ namespace Raven.Database.Actions
                 return null;
             }
 
-            lock (precomputedLock)
+            //only one precomputed batch can run at a time except for test indexes
+            if (index.IsTestIndex == false)
             {
-                if (isPrecomputedBatchForNewIndexIsRunning)
+                lock (precomputedLock)
                 {
-                    index.IsMapIndexingInProgress = false;
-                    return null;
-                }
 
-                isPrecomputedBatchForNewIndexIsRunning = true;
+                    if (isPrecomputedBatchForNewIndexIsRunning)
+                    {
+                        index.IsMapIndexingInProgress = false;
+                        return null;
+                    }
+
+                    isPrecomputedBatchForNewIndexIsRunning = true;
+                }
             }
 
             try
@@ -564,7 +572,8 @@ namespace Raven.Database.Actions
                     }
                     finally
                     {
-                        isPrecomputedBatchForNewIndexIsRunning = false;
+                        if (index.IsTestIndex == false)
+                            isPrecomputedBatchForNewIndexIsRunning = false;
                         index.IsMapIndexingInProgress = false;
                         WorkContext.ShouldNotifyAboutWork(() => "Precomputed indexing batch for " + index.PublicName + " is completed");
                         WorkContext.NotifyAboutWork();
@@ -596,7 +605,8 @@ namespace Raven.Database.Actions
                     catch (Exception)
                     {
                         index.IsMapIndexingInProgress = false;
-                        isPrecomputedBatchForNewIndexIsRunning = false;
+                        if (index.IsTestIndex == false)
+                            isPrecomputedBatchForNewIndexIsRunning = false;
                         throw;
                     }
                 };
@@ -604,7 +614,8 @@ namespace Raven.Database.Actions
             catch (Exception)
             {
                 index.IsMapIndexingInProgress = false;
-                isPrecomputedBatchForNewIndexIsRunning = false;
+                if (index.IsTestIndex == false)
+                    isPrecomputedBatchForNewIndexIsRunning = false;
                 throw;
             }
         }
@@ -630,7 +641,8 @@ namespace Raven.Database.Actions
                 {
                     op.Init();
 
-                    if ((op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
+                    //if we are working on a test index, apply the optimization anyway, as the index is capped by small number of results
+                    if (op.Header.TotalResults > pageSize && index.IsTestIndex == false)
                     {
                         // we don't apply this optimization if the total number of results 
                         // to index is more than the max numbers to index in a single batch. 
