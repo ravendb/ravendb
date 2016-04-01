@@ -10,6 +10,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
+using Sparrow;
 
 namespace Raven.Server.Web.System
 {

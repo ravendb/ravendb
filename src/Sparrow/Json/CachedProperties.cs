@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     /// <summary>
     /// This class allows us to cache the properties from multiple documents
@@ -20,7 +16,7 @@ namespace Raven.Server.Json
     /// </summary>
     public class CachedProperties : IComparer<BlittableJsonDocumentBuilder.PropertyTag>
     {
-        private readonly MemoryOperationContext _context;
+        private readonly JsonOperationContext _context;
 
         private class PropertyName
         {
@@ -41,7 +37,7 @@ namespace Raven.Server.Json
 
         public int PropertiesDiscovered;
 
-        public CachedProperties(MemoryOperationContext context)
+        public CachedProperties(JsonOperationContext context)
         {
             _context = context;
         }

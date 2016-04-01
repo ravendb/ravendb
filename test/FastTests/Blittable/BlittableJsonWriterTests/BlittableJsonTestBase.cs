@@ -7,7 +7,7 @@ using Raven.Json.Linq;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
@@ -122,7 +122,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         protected static unsafe void AssertComplexEmployee(string str,BlittableJsonReaderObject doc,
-         MemoryOperationContext blittableContext)
+         JsonOperationContext blittableContext)
         {
             dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
             dynamic dynamicBlittableJObject = new DynamicBlittableJson(doc);

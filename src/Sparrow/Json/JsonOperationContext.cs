@@ -5,22 +5,16 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Raven.Server.Documents;
-using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
-using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Compression;
+using Sparrow.Json.Parsing;
 
-using Voron.Util;
-
-namespace Raven.Server.ServerWide.Context
+namespace Sparrow.Json
 {
     /// <summary>
     /// Single threaded for contexts
     /// </summary>
-    public class MemoryOperationContext : IDisposable
+    public class JsonOperationContext : IDisposable
     {
         private Stack<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
 
@@ -41,7 +35,7 @@ namespace Raven.Server.ServerWide.Context
 
         private int _lastStreamSize = 4096;
 
-        public MemoryOperationContext(UnmanagedBuffersPool pool)
+        public JsonOperationContext(UnmanagedBuffersPool pool)
         {
             Pool = pool;
             Encoding = new UTF8Encoding();
@@ -688,25 +682,6 @@ namespace Raven.Server.ServerWide.Context
 
                 WriteValue(writer, state, parser);
             }
-            writer.WriteEndArray();
-        }
-
-        private void WriteDocuments(BlittableJsonTextWriter writer, IEnumerable<Document> documents)
-        {
-            writer.WriteStartArray();
-
-            bool first = true;
-            foreach (var document in documents)
-            {
-                if (document == null)
-                    continue;
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-                document.EnsureMetadata();
-                Write(writer, document.Data);
-            }
-
             writer.WriteEndArray();
         }
     }

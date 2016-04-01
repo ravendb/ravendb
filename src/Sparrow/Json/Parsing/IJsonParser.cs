@@ -1,7 +1,6 @@
 using System;
-using System.Threading.Tasks;
 
-namespace Raven.Server.Json.Parsing
+namespace Sparrow.Json.Parsing
 {
     public interface IJsonParser : IDisposable
     {

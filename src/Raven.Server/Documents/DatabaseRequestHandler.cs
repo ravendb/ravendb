@@ -6,6 +6,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
@@ -24,13 +25,13 @@ namespace Raven.Server.Documents
             IndexStore = context.Database.IndexStore;
         }
 
-        protected void  WriteDocuments(MemoryOperationContext context, IEnumerable<Document> documents)
+        protected void  WriteDocuments(JsonOperationContext context, IEnumerable<Document> documents)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 WriteDocuments(context, writer, documents);
         }
 
-        public static void WriteDocuments(MemoryOperationContext context, BlittableJsonTextWriter writer, 
+        public static void WriteDocuments(JsonOperationContext context, BlittableJsonTextWriter writer, 
             IEnumerable<Document> documents)
         {
             writer.WriteStartArray();
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents
             writer.WriteEndArray();
         }
 
-        public static void WriteDocuments(MemoryOperationContext context, BlittableJsonTextWriter writer,
+        public static void WriteDocuments(JsonOperationContext context, BlittableJsonTextWriter writer,
             List<Document> documents, int start, int count)
         {
             writer.WriteStartArray();

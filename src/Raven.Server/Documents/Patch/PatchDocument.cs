@@ -11,6 +11,7 @@ using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Patch

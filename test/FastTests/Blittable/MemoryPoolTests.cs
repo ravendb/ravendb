@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server.Json;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Blittable

@@ -13,7 +13,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
-
+using Sparrow;
 using Xunit;
 
 namespace FastTests.Client.Indexing

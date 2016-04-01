@@ -2,15 +2,15 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Raven.Server.Json.Parsing;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>
     {
         private readonly int _count;
         private readonly byte* _metadataPtr;
-        //private byte* _types;
+
         private readonly byte* _dataStart;
         private readonly long _currentOffsetSize;
         private Dictionary<int, Tuple<object,BlittableJsonToken>> _cache;

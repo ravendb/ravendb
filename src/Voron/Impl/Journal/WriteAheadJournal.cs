@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Sparrow.Compression;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;

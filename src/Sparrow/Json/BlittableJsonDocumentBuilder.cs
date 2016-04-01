@@ -2,33 +2,31 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Server.Json.Parsing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
+using Sparrow.Compression;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public class BlittableJsonDocumentBuilder : IDisposable
     {
         private readonly Stack<BuildingState> _continuationState = new Stack<BuildingState>();
 
-        private readonly MemoryOperationContext _context;
+        private readonly JsonOperationContext _context;
         private readonly UsageMode _mode;
-        private readonly string _debugTag;
         private readonly IJsonParser _reader;
         private readonly JsonParserState _state;
         private readonly UnmanagedWriteBuffer _stream;
         private UnmanagedBuffersPool.AllocatedMemoryData _buffer, _compressionBuffer;
         private int _position;
         private WriteToken _writeToken;
+        private readonly string _debugTag;
 
         public int DiscardedCompressions, Compressed;
-        
 
-
-        public BlittableJsonDocumentBuilder(MemoryOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state)
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state)
         {
             _reader = reader;
+            _debugTag = debugTag;
             _stream = context.GetStream(debugTag);
             _context = context;
             _mode = mode;

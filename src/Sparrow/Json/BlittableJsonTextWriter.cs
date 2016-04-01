@@ -1,17 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 
-using Raven.Client.Indexing;
-using Raven.Server.Documents;
-using Raven.Server.Json.Parsing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-
-using Sparrow;
-
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public class BlittableJsonTextWriter : IDisposable
     {
@@ -30,7 +21,7 @@ namespace Raven.Server.Json
         private int _pos;
         private readonly byte[] _buffer;
 
-        public BlittableJsonTextWriter(MemoryOperationContext context, Stream stream)
+        public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _stream = stream;
             _buffer = context.GetManagedBuffer();

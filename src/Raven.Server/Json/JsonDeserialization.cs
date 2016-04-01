@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
+using Sparrow.Json;
 
 namespace Raven.Server.Json
 {

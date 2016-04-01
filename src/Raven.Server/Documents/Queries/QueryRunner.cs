@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Includes;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public DocumentQueryResult ExecuteQuery(string indexName, IndexQuery query, StringValues includes, CancellationToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQuery query, StringValues includes, CancellationToken token)
         {
             DocumentQueryResult result;
 
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var runner = new DynamicQueryRunner(_indexStore, _documentsStorage, _documentsContext, token);
 
-                result = runner.Execute(indexName, query);
+                result = await runner.Execute(indexName, query).ConfigureAwait(false);
             }
             else
             {

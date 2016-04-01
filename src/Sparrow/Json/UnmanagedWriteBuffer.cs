@@ -2,19 +2,14 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.Abstractions.Util;
-using Raven.Server.Json.Parsing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-
-using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Json
+namespace Sparrow.Json
 {
     public unsafe class UnmanagedWriteBuffer : IDisposable
     {
-        private readonly MemoryOperationContext _context;
+        private readonly JsonOperationContext _context;
 
         private class Segment
         {
@@ -33,7 +28,7 @@ namespace Raven.Server.Json
 
         public int SizeInBytes => _sizeInBytes;
 
-        internal UnmanagedWriteBuffer(MemoryOperationContext context, UnmanagedBuffersPool.AllocatedMemoryData allocatedMemoryData)
+        internal UnmanagedWriteBuffer(JsonOperationContext context, UnmanagedBuffersPool.AllocatedMemoryData allocatedMemoryData)
         {
             _context = context;
             _current = new Segment
@@ -111,6 +106,11 @@ namespace Raven.Server.Json
             _sizeInBytes++;
             *(_current.Address+ _current.Used) = data;
             _current.Used++;
+        }
+
+        public int CopyTo(IntPtr pointer)
+        {
+            return CopyTo((byte*) pointer);
         }
 
         public int CopyTo(byte* pointer)

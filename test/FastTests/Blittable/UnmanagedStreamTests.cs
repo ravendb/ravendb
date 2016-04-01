@@ -5,6 +5,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Blittable
@@ -15,7 +16,7 @@ namespace FastTests.Blittable
         public void EnsureSingleChunk()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new MemoryOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var newStream = ctx.GetStream("tst");
                 var buffer = new byte[1337];
@@ -46,7 +47,7 @@ namespace FastTests.Blittable
         public void BulkWriteAscendingSizeTest()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-                using(var ctx = new MemoryOperationContext(unmanagedByteArrayPool))
+                using(var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");
@@ -89,7 +90,7 @@ namespace FastTests.Blittable
             var size = 3917701;
            
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new MemoryOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var data = ctx.GetMemory(size);
                 ctx.ReturnMemory(data);
@@ -100,7 +101,7 @@ namespace FastTests.Blittable
         public void BulkWriteDescendingSizeTest()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using(var ctx = new MemoryOperationContext(unmanagedByteArrayPool))
+            using(var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");
@@ -137,7 +138,7 @@ namespace FastTests.Blittable
         public void SingleByteWritesTest()
         {
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
-            using (var ctx = new MemoryOperationContext(unmanagedByteArrayPool))
+            using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");

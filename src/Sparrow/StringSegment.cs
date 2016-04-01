@@ -1,13 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Lucene.Net.Spatial.Util;
-using Sparrow;
 using Bits = Sparrow.Binary.Bits;
 
-namespace Raven.Server.Utils
+namespace Sparrow
 {
     public class CaseInsensitiveStringSegmentEqualityComparer: IEqualityComparer<StringSegment>
     {
