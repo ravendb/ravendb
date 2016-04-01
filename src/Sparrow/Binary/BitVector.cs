@@ -574,9 +574,10 @@ namespace Sparrow.Binary
             }
           
             int bytesLeft = length % sizeof(ulong);
-            if ( bytesLeft == 0 )
+            if ( bytesLeft == 0)
             {
-                newValue[lastLong] = 0;
+                if (lastLong != newValue.Length)
+                    newValue[lastLong] = 0;
             }                    
             else
             {
