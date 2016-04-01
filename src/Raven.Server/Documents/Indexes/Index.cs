@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Indexes
                     if (lastDocEtag > lastProcessedDocEtag)
                         return true;
 
-                    var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(indexContext, collection);
+                    var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
                     var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (lastTombstoneEtag > lastProcessedTombstoneEtag)
@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Indexes
                     if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedDocEtag)
                         return true;
 
-                    if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(indexContext, collection, cutoff.Value) > 0)
+                    if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, collection, cutoff.Value) > 0)
                         return true;
                 }
             }

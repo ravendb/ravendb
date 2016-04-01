@@ -356,7 +356,7 @@ namespace Raven.Server.Documents
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
-        public long GetLastTombstoneEtag(TransactionOperationContext context, string collection)
+        public long GetLastTombstoneEtag(DocumentsOperationContext context, string collection)
         {
             Table table;
             try
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
-        public long GetNumberOfTombstonesWithDocumentEtagLowerThan(TransactionOperationContext context, string collection, long etag)
+        public long GetNumberOfTombstonesWithDocumentEtagLowerThan(DocumentsOperationContext context, string collection, long etag)
         {
             Table table;
             try
