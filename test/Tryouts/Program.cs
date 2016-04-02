@@ -43,7 +43,7 @@ namespace Tryouts
                     }
                 });
 
-                BulkInsert(store, 1024  *512).Wait();
+                BulkInsert(store, 1024 * 1024 * 10).Wait();
             }
         }
 
