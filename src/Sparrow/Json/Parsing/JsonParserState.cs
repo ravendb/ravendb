@@ -83,9 +83,10 @@ namespace Sparrow.Json.Parsing
             {
                 var curEscape = -1;
 
+                int offset = start + lastEscape;
                 foreach (var escapeChar in EscapeChars)
                 {
-                    curEscape = Array.IndexOf(buffer, escapeChar, start + lastEscape, count);
+                    curEscape = Array.IndexOf(buffer, escapeChar, start + offset, count - offset);
                     if (curEscape != -1)
                         break;
                 }
