@@ -24,7 +24,7 @@ namespace Voron.Data.Compact
     /// As described in "Dynamic Z-Fast Tries" by Belazzougui, Boldi and Vigna in String Processing and Information
     /// Retrieval. Lecture notes on Computer Science. Volume 6393, 2010, pp 159-172 [1]
     /// </summary>
-    public unsafe partial class PrefixTree
+    public unsafe partial class PrefixTree : ICommittable
     {
         private readonly static ObjectPool<Stack<long>> nodesStackPool = new ObjectPool<Stack<long>>(() => new Stack<long>());
 
@@ -37,19 +37,20 @@ namespace Voron.Data.Compact
 
         public string Name { get; set; }
 
-        public PrefixTree(LowLevelTransaction tx, Tree parent, PrefixTreeRootMutableState state, Slice treeName)
+        public PrefixTree(Transaction tx, Tree parent, PrefixTreeRootMutableState state, Slice treeName)
         {
-            _tx = tx;
+            _tx = tx.LowLevelTransaction;
             _parent = parent;
             _state = state;
             _table = new InternalTable(this, _tx, _state);
             _translationTable = _state.TranslationTable;
-            _pageLocator = new PageLocator(tx, 16);
+            _pageLocator = new PageLocator(_tx, 16);
 
             Name = treeName.ToString();
+            tx.Register(this); // Register the tree to participate in the transaction.
         }
 
-        public static PrefixTree Create(LowLevelTransaction tx, Tree parent, Slice treeName, int subtreeDepth = -1)
+        public static PrefixTree Create(Transaction tx, Tree parent, Slice treeName, int subtreeDepth = -1)
         {
             var header = (PrefixTreeRootHeader*)parent.DirectRead(treeName);
             if (header != null)
@@ -66,7 +67,7 @@ namespace Voron.Data.Compact
             if (subtreeDepth == -1)
                 subtreeDepth = Constants.DepthPerCacheLine;
 
-            var state = new PrefixTreeRootMutableState(tx, header);
+            var state = new PrefixTreeRootMutableState(tx.LowLevelTransaction, header);
             state.TranslationTable.Initialize(subtreeDepth);
             state.Table.Initialize();
             state.IsModified = true;
@@ -74,7 +75,7 @@ namespace Voron.Data.Compact
             return new PrefixTree(tx, parent, state, treeName);    
         }
 
-        public static bool TryOpen( LowLevelTransaction tx, Tree parent, Slice treeName, out PrefixTree tree )
+        public static bool TryOpen(Transaction tx, Tree parent, Slice treeName, out PrefixTree tree )
         {
             tree = null;
 
@@ -85,7 +86,7 @@ namespace Voron.Data.Compact
             if (header->RootObjectType != RootObjectType.PrefixTree)
                 throw new InvalidOperationException("Tried to opened " + treeName + " as a prefix tree, but it is actually a " + header->RootObjectType);
 
-            var state = new PrefixTreeRootMutableState(tx, header);
+            var state = new PrefixTreeRootMutableState(tx.LowLevelTransaction, header);
             tree = new PrefixTree(tx, parent, state, treeName);            
             return tree != null;
         }
@@ -1448,6 +1449,17 @@ namespace Voron.Data.Compact
             var keyPtr = reader.Read(0, out keySize);
 
             return new Slice(keyPtr, (ushort)keySize);                  
+        }
+
+        bool ICommittable.RequiresParticipation
+        {
+            get { return State.IsModified; }
+        }
+
+        void ICommittable.PrepareForCommit()
+        {            
+            var treePtr = (PrefixTreeRootHeader*)_parent.DirectAdd(this.Name, sizeof(PrefixTreeRootHeader));
+            State.CopyTo(treePtr);
         }
     }
 }
