@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -17,13 +16,11 @@ using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Exceptions;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 
@@ -635,34 +632,26 @@ namespace Raven.Server.Documents.Indexes
                             await wait.WaitForIndexingAsync().ConfigureAwait(false);
                             continue;
                         }
-
+                        
                         var stats = ReadStats(indexTx);
 
                         result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
                         result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
                         result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
                             lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
-                                    lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
+                            lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
 
-                        Reference<int> totalResults = new Reference<int>();
-                        List<string> documentIds;
+                        if (Type == IndexType.MapReduce || Type == IndexType.AutoMapReduce)
+                            documentsContext.Reset(); // map reduce don't need to access documents storage
 
                         using (var indexRead = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
-                            documentIds = indexRead.Query(query, token, totalResults).ToList();
+                            var totalResults = new Reference<int>();
+
+                            result.Results = indexRead.Query(query, token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
+                            result.TotalResults = totalResults.Value;
                         }
-
-                        result.TotalResults = totalResults.Value;
-
-                        foreach (var id in documentIds)
-                        {
-                            token.ThrowIfCancellationRequested();
-
-                            var document = DocumentDatabase.DocumentsStorage.Get(documentsContext, id);
-
-                            result.Results.Add(document);
-                        }
-
+                        
                         return result;
                     }
                 }
@@ -745,5 +734,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
+
+        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext);
     }
 }

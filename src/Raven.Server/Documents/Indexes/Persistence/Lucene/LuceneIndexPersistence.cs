@@ -1,10 +1,12 @@
 ﻿using System;
-
+using System.Collections.Generic;
+using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -46,7 +48,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _indexId = indexId;
             _definition = indexDefinition;
-            _converter = new LuceneDocumentConverter(_definition.MapFields.Values);
+
+            IEnumerable<IndexField> fields = _definition.MapFields.Values;
+
+            var mapReduceDef = indexDefinition as AutoMapReduceIndexDefinition;
+            if (mapReduceDef != null)
+                fields = fields.Union(mapReduceDef.GroupByFields);
+
+            _converter = new LuceneDocumentConverter(fields.ToArray());
         }
 
         public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)

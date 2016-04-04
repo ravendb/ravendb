@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -48,6 +49,11 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 tx.Commit();
             }
+        }
+
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            return new DocumentQueryRetriever(DocumentDatabase.DocumentsStorage, documentsContext);
         }
 
         private void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
@@ -192,10 +198,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                 }
 
                 if (count == 0)
-                    return;
+                    continue;
 
                 if (lastEtag <= lastMappedEtag)
-                    return;
+                    continue;
 
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Executing map for '{Name} ({IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");

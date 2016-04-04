@@ -12,6 +12,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Indexing;
 
 using Voron.Impl;
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<string> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults)
+        public IEnumerable<Document> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults, IQueryResultRetriever retriever)
         {
             var docsToGet = query.PageSize;
             var position = query.Start;
@@ -90,7 +91,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     returnedResults++;
 
-                    yield return document.Get(Abstractions.Data.Constants.DocumentIdFieldName);
+                    yield return retriever.Get(document);
+
                     if (returnedResults == query.PageSize)
                         yield break;
                 }
