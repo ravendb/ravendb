@@ -21,6 +21,8 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
+            Sparrow.Hashing.XXHash64.CalculateRaw("MyStringValue");
+
             //using (var x = new BulkInserts())
             //{
             //    x.SimpleBulkInsertShouldWork().Wait();

@@ -56,7 +56,7 @@ namespace Voron.Data.Compact
             if (header != null)
                throw new InvalidOperationException($"Tried to create {treeName} as a prefix tree, but it is actually a { header->RootObjectType.ToString() }");
 
-            // We know for sure that not data exists.
+            // We know for sure that no data exists.
             header = (PrefixTreeRootHeader*)parent.DirectAdd(treeName, sizeof(PrefixTreeRootHeader));
             header->Initialize();
             header->RootNodeName = Constants.InvalidNodeName;

@@ -15,7 +15,23 @@ namespace FastTests.Voron.Compact
 {
     public unsafe class PrefixTreeStorageTests : StorageTest
     {
+        protected string Name = "docs";
         protected TableSchema DocsSchema;
+
+        protected void InitializeStorage()
+        {
+            InitializeStorage(Name);
+        }
+
+        protected virtual void InitializeStorage(string treeName)
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                DocsSchema.Create(tx, treeName);
+
+                tx.Commit();
+            }
+        }
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
@@ -27,6 +43,7 @@ namespace FastTests.Voron.Compact
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 0,
+                    Type = TableIndexType.Compact,
                 });
         }
 
@@ -325,6 +342,23 @@ namespace FastTests.Voron.Compact
 
                 return 1;
             }
+        }
+
+        protected long AddAndDumpToPrefixTree(PrefixTree tree, Table table, string key, string value)
+        {
+            long res = AddToPrefixTree(tree, table, key, value);
+            DumpTree(tree);
+            return res;
+        }
+
+        protected long AddToPrefixTree(PrefixTree tree, Table table, string key, string value)
+        {
+            return AddToPrefixTree(tree, table, new Slice(Encoding.UTF8.GetBytes(key)), value);
+        }
+
+        protected long AddToPrefixTree(PrefixTree tree, Table table, Slice key, string value)
+        {
+            return SetHelper(table, key, value);
         }
     }
 }
