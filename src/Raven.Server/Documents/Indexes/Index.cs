@@ -382,8 +382,7 @@ namespace Raven.Server.Documents.Indexes
 
                             DoIndexingWork(stats, cts.Token);
 
-                            _indexingBatchCompleted.SetByAsyncCompletion();
-                            _indexingBatchCompleted.Reset();
+                            _indexingBatchCompleted.SetAndResetAtomically();
 
                             DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
                             {
