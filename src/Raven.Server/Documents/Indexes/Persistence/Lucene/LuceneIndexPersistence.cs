@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private LuceneVoronDirectory _directory;
 
-        private readonly IndexSearcherHolder _indexSearcherHolder = new IndexSearcherHolder();
+        private readonly IndexSearcherHolder _indexSearcherHolder;
 
         private bool _disposed;
 
@@ -56,6 +56,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 fields = fields.Union(mapReduceDef.GroupByFields);
 
             _converter = new LuceneDocumentConverter(fields.ToArray());
+            _indexSearcherHolder = new IndexSearcherHolder(() =>
+            {
+                if (_indexWriter == null)
+                    return new IndexSearcher(_directory, true);
+
+                var indexReader = _indexWriter.GetReader();
+                return new IndexSearcher(indexReader);
+            });
         }
 
         public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)
@@ -114,15 +122,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal void RecreateSearcher()
         {
-            if (_indexWriter == null)
-            {
-                _indexSearcherHolder.SetIndexSearcher(new IndexSearcher(_directory, true), wait: false);
-            }
-            else
-            {
-                var indexReader = _indexWriter.GetReader();
-                _indexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader), wait: false);
-            }
+            _indexSearcherHolder.SetIndexSearcher(wait: false);
         }
 
         internal LuceneIndexWriter EnsureIndexWriter()

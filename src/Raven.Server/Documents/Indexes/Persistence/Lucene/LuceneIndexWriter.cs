@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
@@ -18,6 +19,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     public class LuceneIndexWriter : IDisposable
     {
         private static readonly ILog LogIndexing = LogManager.GetLogger(typeof(Field.Index).FullName + ".Indexing");
+
+        private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
         private IndexWriter indexWriter;
 
@@ -68,7 +71,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IndexReader GetReader()
         {
-            return indexWriter.GetReader();
+            _locker.EnterReadLock();
+
+            try
+            {
+                return indexWriter.GetReader();
+            }
+            finally
+            {
+                _locker.ExitReadLock();
+            }
         }
 
         public void Commit()
@@ -95,10 +107,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void RecreateIndexWriter()
         {
-            DisposeIndexWriter();
+            _locker.EnterWriteLock();
+            try
+            {
+                DisposeIndexWriter();
 
-            if (indexWriter == null)
-                CreateIndexWriter();
+                if (indexWriter == null)
+                    CreateIndexWriter();
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
         }
 
         private void CreateIndexWriter()
