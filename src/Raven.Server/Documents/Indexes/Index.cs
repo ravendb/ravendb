@@ -20,6 +20,8 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+
 using Sparrow;
 using Sparrow.Json;
 using Voron;
@@ -264,17 +266,33 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Notifications.OnIndexChange -= HandleIndexChange;
 
-                _indexingThread?.Join();
-                _indexingThread = null;
+                var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(Index)} '{Name}'");
 
-                _environment?.Dispose();
-                _environment = null;
+                exceptionAggregator.Execute(() =>
+                {
+                    _indexingThread?.Join();
+                    _indexingThread = null;
+                });
 
-                _unmanagedBuffersPool?.Dispose();
-                _unmanagedBuffersPool = null;
+                exceptionAggregator.Execute(() =>
+                {
+                    _environment?.Dispose();
+                    _environment = null;
+                });
 
-                _contextPool?.Dispose();
-                _contextPool = null;
+                exceptionAggregator.Execute(() =>
+                {
+                    _unmanagedBuffersPool?.Dispose();
+                    _unmanagedBuffersPool = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    _contextPool?.Dispose();
+                    _contextPool = null;
+                });
+
+                exceptionAggregator.ThrowIfNeeded();
             }
         }
 

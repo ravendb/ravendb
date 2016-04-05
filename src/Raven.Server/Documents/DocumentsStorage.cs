@@ -98,12 +98,27 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _unmanagedBuffersPool?.Dispose();
-            _unmanagedBuffersPool = null;
-            ContextPool?.Dispose();
-            ContextPool = null;
-            Environment?.Dispose();
-            Environment = null;
+            var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(DocumentsStorage)}");
+
+            exceptionAggregator.Execute(() =>
+            {
+                _unmanagedBuffersPool?.Dispose();
+                _unmanagedBuffersPool = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                ContextPool?.Dispose();
+                ContextPool = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                Environment?.Dispose();
+                Environment = null;
+            });
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public void Initialize()

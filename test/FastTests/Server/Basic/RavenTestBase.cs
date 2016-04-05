@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,8 +40,8 @@ namespace Raven.Tests.Core
         private bool _doNotReuseServer;
         private int NonReusedServerPort { get; set; }
         private const int MaxParallelServer = 79;
-        private static List<int> _usedServerPorts = new List<int>();
-        private static List<int> _availableServerPorts = null;
+        private static readonly List<int> _usedServerPorts = new List<int>();
+        private static List<int> _availableServerPorts;
 
         public RavenServer Server
         {
@@ -140,27 +139,32 @@ namespace Raven.Tests.Core
         }
 
 
-        protected virtual async Task<DocumentStore> GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null,
+        protected virtual async Task<DocumentStore> GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null,
            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
         {
-            if (dbSuffixIdentifier != null)
-                databaseName = string.Format("{0}_{1}", databaseName, dbSuffixIdentifier);
+            var name = caller ?? Guid.NewGuid().ToString("N");
 
-            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+            if (dbSuffixIdentifier != null)
+                name = string.Format("{0}_{1}", name, dbSuffixIdentifier);
+
+            var path = NewDataPath(name);
+
+            var doc = MultiDatabase.CreateDatabaseDocument(name);
+            doc.Settings["Raven/DataDir"] = path;
             modifyDatabaseDocument?.Invoke(doc);
 
             TransactionOperationContext context;
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-                if (Server.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
-                    throw new InvalidOperationException($"Database '{databaseName}' already exists");
+                if (Server.ServerStore.Read(context, Constants.Database.Prefix + name) != null)
+                    throw new InvalidOperationException($"Database '{name}' already exists");
             }
 
             var store = new DocumentStore
             {
                 Url = UseFiddler(Server.Configuration.Core.ServerUrl),
-                DefaultDatabase = databaseName,
+                DefaultDatabase = name,
                 ApiKey = apiKey
             };
             ModifyStore(store);
@@ -169,7 +173,8 @@ namespace Raven.Tests.Core
             await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
             store.AfterDispose += (sender, args) =>
             {
-                store.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(databaseName, hardDelete: true);
+                store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: true);
+                CreatedStores.Remove(store);
             };
             CreatedStores.Add(store);
             return store;
@@ -206,11 +211,11 @@ namespace Raven.Tests.Core
             } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
         }
 
-        protected string NewDataPath(string prefix = null, bool forceCreateDir = false)
+        protected string NewDataPath([CallerMemberName]string prefix = null, bool forceCreateDir = false)
         {
             prefix = prefix?.Replace("<", "").Replace(">", "");
 
-            var newDataDir = Path.GetFullPath(string.Format(@".\{1}-{0}-{2}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? $"TestDatabase_{NonReusedServerPort}", Interlocked.Increment(ref _pathCount)));
+            var newDataDir = Path.GetFullPath($".\\Databases\\{prefix ?? "TestDatabase_" + NonReusedServerPort}-{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff")}-{Interlocked.Increment(ref _pathCount)}");
             if (forceCreateDir && Directory.Exists(newDataDir) == false)
                 Directory.CreateDirectory(newDataDir);
             PathsToDelete.Add(newDataDir);
@@ -221,75 +226,63 @@ namespace Raven.Tests.Core
         {
             GC.SuppressFinalize(this);
 
-            var errors = new List<Exception>();
+            var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
             foreach (var store in CreatedStores)
-            {
-                try
-                {
-                    store.Dispose();
-                }
-                catch (Exception e)
-                {
-                    errors.Add(e);
-                }
-            }
+                exceptionAggregator.Execute(store.Dispose);
+            CreatedStores.Clear();
 
             if (_localServer != null)
             {
                 if (_doNotReuseServer)
                 {
-                    try
+                    exceptionAggregator.Execute(() =>
                     {
                         _localServer.Dispose();
                         _localServer = null;
                         RemoveUsedPort(NonReusedServerPort);
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        errors.Add(e);
-                    }
+                    });
+
+                    exceptionAggregator.ThrowIfNeeded();
+                    return;
                 }
 
                 if (Interlocked.Decrement(ref _currentServerUsages) > 0)
+                {
+                    exceptionAggregator.ThrowIfNeeded();
                     return;
+                }
+
                 lock (ServerLocker)
                 {
-                    try
+                    exceptionAggregator.Execute(() =>
                     {
                         _globalServer.Dispose();
                         _globalServer = null;
                         _currentServerUsages = 0;
-                    }
-                    catch (Exception e)
-                    {
-                        errors.Add(e);
-                    }
+                    });
                 }
             }
 
             GC.Collect(2);
             GC.WaitForPendingFinalizers();
-            var copy = PathsToDelete.ToArray();
-            foreach (var pathToDelete in copy)
+
+            var pathsToDelete = PathsToDelete.ToArray();
+            foreach (var pathToDelete in pathsToDelete)
             {
                 PathsToDelete.TryRemove(pathToDelete);
-                try
+
+                exceptionAggregator.Execute(() => ClearDatabaseDirectory(pathToDelete));
+
+                if (File.Exists(pathToDelete))
                 {
-                    ClearDatabaseDirectory(pathToDelete);
-                }
-                catch (Exception e)
-                {
-                    errors.Add(e);
-                }
-                finally
-                {
-                    if (File.Exists(pathToDelete)) // Just in order to be sure we didn't created a file in that path, by mistake)
+                    exceptionAggregator.Execute(() =>
                     {
-                        errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory, but failed because it is a file.\r\n{1}", pathToDelete,
-                            WhoIsLocking.ThisFile(pathToDelete))));
-                    }
-                    else if (Directory.Exists(pathToDelete))
+                        throw new IOException(string.Format("We tried to delete the '{0}' directory, but failed because it is a file.\r\n{1}", pathToDelete, WhoIsLocking.ThisFile(pathToDelete)));
+                    });
+                }
+                else if (Directory.Exists(pathToDelete))
+                {
+                    exceptionAggregator.Execute(() =>
                     {
                         string filePath;
                         try
@@ -300,14 +293,13 @@ namespace Raven.Tests.Core
                         {
                             filePath = pathToDelete;
                         }
-                        errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory.\r\n{1}", pathToDelete,
-                            WhoIsLocking.ThisFile(filePath))));
-                    }
+
+                        throw new IOException(string.Format("We tried to delete the '{0}' directory.\r\n{1}", pathToDelete, WhoIsLocking.ThisFile(filePath)));
+                    });
                 }
             }
 
-            if (errors.Count > 0)
-                throw new AggregateException(errors);
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         private void ClearDatabaseDirectory(string dataDir)
@@ -334,7 +326,6 @@ namespace Raven.Tests.Core
                 }
             }
         }
-
 
         protected static void LowLevel_WaitForIndexMap(Index index, long etag)
         {

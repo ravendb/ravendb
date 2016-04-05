@@ -301,10 +301,17 @@ namespace Raven.Server.Documents.Indexes
             //FlushMapIndexes();
             //FlushReduceIndexes();
 
+            var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(IndexStore)}");
+
             foreach (var index in _indexes)
             {
-                index.Dispose();
+                exceptionAggregator.Execute(() =>
+                {
+                    index.Dispose();
+                });
             }
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         private int ResetIndexInternal(Index index)
@@ -330,14 +337,17 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
+            lock (_locker)
             {
-                int indexId;
-                if (int.TryParse(indexDirectory.Name, out indexId) == false)
-                    continue;
+                foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
+                {
+                    int indexId;
+                    if (int.TryParse(indexDirectory.Name, out indexId) == false)
+                        continue;
 
-                var index = Index.Open(indexId, _documentDatabase);
-                _indexes.Add(index);
+                    var index = Index.Open(indexId, _documentDatabase);
+                    _indexes.Add(index);
+                }
             }
         }
 

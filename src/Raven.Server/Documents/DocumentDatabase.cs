@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
         {
             _databaseShutdown.Cancel();
 
-            var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose DatabaseDocument");
+            var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(DocumentDatabase)}");
 
             exceptionAggregator.Execute(() =>
             {
