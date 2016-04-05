@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Server.Documents
 {
     public class Alert
     {
