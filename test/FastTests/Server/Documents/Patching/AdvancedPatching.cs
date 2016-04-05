@@ -679,11 +679,11 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
+                /*store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
                 {
                     Map = @"from doc in docs 
                             select new { doc.Value }"
-                });
+                });*/
 
                 using (var session = store.OpenAsyncSession())
                 {
