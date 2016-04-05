@@ -1,7 +1,7 @@
 <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
 
     <div class="panel-group">
-        <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
+        <div class="panel panel-default">
             <div class="panel-heading">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled() || isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S">
                     <i class="fa fa-save"></i>
@@ -332,7 +332,7 @@
                 </div>
             </div>
         </div>
-        <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
+        <div class="panel panel-default">
             <div class="panel-heading">
                 <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
                 <span style="margin-left: 5px;">
@@ -348,7 +348,7 @@
                 </span>
             </div>
         </div>
-        <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
+        <div class="panel panel-default">
             <div class="panel-heading">
                 <button data-bind="click: saveServerPrefixForHiLo, enable: isServerPrefixForHiLoSaveEnabled" type="submit" class="btn btn-primary" title="Save changes">
                     <i class="fa fa-save"></i>
@@ -371,17 +371,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="panel panel-default" data-bind="if:!replicationEnabled(), visible: !replicationEnabled()">
-            <div class="panel-heading">
-                Replication is disabled
-            </div>
-            <div class="panel-body">
-                <div class="text-center">
-                    <h3 class="text-info">Replication bundle is disabled. <small>Go ahead and <a href="#" data-bind="click: enableReplication">enable replication for this database</a>.</small></h3>
-                </div>
-            </div>
-
         </div>
     </div>
 

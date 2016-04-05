@@ -19,13 +19,10 @@ import getEffectiveConflictResolutionCommand = require("commands/database/global
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
-import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import replicationPatchScript = require("models/database/replication/replicationPatchScript");
 import collectionsStats = require("models/database/documents/collectionsStats");
 
 class replications extends viewModelBase {
-
-    replicationEnabled = ko.observable<boolean>(false);
 
     prefixForHilo = ko.observable<string>("");
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None" }));
@@ -106,7 +103,6 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            this.replicationEnabled(true);
             $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
                 .done(() => deferred.resolve({ can: true }))
                 .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
@@ -363,21 +359,6 @@ class replications extends viewModelBase {
         }
 
         this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour());
-    }
-
-    enableReplication() {
-        new enableReplicationCommand(this.activeDatabase())
-            .execute()
-            .done((bundles) => {
-                var db = this.activeDatabase();
-                this.replicationEnabled(true);
-                this.fetchServerPrefixForHiLoCommand(db);
-                this.fetchAutomaticConflictResolution(db);
-                this.fetchReplications(db);
-                this.fetchCollectionsStats(db).done(results => {
-                    this.collections(results.collections);
-                });
-            });
     }
 
 }
