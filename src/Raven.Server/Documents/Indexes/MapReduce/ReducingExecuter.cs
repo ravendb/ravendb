@@ -79,7 +79,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
 
                         _metrics.MapReduceReducedPerSecond.Mark();
-
                     }
 
                     long tmp = 0;

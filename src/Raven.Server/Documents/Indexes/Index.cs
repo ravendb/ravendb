@@ -644,11 +644,11 @@ namespace Raven.Server.Documents.Indexes
                         if (Type == IndexType.MapReduce || Type == IndexType.AutoMapReduce)
                             documentsContext.Reset(); // map reduce don't need to access documents storage
 
-                        using (var indexRead = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+                        using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
                             var totalResults = new Reference<int>();
 
-                            result.Results = indexRead.Query(query, token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
+                            result.Results = reader.Query(query, token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
                             result.TotalResults = totalResults.Value;
                         }
                         

@@ -2,12 +2,12 @@
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public class DocumentQueryRetriever : IQueryResultRetriever
+    public class DocumentQueryResultRetriever : IQueryResultRetriever
     {
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _context;
 
-        public DocumentQueryRetriever(DocumentsStorage documentsStorage, DocumentsOperationContext context)
+        public DocumentQueryResultRetriever(DocumentsStorage documentsStorage, DocumentsOperationContext context)
         {
             _documentsStorage = documentsStorage;
             _context = context;

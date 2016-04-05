@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            return new DocumentQueryRetriever(DocumentDatabase.DocumentsStorage, documentsContext);
+            return new DocumentQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext);
         }
 
         private void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)

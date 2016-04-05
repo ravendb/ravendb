@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            return new MapResultQueryRetriever(indexContext);
+            return new MapReduceQueryResultRetriever(indexContext);
         }
 
         private unsafe Dictionary<ulong, ReduceKeyState> ExecuteMap(IndexingBatchStats stats, CancellationToken cancellationToken, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)

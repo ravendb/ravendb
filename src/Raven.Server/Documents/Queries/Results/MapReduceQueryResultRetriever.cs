@@ -3,11 +3,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public class MapResultQueryRetriever : IQueryResultRetriever
+    public class MapReduceQueryResultRetriever : IQueryResultRetriever
     {
         private readonly TransactionOperationContext _indexContext;
 
-        public MapResultQueryRetriever(TransactionOperationContext indexContext)
+        public MapReduceQueryResultRetriever(TransactionOperationContext indexContext)
         {
             _indexContext = indexContext;
         }
@@ -21,9 +21,9 @@ namespace Raven.Server.Documents.Queries.Results
                 djv[field.Name] = field.StringValue;
             }
 
-            return new Document()
+            return new Document
             {
-                Data = _indexContext.ReadObject(djv, "map-reduce result document")
+                Data = _indexContext.ReadObject(djv, "map-reduce result document") // TODO arek - BlittableJsonReaderObject is disposable
             };
         }
     }
