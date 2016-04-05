@@ -98,11 +98,11 @@ namespace FastTests.Voron.Compact
         {
             Console.WriteLine("Tree stored order");
 
-            var currentPtr = tree.State.Head.NextPtr;
+            long currentPtr = tree.State.Head.NextPtr;
 
-            while (currentPtr != PrefixTree.Constants.InvalidNodeName && currentPtr > PrefixTree.Constants.TombstoneNodeName)
+            while (currentPtr != PrefixTree.Constants.InvalidNodeName && PrefixTree.Node.IsTombstonePtr(currentPtr))
             {
-                PrefixTree.Leaf* node = (PrefixTree.Leaf*)tree.ReadNodeByName(currentPtr);
+                PrefixTree.Leaf* node = (PrefixTree.Leaf*)tree.DirectRead(currentPtr);
                 Debug.Assert(node->IsLeaf);
 
                 var key = tree.ReadKey(node->DataPtr);
@@ -132,13 +132,13 @@ namespace FastTests.Voron.Compact
             for (int i = depth; i-- != 0;)
                 Console.Write('\t');
 
-            PrefixTree.Node* node = tree.ReadNodeByName(nodeName);
+            PrefixTree.Node* node = tree.DirectRead(nodeName);
             if (node->IsInternal)
             {
                 var internalNode = (PrefixTree.Internal*)node;
 
-                var jumpLeft = tree.ReadNodeByName(internalNode->JumpLeftPtr);
-                var jumpRight = tree.ReadNodeByName(internalNode->JumpRightPtr);
+                var jumpLeft = tree.DirectRead(internalNode->JumpLeftPtr);
+                var jumpRight = tree.DirectRead(internalNode->JumpRightPtr);
 
                 Console.WriteLine(string.Format("Node {0} (name length: {1}) Jump left: {2} Jump right: {3}", tree.ToDebugString(node), nameLength, tree.ToDebugString(jumpLeft), tree.ToDebugString(jumpRight)));
 
@@ -163,7 +163,7 @@ namespace FastTests.Voron.Compact
             Assert.Equal(tree.State.Head.PreviousPtr, PrefixTree.Constants.InvalidNodeName);
 
             // Either the root does not exist or the root is internal and have name length == 0
-            Assert.True(tree.ReadNodeByName(tree.State.RootNodeName) == null || tree.Root->NameLength == 0);
+            Assert.True(tree.DirectRead(tree.State.RootNodeName) == null || tree.Root->NameLength == 0);
             Assert.True(tree.State.Items == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.Values.Count() + 1);
 
             if (tree.Count == 0)
@@ -180,12 +180,12 @@ namespace FastTests.Voron.Compact
             Assert.NotEqual(tree.State.Tail.PreviousPtr, PrefixTree.Constants.InvalidNodeName);
 
             // We check if the first leaf node is pointing back to a tombstone.
-            var head = (PrefixTree.Leaf*)tree.ReadNodeByName(tree.State.Head.NextPtr);
+            var head = (PrefixTree.Leaf*)tree.DirectRead(tree.State.Head.NextPtr);
             Assert.True(head->IsLeaf);
             Assert.Equal(head->PreviousPtr, PrefixTree.Constants.HeadNodeName);
 
             // We check if the last leaf node is pointing forward to a tombstone.
-            var tail = (PrefixTree.Leaf*)tree.ReadNodeByName(tree.State.Tail.PreviousPtr);
+            var tail = (PrefixTree.Leaf*)tree.DirectRead(tree.State.Tail.PreviousPtr);
             Assert.True(tail->IsLeaf);
             Assert.Equal(tail->NextPtr, PrefixTree.Constants.TailNodeName);
 
@@ -194,15 +194,15 @@ namespace FastTests.Voron.Compact
 
             foreach (var nodePtr in tree.NodesTable.Values)
             {
-                var node = (PrefixTree.Internal*)tree.ReadNodeByName(nodePtr);
+                var node = (PrefixTree.Internal*)tree.DirectRead(nodePtr);
                 Assert.True(node->IsInternal);
 
                 int handleLength = tree.GetHandleLength(node);
 
                 Assert.True(root == node || tree.GetHandleLength(root) < handleLength); // All handled of lower nodes must be bigger than the root.
 
-                var referenceNode = tree.ReadNodeByName(node->ReferencePtr);
-                var backReferenceNode = tree.ReadNodeByName(referenceNode->ReferencePtr);
+                var referenceNode = tree.DirectRead(node->ReferencePtr);
+                var backReferenceNode = tree.DirectRead(referenceNode->ReferencePtr);
 
                 Assert.True(node == backReferenceNode); // The reference of the reference should be itself.
 
@@ -224,11 +224,11 @@ namespace FastTests.Voron.Compact
                 for (int i = 1; i < tree.Count; i++)
                 {
                     // Ensure there is name order in the linked list of leaves.
-                    var nextRight = (PrefixTree.Leaf*)tree.ReadNodeByName(toRight->NextPtr);
+                    var nextRight = (PrefixTree.Leaf*)tree.DirectRead(toRight->NextPtr);
                     Assert.True(nextRight->IsLeaf);
                     Assert.True(tree.Name(toRight).CompareTo(tree.Name(nextRight)) <= 0);
 
-                    var previousLeft = (PrefixTree.Leaf*)tree.ReadNodeByName(toLeft->PreviousPtr);
+                    var previousLeft = (PrefixTree.Leaf*)tree.DirectRead(toLeft->PreviousPtr);
                     Assert.True(previousLeft->IsLeaf);                   
                     Assert.True(tree.Name(toLeft).CompareTo(tree.Name(previousLeft)) >= 0);
 
@@ -246,7 +246,7 @@ namespace FastTests.Voron.Compact
                 int counter = 0;
                 foreach (var leafPtr in leaves)
                 {
-                    var leaf = (PrefixTree.Leaf*)tree.ReadNodeByName(leafPtr);
+                    var leaf = (PrefixTree.Leaf*)tree.DirectRead(leafPtr);
                     Assert.True(leaf->IsLeaf);
 
                     // We check the reference of the leaf has been accounted for as an internal node. 
@@ -271,13 +271,13 @@ namespace FastTests.Voron.Compact
             if (nodeName == PrefixTree.Constants.InvalidNodeName)
                 return 0;
 
-            var node = tree.ReadNodeByName(nodeName);
+            var node = tree.DirectRead(nodeName);
             Assert.True(nameLength <= tree.GetExtentLength(node));
 
             PrefixTree.Node* parent = null;
             if (parentName != PrefixTree.Constants.InvalidNodeName)
             {
-                parent = tree.ReadNodeByName(parentName);
+                parent = tree.DirectRead(parentName);
                 if ( parent->IsInternal)
                 {
                     Assert.True(tree.Extent(parent).Equals(tree.Extent(node).SubVector(0, ((PrefixTree.Internal*)parent)->ExtentLength)));
@@ -286,7 +286,7 @@ namespace FastTests.Voron.Compact
 
             if (node->IsInternal)
             {
-                var leafNode = (PrefixTree.Leaf*)tree.ReadNodeByName(node->ReferencePtr);
+                var leafNode = (PrefixTree.Leaf*)tree.DirectRead(node->ReferencePtr);
 
                 Assert.True(leafNode->IsLeaf); // We ensure that internal node references are leaves. 
 
@@ -295,7 +295,7 @@ namespace FastTests.Voron.Compact
 
                 var handle = tree.Handle(node);
 
-                var allNodes = tree.NodesTable.Values.Select(x => tree.Handle(tree.ReadNodeByName(x)));
+                var allNodes = tree.NodesTable.Values.Select(x => tree.Handle(tree.DirectRead(x)));
 
                 Assert.True(allNodes.Contains(handle));
 
@@ -304,21 +304,21 @@ namespace FastTests.Voron.Compact
                 Assert.NotEqual(PrefixTree.Constants.InvalidNodeName, internalNode->ReferencePtr);
 
                 var jumpLeftName = internalNode->LeftPtr;
-                var jumpLeft = tree.ReadNodeByName(jumpLeftName);
+                var jumpLeft = tree.DirectRead(jumpLeftName);
                 while (jumpLeft->IsInternal && jumpLength > ((PrefixTree.Internal*)jumpLeft)->ExtentLength)
                 {
                     jumpLeftName = ((PrefixTree.Internal*)jumpLeft)->LeftPtr;
-                    jumpLeft = tree.ReadNodeByName(jumpLeftName);
+                    jumpLeft = tree.DirectRead(jumpLeftName);
                 }                    
 
                 Assert.Equal(internalNode->JumpLeftPtr, jumpLeftName);
 
                 var jumpRightName = internalNode->RightPtr;
-                var jumpRight = tree.ReadNodeByName(jumpRightName);
+                var jumpRight = tree.DirectRead(jumpRightName);
                 while (jumpRight->IsInternal && jumpLength > ((PrefixTree.Internal*)jumpRight)->ExtentLength)
                 {
                     jumpRightName = ((PrefixTree.Internal*)jumpRight)->RightPtr;
-                    jumpRight = tree.ReadNodeByName(jumpRightName);
+                    jumpRight = tree.DirectRead(jumpRightName);
                 }                    
 
                 Assert.Equal(internalNode->JumpRightPtr, jumpRightName);
@@ -337,7 +337,7 @@ namespace FastTests.Voron.Compact
                 Assert.True(leaves.Add(nodeName)); // We haven't found this leaf somewhere else.
                 Assert.Equal(tree.Name(node).Count, tree.GetExtentLength(node)); // This is a leaf, the extent is the key
 
-                var reference = tree.ReadNodeByName(parent->ReferencePtr);
+                var reference = tree.DirectRead(parent->ReferencePtr);
                 Assert.True(reference->IsLeaf); // We ensure that internal node references are leaves. 
 
                 return 1;

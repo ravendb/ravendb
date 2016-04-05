@@ -10,6 +10,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -32,8 +33,9 @@ namespace Voron.Data.Compact
         private readonly Tree _parent;
         private readonly InternalTable _table;
         private readonly PrefixTreeRootMutableState _state;
-        private readonly PrefixTreeTranslationTableMutableState _translationTable;
         private readonly PageLocator _pageLocator;
+        private readonly PrefixTreeAllocator _allocator;
+        private readonly long _pageSize;
 
         public string Name { get; set; }
 
@@ -43,9 +45,15 @@ namespace Voron.Data.Compact
             _parent = parent;
             _state = state;
             _table = new InternalTable(this, _tx, _state);
-            _translationTable = _state.TranslationTable;
             _pageLocator = new PageLocator(_tx, 16);
+            _pageSize = _tx.DataPager.PageSize;
 
+            if (_tx.Flags == TransactionFlags.ReadWrite)
+            {
+                var freeSpace = new FixedSizeTree(_tx, parent, parent.Name + "-Free", 0);
+                _allocator = new PrefixTreeAllocator(tx, freeSpace);
+            }
+                            
             Name = treeName.ToString();
             tx.Register(this); // Register the tree to participate in the transaction.
         }
@@ -68,7 +76,6 @@ namespace Voron.Data.Compact
                 subtreeDepth = Constants.DepthPerCacheLine;
 
             var state = new PrefixTreeRootMutableState(tx.LowLevelTransaction, header);
-            state.TranslationTable.Initialize(subtreeDepth);
             state.Table.Initialize();
             state.IsModified = true;
 
@@ -107,7 +114,7 @@ namespace Voron.Data.Compact
 
                 // We add the leaf after the head.                  
                 Leaf* head = &(_state.Pointer->Head);
-                AddAfter(Constants.HeadNodeName, head, 0, rootLeaf);
+                AddAfter(Constants.HeadNodeName, head, newNodeName, rootLeaf);
 
                 _state.RootNodeName = newNodeName;
                 _state.Items++; // This will cause the state to set IsModified = true; If this call is removed, add it explicitely                
@@ -126,7 +133,7 @@ namespace Voron.Data.Compact
                 var cutPoint = FindParentExitNode(searchKey, hashState, stack);
 
                 var exitNodeName = cutPoint.Exit;
-                var exitNode = this.ModifyNodeByName(exitNodeName);
+                var exitNode = this.DirectModify(exitNodeName);
 
 #if DETAILED_DEBUG        
                 Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != Constants.InvalidNodeName ? this.ToDebugString((Node*)cutPoint.Parent) : "null", this.ToDebugString(exitNode), cutPoint.LongestPrefix));
@@ -187,7 +194,7 @@ namespace Voron.Data.Compact
                 }
                 else
                 {
-                    var cutPointParentNode = (Internal*)this.ModifyNodeByName(cutPoint.Parent);
+                    var cutPointParentNode = (Internal*)this.DirectModify(cutPoint.Parent);
                     Debug.Assert(cutPointParentNode->IsInternal);
 
                     // Update the parent exit node.
@@ -250,7 +257,7 @@ namespace Voron.Data.Compact
                 if (exitDirection)
                 {
                     var rightLeafName = this.GetRightLeaf(exitNodeName);
-                    var rightLeaf = (Leaf*)this.ModifyNodeByName(rightLeafName);
+                    var rightLeaf = (Leaf*)this.DirectModify(rightLeafName);
                     Debug.Assert(rightLeaf->IsLeaf);
 
                     AddAfter(rightLeafName, rightLeaf, newLeafNodeName, newLeaf);
@@ -258,7 +265,7 @@ namespace Voron.Data.Compact
                 else
                 {
                     var leftLeafName = this.GetLeftLeaf(exitNodeName);
-                    var leftLeaf = (Leaf*)this.ModifyNodeByName(leftLeafName);
+                    var leftLeaf = (Leaf*)this.DirectModify(leftLeafName);
                     Debug.Assert(leftLeaf->IsLeaf);
 
                     AddBefore(leftLeafName, leftLeaf, newLeafNodeName, newLeaf);
@@ -285,15 +292,15 @@ namespace Voron.Data.Compact
         [Conditional("DEBUG")]
         private void ValidateInternalNode(long internalNodeName, Internal* nodePtr)
         {     
-            var internalPtr = this.ReadNodeByName(internalNodeName);
+            var internalPtr = this.DirectRead(internalNodeName);
             Debug.Assert(nodePtr == internalPtr); // Ensure that trying to read returns the same node. 
             Debug.Assert(nodePtr->IsInternal);
 
             var extentLength = this.GetExtentLength(nodePtr); // Retrieve the extent of the internal node. 
 
             // Ensure that the right leaf has a 1 in position and the left one has a 0. (TRIE Property).
-            var leftLeaf = ReadNodeByName(nodePtr->LeftPtr);
-            var rightLeaf = ReadNodeByName(nodePtr->RightPtr);
+            var leftLeaf = DirectRead(nodePtr->LeftPtr);
+            var rightLeaf = DirectRead(nodePtr->RightPtr);
 
             Debug.Assert(this.Name(leftLeaf)[extentLength] == false);
             Debug.Assert(this.Name(rightLeaf)[extentLength] == true);
@@ -309,7 +316,7 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     var toFixNodeName = stack.Pop();
-                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    var toFix = (Internal*)this.DirectRead(toFixNodeName); // On most cases we just need to read.
                     Debug.Assert(toFix->IsInternal);
 
                     // TODO: Check this, it doesnt have much sense now that we dont use live pointers.
@@ -319,7 +326,7 @@ namespace Voron.Data.Compact
                     int jumpLength = this.GetJumpLength( toFix );
                     if (jumpLength < insertedLeafNameLength)
                     {
-                        toFix = (Internal*)this.ModifyNodeByName(toFixNodeName); // Now we need to modify
+                        toFix = (Internal*)this.DirectModify(toFixNodeName); // Now we need to modify
                         toFix->JumpLeftPtr = insertedNodeName;
                     }
                 }
@@ -332,14 +339,14 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     var toFixNodeName = stack.Peek();
-                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    var toFix = (Internal*)this.DirectRead(toFixNodeName); // On most cases we just need to read.
                     Debug.Assert(toFix->IsInternal);
 
                     int jumpLength = this.GetJumpLength(toFix);
                     if (toFix->JumpRightPtr != exitNodeName || jumpLength >= insertedLeafNameLength)
                         break;
 
-                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName); // Now we need to modify
+                    toFix = (Internal*)this.DirectModify(toFixNodeName); // Now we need to modify
                     toFix->JumpRightPtr = insertedNodeName;
 
                     stack.Pop();
@@ -348,21 +355,21 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     var toFixNodeName = stack.Pop();
-                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    var toFix = (Internal*)this.DirectRead(toFixNodeName); // On most cases we just need to read.
                     Debug.Assert(toFix->IsInternal);
 
-                    var exitNode = this.ReadNodeByName(exitNodeName);
+                    var exitNode = this.DirectRead(exitNodeName);
                     while (exitNode->IsInternal && toFix->JumpRightPtr != exitNodeName)
                     {
                         exitNodeName = ((Internal*)exitNode)->JumpRightPtr;
-                        exitNode = this.ReadNodeByName(exitNodeName);
+                        exitNode = this.DirectRead(exitNodeName);
                     }
 
                     // As soon as we cannot find a matching descendant, we can stop updating
                     if (toFix->JumpRightPtr != exitNodeName)
                         return;
 
-                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName); // Now we need to modify
+                    toFix = (Internal*)this.DirectModify(toFixNodeName); // Now we need to modify
                     toFix->JumpRightPtr = insertedLeafName;
                 }
             }
@@ -381,7 +388,7 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     var toFixNodeName = stack.Pop();
-                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    var toFix = (Internal*)this.DirectRead(toFixNodeName); // On most cases we just need to read.
                     Debug.Assert(toFix->IsInternal);
 
                     if (toFix->JumpRightPtr != exitNodeName)
@@ -390,7 +397,7 @@ namespace Voron.Data.Compact
                     int jumpLength = this.GetJumpLength(toFix);
                     if (jumpLength < insertedLeafNameLength)
                     {
-                        toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                        toFix = (Internal*)this.DirectModify(toFixNodeName);
                         toFix->JumpRightPtr = insertedNodeName;
                     }                        
                 }
@@ -403,7 +410,7 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     var toFixNodeName = stack.Peek();
-                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    var toFix = (Internal*)this.DirectRead(toFixNodeName); // On most cases we just need to read.
                     Debug.Assert(toFix->IsInternal);
 
                     int jumpLength = this.GetJumpLength(toFix);
@@ -411,7 +418,7 @@ namespace Voron.Data.Compact
                     if (toFix->JumpLeftPtr != exitNodeName || jumpLength >= insertedLeafNameLength)
                         break;
 
-                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFix = (Internal*)this.DirectModify(toFixNodeName);
                     toFix->JumpLeftPtr = insertedNodeName;
 
                     stack.Pop();
@@ -420,21 +427,21 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     var toFixNodeName = stack.Pop();
-                    var toFix = (Internal*)this.ReadNodeByName(toFixNodeName); // On most cases we just need to read.
+                    var toFix = (Internal*)this.DirectRead(toFixNodeName); // On most cases we just need to read.
                     Debug.Assert(toFix->IsInternal);
 
-                    var exitNode = this.ReadNodeByName(exitNodeName);
+                    var exitNode = this.DirectRead(exitNodeName);
                     while (exitNode->IsInternal && toFix->JumpLeftPtr != exitNodeName)
                     {
                         exitNodeName = ((Internal*)exitNode)->JumpLeftPtr;
-                        exitNode = this.ReadNodeByName(exitNodeName);
+                        exitNode = this.DirectRead(exitNodeName);
                     }
 
                     // As soon as we cannot find a matching descendant, we can stop updating
                     if (toFix->JumpLeftPtr != exitNodeName)
                         return;
 
-                    toFix = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFix = (Internal*)this.DirectModify(toFixNodeName);
                     toFix->JumpLeftPtr = insertedLeafName;
                 }
             }
@@ -443,28 +450,28 @@ namespace Voron.Data.Compact
 
         private void UpdateJumps(long nodeName)
         {
-            var node = (Internal*)this.ModifyNodeByName(nodeName);
+            var node = (Internal*)this.DirectModify(nodeName);
             Debug.Assert(node->IsInternal);
 
             int jumpLength = this.GetJumpLength(node);
 
             long jumpNodeName = node->LeftPtr;
-            Node* jumpNode = this.ReadNodeByName(jumpNodeName);
+            Node* jumpNode = this.DirectRead(jumpNodeName);
             while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
             {
                 jumpNodeName = ((Internal*)jumpNode)->JumpLeftPtr;
-                jumpNode = this.ReadNodeByName(jumpNodeName);
+                jumpNode = this.DirectRead(jumpNodeName);
             }
 
             Debug.Assert(this.Intersects(jumpNode, jumpLength));            
             node->JumpLeftPtr = jumpNodeName;
 
             jumpNodeName = node->RightPtr;
-            jumpNode = this.ReadNodeByName(jumpNodeName);
+            jumpNode = this.DirectRead(jumpNodeName);
             while (jumpNode->IsInternal && jumpLength > ((Internal*)jumpNode)->ExtentLength)
             {
                 jumpNodeName = ((Internal*)jumpNode)->JumpRightPtr;
-                jumpNode = this.ReadNodeByName(jumpNodeName);
+                jumpNode = this.DirectRead(jumpNodeName);
             }
 
             Debug.Assert(this.Intersects(jumpNode, jumpLength));
@@ -486,7 +493,7 @@ namespace Voron.Data.Compact
             // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
             long parexOrExitNodeName = FatBinarySearch(searchKey, state, stack, -1, length, isExact: false);
 
-            Internal* parexOrExitNode = (Internal*)ReadNodeByName(parexOrExitNodeName);
+            Internal* parexOrExitNode = (Internal*)DirectRead(parexOrExitNodeName);
             Debug.Assert(parexOrExitNode->IsInternal);
 
             // Check if the node is either the parex(key) and/or exit(key). 
@@ -496,7 +503,7 @@ namespace Voron.Data.Compact
             else
                 candidateNodeName = parexOrExitNode->LeftPtr;
 
-            Node* candidateNode = ReadNodeByName(candidateNodeName);
+            Node* candidateNode = DirectRead(candidateNodeName);
             int lcpLength = searchKey.LongestCommonPrefixLength(this.Extent(candidateNode));
 
             // Fat Binary Search just worked with high probability and gave use the parex(key) node. 
@@ -523,7 +530,7 @@ namespace Voron.Data.Compact
 
                 stackTopNodeName = stack.Peek();
 
-                stackTopNode = (Internal*)ReadNodeByName(stackTopNodeName);
+                stackTopNode = (Internal*)DirectRead(stackTopNodeName);
                 Debug.Assert(stackTopNode->IsInternal);
 
                 startPoint = stackTopNode->ExtentLength;
@@ -535,7 +542,7 @@ namespace Voron.Data.Compact
 
                 long parexNodeName = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode->NameLength, isExact: false);
 
-                Internal* parexNode = (Internal*)ReadNodeByName(parexNodeName);
+                Internal* parexNode = (Internal*)DirectRead(parexNodeName);
                 if (parexNode->LeftPtr == parexOrExitNodeName || parexNode->RightPtr == parexOrExitNodeName)
                     return new CutPoint(lcpLength, parexNodeName, parexOrExitNodeName, parexNode->RightPtr, searchKey);
 
@@ -544,7 +551,7 @@ namespace Voron.Data.Compact
                     stack.Pop();
 
                 parexNodeName = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode->NameLength, isExact: true);
-                parexNode = (Internal*)ReadNodeByName(parexNodeName);
+                parexNode = (Internal*)DirectRead(parexNodeName);
 
                 return new CutPoint(lcpLength, parexNodeName, parexOrExitNodeName, parexNode->RightPtr, searchKey);
             }
@@ -552,14 +559,14 @@ namespace Voron.Data.Compact
             // The search process failed with very low probability.
             stack.Clear();
             parexOrExitNodeName = FatBinarySearch(searchKey, state, stack, -1, length, isExact: true);
-            parexOrExitNode = (Internal*)ReadNodeByName(parexOrExitNodeName);
+            parexOrExitNode = (Internal*)DirectRead(parexOrExitNodeName);
 
             if (parexOrExitNode->ExtentLength < length && searchKey[parexOrExitNode->ExtentLength])
                 candidateNodeName = parexOrExitNode->RightPtr;
             else
                 candidateNodeName = parexOrExitNode->LeftPtr;
 
-            candidateNode = ReadNodeByName(candidateNodeName);
+            candidateNode = DirectRead(candidateNodeName);
 
             lcpLength = searchKey.LongestCommonPrefixLength(this.Extent(candidateNode));
 
@@ -574,14 +581,14 @@ namespace Voron.Data.Compact
                 return new CutPoint(lcpLength, Constants.InvalidNodeName, _state.RootNodeName, Constants.InvalidNodeName, searchKey);
 
             stackTopNodeName = stack.Peek();
-            stackTopNode = (Internal*)ReadNodeByName(stackTopNodeName);
+            stackTopNode = (Internal*)DirectRead(stackTopNodeName);
 
             startPoint = stackTopNode->ExtentLength;
             if (startPoint == parexOrExitNode->NameLength - 1)
                 return new CutPoint(lcpLength, stackTopNodeName, parexOrExitNodeName, stackTopNode->RightPtr, searchKey);
 
             long parentNodeName = FatBinarySearch(searchKey, state, stack, startPoint, parexOrExitNode->NameLength, isExact: true);
-            var parentNode = (Internal*)ReadNodeByName(parentNodeName);
+            var parentNode = (Internal*)DirectRead(parentNodeName);
 
             return new CutPoint(lcpLength, parentNodeName, parexOrExitNodeName, parentNode->RightPtr, searchKey);
         }
@@ -605,14 +612,14 @@ namespace Voron.Data.Compact
                 long rootNodeName = _state.RootNodeName;
 
                 // Is the root key (which has to be a Leaf) equal to the one we are looking for?
-                var leaf = (Leaf*)this.ReadNodeByName(rootNodeName);
+                var leaf = (Leaf*)this.DirectRead(rootNodeName);
                 Debug.Assert(leaf->IsLeaf);
                 if (this.Name(leaf).CompareTo(searchKey) != 0)
                     return false;
 
                 RemoveLeaf(rootNodeName);
-                _translationTable.DeallocateNodeName(rootNodeName);
 
+                _allocator.DeallocateNode(rootNodeName);
 
                 // We remove the root.    
                 State.RootNodeName = Constants.InvalidNodeName;
@@ -633,7 +640,7 @@ namespace Voron.Data.Compact
                 long parentExitNodeName = cutPoint.Parent;
 
                 // If the exit node is not a leaf or the key is not equal to the LCP             
-                Node* exitNode = this.ReadNodeByName(exitNodeName);
+                Node* exitNode = this.DirectRead(exitNodeName);
                 if (exitNode->IsInternal || ReadKey(((Leaf*)exitNode)->DataPtr).ToBitVector().Count != cutPoint.LongestPrefix)
                     return false;
 
@@ -642,19 +649,19 @@ namespace Voron.Data.Compact
                 // Then we are done (The key does not exist).
                 bool isRightLeaf = cutPoint.IsRightChild;
 
-                var parentExitNode = (Internal*) this.ReadNodeByName(parentExitNodeName);
+                var parentExitNode = (Internal*) this.DirectRead(parentExitNodeName);
                 Debug.Assert(parentExitNode != null);
                 Debug.Assert(parentExitNode->IsInternal);
 
                 long otherNodeName = isRightLeaf ? parentExitNode->LeftPtr : parentExitNode->RightPtr;
-                Node* otherNode = this.ModifyNodeByName(otherNodeName);
+                Node* otherNode = this.DirectModify(otherNodeName);
 
                 // If the parentExitNode is not the root
                 // Then we need to fix the grand parent child pointer.
                 if (parentExitNodeName != State.RootNodeName)
                 {
                     long grandParentExitNodeName = FindGrandParentExitNode(searchKey, hashState, stack);
-                    Internal* grandParentExitNode = (Internal*)this.ModifyNodeByName(grandParentExitNodeName);
+                    Internal* grandParentExitNode = (Internal*)this.DirectModify(grandParentExitNodeName);
                     Debug.Assert(grandParentExitNode->IsInternal);
 
                     isRightLeaf = grandParentExitNode->RightPtr == parentExitNodeName;
@@ -675,16 +682,16 @@ namespace Voron.Data.Compact
                 long toExitNodePtrName = exitNode->ReferencePtr; 
                 if ( toExitNodePtrName != Constants.InvalidNodeName )
                 {   
-                    var toExitNodePtr = this.ModifyNodeByName(toExitNodePtrName);                                       
+                    var toExitNodePtr = this.DirectModify(toExitNodePtrName);                                       
                     toExitNodePtr->ReferencePtr = parentExitNode->ReferencePtr; 
 
                     // There reference just changed now we need to access the new reference node.
-                    var forwardReference = this.ModifyNodeByName(toExitNodePtr->ReferencePtr);
+                    var forwardReference = this.DirectModify(toExitNodePtr->ReferencePtr);
                     forwardReference->ReferencePtr = toExitNodePtrName;                    
                 }
                 else
                 {
-                    var reference = this.ModifyNodeByName(parentExitNode->ReferencePtr);
+                    var reference = this.DirectModify(parentExitNode->ReferencePtr);
                     reference->ReferencePtr = Constants.InvalidNodeName;
                 }
 
@@ -725,8 +732,9 @@ namespace Voron.Data.Compact
                     this.NodesTable.Remove(parentExitNodeName, hash);
                 }
 
-                _translationTable.DeallocateNodeName(exitNodeName);
-                State.Items--;                
+                _allocator.DeallocateNode(exitNodeName);
+
+                State.Items--;
 
                 return true;
             }
@@ -746,13 +754,13 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     long toFixNodeName = stack.Pop();
-                    var toFixNode = (Internal*)this.ReadNodeByName(toFixNodeName);
+                    var toFixNode = (Internal*)this.DirectRead(toFixNodeName);
                     Debug.Assert(toFixNode->IsInternal);
 
                     if (toFixNode->JumpRightPtr != parentExitNodeName)
                         break;
 
-                    toFixNode = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFixNode = (Internal*)this.DirectModify(toFixNodeName);
                     toFixNode->JumpRightPtr = otherNodeName;
                 }
             }
@@ -761,13 +769,13 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     long toFixNodeName = stack.Peek();
-                    var toFixNode = (Internal*)this.ReadNodeByName(toFixNodeName);
+                    var toFixNode = (Internal*)this.DirectRead(toFixNodeName);
                     Debug.Assert(toFixNode->IsInternal);
 
                     if (toFixNode->JumpLeftPtr != parentExitNodeName)
                         break;
 
-                    toFixNode = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFixNode = (Internal*)this.DirectModify(toFixNodeName);
                     toFixNode->JumpLeftPtr = otherNodeName;
 
                     stack.Pop();
@@ -776,20 +784,20 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     long toFixNodeName = stack.Pop();
-                    var toFixNode = (Internal*)this.ReadNodeByName(toFixNodeName);
+                    var toFixNode = (Internal*)this.DirectRead(toFixNodeName);
                     Debug.Assert(toFixNode->IsInternal);
                     
                     if (toFixNode->JumpLeftPtr != deletedLeafName)
                             break;
 
-                    Node* otherNode = this.ReadNodeByName(otherNodeName);
+                    Node* otherNode = this.DirectRead(otherNodeName);
                     while (!this.Intersects(otherNode, this.GetJumpLength(toFixNode)))
                     {                        
                         otherNodeName = ((Internal*)otherNode)->JumpLeftPtr;
-                        otherNode = this.ReadNodeByName(otherNodeName);
+                        otherNode = this.DirectRead(otherNodeName);
                     }
 
-                    toFixNode = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFixNode = (Internal*)this.DirectModify(toFixNodeName);
                     toFixNode->JumpLeftPtr = otherNodeName;
                 }
             }
@@ -804,13 +812,13 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     long toFixNodeName = stack.Pop();
-                    var toFixNode = (Internal*)this.ReadNodeByName(toFixNodeName);
+                    var toFixNode = (Internal*)this.DirectRead(toFixNodeName);
                     Debug.Assert(toFixNode->IsInternal);
 
                     if (toFixNode->JumpLeftPtr != parentExitNodeName)
                         break;
 
-                    toFixNode = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFixNode = (Internal*)this.DirectModify(toFixNodeName);
                     toFixNode->JumpLeftPtr = otherNodeName;
                 }
             }
@@ -819,12 +827,12 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     long toFixNodeName = stack.Peek();
-                    var toFixNode = (Internal*)this.ReadNodeByName(toFixNodeName);
+                    var toFixNode = (Internal*)this.DirectRead(toFixNodeName);
 
                     if (toFixNode->JumpRightPtr != parentExitNodeName)
                         break;
 
-                    toFixNode = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFixNode = (Internal*)this.DirectModify(toFixNodeName);
                     toFixNode->JumpRightPtr = otherNodeName;
                     stack.Pop();
                 }
@@ -832,19 +840,19 @@ namespace Voron.Data.Compact
                 while (stack.Count != 0)
                 {
                     long toFixNodeName = stack.Pop();
-                    var toFixNode = (Internal*)this.ReadNodeByName(toFixNodeName);
+                    var toFixNode = (Internal*)this.DirectRead(toFixNodeName);
 
                     if (toFixNode->JumpRightPtr != deletedLeafName)
                         break;
 
-                    Node* otherNode = this.ReadNodeByName(otherNodeName);
+                    Node* otherNode = this.DirectRead(otherNodeName);
                     while (!this.Intersects(otherNode, this.GetJumpLength(toFixNode)))
                     {
                         otherNodeName = ((Internal*)otherNode)->JumpRightPtr;
-                        otherNode = this.ReadNodeByName(otherNodeName);
+                        otherNode = this.DirectRead(otherNodeName);
                     }
 
-                    toFixNode = (Internal*)this.ModifyNodeByName(toFixNodeName);
+                    toFixNode = (Internal*)this.DirectModify(toFixNodeName);
                     toFixNode->JumpRightPtr = otherNodeName;
                 }
             }
@@ -860,10 +868,10 @@ namespace Voron.Data.Compact
             if (parentExitNodeName == State.RootNodeName)
                 return Constants.InvalidNodeName;
 
-            var parentExitNode = this.ReadNodeByName(parentExitNodeName);
+            var parentExitNode = this.DirectRead(parentExitNodeName);
 
             long topName = stack.Peek();
-            var top = (Internal*)this.ReadNodeByName(topName);
+            var top = (Internal*)this.DirectRead(topName);
 
             int start = top->ExtentLength;
             if (start == parentExitNode->NameLength - 1)
@@ -874,7 +882,7 @@ namespace Voron.Data.Compact
             // We will find the proper grand parent exit node with very high probability.
             long grandParentExitNodeName = FatBinarySearch(searchKey, hashState, stack, start, parentExitNode->NameLength, false);
 
-            var grandParentExitNode = (Internal*)this.ReadNodeByName(grandParentExitNodeName);
+            var grandParentExitNode = (Internal*)this.DirectRead(grandParentExitNodeName);
             if (grandParentExitNode->RightPtr == parentExitNodeName || grandParentExitNode->LeftPtr == parentExitNodeName)
                 return grandParentExitNodeName;
 
@@ -897,7 +905,7 @@ namespace Voron.Data.Compact
 
             // We look for the parent of the exit node for the key.
             var exitNode = FindExitNode(key);
-            var node = ReadNodeByName(exitNode.Exit);
+            var node = DirectRead(exitNode.Exit);
           
             // If the exit node is a leaf and the key is equal to the LCP 
             if (node->IsLeaf && ((Leaf*)node)->KeySize == exitNode.LongestPrefix)
@@ -918,7 +926,7 @@ namespace Voron.Data.Compact
 
             // We look for the parent of the exit node for the key.
             var exitNode = FindExitNode(key);
-            var node = ReadNodeByName(exitNode.Exit);
+            var node = DirectRead(exitNode.Exit);
 
             // If the exit node is a leaf and the key is equal to the LCP 
             if (node->IsLeaf && ((Leaf*)node)->KeySize == exitNode.LongestPrefix)
@@ -936,7 +944,7 @@ namespace Voron.Data.Compact
             if (nodeName == Constants.TailNodeName)
                 return Slice.AfterAllKeys;
 
-            var node = (Leaf*)ReadNodeByName(nodeName);
+            var node = (Leaf*)DirectRead(nodeName);
             Debug.Assert(node->IsLeaf); // Linked list elements are always leaves.
             return this.ReadKey(node->DataPtr);
         }
@@ -950,7 +958,7 @@ namespace Voron.Data.Compact
             if (nodeName == Constants.HeadNodeName)
                 return Slice.BeforeAllKeys;
 
-            var node = (Leaf*)ReadNodeByName(nodeName);
+            var node = (Leaf*)DirectRead(nodeName);
             Debug.Assert(node->IsLeaf); // Linked list elements are always leaves.
             return this.ReadKey(node->DataPtr);
         }
@@ -963,7 +971,7 @@ namespace Voron.Data.Compact
             Debug.Assert(_state.Head.PreviousPtr == Constants.InvalidNodeName);
             Debug.Assert(_state.Head.NextPtr != Constants.InvalidNodeName);
 
-            var refHead = (Leaf*)ReadNodeByName(_state.Head.NextPtr);
+            var refHead = (Leaf*)DirectRead(_state.Head.NextPtr);
             Debug.Assert(refHead->IsLeaf); // Linked list elements are always leaves.
             return this.ReadKey(refHead->DataPtr);
         }
@@ -976,16 +984,16 @@ namespace Voron.Data.Compact
             Debug.Assert(_state.Tail.PreviousPtr != Constants.InvalidNodeName);
             Debug.Assert(_state.Tail.NextPtr == Constants.InvalidNodeName);
 
-            var refTail = (Leaf*)ReadNodeByName(_state.Tail.PreviousPtr);
+            var refTail = (Leaf*)DirectRead(_state.Tail.PreviousPtr);
             Debug.Assert(refTail->IsLeaf); // Linked list elements are always leaves.
             return this.ReadKey(refTail->DataPtr);
         }
 
         public long Count => _state.Items;
 
-        internal Node* Root => this.ReadNodeByName(_state.RootNodeName);
+        internal Node* Root => this.DirectRead(_state.RootNodeName);
         internal PrefixTreeRootMutableState State => _state;
-        internal PrefixTreeTranslationTableMutableState TranslationTable => _translationTable;
+        //internal PrefixTreeTranslationTableMutableState TranslationTable => _translationTable;
         internal InternalTable NodesTable => this._table;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -996,7 +1004,7 @@ namespace Voron.Data.Compact
             // We look for the exit node for the key
             var exitFound = FindExitNode(key);
 
-            var exitNode = this.ReadNodeByName(exitFound.Exit);
+            var exitNode = this.DirectRead(exitFound.Exit);
             var exitNodeName = exitFound.Exit;
 
             // We compare the key with the exit node extent.
@@ -1010,9 +1018,9 @@ namespace Voron.Data.Compact
             {
                 // If the key is greater than the extent, we exit to the right leaf and get the next.
                 var nodeRefName = this.GetRightLeaf(exitNodeName);
-                var nodeRef = (Leaf*)this.ReadNodeByName(nodeRefName);
+                var nodeRef = (Leaf*)this.DirectRead(nodeRefName);
                 var leafRefName = nodeRef->NextPtr;
-                Debug.Assert(!this.ReadNodeByName(leafRefName)->IsInternal);
+                Debug.Assert(!this.DirectRead(leafRefName)->IsInternal);
 
                 return leafRefName;
             }
@@ -1026,7 +1034,7 @@ namespace Voron.Data.Compact
             // We look for the exit node for the key
             var exitFound = FindExitNode(key);
 
-            var exitNode = this.ReadNodeByName(exitFound.Exit);
+            var exitNode = this.DirectRead(exitFound.Exit);
             var exitNodeName = exitFound.Exit;
 
             // We compare the key with the exit node extent.
@@ -1040,9 +1048,9 @@ namespace Voron.Data.Compact
             {
                 // If the key is smaller than the extent, we exit to the left leaf and get the previous leaf.
                 var nodeRefName = this.GetLeftLeaf(exitNodeName);
-                var nodeRef = (Leaf*)this.ReadNodeByName(nodeRefName);
+                var nodeRef = (Leaf*)this.DirectRead(nodeRefName);
                 var leafRefName = nodeRef->PreviousPtr;
-                Debug.Assert(!this.ReadNodeByName(leafRefName)->IsInternal);
+                Debug.Assert(!this.DirectRead(leafRefName)->IsInternal);
 
                 return leafRefName;
             }
@@ -1063,7 +1071,7 @@ namespace Voron.Data.Compact
 
             // Find parex(key), exit(key) or fail spectacularly (with very low probability). 
             long parexOrExitNodeName = FatBinarySearch(searchKey, state, -1, searchKey.Count, isExact: false);
-            Internal* parexOrExitNode = (Internal*)ReadNodeByName(parexOrExitNodeName);
+            Internal* parexOrExitNode = (Internal*)DirectRead(parexOrExitNodeName);
             Debug.Assert(parexOrExitNode->IsInternal);
 
             // Check if the node is either the parex(key) and/or exit(key). 
@@ -1073,7 +1081,7 @@ namespace Voron.Data.Compact
             else
                 candidateNodeName = parexOrExitNode->LeftPtr;
 
-            Node* candidateNode = ReadNodeByName(candidateNodeName);
+            Node* candidateNode = DirectRead(candidateNodeName);
 
             int lcpLength = searchKey.LongestCommonPrefixLength(this.Extent(candidateNode));
 
@@ -1087,7 +1095,7 @@ namespace Voron.Data.Compact
 
             // With very low priority we screw up and therefore we start again but without skipping anything. 
             parexOrExitNodeName = FatBinarySearch(searchKey, state, -1, searchKey.Count, isExact: true);
-            parexOrExitNode = (Internal*)ReadNodeByName(parexOrExitNodeName);
+            parexOrExitNode = (Internal*)DirectRead(parexOrExitNodeName);
             Debug.Assert(parexOrExitNode->IsInternal);
 
             if (this.Extent((Node*)parexOrExitNode).IsProperPrefix(searchKey))
@@ -1126,7 +1134,7 @@ namespace Voron.Data.Compact
                 top = _state.RootNodeName;
                 stack.Push(top);
 
-                var topNode = (Internal*)ReadNodeByName(top);
+                var topNode = (Internal*)DirectRead(top);
                 Debug.Assert(topNode->IsInternal);
                 startBit = topNode->ExtentLength;
             }
@@ -1164,7 +1172,7 @@ namespace Voron.Data.Compact
                     else
                     {
 
-                        Internal* item = (Internal*)ReadNodeByName(itemPtr);
+                        Internal* item = (Internal*)DirectRead(itemPtr);
                         Debug.Assert(item->IsInternal); // Make sure there are only internal nodes there. 
 
                         if (item->ExtentLength < current)
@@ -1205,7 +1213,7 @@ namespace Voron.Data.Compact
             bool first = true;
             foreach (var nodeName in stack)
             {
-                Node* node = this.ReadNodeByName(nodeName);
+                Node* node = this.DirectRead(nodeName);
                 if (!first)
                     builder.Append(", ");
 
@@ -1237,7 +1245,7 @@ namespace Voron.Data.Compact
                 Debug.Assert(this.Root->IsInternal);
 
                 top = _state.RootNodeName;
-                startBit = ((Internal*)ReadNodeByName(top))->ExtentLength;
+                startBit = ((Internal*)DirectRead(top))->ExtentLength;
             }
 
             var nodesTable = this.NodesTable;
@@ -1273,7 +1281,7 @@ namespace Voron.Data.Compact
                     }
                     else
                     {
-                        Internal* item = (Internal*)ReadNodeByName(itemPtr);
+                        Internal* item = (Internal*)DirectRead(itemPtr);
                         Debug.Assert(item->IsInternal); // Make sure there are only internal nodes there. 
 
                         if (item->ExtentLength < current)
@@ -1305,100 +1313,88 @@ namespace Voron.Data.Compact
             return top;
         }
 
-        internal Node* ReadNodeByName(long nodeName)
+        internal Node* DirectRead(long ptr)
         {
-            if (nodeName == Constants.InvalidNodeName)
+            if (ptr == Constants.InvalidNodeName)
                 return null;
 
-            if (PrefixTree.IsTombstone(nodeName))
+            if (Node.IsTombstonePtr(ptr))
             {
-                if (nodeName == Constants.HeadNodeName)
+                if (ptr == Constants.HeadNodeName)
                 {
                     return (Node*)&(_state.Pointer->Head);
                 }
                 else
                 {
-                    Debug.Assert(nodeName == Constants.TailNodeName);
+                    Debug.Assert(ptr == Constants.TailNodeName);
                     return (Node*)&(_state.Pointer->Tail);
                 }
             }
 
-            Debug.Assert(nodeName > Constants.InvalidNodeName);
+            Debug.Assert(Node.IsValidPtr(ptr));
 
-            var location = _translationTable.MapVirtualToPhysical(nodeName);
-            if (location.PageNumber == Constants.InvalidPage)
-                return null;
+            long pageNumber = ptr / _pageSize;
+            long offset = ptr % _pageSize;
 
-            return _pageLocator.GetReadOnlyPage(location.PageNumber)
-                     .ToPrefixTreePage()
-                     .GetNodePointer(location.NodeOffset);
+            return _pageLocator.GetReadOnlyPage(pageNumber)
+                               .ToPrefixTreePage()
+                               .GetNodePtr(offset);
         }
 
-        private Node* ModifyNodeByName(long nodeName)
-        {            
-            if (IsTombstone(nodeName))
+        private Node* DirectModify(long ptr)
+        {
+            if (Node.IsTombstonePtr(ptr))
             {
                 // We will be modifying the data after this call. If it is a tombstone, then we should handle it appropriately anyways.
                 _state.IsModified = true;
 
-                if (nodeName == Constants.HeadNodeName)
+                if (ptr == Constants.HeadNodeName)
                 {
                     return (Node*)&(_state.Pointer->Head);
                 }
                 else
                 {
-                    Debug.Assert(nodeName == Constants.TailNodeName);
+                    Debug.Assert(ptr == Constants.TailNodeName);
                     return (Node*)&(_state.Pointer->Tail);
                 }
             }
 
-            Debug.Assert(nodeName > Constants.InvalidNodeName);
+            Debug.Assert(Node.IsValidPtr(ptr));
 
-            var location = _translationTable.MapVirtualToPhysical(nodeName);
-            if (location.PageNumber == Constants.InvalidPage)
-                return null;
+            long pageNumber = ptr / _pageSize;
+            long offset = ptr % _pageSize;
 
-            return _pageLocator.GetWritablePage(location.PageNumber)
-                     .ToPrefixTreePage()
-                     .GetNodePointer(location.NodeOffset);
-        }
- 
-        private static bool IsTombstone(long nodeName)
-        {
-            return nodeName < PrefixTree.Constants.TombstoneNodeName;                
+            return _pageLocator.GetWritablePage(pageNumber)
+                               .ToPrefixTreePage()
+                               .GetNodePtr(offset);
+
         }
 
         private long CreateInternal(long parentNode, short nameLength, short extentLength, out Internal* ptr)
         {
-            long nodeName = _translationTable.AllocateNodeName(parentNode);
+            Node* localPtr;
+            long nodePtr = _allocator.AllocateNode(parentNode, out localPtr);
 
-            var location = _translationTable.MapVirtualToPhysical(nodeName);
-            
-            PrefixTreePage page = _pageLocator.GetWritablePage(location.PageNumber).ToPrefixTreePage();
-
-            ptr = (Internal*)page.GetNodePointer(location.NodeOffset);
+            ptr = (Internal*)localPtr;
             Debug.Assert(ptr->Type == NodeType.Uninitialized);
             ptr->Initialize(nameLength, extentLength);
 
-            return nodeName;
+            return nodePtr;
         }
 
         private long CreateLeaf(long parentNode, short nameLength, long dataPtr, int keySize, out Leaf* ptr)
         {
-            long nodeName = _translationTable.AllocateNodeName(parentNode);
+            Node* localPtr;
+            long nodePtr = _allocator.AllocateNode(parentNode, out localPtr);
 
-            var location = _translationTable.MapVirtualToPhysical(nodeName);
-            PrefixTreePage page = _pageLocator.GetWritablePage(location.PageNumber).ToPrefixTreePage();            
+            ptr = (Leaf*)localPtr;
 
-            ptr = (Leaf*)page.GetNodePointer(location.NodeOffset);
             Debug.Assert(ptr->Type == 0);
             ptr->Initialize(nameLength);
             ptr->DataPtr = dataPtr;
             ptr->KeySize = (ushort)keySize;
 
-            Debug.Assert(page.FreeSpace.Get((int)location.NodeOffset) == false);
-
-            return nodeName;
+            return nodePtr;
         }
 
         private void AddBefore(long successorName, Leaf* successor, long newNodeName, Leaf* newNode)
@@ -1406,7 +1402,7 @@ namespace Voron.Data.Compact
             newNode->PreviousPtr = successor->PreviousPtr;
             newNode->NextPtr = successorName;
 
-            var previousNode = (Leaf*)this.ModifyNodeByName(successor->PreviousPtr);
+            var previousNode = (Leaf*)this.DirectModify(successor->PreviousPtr);
             Debug.Assert(previousNode->IsLeaf || previousNode->IsTombstone);
 
             previousNode->NextPtr = newNodeName;
@@ -1418,7 +1414,7 @@ namespace Voron.Data.Compact
             newNode->NextPtr = predecessor->NextPtr;
             newNode->PreviousPtr = predecessorName;
 
-            var nextNode = (Leaf*)this.ModifyNodeByName(predecessor->NextPtr);
+            var nextNode = (Leaf*)this.DirectModify(predecessor->NextPtr);
             Debug.Assert(nextNode->IsLeaf || nextNode->IsTombstone);
 
             nextNode->PreviousPtr = newNodeName;
@@ -1427,11 +1423,11 @@ namespace Voron.Data.Compact
 
         private void RemoveLeaf(long nodeName)
         {
-            var node = (Leaf*)this.ModifyNodeByName(nodeName);
+            var node = (Leaf*)this.DirectModify(nodeName);
             Debug.Assert(node->IsLeaf);
 
-            var previousNode = (Leaf*)this.ModifyNodeByName(node->PreviousPtr);
-            var nextNode = (Leaf*)this.ModifyNodeByName(node->NextPtr);
+            var previousNode = (Leaf*)this.DirectModify(node->PreviousPtr);
+            var nextNode = (Leaf*)this.DirectModify(node->NextPtr);
             Debug.Assert(previousNode->IsLeaf || previousNode->IsTombstone);
             Debug.Assert(nextNode->IsLeaf || nextNode->IsTombstone);
 

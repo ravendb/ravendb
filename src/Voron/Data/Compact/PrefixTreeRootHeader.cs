@@ -25,6 +25,12 @@ namespace Voron.Data.Compact
         public long Items;
 
         /// <summary>
+        /// The link to the internal free space table (a fixed size b-tree) that will hold the pages with free space for nodes.
+        /// </summary>
+        // TODO: Add the leaf one too afterwards.
+        public long FreeSpace;
+
+        /// <summary>
         /// The head node pointer for the tree. 
         /// </summary>
         public PrefixTree.Leaf Head;
@@ -38,11 +44,6 @@ namespace Voron.Data.Compact
         /// The table header page for the tree.
         /// </summary>
         public PrefixTreeTableHeader Table;
-
-        /// <summary>
-        /// This is the translation table header. 
-        /// </summary>
-        public PrefixTreeTranslationTableHeader TranslationTable;
 
         public void Initialize()
         {
