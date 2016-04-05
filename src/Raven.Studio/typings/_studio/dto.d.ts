@@ -1092,7 +1092,6 @@ interface tenantDto {
     IsLoaded: boolean;
     Name: string;
     Disabled: boolean;
-    Bundles: Array<string>;
     IsAdminCurrentTenant: boolean;
 }
 

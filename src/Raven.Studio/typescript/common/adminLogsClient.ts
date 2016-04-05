@@ -27,7 +27,7 @@ class adminLogsClient {
 
     constructor(private token: string) {
         this.eventsId = idGenerator.generateId();
-        this.resourcePath = appUrl.forResourceQuery(appUrl.getSystemDatabase());
+        this.resourcePath = appUrl.baseUrl;
         this.connectionOpeningTask = $.Deferred();
         this.connectionClosingTask = $.Deferred();
     }
@@ -105,7 +105,7 @@ class adminLogsClient {
             }
 
             //TODO: exception handling?
-            this.commandBase.query('/admin/logs/configure', args, appUrl.getSystemDatabase());
+            this.commandBase.query('/admin/logs/configure', args, null);
         });
     }
 
@@ -135,7 +135,7 @@ class adminLogsClient {
     }
 
     configureCategories(categoriesConfig: adminLogsConfigEntryDto[]) {
-        new adminLogsConfigureCommand(appUrl.getSystemDatabase(), categoriesConfig, this.eventsId).execute();
+        new adminLogsConfigureCommand(null, categoriesConfig, this.eventsId).execute();
     }
 
     dispose() {

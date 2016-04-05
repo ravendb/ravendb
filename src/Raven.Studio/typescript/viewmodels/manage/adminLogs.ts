@@ -96,7 +96,7 @@ class adminLogs extends viewModelBase {
         var tokenDeferred = $.Deferred();
 
         if (!this.adminLogsConfig().singleAuthToken()) {
-            new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true)
+           /* TODO: new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true)
                 .execute()
                 .done((tokenObject: singleAuthToken) => {
                     this.adminLogsConfig().singleAuthToken(tokenObject);
@@ -104,7 +104,7 @@ class adminLogs extends viewModelBase {
                 })
                 .fail((e) => {
                     app.showMessage("You are not authorized to trace this resource", "Authorization error");
-                });
+                });*/
         } else {
             tokenDeferred.resolve();
         }

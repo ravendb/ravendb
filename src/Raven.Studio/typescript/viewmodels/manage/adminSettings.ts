@@ -17,7 +17,6 @@ class adminSettings extends viewModelBase {
         super();
 
         this.isSystemDatabaseForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
-        this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
 
         var licenseInformation = { route: 'admin/settings/licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation() };
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };

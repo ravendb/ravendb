@@ -13,8 +13,8 @@ class serverSmugglingItem {
 
     constructor(database: database) {
         this.resource = database;
-        this.hasReplicationBundle = ko.computed(() => this.resource.isBundleActive("replication"));
-        this.hasVersioningBundle = ko.computed(() => this.resource.isBundleActive("versioning"));
+        this.hasReplicationBundle = ko.computed(() => true);
+        this.hasVersioningBundle = ko.computed(() => true);
     }
 
     toDto(): serverSmugglingItemDto {

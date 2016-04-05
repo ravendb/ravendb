@@ -82,8 +82,6 @@ class shell extends viewModelBase {
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;
-    systemDatabase: database;
-    isSystemConnected: KnockoutComputed<boolean>;
     isActiveDatabaseDisabled: KnockoutComputed<boolean>;
     canShowDatabaseNavbar = ko.computed(() =>
         !!this.lastActivatedResource()
@@ -177,8 +175,10 @@ class shell extends viewModelBase {
         });
         oauthContext.enterApiKeyTask = this.setupApiKey();
         oauthContext.enterApiKeyTask.done(() => {
-            this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-            this.notifications = this.createNotifications();
+           /*
+            TODO: Implement
+            this.globalChangesApi = new changesApi();
+            this.notifications = this.createNotifications();*/
         });
 
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
@@ -192,19 +192,11 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
         ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
 
-        this.currentConnectedResource = appUrl.getSystemDatabase();
-
         this.goToDocumentSearch = ko.observable<string>();
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
         helpBindingHandler.install();
-
-        this.isSystemConnected = ko.computed(() => {
-            var activeDb = this.activeDatabase();
-            var systemDb = this.systemDatabase;
-            return (!!activeDb && !!systemDb) ? systemDb.name != activeDb.name : false;
-        });
 
         this.isActiveDatabaseDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeDatabase()));
         this.isActiveFileSystemDisabled = ko.computed(() => this.isActiveResourceDisabled(this.activeFilesystem()));
@@ -283,8 +275,9 @@ class shell extends viewModelBase {
                     self.destroyChangesApi();
                 } else {
                     // enable changes api
-                    this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-                    this.notifications = this.createNotifications();
+                 /*  TODO: Implement
+                     this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
+                    this.notifications = this.createNotifications();*/
                 }
             } else if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
                 this.onLogOut();
@@ -524,8 +517,8 @@ class shell extends viewModelBase {
     }
 
     private renewOAuthToken() {
-        oauthContext.authHeader(null);
-        new getDatabaseStatsCommand(this.systemDatabase).execute();
+        /* TODO: Implement oauthContext.authHeader(null);
+        new getDatabaseStatsCommand(this.systemDatabase).execute();*/
     }
 
     showNavigationProgress(isNavigating: boolean) {
@@ -853,6 +846,8 @@ class shell extends viewModelBase {
     }
 
     fetchStudioConfig() {
+        /*
+        TOOD: Implement
         new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, this.systemDatabase)
             .execute()
             .done((doc: documentClass) => {
@@ -862,7 +857,7 @@ class shell extends viewModelBase {
                     shell.selectedEnvironmentColorStatic(color);
                     shell.originalEnviromentColor(color);
                 }
-            });
+            });*/
     }
 
     private handleRavenConnectionFailure(result) {
@@ -1027,11 +1022,12 @@ class shell extends viewModelBase {
     }
 
     fetchClusterTopology() {
+       /* TODO: Implement
         new getClusterTopologyCommand(appUrl.getSystemDatabase())
             .execute()
             .done((topology: topology) => {
                 shell.clusterMode(topology.allNodes().length > 0);
-            });
+            });*/
     }
 
     fetchLicenseStatus() {
@@ -1081,11 +1077,12 @@ class shell extends viewModelBase {
     }
 
     fetchSystemDatabaseAlerts() {
+        /* TODO Implement
         new getDocumentWithMetadataCommand("Raven/Alerts", this.systemDatabase)
             .execute()
             .done((doc: documentClass) => {
                 //
-            });
+            });*/
     }
 
     logOut() {

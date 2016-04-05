@@ -54,7 +54,7 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
     }
 
     startServerLogging() {
-        var getTokenTask = new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true).execute();
+        var getTokenTask = new getSingleAuthTokenCommand(null, true).execute();
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
