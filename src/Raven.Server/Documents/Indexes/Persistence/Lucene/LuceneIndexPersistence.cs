@@ -93,10 +93,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction)
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index persistance for index '{_definition.Name} ({_indexId})' was already disposed.");
+                throw new ObjectDisposedException($"Index persistence for index '{_definition.Name} ({_indexId})' was already disposed.");
 
             if (_initialized == false)
-                throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
+                throw new InvalidOperationException($"Index persistence for index '{_definition.Name} ({_indexId})' was not initialized.");
 
             return new IndexWriteOperation(_writeLock, _definition.Name, _definition.MapFields, _directory, _converter, writeTransaction, this); // TODO arek - 'this' :/
         }
@@ -104,10 +104,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index persistance for index '{_definition.Name} ({_indexId})' was already disposed.");
+                throw new ObjectDisposedException($"Index persistence for index '{_definition.Name} ({_indexId})' was already disposed.");
 
             if (_initialized == false)
-                throw new InvalidOperationException($"Index persistance for index '{_definition.Name} ({_indexId})' was not initialized.");
+                throw new InvalidOperationException($"Index persistence for index '{_definition.Name} ({_indexId})' was not initialized.");
 
             return new IndexReadOperation(_definition.Name, _definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
         }
