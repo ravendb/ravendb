@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -18,6 +19,8 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
+using Raven.Client.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Json.Linq;
@@ -29,6 +32,11 @@ namespace Raven.Tests.Raft.Client
 {
     public class Basic : RaftTestBase
     {
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            configuration.Replication.ReplicationRequestTimeoutInMilliseconds = 4000;
+        }
+
         [Fact]
         public void RequestExecuterShouldDependOnClusterBehavior()
         {
@@ -95,13 +103,13 @@ namespace Raven.Tests.Raft.Client
             using (var store1 = clusterStores[0])
             using (var store2 = clusterStores[1])
             {
-                var nonClusterCommands1 = (ServerClient)store1.DatabaseCommands.ForDatabase(store1.DefaultDatabase, ClusterBehavior.None);
-                var nonClusterCommands2 = (ServerClient)store2.DatabaseCommands.ForDatabase(store1.DefaultDatabase, ClusterBehavior.None);
+                var nonClusterCommands1 = (ServerClient) store1.DatabaseCommands.ForDatabase(store1.DefaultDatabase, ClusterBehavior.None);
+                var nonClusterCommands2 = (ServerClient) store2.DatabaseCommands.ForDatabase(store1.DefaultDatabase, ClusterBehavior.None);
 
                 nonClusterCommands1.Put("keys/1", null, new RavenJObject(), new RavenJObject());
                 nonClusterCommands2.Put("keys/2", null, new RavenJObject(), new RavenJObject());
 
-                var allNonClusterCommands = new[] { nonClusterCommands1, nonClusterCommands2 };
+                var allNonClusterCommands = new[] {nonClusterCommands1, nonClusterCommands2};
 
                 allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/1"));
                 allNonClusterCommands.ForEach(commands => WaitForDocument(commands, "keys/2"));
@@ -113,38 +121,49 @@ namespace Raven.Tests.Raft.Client
         [InlineData(5)]
         public void ClientShouldHandleLeaderShutdown(int numberOfNodes)
         {
-            var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader);
-
-            SetupClusterConfiguration(clusterStores);
-
-            clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
-
-            for (int i = 0; i < clusterStores.Count; i++)
+            using (WithCustomDatabaseSettings(doc => doc.Settings["Raven/Replication/ReplicationRequestTimeout"] = "4000"))
             {
-                var store = clusterStores[i];
+                var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store =>
+                {
+                    store.Conventions.ClusterBehavior = ClusterBehavior.ReadFromLeaderWriteToLeader;
+                });
 
-                store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
-            }
+                foreach (var documentStore in clusterStores)
+                {
+                    // set lower timeout to reduce test time
+                    documentStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(5);
+                }
 
-            for (int i = 0; i < clusterStores.Count; i++)
-            {
-                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + i));
-            }
+                SetupClusterConfiguration(clusterStores);
 
-            servers
-                .First(x => x.Options.ClusterManager.Value.IsLeader())
-                .Dispose();
+                clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
 
-            for (int i = 0; i < clusterStores.Count; i++)
-            {
-                var store = clusterStores[i];
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    var store = clusterStores[i];
 
-                store.DatabaseCommands.Put("keys/" + (i + clusterStores.Count), null, new RavenJObject(), new RavenJObject());
-            }
+                    store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject(), new RavenJObject());
+                }
 
-            for (int i = 0; i < clusterStores.Count; i++)
-            {
-                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + (i + clusterStores.Count)));
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + i));
+                }
+
+                servers
+                    .First(x => x.Options.ClusterManager.Value.IsLeader())
+                    .Dispose();
+
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    var store = clusterStores[i];
+                    store.DatabaseCommands.Put("keys/" + (i + clusterStores.Count), null, new RavenJObject(), new RavenJObject());
+                }
+
+                for (int i = 0; i < clusterStores.Count; i++)
+                {
+                    clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "keys/" + (i + clusterStores.Count)));
+                }
             }
         }
 

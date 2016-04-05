@@ -246,6 +246,14 @@ namespace Raven.Client.Connection.Implementation
                     Response = exception.Response;
                     ResponseStatusCode = Response.StatusCode;
                     throw exception;
+                } 
+                catch (TaskCanceledException e)
+                {
+                    var exception = ErrorResponseException.FromException(e);
+                    exception.Data.Add(Constants.RequestFailedExceptionMarker, true);
+                    Response = exception.Response;
+                    ResponseStatusCode = Response.StatusCode;
+                    throw exception;
                 }
                 finally
                 {

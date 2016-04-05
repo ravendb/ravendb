@@ -13,13 +13,15 @@ namespace Raven.Client.Extensions
     ///</summary>
     public static class MultiDatabase
     {
+        public static Action<DatabaseDocument> ConfigureDatabaseDocument { get; set; }
+
         public static DatabaseDocument CreateDatabaseDocument(string name)
         {
             AssertValidName(name);
             if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
                 return new DatabaseDocument { Id = Constants.SystemDatabase };
 
-            return new DatabaseDocument
+            var dbDoc = new DatabaseDocument
             {
                 Id = "Raven/Databases/" + name,
                 Settings =
@@ -27,6 +29,8 @@ namespace Raven.Client.Extensions
                     {"Raven/DataDir", Path.Combine("~", name)},
                 }
             };
+            ConfigureDatabaseDocument?.Invoke(dbDoc);
+            return dbDoc;
         }
         public static FileSystemDocument CreateFileSystemDocument(string name)
         {
