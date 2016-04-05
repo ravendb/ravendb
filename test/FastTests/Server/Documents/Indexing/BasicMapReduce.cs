@@ -28,13 +28,15 @@ namespace FastTests.Server.Documents.Indexing
                         new IndexField
                         {
                             Name = "Count",
-                            MapReduceOperation = FieldMapReduceOperation.Count
+                            MapReduceOperation = FieldMapReduceOperation.Count,
+                            Storage = FieldStorage.Yes
                         }
                     }, new[]
                     {
                         new IndexField
                         {
-                            Name = "Location"
+                            Name = "Location",
+                            Storage = FieldStorage.Yes
                         },
                     }), db);
 
