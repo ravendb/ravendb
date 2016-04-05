@@ -1,4 +1,5 @@
-﻿using Raven.Server.ServerWide.Context;
+﻿using Lucene.Net.Documents;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -18,6 +19,13 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var field in input.GetFields())
             {
+                if (field.Name.EndsWith("_Range"))
+                {
+                    djv[field.Name.Substring(0, field.Name.Length - 6)] = double.Parse(field.StringValue);
+
+                    continue;
+                }
+
                 djv[field.Name] = field.StringValue;
             }
 

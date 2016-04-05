@@ -42,7 +42,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (mri)
                 {
-                    CreateUsers(db);
+                    CreateUsers(db, 2, "Poland");
 
                     var stats = new IndexingBatchStats();
                     mri.DoIndexingWork(stats, CancellationToken.None);
@@ -58,56 +58,107 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(result.TryGet("Location", out location));
                         Assert.Equal("Poland", location);
 
-                        // TODO arek - retrieve numeric values
+                        var count = result["Count"] as LazyDoubleValue;
+                        
+                        Assert.NotNull(count);
+                        Assert.Equal("2.0", count.Inner.ToString());
+                    }
 
-                        string countString;
-                        Assert.True(result.TryGet("Count", out countString));
-                        Assert.Equal("2", countString);
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                    {
+                        var queryResult = await mri.Query(new IndexQuery()
+                        {
+                            Query = "Count_Range:[Lx2 TO Lx10]"
+                        }, context, CancellationToken.None);
 
-                        string countRangeString;
-                        Assert.True(result.TryGet("Count_Range", out countRangeString));
-                        Assert.Equal("2", countRangeString);
+                        Assert.Equal(1, queryResult.Results.Count);
+
+                        queryResult = await mri.Query(new IndexQuery()
+                        {
+                            Query = "Count_Range:[Lx10 TO NULL]"
+                        }, context, CancellationToken.None);
+
+                        Assert.Equal(0, queryResult.Results.Count);
                     }
                 }
             }
         }
 
-        private static void CreateUsers(DocumentDatabase db)
+        [Fact]
+        public async Task MultipleReduceKeys()
+        {
+            using (var db = LowLevel_CreateDocumentDatabase())
+            {
+                var mri = AutoMapReduceIndex.CreateNew(1,
+                    new AutoMapReduceIndexDefinition("test", new[] { "Users" }, new[]
+                    {
+                        new IndexField
+                        {
+                            Name = "Count",
+                            MapReduceOperation = FieldMapReduceOperation.Count,
+                            Storage = FieldStorage.Yes
+                        }
+                    }, new[]
+                    {
+                        new IndexField
+                        {
+                            Name = "Location",
+                            Storage = FieldStorage.Yes
+                        },
+                    }), db);
+
+                using (mri)
+                {
+                    CreateUsers(db, 100, "Poland", "Israel", "USA");
+
+                    var stats = new IndexingBatchStats();
+                    mri.DoIndexingWork(stats, CancellationToken.None);
+
+                    using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                    {
+                        var queryResult = await mri.Query(new IndexQuery(), context, CancellationToken.None);
+
+                        var results = queryResult.Results;
+
+                        Assert.Equal(3, results.Count);
+
+                        Assert.Equal("Poland", results[0].Data["Location"].ToString());
+                        Assert.Equal("34.0", ((LazyDoubleValue) results[0].Data["Count"]).Inner.ToString());
+
+                        Assert.Equal("Israel", results[1].Data["Location"].ToString());
+                        Assert.Equal("33.0", ((LazyDoubleValue)results[1].Data["Count"]).Inner.ToString());
+
+                        Assert.Equal("USA", results[2].Data["Location"].ToString());
+                        Assert.Equal("33.0", ((LazyDoubleValue)results[2].Data["Count"]).Inner.ToString());
+                    }
+                }
+            }
+        }
+
+        private static void CreateUsers(DocumentDatabase db, int numberOfUsers, params string[] locations)
         {
             using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var doc = context.ReadObject(new DynamicJsonValue
+                    for (int i = 0; i < numberOfUsers; i++)
                     {
-                        ["Name"] = "Arek",
-                        ["Location"] = "Poland",
-                        [Constants.Metadata] = new DynamicJsonValue
+                        using (var doc = context.ReadObject(new DynamicJsonValue
                         {
-                            [Constants.RavenEntityName] = "Users"
-                        }
-                    }, "users/1"))
-                    {
-                        db.DocumentsStorage.Put(context, "users/1", null, doc);
-                    }
-
-                    using (var doc = context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Name"] = "Pawel",
-                        ["Location"] = "Poland",
-                        [Constants.Metadata] = new DynamicJsonValue
+                            ["Name"] = $"User-{i}",
+                            ["Location"] = locations[i % locations.Length],
+                            [Constants.Metadata] = new DynamicJsonValue
+                            {
+                                [Constants.RavenEntityName] = "Users"
+                            }
+                        }, $"users/{i}"))
                         {
-                            [Constants.RavenEntityName] = "Users"
+                            db.DocumentsStorage.Put(context, $"users/{i}", null, doc);
                         }
-                    }, "users/2"))
-                    {
-                        db.DocumentsStorage.Put(context, "users/2", null, doc);
                     }
 
                     tx.Commit();
                 }
-
-                //LowLevel_WaitForIndexMap(mri, 2);
             }
         }
     }
