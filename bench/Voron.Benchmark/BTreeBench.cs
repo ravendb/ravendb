@@ -123,6 +123,8 @@ namespace Voron.Benchmark
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
+                env.Options.ManualFlushing = true;
+
                 var value = new byte[100];
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
@@ -150,7 +152,12 @@ namespace Voron.Benchmark
                         }
                         tx.Commit();
                     }
+
+                    if (x % 100 == 0)
+                        env.FlushLogToDataFile();
                 }
+
+                env.FlushLogToDataFile();
                 sw.Stop();
             }
         }

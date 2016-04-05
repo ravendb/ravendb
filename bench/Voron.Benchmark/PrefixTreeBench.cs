@@ -28,6 +28,7 @@ namespace Voron.Benchmark
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 0,
+                    Type = TableIndexType.Compact,
                 });
         }
 
@@ -144,7 +145,6 @@ namespace Voron.Benchmark
                 using (var tx = env.WriteTransaction())
                 {
                     docsSchema.Create(tx, "docs");
-                    tx.CreatePrefixTree("test");
 
                     tx.Commit();
                 }
@@ -153,20 +153,11 @@ namespace Voron.Benchmark
                 using (var tx = env.WriteTransaction())
                 {
                     var docs = new Table(docsSchema, "docs", tx);
-                    var tree = tx.CreatePrefixTree("test");
                     foreach (var l in _randomNumbers)
                     {
                         ms.Position = 0;
 
-                        var recordId = SetHelper(docs, l.ToString("0000000000000000"), ms);
-
-                        int dataSize;
-                        byte* data = docs.DirectRead(recordId, out dataSize);
-                        var r = new TableValueReader(data, dataSize);
-
-                        int keySize;
-                        var key = r.Read(0, out keySize);
-                        tree.Add(new Slice(key, (ushort)keySize), recordId);
+                        SetHelper(docs, l.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -189,8 +180,6 @@ namespace Voron.Benchmark
                 using (var tx = env.WriteTransaction())
                 {
                     docsSchema.Create(tx, "docs");
-                    tx.CreatePrefixTree("test");
-
                     tx.Commit();
                 }
 
@@ -198,20 +187,11 @@ namespace Voron.Benchmark
                 using (var tx = env.WriteTransaction())
                 {
                     var docs = new Table(docsSchema, "docs", tx);
-                    var tree = tx.CreatePrefixTree("test");
                     for (long i = 0; i < Configuration.Transactions * Configuration.ItemsPerTransaction; i++)
                     {
                         ms.Position = 0;
 
-                        var recordId = SetHelper(docs, i.ToString("0000000000000000"), ms);
-
-                        int dataSize;
-                        byte* data = docs.DirectRead(recordId, out dataSize);
-                        var r = new TableValueReader(data, dataSize);
-
-                        int keySize;
-                        var key = r.Read(0, out keySize);
-                        tree.Add(new Slice(key, (ushort)keySize), recordId);
+                        SetHelper(docs, i.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -224,6 +204,8 @@ namespace Voron.Benchmark
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
+                env.Options.ManualFlushing = true;
+
                 var docsSchema = Configure(env);
 
                 var value = new byte[100];
@@ -233,8 +215,6 @@ namespace Voron.Benchmark
                 using (var tx = env.WriteTransaction())
                 {
                     docsSchema.Create(tx, "docs");
-                    tx.CreatePrefixTree("test");
-
                     tx.Commit();
                 }
 
@@ -245,7 +225,6 @@ namespace Voron.Benchmark
                     using (var tx = env.WriteTransaction())
                     {
                         var docs = new Table(docsSchema, "docs", tx);
-                        var tree = tx.CreatePrefixTree("test");
 
                         for (long i = 0; i < Configuration.ItemsPerTransaction; i++)
                         {
@@ -253,20 +232,18 @@ namespace Voron.Benchmark
 
                             enumerator.MoveNext();
 
-                            var recordId = SetHelper(docs, enumerator.Current.ToString("0000000000000000"), ms);
-
-                            int dataSize;
-                            byte* data = docs.DirectRead(recordId, out dataSize);
-                            var r = new TableValueReader(data, dataSize);
-
-                            int keySize;
-                            var key = r.Read(0, out keySize);
-                            tree.Add(new Slice(key, (ushort)keySize), recordId);
+                            SetHelper(docs, enumerator.Current.ToString("0000000000000000"), ms);
                         }
 
                         tx.Commit();
                     }
+
+                    if (x % 100 == 0)
+                        env.FlushLogToDataFile();
                 }
+
+                env.FlushLogToDataFile();
+
                 sw.Stop();
             }
         }
@@ -284,8 +261,6 @@ namespace Voron.Benchmark
                 using (var tx = env.WriteTransaction())
                 {
                     docsSchema.Create(tx, "docs");
-                    tx.CreatePrefixTree("test");
-
                     tx.Commit();
                 }
 
@@ -296,21 +271,12 @@ namespace Voron.Benchmark
                     using (var tx = env.WriteTransaction())
                     {
                         var docs = new Table(docsSchema, "docs", tx);
-                        var tree = tx.CreatePrefixTree("test");
 
                         for (long i = 0; i < Configuration.ItemsPerTransaction; i++)
                         {
                             ms.Position = 0;
 
-                            var recordId = SetHelper(docs, (counter++).ToString("0000000000000000"), ms);
-
-                            int dataSize;
-                            byte* data = docs.DirectRead(recordId, out dataSize);
-                            var r = new TableValueReader(data, dataSize);
-
-                            int keySize;
-                            var key = r.Read(0, out keySize);
-                            tree.Add(new Slice(key, (ushort)keySize), recordId);
+                            SetHelper(docs, (counter++).ToString("0000000000000000"), ms);
                         }
 
                         tx.Commit();

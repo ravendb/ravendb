@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Sparrow.Binary
@@ -129,6 +130,15 @@ namespace Sparrow.Binary
 
             idx = accumulator - Binary.Bits.MostSignificantBit(value) - 1;
             return idx < count ? idx : -1;
+        }
+
+        public string ToDebugString()
+        {
+            var builder = new StringBuilder();
+            for (int i = 0; i < this.Count; i++)
+                builder.Append(this[i] ? "1" : "0");
+
+            return builder.ToString();
         }
     }
 }
