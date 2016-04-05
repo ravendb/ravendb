@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Voron.Data.Fixed;
@@ -13,6 +14,8 @@ namespace Voron.Data.Compact
         private readonly FixedSizeTree _freeSpaceTree;
         private readonly PageLocator _pageLocator;
         private readonly long _chunkPageSize;
+
+        private PageHandlePtr _lastPage;
 
         public PrefixTreeAllocator(Transaction tx, FixedSizeTree freeSpaceTree)
         {
@@ -36,48 +39,36 @@ namespace Voron.Data.Compact
                 throw new InvalidOperationException("Cannot allocate a node in a read transaction.");
 
             long nodePtr = PrefixTree.Constants.InvalidNodeName;
-            if (parentPtr != PrefixTree.Constants.InvalidNodeName && TryAllocateNodeInChunk(parentPtr, out nodePtr, out node))
-                return nodePtr;
+            if (_lastPage.IsValid && _lastPage.IsWritable)
+                TryAllocateNodeInPage(_lastPage.Value.ToPrefixTreePage(), out nodePtr, out node);
 
             return AllocateOnAnyChunk(out node);
         }
-   
-        private bool TryAllocateNodeInChunk(long parentPtr, out long nodePtr, out PrefixTree.Node* node)
+
+        public bool TryAllocateNodeInPage( PrefixTreePage chunkPage, out long nodePtr, out PrefixTree.Node* node)
         {
-            node = null;
-            long parentPageNumber = parentPtr / _chunkPageSize;
-
-            if (_freeSpaceTree.Contains(parentPageNumber)) // We still have free space reported here.
+            // We will try to allocate from the chunk free space.
+            int idx = chunkPage.FreeSpace.FindLeadingOne();
+            if (idx < 0) // Check if we have space available. 
             {
-                // We will retrieve the actual chunk.
-                long chunkPageNumber = parentPageNumber;
+                // We dont have any spot available, therefore we remove the page (it is full) and fail. 
+                _freeSpaceTree.Delete(chunkPage.PageNumber);
+                nodePtr = PrefixTree.Constants.InvalidNodeName;
+                node = null;
 
-                PrefixTreePage chunkPage = _pageLocator.GetReadOnlyPage(chunkPageNumber).ToPrefixTreePage();
-
-                // We will try to allocate from the chunk free space.
-                int idx = chunkPage.FreeSpace.FindLeadingOne();
-                if (idx < 0) // Check if we have space available. 
-                {
-                    // We dont have any spot available, therefore we remove the page (it is full) and fail. 
-                    _freeSpaceTree.Delete(parentPageNumber);
-                    nodePtr = PrefixTree.Constants.InvalidNodeName;
-                    return false;
-                }
-
-                // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
-                chunkPage = _pageLocator.GetWritablePage(chunkPageNumber).ToPrefixTreePage();
-                chunkPage.FreeSpace.Set(idx, false);
-
-                // Convert relative node position to the real memory address on disk.
-                nodePtr = chunkPage.GetDiskPointer(idx);
-                node = chunkPage.GetNodePtrByIndex(idx);
-                return true;
+                return false;
             }
 
-            nodePtr = PrefixTree.Constants.InvalidNodeName;
-            return false;
-        }
+            chunkPage.FreeSpace.Set(idx, false);
+            Debug.Assert(chunkPage.FreeSpace.Get(idx) == false);
+            Debug.Assert(chunkPage.FreeSpace.FindLeadingOne() != idx);
 
+            // Convert relative node position to the real memory address on disk.
+            nodePtr = chunkPage.GetDiskPointer(idx);
+            node = chunkPage.GetNodePtrByIndex(idx);
+            return true;
+        }
+   
         private long AllocateOnAnyChunk(out PrefixTree.Node* node)
         {
             List<long> chunksAlreadyFull = null;
