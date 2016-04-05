@@ -16,7 +16,6 @@ class apiKey extends document {
     databases = ko.observableArray<databaseAccess>();
     visible = ko.observable(true);
     nameCustomValidity = ko.observable<string>('');
-    needToShowSystemDatabaseWarning: KnockoutComputed<boolean>;
 
     constructor(dto: apiKeyDto) {
         super(dto);
@@ -49,13 +48,6 @@ class apiKey extends document {
                 return "Requires name and secret";
             }
             return appUrl.forServer() + "/studio/index.html#api-key=" + this.fullApiKey();
-        });
-
-        this.needToShowSystemDatabaseWarning = ko.computed(() => {
-            var resources = this.databases();
-            var hasAllDatabasesAdminAccess = resources.filter(x => x.admin() && x.tenantId() === "*").length > 0;
-            var hasSystemDatabaseAdminAcces = resources.filter(x => x.admin() && x.tenantId() === "<system>").length > 0;
-            return hasAllDatabasesAdminAccess && hasSystemDatabaseAdminAcces === false;
         });
     }
 

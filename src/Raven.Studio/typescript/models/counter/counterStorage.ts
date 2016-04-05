@@ -7,11 +7,10 @@ class counterStorage extends resource{
     static type = "counterstorage";
     iconName = "fa fa-sort-numeric-desc";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false) {
         super(name, TenantType.CounterStorage, isAdminCurrentTenant);
         this.fullTypeName = "Counter Storage";
         this.disabled(isDisabled);
-        this.activeBundles(bundles);
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().counterCountText() : "");
 
         this.isLicensed = ko.computed(() => {

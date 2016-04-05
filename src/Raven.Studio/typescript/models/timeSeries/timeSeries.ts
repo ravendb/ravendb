@@ -9,14 +9,13 @@ class timeSeries extends resource {
     static type = "timeSeries";
     iconName = "fa fa-clock-o";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false) {
         super(name, TenantType.TimeSeries, isAdminCurrentTenant);
         if (!name) {
             debugger;
         }
         this.fullTypeName = "Time Series";
         this.disabled(isDisabled);
-        this.activeBundles(bundles);
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().keysCountText() : "");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {

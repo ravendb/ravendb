@@ -57,7 +57,7 @@ class adminSettings extends viewModelBase {
             consoleRoute,
             studioConfigRoute
         ];
-        if (license.licenseStatus().Attributes.hotSpare === "true")
+        if (!!license && license.licenseStatus().Attributes.hotSpare === "true")
             routes.push(hotSpareRoute);
         if (!shell.has40Features()) {
             routes.remove(clusterRoute);
@@ -79,15 +79,6 @@ class adminSettings extends viewModelBase {
 
     canActivate(args): any {
         return true;
-    }
-
-    navigateToSystemDatabase() {
-        this.promptNavSystemDb(true).done(() => {
-            var db: database = appUrl.getSystemDatabase();
-            db.activate();
-            var url = appUrl.forDocuments(null, db);
-            this.navigate(url);
-        });
     }
 }
 

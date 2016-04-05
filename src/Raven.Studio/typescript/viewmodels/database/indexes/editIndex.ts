@@ -124,7 +124,6 @@ class editIndex extends viewModelBase {
 
         this.initializeDirtyFlag();
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
-        this.checkIfScriptedIndexBundleIsActive();
     }
 
     attached() {
@@ -372,12 +371,6 @@ class editIndex extends viewModelBase {
                     }
                 });
         });
-    }
-
-    checkIfScriptedIndexBundleIsActive() {
-        var db = this.activeDatabase();
-        var activeBundles = db.activeBundles();
-        this.isScriptedIndexBundleActive(activeBundles.indexOf("ScriptedIndexResults") != -1);
     }
 
     fetchOrCreateScriptedIndex() {

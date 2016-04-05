@@ -69,10 +69,7 @@ class settings extends viewModelBase {
         var isSqlSubBundle = this.sqlSubBundles.indexOf(bundelName) > -1;
         var isSqlBundleExists = this.userDatabasePages.indexOf("SQL Replication") > -1;
         
-        if (db.isSystem) {
-            return appUrl.forDocuments(null, db);
-        }
-        else if ((isLegalBundelName && isBundleExists == false) || (isSqlSubBundle && isSqlBundleExists == false)) {
+        if ((isLegalBundelName && isBundleExists == false) || (isSqlSubBundle && isSqlBundleExists == false)) {
             return appUrl.forCurrentDatabase().databaseSettings();
         }
 
@@ -94,18 +91,15 @@ class settings extends viewModelBase {
 
         this.userDatabasePages(["Database Settings", "Custom Functions", "Studio Config"]);
         var db: database = this.activeDatabase();
-        var bundles: string[] = db.activeBundles();
-
-        bundles.forEach((bundle: string) => {
-            var bundleName = this.bundleMap[bundle.toLowerCase()];
-            if (bundleName != undefined) {
-                this.userDatabasePages.push(bundleName);
+        var bundleMap = this.bundleMap;
+        for (var bundle in bundleMap) {
+            if (bundleMap.hasOwnProperty(bundle)) {
+                var bundleName = bundleMap[bundle.toLowerCase()];
+                if (bundleName != undefined) {
+                    this.userDatabasePages.push(bundleName);
+                }
             }
-        });
-
-        // RavenDB-3640 Allow to enable replication to existing db in studio
-        // even if replication isn't enabled we display button to enable it
-        this.userDatabasePages.push("Replication");
+        }
     }
 
     routeIsVisible(route: DurandalRouteConfiguration) {

@@ -106,16 +106,10 @@ class replications extends viewModelBase {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            if (db.activeBundles.contains("Replication")) {
-                this.replicationEnabled(true);
-                $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
-                    .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
-            } else {
-                this.replicationEnabled(false);
-                deferred.resolve({ can: true });
-            }
-
+            this.replicationEnabled(true);
+            $.when(this.fetchServerPrefixForHiLoCommand(db), this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
         }
         return deferred;
     }
@@ -376,7 +370,6 @@ class replications extends viewModelBase {
             .execute()
             .done((bundles) => {
                 var db = this.activeDatabase();
-                db.activeBundles(bundles);
                 this.replicationEnabled(true);
                 this.fetchServerPrefixForHiLoCommand(db);
                 this.fetchAutomaticConflictResolution(db);

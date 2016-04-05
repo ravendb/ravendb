@@ -13,7 +13,6 @@ class tasks extends viewModelBase {
     constructor() {
         super();
 
-        this.isOnSystemDatabase = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().isSystem);
         this.isOnUserDatabase = ko.computed(() => !!this.activeDatabase() && !this.isOnSystemDatabase());
         this.appUrls = appUrl.forCurrentDatabase();
 

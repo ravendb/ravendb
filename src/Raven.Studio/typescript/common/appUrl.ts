@@ -665,7 +665,7 @@ class appUrl {
     }
 
     static forResourceQuery(res: resource): string {
-        if (res && res instanceof database && !res.isSystem) {
+        if (res && res instanceof database) {
             return appUrl.baseUrl + "/databases/" + res.name;
         } else if (res && res instanceof filesystem) {
             return appUrl.baseUrl + "/fs/" + res.name;
@@ -867,7 +867,6 @@ class appUrl {
             var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd);
             var unescapedDatabaseName = decodeURIComponent(databaseName);
             var db = new database(unescapedDatabaseName);
-            db.isSystem = unescapedDatabaseName === "<system>";
             return db;
         } else {
             // No database is specified in the URL. Assume it's the system database.
@@ -876,8 +875,8 @@ class appUrl {
     }
 
     static getSystemDatabase(): database {
+ // TODO: delete this
         var db = new database("<system>");
-        db.isSystem = true;
         db.isVisible(false);
         return db;
     }
@@ -1069,8 +1068,6 @@ class appUrl {
     private static getEncodedCounterPart(cs?: counterStorage) {
         return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
-
-    public static warnWhenUsingSystemDatabase: boolean = true;
 
     public static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
