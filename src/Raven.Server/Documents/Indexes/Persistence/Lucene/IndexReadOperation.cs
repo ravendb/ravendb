@@ -62,32 +62,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 totalResults.Value = search.TotalHits;
 
-                //RecordAlreadyPagedItemsInPreviousPage(start, search, indexSearcher);
-
-                //SetupHighlighter(documentQuery);
-
                 for (; position < search.ScoreDocs.Length && query.PageSize > 0; position++)
                 {
                     token.ThrowIfCancellationRequested();
 
                     var scoreDoc = search.ScoreDocs[position];
                     var document = _searcher.Doc(scoreDoc.Doc);
-
-                    //var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
-                    //if (indexQueryResult.Key == null && !string.IsNullOrEmpty(indexQuery.HighlighterKeyName))
-                    //{
-                    //    indexQueryResult.HighlighterKey = document.Get(indexQuery.HighlighterKeyName);
-                    //}
-
-                    //if (ShouldIncludeInResults(indexQueryResult) == false)
-                    //{
-                    //    indexQuery.SkippedResults.Value++;
-                    //    continue;
-                    //}
-
-                    //AddHighlighterResults(indexSearcher, scoreDoc, indexQueryResult);
-
-                    //AddQueryExplanation(documentQuery, indexSearcher, scoreDoc, indexQueryResult);
 
                     returnedResults++;
 
@@ -192,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {
-                    sortOptions = SortOptions.NumbericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be veryfied better
+                    sortOptions = SortOptions.NumbericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
                 }
 
                 return new SortField(x.Field, (int)sortOptions, x.Descending);
