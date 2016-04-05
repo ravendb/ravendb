@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             return new Document
             {
-                Data = _indexContext.ReadObject(djv, "map-reduce result document") // TODO arek - BlittableJsonReaderObject is disposable
+                Data = _indexContext.ReadObject(djv, "map-reduce result document")
             };
         }
     }
