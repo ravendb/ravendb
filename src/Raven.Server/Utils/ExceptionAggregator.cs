@@ -6,10 +6,10 @@ namespace Raven.Server.Utils
 {
     public class ExceptionAggregator
     {
-        private readonly ILog log;
-        private readonly string errorMsg;
-        private readonly LogLevel level;
-        readonly ConcurrentSet<Exception> list = new ConcurrentSet<Exception>();
+        private readonly ILog _log;
+        private readonly string _errorMsg;
+        private readonly LogLevel _level;
+        private readonly ConcurrentSet<Exception> _list = new ConcurrentSet<Exception>();
 
         public ExceptionAggregator(string errorMsg)
             : this(null, errorMsg)
@@ -18,9 +18,9 @@ namespace Raven.Server.Utils
 
         public ExceptionAggregator(ILog log, string errorMsg, LogLevel level = LogLevel.Error)
         {
-            this.log = log;
-            this.errorMsg = errorMsg;
-            this.level = level;
+            _log = log;
+            _errorMsg = errorMsg;
+            _level = level;
         }
 
         public void Execute(Action action)
@@ -31,19 +31,18 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                list.Add(e);
+                _list.Add(e);
             }
         }
 
         public void ThrowIfNeeded()
         {
-            if (list.Count == 0)
+            if (_list.Count == 0)
                 return;
 
-            var aggregateException = new AggregateException(errorMsg, list);
+            var aggregateException = new AggregateException(_errorMsg, _list);
 
-            if (log != null)
-                log.Log(level, () => errorMsg, aggregateException);
+            _log?.Log(_level, () => _errorMsg, aggregateException);
 
             throw aggregateException;
         }
