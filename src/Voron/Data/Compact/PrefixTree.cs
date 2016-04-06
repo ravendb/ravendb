@@ -37,6 +37,9 @@ namespace Voron.Data.Compact
         private readonly PrefixTreeAllocator _allocator;
         private readonly long _pageSize;
 
+        private PageHandlePtr _lastReadPage;
+        private PageHandlePtr _lastWritePage;
+
         public string Name { get; set; }
 
         public PrefixTree(Transaction tx, Tree parent, PrefixTreeRootMutableState state, Slice treeName)
@@ -993,7 +996,6 @@ namespace Voron.Data.Compact
 
         internal Node* Root => this.DirectRead(_state.RootNodeName);
         internal PrefixTreeRootMutableState State => _state;
-        //internal PrefixTreeTranslationTableMutableState TranslationTable => _translationTable;
         internal InternalTable NodesTable => this._table;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1315,59 +1317,75 @@ namespace Voron.Data.Compact
 
         internal Node* DirectRead(long ptr)
         {
-            if (ptr == Constants.InvalidNodeName)
-                return null;
-
-            if (Node.IsTombstonePtr(ptr))
-            {
-                if (ptr == Constants.HeadNodeName)
-                {
-                    return (Node*)&(_state.Pointer->Head);
-                }
-                else
-                {
-                    Debug.Assert(ptr == Constants.TailNodeName);
-                    return (Node*)&(_state.Pointer->Tail);
-                }
-            }
-
-            Debug.Assert(Node.IsValidPtr(ptr));
-
             long pageNumber = ptr / _pageSize;
             long offset = ptr % _pageSize;
 
-            return _pageLocator.GetReadOnlyPage(pageNumber)
-                               .ToPrefixTreePage()
-                               .GetNodePtr(offset);
+            if ((ulong)ptr > unchecked((ulong)Constants.TombstoneNodeName)) // Is this a valid pointer?
+            {
+                if (Node.IsTombstonePtr(ptr))
+                {
+                    if (ptr == Constants.HeadNodeName)
+                    {
+                        return (Node*)&(_state.Pointer->Head);
+                    }
+                    else
+                    {
+                        Debug.Assert(ptr == Constants.TailNodeName);
+                        return (Node*)&(_state.Pointer->Tail);
+                    }
+                }
+                else return null;
+            }
+
+            Page page;
+            if (_lastReadPage.PageNumber == pageNumber && _lastReadPage.IsValid)
+                page = _lastReadPage.Value;
+            else
+            {
+                page = _pageLocator.GetReadOnlyPage(pageNumber);
+                _lastReadPage = new PageHandlePtr(page, false);
+            }
+
+            return page.ToPrefixTreePage()
+                       .GetNodePtr(offset);
         }
 
         private Node* DirectModify(long ptr)
         {
-            if (Node.IsTombstonePtr(ptr))
-            {
-                // We will be modifying the data after this call. If it is a tombstone, then we should handle it appropriately anyways.
-                _state.IsModified = true;
-
-                if (ptr == Constants.HeadNodeName)
-                {
-                    return (Node*)&(_state.Pointer->Head);
-                }
-                else
-                {
-                    Debug.Assert(ptr == Constants.TailNodeName);
-                    return (Node*)&(_state.Pointer->Tail);
-                }
-            }
-
-            Debug.Assert(Node.IsValidPtr(ptr));
-
             long pageNumber = ptr / _pageSize;
             long offset = ptr % _pageSize;
 
-            return _pageLocator.GetWritablePage(pageNumber)
-                               .ToPrefixTreePage()
-                               .GetNodePtr(offset);
+            if ((ulong)ptr > unchecked((ulong)Constants.TombstoneNodeName)) // Is this a valid pointer?
+            {
+                if (Node.IsTombstonePtr(ptr))
+                {
+                    // We will be modifying the data after this call. If it is a tombstone, then we should handle it appropriately anyways.
+                    _state.IsModified = true;
 
+                    if (ptr == Constants.HeadNodeName)
+                    {
+                        return (Node*)&(_state.Pointer->Head);
+                    }
+                    else
+                    {
+                        Debug.Assert(ptr == Constants.TailNodeName);
+                        return (Node*)&(_state.Pointer->Tail);
+                    }
+                }
+                else return null;
+            }
+
+            Page page;
+            if (_lastWritePage.PageNumber == pageNumber && _lastWritePage.IsValid)
+                page = _lastWritePage.Value;
+            else
+            {
+                page = _pageLocator.GetWritablePage(pageNumber);
+                _lastWritePage = new PageHandlePtr(page, true);
+            }
+
+            return page.ToPrefixTreePage()
+                       .GetNodePtr(offset);
         }
 
         private long CreateInternal(long parentNode, short nameLength, short extentLength, out Internal* ptr)

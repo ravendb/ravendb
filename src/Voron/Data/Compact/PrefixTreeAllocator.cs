@@ -40,7 +40,10 @@ namespace Voron.Data.Compact
 
             long nodePtr = PrefixTree.Constants.InvalidNodeName;
             if (_lastPage.IsValid && _lastPage.IsWritable)
-                TryAllocateNodeInPage(_lastPage.Value.ToPrefixTreePage(), out nodePtr, out node);
+            {
+                if ( TryAllocateNodeInPage(_lastPage.Value.ToPrefixTreePage(), out nodePtr, out node) )
+                    return nodePtr;
+            }                
 
             return AllocateOnAnyChunk(out node);
         }
@@ -75,13 +78,15 @@ namespace Voron.Data.Compact
 
             try
             {
+                Page page;
+                PrefixTreePage chunkPage;
                 using (var it = _freeSpaceTree.Iterate())
-                {
+                {                   
                     while (it.MoveNext())
                     {
                         var chunkPageNumber = it.CurrentKey;
 
-                        PrefixTreePage chunkPage = _pageLocator.GetReadOnlyPage(chunkPageNumber).ToPrefixTreePage();
+                        chunkPage = _pageLocator.GetReadOnlyPage(chunkPageNumber).ToPrefixTreePage();
                         
                         // We will try to allocate from the chunk free space.
                         int idx = chunkPage.FreeSpace.FindLeadingOne();
@@ -96,7 +101,10 @@ namespace Voron.Data.Compact
                         }
 
                         // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
-                        chunkPage = _pageLocator.GetWritablePage(chunkPageNumber).ToPrefixTreePage();
+                        page = _pageLocator.GetWritablePage(chunkPageNumber);
+                        _lastPage = new PageHandlePtr(page, true);
+
+                        chunkPage = page.ToPrefixTreePage();
                         chunkPage.FreeSpace.Set(idx, false);
 
                         // Convert relative node position to the real memory address on disk.
@@ -106,15 +114,18 @@ namespace Voron.Data.Compact
                 }
 
                 // We dont have any place from the free space. Therefore we will allocate. 
-                var page = _tx.AllocatePage(1).ToPrefixTreePage();
-                page.Initialize();
+                page = _tx.AllocatePage(1);
+                chunkPage = page.ToPrefixTreePage();
+                chunkPage.Initialize();
+                _lastPage = new PageHandlePtr(page, true);
 
                 _freeSpaceTree.Add(page.PageNumber);
-                page.FreeSpace.Set(0, false);
+                chunkPage.FreeSpace.Set(0, false);
+               
 
                 // Convert relative node position to the real memory address on disk.
-                node = page.GetNodePtrByIndex(0);
-                return page.GetDiskPointer(0);
+                node = chunkPage.GetNodePtrByIndex(0);
+                return chunkPage.GetDiskPointer(0);
             }
             finally
             {
@@ -128,10 +139,16 @@ namespace Voron.Data.Compact
 
         public void DeallocateNode(long nodePtr)
         {
-            long chunkPageNumber = nodePtr / _chunkPageSize;            
+            long chunkPageNumber = nodePtr / _chunkPageSize;
 
-            // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
-            var chunkPage = _pageLocator.GetWritablePage(chunkPageNumber).ToPrefixTreePage();
+            if (chunkPageNumber != _lastPage.PageNumber)
+            {
+                // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
+                Page page = _pageLocator.GetWritablePage(chunkPageNumber);
+                _lastPage = new PageHandlePtr(page, true);
+            }
+
+            PrefixTreePage chunkPage = _lastPage.Value.ToPrefixTreePage();
 
             // We mark the node as unused.
             long nodeIdx = chunkPage.GetIndexFromDiskPointer(nodePtr);
