@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public int CreateIndex(AutoMapIndexDefinition definition)
+        public int CreateIndex(IndexDefinitionBase definition)
         {
             lock (_locker)
             {
@@ -95,7 +96,14 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexId = _indexes.GetNextIndexId();
 
-                var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
+                Index index;
+
+                if (definition is AutoMapIndexDefinition)
+                    index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition) definition, _documentDatabase);
+                else if (definition is AutoMapReduceIndexDefinition)
+                    index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition) definition, _documentDatabase);
+                else
+                    throw new NotImplementedException("Unknown index definition type: ");
 
                 if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                     index.Start();
@@ -345,8 +353,15 @@ namespace Raven.Server.Documents.Indexes
                     if (int.TryParse(indexDirectory.Name, out indexId) == false)
                         continue;
 
-                    var index = Index.Open(indexId, _documentDatabase);
-                    _indexes.Add(index);
+                    try
+                    {
+                        var index = Index.Open(indexId, _documentDatabase);
+                        _indexes.Add(index);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.ErrorException($"Could not open index with id {indexId}", e);
+                    }
                 }
             }
         }
