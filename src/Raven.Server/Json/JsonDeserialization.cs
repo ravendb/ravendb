@@ -4,12 +4,21 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.SqlReplication;
 
 namespace Raven.Server.Json
 {
     public static class JsonDeserialization
     {
         public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
+
+        public static readonly Func<BlittableJsonReaderObject, SqlReplicationConfiguration> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlReplicationConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, SimulateSqlReplication> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlReplication>();
+
+        public static readonly Func<BlittableJsonReaderObject, PredefinedSqlConnections> PredefinedSqlConnections = GenerateJsonDeserializationRoutine<PredefinedSqlConnections>();
+
+        public static readonly Func<BlittableJsonReaderObject, SqlReplicationTable> SqlReplicationTable = GenerateJsonDeserializationRoutine<SqlReplicationTable>();
 
         public static Func<BlittableJsonReaderObject,T> GenerateJsonDeserializationRoutine<T>()
         {
@@ -32,9 +41,11 @@ namespace Raven.Server.Json
         {
             if (propertyInfo.PropertyType == typeof (Dictionary<string, string>))
             {
-                return Expression.Call(typeof (JsonDeserialization).GetMethod(nameof(ToDictionary)),
-                    json, Expression.Constant(propertyInfo.Name));
-
+                return Expression.Call(typeof (JsonDeserialization).GetMethod(nameof(ToDictionary)), json, Expression.Constant(propertyInfo.Name));
+            }
+            if (propertyInfo.PropertyType == typeof(List<SqlReplicationTable>))
+            {
+                return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListSqlReplicationTable)), json, Expression.Constant(propertyInfo.Name));
             }
             var value = GetParameter(propertyInfo.PropertyType, vars);
 
@@ -72,6 +83,21 @@ namespace Raven.Server.Json
                 }
             }
             return dic;
-        } 
+        }
+
+        public static List<SqlReplicationTable> ToListSqlReplicationTable(BlittableJsonReaderObject json, string name)
+        {
+            var list = new List<SqlReplicationTable>();
+
+            BlittableJsonReaderArray array;
+            if (json.TryGet(name, out array) == false)
+                return list;
+
+            foreach (BlittableJsonReaderObject item in array.Items)
+            {
+                list.Add(SqlReplicationTable(item));
+            }
+            return list;
+        }
     }
 }
