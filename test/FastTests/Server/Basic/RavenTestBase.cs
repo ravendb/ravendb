@@ -44,6 +44,13 @@ namespace Raven.Tests.Core
         private static List<int> _usedServerPorts = new List<int>();
         private static List<int> _availableServerPorts = null;
 
+
+        public async Task<DocumentDatabase> GetDatabase(string databaseName)
+        {
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            return database;
+        }
+
         public RavenServer Server
         {
             get

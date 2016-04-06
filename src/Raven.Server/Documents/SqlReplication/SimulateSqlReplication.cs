@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using Raven.Json.Linq;
-using System.Linq;
-
-namespace Raven.Abstractions.Data
+namespace Raven.Server.Documents.SqlReplication
 {
-    /// <summary>
-    /// The result of a query
-    /// </summary>
-    public class SimulateSqlReplicationResult
+    public class SimulateSqlReplication
     {
         /// <summary>
         /// Document Id to simulate replication on
@@ -21,6 +13,6 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Sql Replication Script
         /// </summary>
-        public string SqlReplication;
+        public SqlReplicationConfiguration Configuration;
     }
 }

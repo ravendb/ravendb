@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.SqlReplication;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 
@@ -19,26 +20,7 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-
-            using (var store = new DocumentStore
-            {
-                Url = "http://127.0.0.1:8081",
-                DefaultDatabase = "FooBar123"
-            })
-            {
-                store.Initialize();
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
-                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-                {
-                    Id = "FooBar123",
-                    Settings =
-                    {
-                        { "Raven/DataDir", "~\\FooBar123" }
-                    }
-                });
-
-                BulkInsert(store, 1024  *512).Wait();
-            }
+            new CanReplicate().SimpleTransformation().Wait();
         }
 
         public static async Task BulkInsert(DocumentStore store, int numOfItems)
