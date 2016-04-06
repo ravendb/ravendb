@@ -93,12 +93,14 @@ namespace Raven.Server.Documents.Indexes
 
         public static Index Open(int indexId, DocumentDatabase documentDatabase)
         {
+            StorageEnvironment environment = null;
+
             var options = StorageEnvironmentOptions.ForPath(Path.Combine(documentDatabase.Configuration.Indexing.IndexStoragePath, indexId.ToString()));
             try
             {
                 options.SchemaVersion = 1;
 
-                var environment = new StorageEnvironment(options);
+                environment = new StorageEnvironment(options);
                 var type = IndexStorage.ReadIndexType(indexId, environment);
 
                 switch (type)
@@ -111,7 +113,11 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception)
             {
-                options.Dispose();
+                if (environment != null)
+                    environment.Dispose();
+                else
+                    options.Dispose();
+                
                 throw;
             }
         }
@@ -191,7 +197,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void LoadValues()
+        protected virtual void LoadValues()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
