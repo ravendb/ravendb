@@ -17,10 +17,10 @@ namespace Voron.Data.Compact
 
         private PageHandlePtr _lastPage;
 
-        public PrefixTreeAllocator(Transaction tx, FixedSizeTree freeSpaceTree)
+        public PrefixTreeAllocator(Transaction tx, PageLocator pageLocator, FixedSizeTree freeSpaceTree)
         {
             _tx = tx.LowLevelTransaction;
-            _pageLocator = new PageLocator(_tx);
+            _pageLocator = pageLocator;
             _freeSpaceTree = freeSpaceTree;
             _chunkPageSize = _tx.DataPager.PageSize;
         }  

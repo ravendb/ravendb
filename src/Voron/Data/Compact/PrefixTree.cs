@@ -37,8 +37,7 @@ namespace Voron.Data.Compact
         private readonly PrefixTreeAllocator _allocator;
         private readonly long _pageSize;
 
-        private PageHandlePtr _lastReadPage;
-        private PageHandlePtr _lastWritePage;
+        private PageHandlePtr _lastPage;
 
         public string Name { get; set; }
 
@@ -54,7 +53,7 @@ namespace Voron.Data.Compact
             if (_tx.Flags == TransactionFlags.ReadWrite)
             {
                 var freeSpace = new FixedSizeTree(_tx, parent, parent.Name + "-Free", 0);
-                _allocator = new PrefixTreeAllocator(tx, freeSpace);
+                _allocator = new PrefixTreeAllocator(tx, _pageLocator, freeSpace);
             }
                             
             Name = treeName.ToString();
@@ -1338,12 +1337,14 @@ namespace Voron.Data.Compact
             }
 
             Page page;
-            if (_lastReadPage.PageNumber == pageNumber && _lastReadPage.IsValid)
-                page = _lastReadPage.Value;
+            if (_lastPage.PageNumber == pageNumber && _lastPage.IsValid)
+            {
+                page = _lastPage.Value;
+            }                
             else
             {
                 page = _pageLocator.GetReadOnlyPage(pageNumber);
-                _lastReadPage = new PageHandlePtr(page, false);
+                _lastPage = new PageHandlePtr(page, false);
             }
 
             return page.ToPrefixTreePage()
@@ -1376,12 +1377,14 @@ namespace Voron.Data.Compact
             }
 
             Page page;
-            if (_lastWritePage.PageNumber == pageNumber && _lastWritePage.IsValid)
-                page = _lastWritePage.Value;
+            if (_lastPage.PageNumber == pageNumber && _lastPage.IsWritable)
+            {
+                page = _lastPage.Value;
+            }                
             else
             {
                 page = _pageLocator.GetWritablePage(pageNumber);
-                _lastWritePage = new PageHandlePtr(page, true);
+                _lastPage = new PageHandlePtr(page, true);
             }
 
             return page.ToPrefixTreePage()
