@@ -4,7 +4,7 @@ using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-
+using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private bool _initialized;
 
-        public LuceneIndexPersistence(int indexId, IndexDefinitionBase indexDefinition)
+        public LuceneIndexPersistence(int indexId, IndexDefinitionBase indexDefinition, IndexType type)
         {
             _indexId = indexId;
             _definition = indexDefinition;
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (mapReduceDef != null)
                 fields = fields.Union(mapReduceDef.GroupByFields);
 
-            _converter = new LuceneDocumentConverter(fields.ToArray());
+            _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: type == IndexType.AutoMapReduce || type == IndexType.MapReduce);
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using Raven.Database.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -48,8 +49,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (var writer = _indexPersistence.OpenIndexWriter(_indexContext.Transaction.InnerTransaction))
             {
-                foreach (var modifiedState in _stateByReduceKeyHash.Values)
+                foreach (var state in _stateByReduceKeyHash)
                 {
+                    var reduceKeyHash = _indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)); // TODO arek - ToString()?
+                    var modifiedState = state.Value;
+
                     foreach (var modifiedPage in modifiedState.ModifiedPages)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -70,10 +74,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             //TODO arek handle errors
                             if (parentPage == -1)
                             {
-                                // write to index
-                                writer.IndexDocument(new Document()
+                                writer.IndexDocument(new Document
                                 {
-                                    Data = result,
+                                    Key = reduceKeyHash,
+                                    Data = result
                                 });
                             }
                         }
@@ -129,9 +133,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 if (parentPage == -1)
                                 {
-                                    //write to index                             
-                                    writer.IndexDocument(new Document()
+                                    writer.IndexDocument(new Document
                                     {
+                                        Key = reduceKeyHash,
                                         Data = result
                                     });
                                 }

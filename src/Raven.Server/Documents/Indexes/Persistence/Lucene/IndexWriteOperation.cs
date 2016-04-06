@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 
@@ -10,7 +9,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
-
 using Voron.Impl;
 
 using Constants = Raven.Abstractions.Data.Constants;
@@ -22,6 +20,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly ILog Log = LogManager.GetLogger(typeof(IndexWriteOperation));
 
         private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
+        private readonly Term _reduceKeyHash = new Term(Constants.ReduceKeyFieldName, "Dummy");
+
         private readonly object _writeLock;
 
         private readonly string _name;
@@ -105,6 +105,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (Log.IsDebugEnabled)
                 Log.Debug($"Deleted document for '{_name}'. Key: {key}.");
+        }
+
+        public void DeleteReduceResult(ulong reduceKeyHash)
+        {
+            _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash.ToString())); // TODO arek - ToString call
+
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Deleted document for '{_name}'. Reduce key hash: {reduceKeyHash}.");
         }
     }
 }

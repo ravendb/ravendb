@@ -34,9 +34,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private readonly ICollection<IndexField> _fields;
 
-        public LuceneDocumentConverter(ICollection<IndexField> fields)
+        private readonly bool _reduceOutput;
+
+        public LuceneDocumentConverter(ICollection<IndexField> fields, bool reduceOutput = false)
         {
             _fields = fields;
+            _reduceOutput = reduceOutput;
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -56,7 +59,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             if (document.Key != null)
             {
-                yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+                if (_reduceOutput == false)
+                    yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+                else
+                    yield return GetOrCreateField(Constants.ReduceKeyFieldName, null, document.Key, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
             }
             
             foreach (var indexField in _fields)
