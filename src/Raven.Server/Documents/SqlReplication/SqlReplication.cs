@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         private readonly DocumentDatabase _database;
         public readonly SqlReplicationConfiguration Configuration;
-        private readonly SqlReplicationStatistics _statistics;
+        public readonly SqlReplicationStatistics Statistics;
 
         public readonly ManualResetEventSlim WaitForChanges = new ManualResetEventSlim();
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             _database = database;
             Configuration = configuration;
-            _statistics = new SqlReplicationStatistics(configuration.Name);
+            Statistics = new SqlReplicationStatistics(configuration.Name);
         }
 
         public void Start()
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.SqlReplication
             finally
             {
                 var afterReplicationCompleted = _database.SqlReplicationLoader.AfterReplicationCompleted;
-                afterReplicationCompleted?.Invoke(_statistics);
+                afterReplicationCompleted?.Invoke(Statistics);
             }
         }
 
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.SqlReplication
                 return;
 
             var documentsKeys = documents.Select(tombstone => (string) tombstone.Key).ToList();
-            using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, _statistics, cancellationToken))
+            using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, Statistics, cancellationToken))
             {
                 foreach (var sqlReplicationTable in Configuration.SqlReplicationTables)
                 {
@@ -160,19 +160,19 @@ namespace Raven.Server.Documents.SqlReplication
             var countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
             try
             {
-                using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, _statistics, cancellationToken))
+                using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, Statistics, cancellationToken))
                 {
                     if (writer.ExecuteScript(scriptResult))
                     {
                         if (Log.IsDebugEnabled)
                             Log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
-                        _statistics.CompleteSuccess(countOfReplicatedItems);
+                        Statistics.CompleteSuccess(countOfReplicatedItems);
                     }
                     else
                     {
                         if (Log.IsDebugEnabled)
                             Log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
-                        _statistics.Success(countOfReplicatedItems);
+                        Statistics.Success(countOfReplicatedItems);
                     }
                 }
                 return true;
@@ -181,17 +181,17 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 Log.WarnException("Failure to replicate changes to relational database for: " + Configuration.Name, e);
                 DateTime newTime;
-                if (_statistics.LastErrorTime == null)
+                if (Statistics.LastErrorTime == null)
                 {
                     newTime = SystemTime.UtcNow.AddSeconds(5);
                 }
                 else
                 {
                     // double the fallback time (but don't cross 15 minutes)
-                    var totalSeconds = (SystemTime.UtcNow - _statistics.LastErrorTime.Value).TotalSeconds;
+                    var totalSeconds = (SystemTime.UtcNow - Statistics.LastErrorTime.Value).TotalSeconds;
                     newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60*15, Math.Max(5, totalSeconds*2)));
                 }
-                _statistics.RecordWriteError(e, _database, countOfReplicatedItems, newTime);
+                Statistics.RecordWriteError(e, _database, countOfReplicatedItems, newTime);
                 return false;
             }
         }
@@ -212,11 +212,11 @@ namespace Raven.Server.Documents.SqlReplication
                         Log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, Configuration.Name, string.Join("\r\n", scope.DebugInfo.Items));
                     }
 
-                    _statistics.ScriptSuccess();
+                    Statistics.ScriptSuccess();
                 }
                 catch (ParseException e)
                 {
-                    _statistics.MarkScriptAsInvalid(_database, Configuration.Script);
+                    Statistics.MarkScriptAsInvalid(_database, Configuration.Script);
 
                     Log.WarnException("Could not parse SQL Replication script for " + Configuration.Name, e);
 
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.SqlReplication
                 }
                 catch (Exception diffExceptionName)
                 {
-                    _statistics.RecordScriptError(_database, diffExceptionName);
+                    Statistics.RecordScriptError(_database, diffExceptionName);
                     Log.WarnException("Could not process SQL Replication script for " + Configuration.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
                 }
             }
@@ -250,7 +250,7 @@ namespace Raven.Server.Documents.SqlReplication
                     Log.Warn("Could not find predefined connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
                         Configuration.PredefinedConnectionStringSettingName,
                         Configuration.Name);
-                _statistics.LastAlert = new Alert
+                Statistics.LastAlert = new Alert
                 {
                     IsError = true,
                     CreatedAt = DateTime.UtcNow,
@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.SqlReplication
                 return true;
 
             Log.Warn($"Could not find name for sql replication document {Configuration.Name}, ignoring");
-            _statistics.LastAlert = new Alert
+            Statistics.LastAlert = new Alert
             {
                 IsError = true,
                 CreatedAt = DateTime.UtcNow,
