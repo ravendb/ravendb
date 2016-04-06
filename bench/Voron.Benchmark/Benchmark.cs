@@ -22,9 +22,24 @@ namespace Voron.Benchmark
 
             var sp = new Stopwatch();
             Console.Write("{0,-35}: running...", name);
-            action(sp);
 
-            Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Configuration.Transactions * Configuration.ItemsPerTransaction / sp.Elapsed.TotalSeconds);
+            try
+            {
+                action(sp);
+                Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Configuration.Transactions * Configuration.ItemsPerTransaction / sp.Elapsed.TotalSeconds);
+            }
+            catch (NotSupportedException)
+            {
+                Console.WriteLine("\r{0,-35}: unsupported.", name);
+            }
+            catch (NotImplementedException)
+            {
+                Console.WriteLine("\r{0,-35}: not implemented.", name);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"\r{0,-35}: failed with {e.GetType().Name} exception.", name);
+            }
         }
 
         private static void DeleteDirectory(string dir)

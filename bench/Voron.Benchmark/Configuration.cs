@@ -9,6 +9,6 @@ namespace Voron.Benchmark
     {
         public const int ItemsPerTransaction = 100;
         public const int Transactions = 500;
-        public const string Path = @"G:\scratch\bench.data";
+        public const string Path = @"D:\scratch\bench.data";
     }
 }

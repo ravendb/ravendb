@@ -1,10 +1,12 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
@@ -101,7 +103,7 @@ namespace Voron.Benchmark
         {
             Console.WriteLine();
 
-            string benchmarkType = _indexType == TableIndexType.Compact ? "Prefix Tree" : "BTree";            
+            string benchmarkType = _indexType == TableIndexType.Compact ? "Prefix Tree" : "BTree";
             Console.WriteLine($"{benchmarkType} Table Benchmarking.");
             Console.WriteLine();
 
@@ -125,11 +127,14 @@ namespace Voron.Benchmark
             Benchmark.Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), this, delete: false);
             Benchmark.Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), this, delete: false);
 
-            Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), this, delete: false);
-            Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), this, delete: false);
-            Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), this, delete: false);
-            Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), this, delete: false);
-            Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), this, delete: false);
+            if (_indexType != TableIndexType.Compact)
+            {
+                Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), this, delete: false);
+                Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), this, delete: false);
+                Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), this, delete: false);
+                Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), this, delete: false);
+                Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), this, delete: false);
+            }
 
             Benchmark.Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4), this);
             Benchmark.Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8), this);
@@ -293,103 +298,126 @@ namespace Voron.Benchmark
 
         private void ReadOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            //using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
-            //{
-            //    var countdownEvent = new CountdownEvent(concurrency);
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            {
+                var docsSchema = Configure(env);
 
-            //    sw.Start();
-            //    for (int i = 0; i < concurrency; i++)
-            //    {
-            //        var currentBase = i;
-            //        ThreadPool.QueueUserWorkItem(state =>
-            //        {
-            //            using (var tx = env.ReadTransaction())
-            //            {
-            //                var tree = tx.ReadTree("test");
-            //                var ms = new byte[100];
-            //                for (int j = 0; j < ((Configuration.ItemsPerTransaction * Configuration.Transactions) / concurrency); j++)
-            //                {
-            //                    var current = j * currentBase;
-            //                    var key = current.ToString("0000000000000000");
-            //                    var stream = tree.Read(key).Reader;
-            //                    while (stream.Read(ms, 0, ms.Length) != 0)
-            //                    {
-            //                    }
-            //                }
+                Exception exceptionHappened = null;
 
-            //                tx.Commit();
-            //            }
+                sw.Start();
 
-            //            countdownEvent.Signal();
-            //        });
-            //    }
-            //    countdownEvent.Wait();
-            //    sw.Stop();
-            //}
+                var tasks = new Task[concurrency];
+                for (int i = 0; i < concurrency; i++)
+                {
+                    var currentBase = i;
+                    tasks[i] = Task.Factory.StartNew(()=>                    
+                    {
+                        using (var tx = env.ReadTransaction())
+                        {
+                            var docs = new Table(docsSchema, "docs", tx);
+
+                            var ms = new byte[100];
+                            for (int j = 0; j < ((Configuration.ItemsPerTransaction * Configuration.Transactions) / concurrency); j++)
+                            {
+                                var current = j * currentBase;
+                                var key = current.ToString("0000000000000000");
+                                var tableReader = docs.ReadByKey(key);
+
+                                int size;
+                                byte* buffer = tableReader.Read(1, out size);
+
+                                fixed (byte* msPtr = ms)
+                                {
+                                    Memory.Copy(msPtr, buffer, size);
+                                }
+                            }
+
+                            tx.Commit();
+                        }
+                    });
+                    tasks[i].ContinueWith(t =>
+                    {
+                       exceptionHappened = t.Exception.InnerException;
+                    }, TaskContinuationOptions.OnlyOnFaulted);                                      
+                }
+
+                Task.WaitAll(tasks);
+
+                if (exceptionHappened != null)
+                    throw exceptionHappened;
+
+                sw.Stop();
+            }
         }
 
         private void IterateAllKeysInOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            //using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
-            //{
-            //    var countdownEvent = new CountdownEvent(concurrency);
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            {
+                var docsSchema = Configure(env);
 
-            //    sw.Start();
-            //    for (int i = 0; i < concurrency; i++)
-            //    {
-            //        var currentBase = i;
-            //        ThreadPool.QueueUserWorkItem(state =>
-            //        {
-            //            var local = 0;
-            //            using (var tx = env.ReadTransaction())
-            //            {
-            //                var tree = tx.ReadTree("test");
-            //                using (var it = tree.Iterate())
-            //                {
-            //                    if (it.Seek(Slice.BeforeAllKeys))
-            //                    {
-            //                        do
-            //                        {
-            //                            local += it.CurrentKey.Size;
-            //                        } while (it.MoveNext());
-            //                    }
-            //                }
-            //                tx.Commit();
-            //            }
+                var countdownEvent = new CountdownEvent(concurrency);
 
-            //            countdownEvent.Signal();
-            //        });
-            //    }
-            //    countdownEvent.Wait();
-            //    sw.Stop();
-            //}
+                sw.Start();
+                for (int i = 0; i < concurrency; i++)
+                {
+                    var currentBase = i;
+                    ThreadPool.QueueUserWorkItem(state =>
+                    {
+                        var local = 0;
+                        using (var tx = env.ReadTransaction())
+                        {
+                            var docs = new Table(docsSchema, "docs", tx);
+
+                            foreach (var reader in docs.SeekByPrimaryKey(Slice.BeforeAllKeys) )
+                            {
+                                int size;
+                                reader.Read(0, out size);
+                                local += size;
+                            }
+
+                            tx.Commit();
+                        }
+
+                        countdownEvent.Signal();
+                    });
+                }
+                countdownEvent.Wait();
+                sw.Stop();
+            }
         }
 
 
         private void ReadOneTransaction(Stopwatch sw)
         {
-            //using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
-            //{
-            //    sw.Start();
-            //    using (var tx = env.ReadTransaction())
-            //    {
-            //        var test = tx.ReadTree("test");
-            //        var ms = new byte[100];
-            //        for (int i = 0; i < Configuration.Transactions * Configuration.ItemsPerTransaction; i++)
-            //        {
-            //            var key = i.ToString("0000000000000000");
-            //            var stream = test.Read(key).Reader;
-            //            {
-            //                while (stream.Read(ms, 0, ms.Length) != 0)
-            //                {
-            //                }
-            //            }
-            //        }
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            {
+                var docsSchema = Configure(env);
 
-            //        tx.Commit();
-            //    }
-            //    sw.Stop();
-            //}
+                sw.Start();
+                using (var tx = env.ReadTransaction())
+                {
+                    var docs = new Table(docsSchema, "docs", tx);
+
+                    var ms = new byte[100];
+                    for (int i = 0; i < Configuration.Transactions * Configuration.ItemsPerTransaction; i++)
+                    {
+                        var key = i.ToString("0000000000000000");
+                        var tableReader = docs.ReadByKey(key);
+
+                        int size;
+                        byte* buffer = tableReader.Read(1, out size);
+
+                        fixed (byte* msPtr = ms)
+                        {
+                            Memory.Copy(msPtr, buffer, size);
+                        }
+                    }
+
+                    tx.Commit();
+                }
+                sw.Stop();
+            }
         }
 
         private void ReadAndWriteOneTransaction(Stopwatch sw, int concurrency)

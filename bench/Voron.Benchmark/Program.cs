@@ -31,11 +31,11 @@ namespace Voron.Benchmark
             var prefixTreeBench = new TableBench(_randomNumbers, TableIndexType.Compact);
             prefixTreeBench.Execute();
 
-            var btreeBench = new BTreeBench(_randomNumbers);
-            btreeBench.Execute();
             var defaultBench = new TableBench(_randomNumbers, TableIndexType.BTree);
             defaultBench.Execute();
 
+            var btreeBench = new BTreeBench(_randomNumbers);
+            btreeBench.Execute();
         }
 
         private static HashSet<long> InitRandomNumbers(int count)
