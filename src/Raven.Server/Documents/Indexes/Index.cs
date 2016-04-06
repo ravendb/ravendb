@@ -662,8 +662,8 @@ namespace Raven.Server.Documents.Indexes
                         result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
                         result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
                         result.ResultEtag = CalculateIndexEtag(Definition, result.IsStale,
-                            lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)),
-                            lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)));
+                            lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x)).ToList(),
+                            lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTx, x)).ToList());
 
                         if (Type == IndexType.MapReduce || Type == IndexType.AutoMapReduce)
                             documentsContext.Reset(); // map reduce don't need to access documents storage
@@ -696,21 +696,27 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        private static long CalculateIndexEtag(IndexDefinitionBase definition, bool isStale, IEnumerable<long> lastDocEtags, IEnumerable<long> lastMappedEtags)
+        private static unsafe long CalculateIndexEtag(IndexDefinitionBase definition, bool isStale, List<long> lastDocEtags, List<long> lastMappedEtags)
         {
-            var indexEtagBytes = new List<byte>();
+            var indexEtagBytes = new long[
+                1 + // definition hash
+                1 + // isStale
+                lastDocEtags.Count +
+                lastMappedEtags.Count];
 
-            indexEtagBytes.AddRange(definition.GetDefinitionHash());
-            indexEtagBytes.AddRange(BitConverter.GetBytes(isStale));
+            var index = 0;
+
+            indexEtagBytes[index++] = definition.GetHashCode();
+            indexEtagBytes[index++] = isStale ? 0L : 1L;
 
             foreach (var etag in lastDocEtags)
             {
-                indexEtagBytes.AddRange(BitConverter.GetBytes(etag));
+                indexEtagBytes[index++] = etag;
             }
 
             foreach (var etag in lastMappedEtags)
             {
-                indexEtagBytes.AddRange(BitConverter.GetBytes(etag));
+                indexEtagBytes[index++] = etag;
             }
 
             // TODO arek - reduce etags
@@ -718,7 +724,10 @@ namespace Raven.Server.Documents.Indexes
 
             unchecked
             {
-                return (long)Hashing.XXHash64.Calculate(indexEtagBytes.ToArray());
+                fixed (long* buffer = indexEtagBytes)
+                {
+                    return (long)Hashing.XXHash64.Calculate((byte*) buffer, indexEtagBytes.Length * sizeof(long));
+                }
             }
         }
 
@@ -735,8 +744,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     return CalculateIndexEtag(Definition,
                         IsStale(documentContext, indexContext),
-                        lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentContext, x)),
-                        lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTransation, x)));
+                        lastDocEtags: Collections.Select(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentContext, x)).ToList(),
+                        lastMappedEtags: Collections.Select(x => _indexStorage.ReadLastMappedEtag(indexTransation, x)).ToList());
                 }
             }
         }
