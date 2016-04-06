@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Impl;
 
@@ -27,11 +28,14 @@ namespace Voron.Benchmark
 #endif
             _randomNumbers = InitRandomNumbers(Configuration.Transactions * Configuration.ItemsPerTransaction);
 
-            var prefixTreeBench = new PrefixTreeBench(_randomNumbers);
+            var prefixTreeBench = new TableBench(_randomNumbers, TableIndexType.Compact);
             prefixTreeBench.Execute();
 
             var btreeBench = new BTreeBench(_randomNumbers);
             btreeBench.Execute();
+            var defaultBench = new TableBench(_randomNumbers, TableIndexType.BTree);
+            defaultBench.Execute();
+
         }
 
         private static HashSet<long> InitRandomNumbers(int count)

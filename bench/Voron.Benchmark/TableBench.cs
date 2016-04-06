@@ -11,15 +11,17 @@ using Voron.Util.Conversion;
 
 namespace Voron.Benchmark
 {
-    public unsafe class PrefixTreeBench : IHasStorageLocation
+    public unsafe class TableBench : IHasStorageLocation
     {
         public string Path => Configuration.Path + ".prefix";
 
         private HashSet<long> _randomNumbers;
+        private TableIndexType _indexType;
 
-        public PrefixTreeBench(HashSet<long> _randomNumbers)
+        public TableBench(HashSet<long> _randomNumbers, TableIndexType indexType)
         {
             this._randomNumbers = _randomNumbers;
+            this._indexType = indexType;
         }
 
         protected TableSchema Configure(StorageEnvironment options)
@@ -28,7 +30,7 @@ namespace Voron.Benchmark
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 0,
-                    Type = TableIndexType.Compact,
+                    Type = _indexType,
                 });
         }
 
@@ -98,7 +100,9 @@ namespace Voron.Benchmark
         public void Execute()
         {
             Console.WriteLine();
-            Console.WriteLine("Prefix Tree Benchmarking.");
+
+            string benchmarkType = _indexType == TableIndexType.Compact ? "Prefix Tree" : "BTree";            
+            Console.WriteLine($"{benchmarkType} Table Benchmarking.");
             Console.WriteLine();
 
             Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw), this);
