@@ -56,14 +56,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 fields = fields.Union(mapReduceDef.GroupByFields);
 
             _converter = new LuceneDocumentConverter(fields.ToArray());
-            _indexSearcherHolder = new IndexSearcherHolder(() =>
-            {
-                if (_indexWriter == null)
-                    return new IndexSearcher(_directory, true);
-
-                var indexReader = _indexWriter.GetReader();
-                return new IndexSearcher(indexReader);
-            });
+            _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
         }
 
         public void Initialize(StorageEnvironment environment, IndexingConfiguration configuration)

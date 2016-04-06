@@ -73,9 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal class IndexSearcherHoldingState : IDisposable
         {
-            private readonly Func<IndexSearcher> _recreateSearcher;
-
-            public Lazy<IndexSearcher> IndexSearcher => new Lazy<IndexSearcher>(_recreateSearcher, LazyThreadSafetyMode.ExecutionAndPublication);
+            public readonly Lazy<IndexSearcher> IndexSearcher;
 
             public volatile bool ShouldDispose;
             public int Usage;
@@ -83,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public IndexSearcherHoldingState(Func<IndexSearcher> recreateSearcher)
             {
-                _recreateSearcher = recreateSearcher;
+                IndexSearcher = new Lazy<IndexSearcher>(recreateSearcher, LazyThreadSafetyMode.ExecutionAndPublication);
             }
 
             public void MarkForDisposal()
