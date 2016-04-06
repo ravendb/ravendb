@@ -20,6 +20,7 @@ namespace Raven.Abstractions.Data
         {
             get { return Status.StartsWith("Commercial"); }
         }
+        public string LicensePath { get; set; }
         public bool ValidCommercialLicenseSeen { get; set; }
 
         public Dictionary<string, string> Attributes

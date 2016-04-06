@@ -261,6 +261,7 @@ interface licenseStatusDto {
     Error: boolean;
     Details?:string;
     IsCommercial: boolean;
+    LicensePath: string;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
         periodicBackup: string;
@@ -287,6 +288,7 @@ interface licenseStatusDto {
         monitoring: string;
         cluster: string;
         hotSpare: string;
+        updatesExpiration: string;
     }
 }
 

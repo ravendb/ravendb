@@ -31,7 +31,7 @@
                         <h3>LICENCE</h3>
                         <h4 data-bind="text: licenseStatusText"></h4>
                     </div>
-                    <div class="expire-date">EXPIRES: 01.10.2017</div>
+                    <div data-bind="visible: licenseExpiresAt" class="expire-date">EXPIRES: <span data-bind="text: licenseExpiresAt"></span></div>
                 </div>
             </div>
             <div class="col-sm-6">
@@ -71,7 +71,7 @@
                         <h3>SUPPORT</h3>
                         <h4>Licence not found</h4>
                     </div>
-                    <div class="expire-date">EXPIRES: 01.10.2017</div>
+                    <div data-bind="visible: supportExpiresAt" class="expire-date">EXPIRES: <span data-bind="text: supportExpiresAt"></span></div>
                 </div>
             </div>
         </div>
@@ -79,25 +79,15 @@
     <div class="bg-gray padding">
         <div class="row">
             <div class="col-sm-6">
-                <div class="text-center" data-bind="">
+                <div class="text-center" data-bind="visible: isDevelopmentOnly">
                     <div class="border-danger padding">
-                       
                         <div class="icon-xl"><i class="fa fa-exclamation-triangle"></i></div>
-                        <h3 class="text-danger">We couldn't find a license at <span class="path">{path}</span></h3>
+                        <h3 class="text-danger">We couldn't find a license at <span class="path" data-bind="text: licensePath"></span></h3>
                         <p class="text-muted">
                             Only Open Source / Development work is permitted<br />
                             AGPL license restrictions apply
                         </p>
                     </div>
-
-                    <div class="padding border-danger">
-                       
-                        <div class="icon-xl"><i class="fa fa-server"></i> <i class="fa fa-server"></i> <i class="fa fa-server text-danger"></i></div>
-                        <h3 class="text-danger">We have detected that you own more server than support licenses.</h3>
-                        <p class="text-muted">Please contact support to resolve this issue.</p>
-                        <a href="#" class="btn btn-primary btn-sm">CONTACT</a>
-                    </div>
-                    
                 </div>
                 <div class="licence-table" data-bind="visible: !isDevelopmentOnly">
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" class="alternate-align">
@@ -122,6 +112,14 @@
 
             </div>
             <div class="col-sm-6">
+
+                <div class="padding border-danger text-center" data-bind="visible: isPartialSupport">
+
+                    <div class="icon-xl"><i class="fa fa-server"></i> <i class="fa fa-server"></i> <i class="fa fa-server text-danger"></i></div>
+                    <h3 class="text-danger">We have detected that you own more server than support licenses</h3>
+                    <p class="text-muted">Please contact support to resolve this issue.</p>
+                    <a href="http://ravendb.net/contact" target="_blank" class="btn btn-primary btn-sm">CONTACT</a>
+                </div>
 
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isCommunitySupport">
                     <tbody>
