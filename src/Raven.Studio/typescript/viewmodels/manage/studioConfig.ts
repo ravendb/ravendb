@@ -4,14 +4,12 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import appUrl = require("common/appUrl");
 import documentClass = require("models/database/documents/document");
 import serverBuildReminder = require("common/serverBuildReminder");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 
 class studioConfig extends viewModelBase {
 
     configDocument = ko.observable<documentClass>();
-    disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
     isForbidden = ko.observable<boolean>();
@@ -32,7 +30,6 @@ class studioConfig extends viewModelBase {
         super();
 
         this.timeUntilRemindToUpgrade(serverBuildReminder.get());
-        this.disableEventSource(eventSourceSettingStorage.get());
         this.mute = ko.computed(() => {
             var lastBuildCheck = this.timeUntilRemindToUpgrade();
             var timestamp = Date.parse(lastBuildCheck);
@@ -114,11 +111,6 @@ class studioConfig extends viewModelBase {
 
     private pickColor() {
         $("#select-color button").css("backgroundColor", this.selectedColor().backgroundColor);
-    }
-
-    setEventSourceDisabled(setting: boolean) {
-        this.disableEventSource(setting);
-        eventSourceSettingStorage.setValue(setting);
     }
 
     setUpgradeReminder(upgradeSetting: boolean) {

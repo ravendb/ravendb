@@ -33,7 +33,6 @@ import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
 import extensions = require("common/extensions");
 import serverBuildReminder = require("common/serverBuildReminder");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
@@ -270,16 +269,7 @@ class shell extends viewModelBase {
         window.addEventListener("beforeunload", self.destroyChangesApi.bind(self));
 
         $(window).bind("storage", (e: any) => {
-            if (e.originalEvent.key === eventSourceSettingStorage.localStorageName) {
-                if (!JSON.parse(e.originalEvent.newValue)) {
-                    self.destroyChangesApi();
-                } else {
-                    // enable changes api
-                 /*  TODO: Implement
-                     this.globalChangesApi = new changesApi(appUrl.getSystemDatabase());
-                    this.notifications = this.createNotifications();*/
-                }
-            } else if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
+            if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
                 this.onLogOut();
             }
         });

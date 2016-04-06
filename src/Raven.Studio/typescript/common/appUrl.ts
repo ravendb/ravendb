@@ -617,7 +617,7 @@ class appUrl {
     }
 
     static forEditMerged(indexName: string, db: database): string {
-        return appUrl.forEditIndex(indexName, db) + "&"
+        return appUrl.forEditIndex(indexName, db) + "&";
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
