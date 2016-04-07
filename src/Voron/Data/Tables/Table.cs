@@ -13,7 +13,7 @@ using Voron.Data.Compact;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class Table
+    public unsafe class Table : ICommittable
     {
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
@@ -103,12 +103,14 @@ namespace Voron.Data.Tables
             _tableTree = _tx.ReadTree(name);
             if (_tableTree == null)
                 throw new InvalidDataException($"Cannot find collection name {name}");
-            
+
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
                 throw new InvalidDataException($"Cannot find stats value for table {name}");
 
             NumberOfEntries = stats->NumberOfEntries;
+
+            _tx.Register(this);
         }
 
         /// <summary>
@@ -797,6 +799,25 @@ namespace Voron.Data.Tables
 
             foreach (var id in toDelete)
                 Delete(id);
+        }
+
+        public bool RequiresParticipation
+        {
+            get { return true; }
+        }
+
+        public void PrepareForCommit()
+        {
+            foreach( var item in _treesBySliceCache)
+            {
+                var tree = item.Value;
+                if (!tree.State.IsModified)
+                    continue;
+
+                var treeName = item.Key;               
+                var header = (TreeRootHeader*) _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
+                tree.State.CopyTo(header);
+            }
         }
     }
 }
