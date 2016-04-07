@@ -1269,10 +1269,43 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitOrderBy((LambdaExpression)((UnaryExpression)expression.Arguments[1]).Operand,
                                  expression.Method.Name.EndsWith("Descending"));
                     break;
+                case "GroupBy":
+
+                    if (documentQuery.IndexQueried.StartsWith("dynamic/") == false)
+                        throw new NotSupportedException("GroupBy method is only supported in dynamic map-reduce queries");
+
+                    VisitExpression(expression.Arguments[0]);
+
+                    VisitGroupBy(((UnaryExpression) expression.Arguments[1]).Operand);
+
+                    
+                    break;
                 default:
                 {
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
                 }
+            }
+        }
+
+        private void VisitGroupBy(Expression expression)
+        {
+            var lambdaExpression = expression as LambdaExpression;
+
+            if (lambdaExpression == null)
+                throw new NotSupportedException("We expect GroupBy statement to have lambda expression");
+
+            var body = lambdaExpression.Body;
+
+            switch (body.NodeType)
+            {
+                case ExpressionType.MemberAccess:
+                    var memberExpression = (MemberExpression) body;
+                    var name = memberExpression.Member.Name;
+
+                    documentQuery.AddGroupByField(name);
+                    break;
+                default:
+                    throw new NotSupportedException("Unsupported expression type in GroupBy method: " + body.NodeType);
             }
         }
 

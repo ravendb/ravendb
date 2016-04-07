@@ -87,6 +87,11 @@ namespace Raven.Abstractions.Data
         public SortedField[] SortedFields { get; set; }
 
         /// <summary>
+        /// Array of fields containing group by information.
+        /// </summary>
+        public string[] GroupByFields { get; set; }
+
+        /// <summary>
         /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
         /// </summary>
         public bool WaitForNonStaleResultsAsOfNow { get; set; }
@@ -251,6 +256,8 @@ namespace Raven.Abstractions.Data
             FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
             SortedFields.ApplyIfNotNull(
                 field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
+
+            GroupByFields.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {

@@ -113,6 +113,11 @@ namespace Raven.Client.Document
         protected string[] orderByFields = new string[0];
 
         /// <summary>
+        ///   The fields to group the results by
+        /// </summary>
+        protected string[] groupByFields = new string[0];
+
+        /// <summary>
         ///   The fields to highlight
         /// </summary>
         protected List<HighlightedField> highlightedFields = new List<HighlightedField>();
@@ -344,6 +349,7 @@ namespace Raven.Client.Document
             theSession = other.theSession;
             conventions = other.conventions;
             orderByFields = other.orderByFields;
+            groupByFields = other.groupByFields;
             pageSize = other.pageSize;
             queryText = other.queryText;
             start = other.start;
@@ -870,6 +876,16 @@ namespace Raven.Client.Document
         public void SetOriginalQueryType(Type originalType)
         {
             this.originalType = originalType;
+        }
+
+        public void AddGroupByField(string fieldName)
+        {
+            fieldName = EnsureValidFieldName(new WhereParams
+            {
+                FieldName = fieldName
+            });
+
+            groupByFields = groupByFields.Concat(new [] {fieldName}).ToArray();
         }
 
         IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
@@ -1807,6 +1823,7 @@ If you really want to do in memory filtering on the data returned from the query
                     WaitForNonStaleResultsTimeout = timeout,
                     CutoffEtag = cutoffEtag,
                     SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+                    GroupByFields = groupByFields,
                     FieldsToFetch = fieldsToFetch,
                     SpatialFieldName = spatialFieldName,
                     QueryShape = queryShape,
@@ -1843,6 +1860,7 @@ If you really want to do in memory filtering on the data returned from the query
                 WaitForNonStaleResults = theWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = timeout,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+                GroupByFields = groupByFields,
                 FieldsToFetch = fieldsToFetch,
                 DefaultField = defaultField,
                 DefaultOperator = defaultOperator,

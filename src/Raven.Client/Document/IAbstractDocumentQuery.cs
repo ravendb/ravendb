@@ -368,5 +368,10 @@ namespace Raven.Client.Document
         /// </summary>
         /// <param name="originalType"></param>
         void SetOriginalQueryType(Type originalType);
+
+        /// <summary>
+        /// Adds an grouping by a specific field to the query
+        /// </summary>
+        void AddGroupByField(string fieldName);
     }
 }

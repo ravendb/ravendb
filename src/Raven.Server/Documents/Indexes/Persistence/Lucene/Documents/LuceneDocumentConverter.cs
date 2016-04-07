@@ -8,7 +8,6 @@ using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
-using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
