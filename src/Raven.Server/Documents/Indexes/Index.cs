@@ -15,6 +15,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Exceptions;
@@ -73,11 +74,12 @@ namespace Raven.Server.Documents.Indexes
 
         private DateTime? _lastQueryingTime;
 
-        protected readonly HashSet<string> Collections;
+        public readonly HashSet<string> Collections;
 
         private volatile bool _indexingInProgress;
 
         internal IndexStorage _indexStorage;
+        private IIndexingWork[] _indexWorkers;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -186,6 +188,8 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
 
                     DocumentDatabase.Notifications.OnIndexChange += HandleIndexChange;
+
+                    _indexWorkers = CreateIndexWorkExecutors();
 
                     _initialized = true;
                 }
@@ -486,7 +490,52 @@ namespace Raven.Server.Documents.Indexes
             SetPriority(IndexingPriority.Error);
         }
 
-        public abstract void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken);
+        protected abstract IIndexingWork[] CreateIndexWorkExecutors();
+
+        public virtual IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
+        {
+            return null;
+        }
+
+        public void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken)
+        {
+            DocumentsOperationContext databaseContext;
+            TransactionOperationContext indexContext;
+
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (var tx = indexContext.OpenWriteTransaction())
+            using (InitializeIndexingWork(indexContext))
+            {
+                var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
+
+                try
+                {
+                    foreach (var work in _indexWorkers)
+                    {
+                        var mightBeMore = work.Execute(databaseContext, indexContext, writeOperation, stats, cancellationToken);
+
+                        if (mightBeMore)
+                            _mre.Set();
+                    }
+                }
+                finally
+                {
+                    if (writeOperation.IsValueCreated)
+                        writeOperation.Value.Dispose();
+                }
+
+                tx.Commit();
+
+                // TODO arek we need to recreate it here - after the transaction commit so it won't see the uncommitted changes
+                //if (writeOperation.IsValueCreated)
+                //    IndexPersistence.RecreateSearcher(); 
+            }
+        }
+
+        public abstract void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext);
+
+        public abstract void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext);
 
         private void HandleIndexChange(IndexChangeNotification notification)
         {

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
-using System.Threading;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -23,6 +22,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
         private readonly TableSchema _mapResultsSchema = new TableSchema();
+
+        private readonly MapReduceIndexingContext _indexingWorkContext = new MapReduceIndexingContext();
 
         internal long _lastMapResultEtag = -1;
 
@@ -71,25 +72,98 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             //return instance;
         }
-        
-        public override void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken)
+
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            DocumentsOperationContext databaseContext;
-            TransactionOperationContext indexContext;
-
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-            using (_contextPool.AllocateOperationContext(out indexContext))
-            using (var tx = indexContext.OpenWriteTransaction())
+            return new IIndexingWork[]
             {
-                var stateByReduceKeyHash = new Dictionary<ulong, ReduceKeyState>();
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
+                new ReduceMapResults(DocumentDatabase.Metrics, _indexingWorkContext)
+            };
+        }
+        
+        public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
+        {
+            _indexingWorkContext.MapEntriesTable = GetMapEntriesTable(indexContext.Transaction.InnerTransaction);
 
-                ExecuteCleanup(cancellationToken, databaseContext, indexContext, stateByReduceKeyHash);
-                ExecuteMap(stats, cancellationToken, databaseContext, indexContext, stateByReduceKeyHash);
+            return _indexingWorkContext;
+        }
 
-                new ReducingExecuter(stateByReduceKeyHash, indexContext, IndexPersistence, DocumentDatabase.Metrics).Execute(cancellationToken);
+        public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        {
+            var etagSlice = new Slice((byte*)null, sizeof(long));
 
-                tx.Commit();
+            foreach (var mapEntry in GetMapEntriesForDocument(_indexingWorkContext.MapEntriesTable, tombstone.Key))
+            {
+                ReduceKeyState state;
+                if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(mapEntry.ReduceKeyHash, out state) == false)
+                {
+                    //TODO: Need better way to handle tree names
+                    var tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + mapEntry.ReduceKeyHash);
+                    _indexingWorkContext.StateByReduceKeyHash[mapEntry.ReduceKeyHash] = state = new ReduceKeyState(tree);
+                }
+
+                var etag = mapEntry.Etag;
+                etagSlice.Set((byte*)&etag, sizeof(long));
+                state.Tree.Delete(etagSlice);
+
+                writer.DeleteReduceResult(mapEntry.ReduceKeyHash);
             }
+        }
+
+        public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        {
+            var mappedResult = new DynamicJsonValue();
+            var reduceKey = new DynamicJsonValue();
+            foreach (var indexField in Definition.MapFields.Values)
+            {
+                object result;
+                _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
+                // explicitly adding this even if the value isn't there, as a null
+                switch (indexField.MapReduceOperation)
+                {
+                    case FieldMapReduceOperation.Count:
+                        mappedResult[indexField.Name] = 1;
+                        break;
+                    case FieldMapReduceOperation.None:
+                    case FieldMapReduceOperation.Sum:
+                        mappedResult[indexField.Name] = result;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            foreach (var indexField in Definition.GroupByFields)
+            {
+                object result;
+                _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
+                // explicitly adding this even if the value isn't there, as a null
+                mappedResult[indexField.Name] = result;
+                reduceKey[indexField.Name] = result;
+            }
+
+            ulong reduceHashKey;
+            using (var reduceKeyObject = indexContext.ReadObject(reduceKey, document.Key))
+            {
+                reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer, reduceKeyObject.Size);
+            }
+
+            ReduceKeyState state;
+            if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(reduceHashKey, out state) == false)
+            {
+                //TODO: Need better way to handle tree names
+                var tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + reduceHashKey);
+                _indexingWorkContext.StateByReduceKeyHash[reduceHashKey] = state = new ReduceKeyState(tree);
+            }
+
+            using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
+            {
+                PutMappedResult(mappedresult, state, _indexingWorkContext.MapEntriesTable, document.Key, reduceHashKey);
+            }
+
+            DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
@@ -97,107 +171,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return new MapReduceQueryResultRetriever(indexContext);
         }
 
-        private unsafe void ExecuteMap(IndexingBatchStats stats, CancellationToken cancellationToken, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Dictionary<ulong, ReduceKeyState> stateByReduceKeyHash)
-        {
-            //TODO arek: use stats
-            
-            var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
-
-            var table = GetMapResultsTable(indexContext.Transaction.InnerTransaction);
-
-            foreach (var collection in Collections)
-            {
-                var lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var lastEtag = lastMappedEtag;
-                var count = 0;
-
-                var sw = Stopwatch.StartNew();
-
-                using (databaseContext.OpenReadTransaction())
-                {
-                    foreach (var document in DocumentDatabase.DocumentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        count++;
-                        lastEtag = document.Etag;
-
-                        var mappedResult = new DynamicJsonValue();
-                        var reduceKey = new DynamicJsonValue();
-                        foreach (var indexField in Definition.MapFields.Values)
-                        {
-                            object result;
-                            _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
-                            // explicitly adding this even if the value isn't there, as a null
-                            switch (indexField.MapReduceOperation)
-                            {
-                                case FieldMapReduceOperation.Count:
-                                    mappedResult[indexField.Name] = 1;
-                                    break;
-                                case FieldMapReduceOperation.None:
-                                case FieldMapReduceOperation.Sum:
-                                    mappedResult[indexField.Name] = result;
-                                    break;
-                                default:
-                                    throw new ArgumentOutOfRangeException();
-                            }
-                        }
-
-                        foreach (var indexField in Definition.GroupByFields)
-                        {
-                            object result;
-                            _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
-                            // explicitly adding this even if the value isn't there, as a null
-                            mappedResult[indexField.Name] = result;
-                            reduceKey[indexField.Name] = result;
-                        }
-
-                        ulong reduceHashKey;
-                        using (var reduceKeyObject = indexContext.ReadObject(reduceKey, document.Key))
-                        {
-                            reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer, reduceKeyObject.Size);
-                        }
-
-                        ReduceKeyState state;
-                        if (stateByReduceKeyHash.TryGetValue(reduceHashKey, out state) == false)
-                        {
-                            //TODO: Need better way to handle tree names
-                            var tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + reduceHashKey);
-                            stateByReduceKeyHash[reduceHashKey] = state = new ReduceKeyState(tree);
-                        }
-                        using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
-                        {
-                            PutMappedResult(mappedresult, state, table, document.Key, reduceHashKey);
-                        }
-
-                        DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
-
-                        if (sw.Elapsed > (Debugger.IsAttached == false ? DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan : TimeSpan.FromMinutes(15)))
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                if (count == 0)
-                    continue;
-
-                if (lastEtag <= lastMappedEtag)
-                    continue;
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing map for '{Name} ({IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
-
-                _indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
-
-                _mre.Set(); // might be more
-            }
-        }
-
-        private Table GetMapResultsTable(Transaction tx)
+        private Table GetMapEntriesTable(Transaction tx)
         {
             _mapResultsSchema.Create(tx, "MapResults");
             var table = new Table(_mapResultsSchema, "MapResults", tx);
@@ -227,90 +201,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             mappedResult.CopyTo(pos);
         }
 
-        private unsafe void ExecuteCleanup(CancellationToken token, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Dictionary<ulong, ReduceKeyState> stateByReduceKeyHash)
-        {
-            var pageSize = DocumentDatabase.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
-
-            foreach (var collection in Collections)
-            {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Collection: {collection}.");
-
-                long lastMappedEtag;
-                long lastTombstoneEtag;
-                lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
-                lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
-
-                var lastEtag = lastTombstoneEtag;
-                var count = 0;
-
-                var sw = Stopwatch.StartNew();
-
-                using (var indexWriter = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction))
-                using (databaseContext.OpenReadTransaction())
-                {
-                    foreach (var tombstone in DocumentDatabase.DocumentsStorage.GetTombstonesAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        if (Log.IsDebugEnabled)
-                            Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processing tombstone {tombstone.Key} ({tombstone.Etag}).");
-
-                        count++;
-                        lastEtag = tombstone.Etag;
-
-                        if (tombstone.DeletedEtag > lastMappedEtag)
-                            continue; // no-op, we have not yet indexed this document
-
-                        var etagSlice = new Slice((byte*)null, sizeof(long));
-
-                        foreach (var mapEntry in GetMapEntriesForDocument(indexContext.Transaction.InnerTransaction, tombstone.Key))
-                        {
-                            ReduceKeyState state;
-                            if (stateByReduceKeyHash.TryGetValue(mapEntry.ReduceKeyHash, out state) == false)
-                            {
-                                //TODO: Need better way to handle tree names
-                                var tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + mapEntry.ReduceKeyHash);
-                                stateByReduceKeyHash[mapEntry.ReduceKeyHash] = state = new ReduceKeyState(tree);
-                            }
-
-                            var etag = mapEntry.Etag;
-                            etagSlice.Set((byte*)&etag, sizeof(long));
-                            state.Tree.Delete(etagSlice);
-
-                            indexWriter.DeleteReduceResult(mapEntry.ReduceKeyHash);
-                        }
-
-                        if (sw.Elapsed > (Debugger.IsAttached == false ? DocumentDatabase.Configuration.Indexing.DocumentProcessingTimeout.AsTimeSpan : TimeSpan.FromMinutes(15)))
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                if (count == 0)
-                    return;
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing cleanup for '{Name} ({IndexId})'. Processed {count} tombstones in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
-
-                if (lastEtag <= lastTombstoneEtag)
-                    return;
-
-                _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
-
-                _mre.Set(); // might be more
-            }
-        }
-
-        public unsafe List<MapEntry> GetMapEntriesForDocument(Transaction tx, LazyStringValue documentKey)
+        public unsafe List<MapEntry> GetMapEntriesForDocument(Table table, LazyStringValue documentKey)
         {
             var result = new List<MapEntry>();
-
-            var table = GetMapResultsTable(tx);
 
             var documentKeySlice = new Slice(documentKey.Buffer, (ushort) documentKey.Size);
 
