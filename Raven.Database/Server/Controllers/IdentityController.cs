@@ -24,10 +24,14 @@ namespace Raven.Database.Server.Controllers
             }
 
             long nextIdentityValue = -1;
-            Database.TransactionalStorage.Batch(accessor =>
+
+            using (Database.IdentityLock.Lock())
             {
-                nextIdentityValue = accessor.General.GetNextIdentityValue(name);
-            });
+                Database.TransactionalStorage.Batch(accessor =>
+                {
+                    nextIdentityValue = accessor.General.GetNextIdentityValue(name);
+                });
+            }
 
             return GetMessageWithObject(new { Value = nextIdentityValue });
         }
