@@ -6,14 +6,14 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Voron.Impl.Paging;
 
 namespace Voron.Data.Compact
 {
     public sealed unsafe class PrefixTreePage
     {
         public readonly byte* Pointer;
-        public readonly int PageSize;
-        public readonly string Source;
+        public readonly IVirtualPager Pager;
 
         private PrefixTreePageHeader* Header
         {
@@ -27,11 +27,10 @@ namespace Voron.Data.Compact
             get { return Pointer + sizeof(PrefixTreePageHeader); }
         }
 
-        public PrefixTreePage(byte* pointer, string source, int pageSize)
+        public PrefixTreePage(byte* pointer, IVirtualPager pager)
         {
             Pointer = pointer;
-            Source = source;
-            PageSize = pageSize;            
+            Pager = pager;
         }
 
         public long PageNumber

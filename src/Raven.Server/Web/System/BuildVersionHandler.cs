@@ -8,10 +8,11 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -22,7 +23,7 @@ namespace Raven.Server.Web.System
         private static byte[] GetVersionBuffer()
         {
             using (var pool = new UnmanagedBuffersPool("build/version"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             {
                 var stream = new MemoryStream();
                 using (var writer = new BlittableJsonTextWriter(context, stream))

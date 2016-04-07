@@ -10,6 +10,7 @@ using System.Diagnostics;
 
 using Raven.Server.Documents;
 using Raven.Server.Json;
+using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -28,7 +29,7 @@ namespace Raven.Server.ServerWide.Context
             _contextPool = new ConcurrentStack<DocumentsOperationContext>();
         }
 
-        public IDisposable AllocateOperationContext(out MemoryOperationContext context)
+        public IDisposable AllocateOperationContext(out JsonOperationContext context)
         {
             DocumentsOperationContext ctx;
             var disposable = AllocateOperationContext(out ctx);

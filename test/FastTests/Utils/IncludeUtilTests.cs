@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Utils
@@ -84,7 +85,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -112,7 +113,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -140,7 +141,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -168,7 +169,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -205,7 +206,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -251,7 +252,7 @@ namespace FastTests.Utils
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -383,7 +384,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -460,7 +461,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -478,7 +479,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = new DynamicJsonArray(new object[] {1, 2, 3})
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -514,7 +515,7 @@ namespace FastTests.Utils
                 })
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -532,7 +533,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = new DynamicJsonArray(new[] { "foo/1", "foo/2", "foo/3" })
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -557,7 +558,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -581,7 +582,7 @@ namespace FastTests.Utils
                 ["ContactInfoId3"] = new DynamicJsonArray(new object[] { (long)1, (long)2, (long)3 })
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -610,7 +611,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -632,7 +633,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -670,7 +671,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -716,7 +717,7 @@ namespace FastTests.Utils
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -743,7 +744,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = "contacts/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -762,7 +763,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = "contacts/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -783,7 +784,7 @@ namespace FastTests.Utils
                 ["ContactInfoId3"] = 78.89, //this one is double
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -809,7 +810,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -828,7 +829,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -847,7 +848,7 @@ namespace FastTests.Utils
                 ["ContactInfoId"] = 1
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -876,7 +877,7 @@ namespace FastTests.Utils
                 ["CarInfoId"] = "cars/1"
             };
             using (var pool = new UnmanagedBuffersPool("test"))
-            using (var context = new MemoryOperationContext(pool))
+            using (var context = new JsonOperationContext(pool))
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.SqlReplication;
+using Sparrow.Json;
 
 namespace Raven.Server.Json
 {

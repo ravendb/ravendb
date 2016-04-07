@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Server.Utils;
+using Sparrow;
 
 namespace Raven.Server.Routing
 {

@@ -95,7 +95,6 @@ namespace Raven.Client.Document
                 queryText = new StringBuilder(queryText.ToString()),
                 start = start,
                 timeout = timeout,
-                cutoff = cutoff,
                 queryStats = queryStats,
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
                 theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
@@ -122,51 +121,30 @@ namespace Raven.Client.Document
 
         protected override Task<QueryOperation> ExecuteActualQueryAsync()
         {
-            var results = CompletedTask.With(new bool[ShardDatabaseCommands.Count]).Task;
-
-            Func<Task> loop = null;
-            loop = () =>
-            {
-                var lastResults = results.Result;
-
-                results = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
-                    new ShardRequestData
-                    {
-                        EntityType = typeof(T),
-                        Query = IndexQuery,
-                        IndexName = indexName
-                    }, (commands, i) =>
-                    {
-                        if (lastResults[i]) // if we already got a good result here, do nothing
-                            return CompletedTask.With(true);
-
-                        var queryOp = shardQueryOperations[i];
-
-                        var queryContext = queryOp.EnterQueryContext();
-                        return commands.QueryAsync(indexName, queryOp.IndexQuery, includes.ToArray())
-                            .ContinueWith(task =>
-                        {
-                            if (queryContext != null)
-                                queryContext.Dispose();
-
-                            return queryOp.IsAcceptable(task.Result);
-                        });
-                    });
-
-                return results.ContinueWith(task =>
+            var results = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
+                new ShardRequestData
                 {
-                    task.AssertNotFailed();
+                    EntityType = typeof(T),
+                    Query = IndexQuery,
+                    IndexName = indexName
+                }, (commands, i) =>
+                {
+                    var queryOp = shardQueryOperations[i];
 
-                    if (lastResults.All(acceptable => acceptable))
-                        return new CompletedTask().Task;
+                    var queryContext = queryOp.EnterQueryContext();
+                    return commands.QueryAsync(indexName, queryOp.IndexQuery, includes.ToArray())
+                        .ContinueWith(task =>
+                    {
+                        if (queryContext != null)
+                            queryContext.Dispose();
 
-                    Thread.Sleep(100);
+                        queryOp.EnsureIsAcceptable(task.Result);
 
-                    return loop();
-                }).Unwrap();
-            };
+                        return task.Result;
+                    });
+                });
 
-            return loop().ContinueWith(task =>
+            return results.ContinueWith(task =>
             {
                 task.AssertNotFailed();
 

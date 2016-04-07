@@ -6,6 +6,8 @@
     "libs"
   ],
   "sdk": {
-    "version": "1.0.0-rc1-update1"
+    "version": "1.0.0-rc1-update2",
+    "runtime": "coreclr",
+    "architecture": "x64"
   }
 }

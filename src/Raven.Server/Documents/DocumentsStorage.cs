@@ -9,10 +9,10 @@ using Raven.Abstractions.Data;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -86,6 +86,11 @@ namespace Raven.Server.Documents
             {
                 StartIndex = 1,
                 IsGlobal = true
+            });
+            _tombstonesSchema.DefineFixedSizeIndex("DeletedEtags", new TableSchema.FixedSizeSchemaIndexDef()
+            {
+                StartIndex = 2,
+                IsGlobal = false
             });
         }
 
@@ -376,6 +381,23 @@ namespace Raven.Server.Documents
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
+        public long GetNumberOfTombstonesWithDocumentEtagLowerThan(TransactionOperationContext context, string collection, long etag)
+        {
+            Table table;
+            try
+            {
+                table = new Table(_tombstonesSchema, "#" + collection, context.Transaction.InnerTransaction);
+            }
+            catch (InvalidDataException)
+            {
+                // TODO [ppekrol] how to handle missing collection?
+                return 0;
+            }
+            return table
+                    .SeekBackwardFrom(_tombstonesSchema.FixedSizeIndexes["DeletedEtags"], etag)
+                    .Count();
+        }
+
         private Slice GetSliceFromKey(DocumentsOperationContext context, string key)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
@@ -405,7 +427,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void GetLowerKeySliceAndStorageKey(MemoryOperationContext context, string str, out byte* lowerKey, out int lowerSize,
+        private void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey, out int lowerSize,
             out byte* key, out int keySize)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
@@ -470,7 +492,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static Document TableValueToDocument(MemoryOperationContext context, TableValueReader tvr)
+        private static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
         {
             var result = new Document
             {
@@ -488,7 +510,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static DocumentTombstone TableValueToTombstone(MemoryOperationContext context, TableValueReader tvr)
+        private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, TableValueReader tvr)
         {
             var result = new DocumentTombstone
             {

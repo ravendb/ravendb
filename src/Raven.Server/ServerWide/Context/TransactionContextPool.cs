@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 
 using Raven.Server.Json;
-
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.ServerWide.Context
@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide.Context
 
         }
 
-        public IDisposable AllocateOperationContext(out MemoryOperationContext context)
+        public IDisposable AllocateOperationContext(out JsonOperationContext context)
         {
             TransactionOperationContext ctx;
             if (_contextPool.TryPop(out ctx) == false)

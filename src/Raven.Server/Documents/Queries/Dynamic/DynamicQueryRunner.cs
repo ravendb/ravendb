@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
@@ -24,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _documents = documents;
         }
 
-        public DocumentQueryResult Execute(string dynamicIndexName, IndexQuery query)
+        public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQuery query, long? existingResultEtag)
         {
             var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
@@ -55,11 +57,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     result.Results.Add(document);
                 }
 
-                return result;
+                return new CompletedTask<DocumentQueryResult>(result);
             }
             
-            bool newAutoIndex = false;
-
             Index index;
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
@@ -68,36 +68,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(autoIndexDef);
                 index = _indexStore.GetIndex(id);
 
-                newAutoIndex = true;
+                if (query.WaitForNonStaleResultsTimeout == null)
+                    query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
+            }
+            else
+            {
+                var currentIndexEtag = index.GetIndexEtag();
+
+                if (existingResultEtag == currentIndexEtag)
+                {
+                    return new CompletedTask<DocumentQueryResult>(new DocumentQueryResult
+                    {
+                        NotModified = true
+                    });
+                }
             }
 
             query = EnsureValidQuery(query, map);
-
-            return ExecuteActualQuery(index, query, newAutoIndex);
+            
+            return index.Query(query, _context, _token);
         }
-
-        private DocumentQueryResult ExecuteActualQuery(Index index, IndexQuery query, bool newAutoIndex)
-        {
-            // Perform the query until we have some results at least
-            var sp = Stopwatch.StartNew();
-
-            while (true)
-            {
-                var result = index.Query(query, _context, _token);
-
-                if (newAutoIndex == false ||
-                    result.IsStale == false ||
-                    (result.Results.Count >= query.PageSize && query.PageSize > 0) ||
-                    sp.Elapsed.TotalSeconds > 15)
-                {
-                    return result;
-                }
-
-                _context.Reset(); // dispose already open read transactions
-                Thread.Sleep(100);
-            }
-        }
-
+        
         private bool TryMatchExistingIndexToQuery(DynamicQueryMapping map, out Index index)
         {
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(_indexStore);

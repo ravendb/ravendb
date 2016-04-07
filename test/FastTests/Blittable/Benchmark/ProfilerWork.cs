@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 //using Raven.Imports.Newtonsoft.Json;
 
@@ -22,7 +23,7 @@ namespace FastTests.Blittable.Benchmark
             string directory = @"C:\Users\bumax_000\Downloads\JsonExamples";
             var files = Directory.GetFiles(directory, "*.json");
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+            using (var blittableContext = new JsonOperationContext(unmanagedPool))
             {
                 foreach (var file in files.OrderBy(x=> new FileInfo(x).Length).Take(take))
                 {

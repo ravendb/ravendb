@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.Compact
 {
@@ -19,19 +20,9 @@ namespace Voron.Data.Compact
         public long RootNodeName;
 
         /// <summary>
-        /// The table header page for the tree.
-        /// </summary>
-        public long Table;
-
-        /// <summary>
         /// This is the amount of elements already stored in the tree. 
         /// </summary>
         public long Items;
-
-        /// <summary>
-        /// This is the translation table header. 
-        /// </summary>
-        public PrefixTreeTranslationTableHeader TranslationTable;
 
         /// <summary>
         /// The head node pointer for the tree. 
@@ -42,5 +33,20 @@ namespace Voron.Data.Compact
         /// The tail node pointer for the tree. 
         /// </summary>
         public PrefixTree.Leaf Tail;
+
+        /// <summary>
+        /// The table header page for the tree.
+        /// </summary>
+        public PrefixTreeTableHeader Table;
+
+        /// <summary>
+        /// This is the translation table header. 
+        /// </summary>
+        public PrefixTreeTranslationTableHeader TranslationTable;
+
+        public void Initialize()
+        {
+            this.RootObjectType = RootObjectType.PrefixTree;
+        }
     }
 }

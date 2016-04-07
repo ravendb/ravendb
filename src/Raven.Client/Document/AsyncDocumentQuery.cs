@@ -645,28 +645,6 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff date.
-        /// </summary>
-        /// <param name="cutOff">The cut off.</param>
-        /// <returns></returns>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff)
-        {
-            WaitForNonStaleResultsAsOf(cutOff);
-            return this;
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
-        /// </summary>
-        /// <param name="cutOff">The cut off.</param>
-        /// <param name="waitTimeout">The wait timeout.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOf(cutOff, waitTimeout);
-            return this;
-        }
-
-        /// <summary>
         /// Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
         /// <param name="cutOffEtag">The cut off etag.</param>
@@ -776,7 +754,6 @@ namespace Raven.Client.Document
                                             queryText = new StringBuilder(queryText.ToString()),
                                             start = start,
                                             timeout = timeout,
-                                            cutoff = cutoff,
                                             cutoffEtag = cutoffEtag,
                                             queryStats = queryStats,
                                             theWaitForNonStaleResults = theWaitForNonStaleResults,

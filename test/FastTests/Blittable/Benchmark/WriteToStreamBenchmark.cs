@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace FastTests.Blittable.Benchmark
 {
@@ -37,7 +38,7 @@ namespace FastTests.Blittable.Benchmark
 
                 size = 0;
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-                using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+                using (var blittableContext = new JsonOperationContext(unmanagedPool))
                 {
                     sp.Restart();
 
@@ -78,7 +79,7 @@ namespace FastTests.Blittable.Benchmark
                 }
 
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-                using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+                using (var blittableContext = new JsonOperationContext(unmanagedPool))
                 {
                     foreach (var line in jsonCache)
                     {
@@ -113,7 +114,7 @@ namespace FastTests.Blittable.Benchmark
         private static unsafe void BlitIndexing(List<BlittableJsonReaderObject> blitCache)
         {
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-            using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+            using (var blittableContext = new JsonOperationContext(unmanagedPool))
             {
                 foreach (var tuple in blitCache)
                 {
@@ -139,7 +140,7 @@ namespace FastTests.Blittable.Benchmark
 
                 streamWriter.WriteLine("Name,Json Parse Time,Json Size, Json Time, Blit Parse Time,Blit Size, Blit Time");
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
-                using (var blittableContext = new MemoryOperationContext(unmanagedPool))
+                using (var blittableContext = new JsonOperationContext(unmanagedPool))
                 {
                     foreach (var jsonFile in files)
                     {

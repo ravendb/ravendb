@@ -108,11 +108,6 @@ namespace Raven.Client.Document
         protected readonly InMemoryDocumentSessionOperations theSession;
 
         /// <summary>
-        ///   The cutoff date to use for detecting staleness in the index
-        /// </summary>
-        protected DateTime? cutoff;
-
-        /// <summary>
         ///   The fields to order the results by
         /// </summary>
         protected string[] orderByFields = new string[0];
@@ -348,7 +343,6 @@ namespace Raven.Client.Document
             projectionFields = other.projectionFields;
             theSession = other.theSession;
             conventions = other.conventions;
-            cutoff = other.cutoff;
             orderByFields = other.orderByFields;
             pageSize = other.pageSize;
             queryText = other.queryText;
@@ -588,7 +582,6 @@ namespace Raven.Client.Document
         {
             theWaitForNonStaleResults = true;
             cutoffEtag = null;
-            cutoff = null;
             timeout = waitTimeout;
         }
 
@@ -676,20 +669,13 @@ namespace Raven.Client.Document
         protected virtual void ExecuteActualQuery()
         {
             theSession.IncrementRequestCount();
-            while (true)
+            using (queryOperation.EnterQueryContext())
             {
-                using (queryOperation.EnterQueryContext())
-                {
-                    queryOperation.LogQuery();
-                    var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
-                    if (queryOperation.IsAcceptable(result) == false)
-                    {
-                        Thread.Sleep(100);
-                        continue;
-                    }
-                    break;
-                }
+                queryOperation.LogQuery();
+                var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
+                queryOperation.EnsureIsAcceptable(result);
             }
+
             InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
         }
 
@@ -1602,7 +1588,6 @@ If you really want to do in memory filtering on the data returned from the query
         {
             theWaitForNonStaleResults = true;
             theWaitForNonStaleResultsAsOfNow = true;
-            cutoff = SystemTime.UtcNow;
             timeout = DefaultTimeout;
         }
 
@@ -1638,29 +1623,6 @@ If you really want to do in memory filtering on the data returned from the query
         IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
         {
             WaitForNonStaleResultsAsOfLastWrite(waitTimeout);
-            return this;
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of the cutoff date.
-        /// </summary>
-        /// <param name = "cutOff">The cut off.</param>
-        /// <returns></returns>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(DateTime cutOff)
-        {
-            WaitForNonStaleResultsAsOf(cutOff);
-            return this;
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
-        /// </summary>
-        /// <param name = "cutOff">The cut off.</param>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(DateTime cutOff,
-                                                                                           TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOf(cutOff, waitTimeout);
             return this;
         }
 
@@ -1704,29 +1666,6 @@ If you really want to do in memory filtering on the data returned from the query
         {
             theWaitForNonStaleResults = true;
             theWaitForNonStaleResultsAsOfNow = true;
-            cutoff = SystemTime.UtcNow;
-            timeout = waitTimeout;
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of the cutoff date.
-        /// </summary>
-        /// <param name = "cutOff">The cut off.</param>
-        /// <returns></returns>
-        public void WaitForNonStaleResultsAsOf(DateTime cutOff)
-        {
-            WaitForNonStaleResultsAsOf(cutOff, DefaultTimeout);
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
-        /// </summary>
-        /// <param name = "cutOff">The cut off.</param>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        public void WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout)
-        {
-            theWaitForNonStaleResults = true;
-            cutoff = cutOff.ToUniversalTime();
             timeout = waitTimeout;
         }
 
@@ -1834,21 +1773,15 @@ If you really want to do in memory filtering on the data returned from the query
         protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
         {
             theSession.IncrementRequestCount();
-            while (true)
+            using (queryOperation.EnterQueryContext())
             {
-                using (queryOperation.EnterQueryContext())
-                {
-                    queryOperation.LogQuery();
-                    var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray()).ConfigureAwait(false);
+                queryOperation.LogQuery();
+                var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray()).ConfigureAwait(false);
 
-                    if (queryOperation.IsAcceptable(result) == false)
-                    {
-                        await Task.Delay(100).ConfigureAwait(false);
-                        continue;
-                    }
-                    InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-                    return queryOperation;
-                }
+                queryOperation.EnsureIsAcceptable(result);
+
+                InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
+                return queryOperation;
             }
         }
 
@@ -1869,9 +1802,9 @@ If you really want to do in memory filtering on the data returned from the query
                     IsDistinct = isDistinct,
                     Query = query,
                     Start = start,
-                    Cutoff = cutoff,
                     WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
                     WaitForNonStaleResults = theWaitForNonStaleResults,
+                    WaitForNonStaleResultsTimeout = timeout,
                     CutoffEtag = cutoffEtag,
                     SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
                     FieldsToFetch = fieldsToFetch,
@@ -1905,10 +1838,10 @@ If you really want to do in memory filtering on the data returned from the query
                 IsDistinct = isDistinct,
                 Query = query,
                 Start = start,
-                Cutoff = cutoff,
                 CutoffEtag = cutoffEtag,
                 WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
                 WaitForNonStaleResults = theWaitForNonStaleResults,
+                WaitForNonStaleResultsTimeout = timeout,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
                 FieldsToFetch = fieldsToFetch,
                 DefaultField = defaultField,

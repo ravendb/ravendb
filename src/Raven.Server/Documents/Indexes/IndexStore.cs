@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Utils;
@@ -15,6 +16,8 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStore : IDisposable
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(IndexStore));
+
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
@@ -24,6 +27,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _initialized;
 
         private string _path;
+        private bool _run = true;
 
         public IndexStore(DocumentDatabase documentDatabase)
         {
@@ -92,7 +96,9 @@ namespace Raven.Server.Documents.Indexes
                 var indexId = _indexes.GetNextIndexId();
 
                 var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
-                index.Start();
+
+                if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
+                    index.Start();
 
                 _indexes.Add(index);
 
@@ -242,6 +248,8 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
 
+            _run = true;
+
             Parallel.ForEach(indexes, index => index.Start());
         }
 
@@ -282,6 +290,8 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
+
+            _run = false;
 
             Parallel.ForEach(indexes, index => index.Stop());
         }
@@ -352,9 +362,6 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
-            foreach (var index in _indexes)
-                index.MaybePersistQueryingTime();
-
             HandleUnusedAutoIndexes();
             //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
         }
@@ -399,10 +406,13 @@ namespace Raven.Server.Documents.Indexes
                     else
                         differenceBetweenNewestAndCurrentQueryingTime = TimeSpan.Zero;
 
-                    if (differenceBetweenNewestAndCurrentQueryingTime > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                    if (differenceBetweenNewestAndCurrentQueryingTime >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                     {
-                        if (lastQuery > timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                        if (lastQuery >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                        {
                             item.Index.SetPriority(IndexingPriority.Idle);
+                            Log.Warn($"Changed index '{item.Index.Name} ({item.Index.IndexId})' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
+                        }
                     }
 
                     continue;
@@ -410,8 +420,11 @@ namespace Raven.Server.Documents.Indexes
 
                 if (item.Priority.HasFlag(IndexingPriority.Idle))
                 {
-                    if (age < ageThreshold || lastQuery > timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                    if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                    {
                         DeleteIndex(item.Index.IndexId);
+                        Log.Warn($"Deleted index '{item.Index.Name} ({item.Index.IndexId})' due to idleness. Age: {age}. Last query: {lastQuery}.");
+                    }
                 }
             }
         }

@@ -1,0 +1,48 @@
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Tests.Core;
+using Raven.Tests.Core.Utils.Entities;
+using Xunit;
+
+namespace FastTests.Server.Queries
+{
+    [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
+    public class NotModifiedQueryResults : RavenTestBase
+    {
+        [Fact]
+        public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Arek", Age = 25 }, "users/1");
+                    await session.StoreAsync(new User { Name = "Jan", Age = 27 }, "users/2");
+                    await session.StoreAsync(new User { Name = "Arek", Age = 39 }, "users/3");
+
+                    await session.SaveChangesAsync();
+                }
+
+                var users = store.DatabaseCommands.Query("dynamic/Users", new IndexQuery()
+                {
+                    Query = "Name:Arek",
+                    WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
+                });
+
+                Assert.Equal(2, users.Results.Count);
+
+                users = store.DatabaseCommands.Query("dynamic/Users", new IndexQuery()
+                {
+                    Query = "Name:Arek",
+                    WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
+                });
+
+                Assert.Equal(-1, users.DurationMilliseconds); // taken from cache
+                Assert.Equal(2, users.Results.Count);
+            }
+        }
+    }
+}

@@ -18,10 +18,10 @@ namespace Voron.Data.Compact
             public const long InvalidPage = -1;
 
             public const int L1CacheSize = 16 * 1024;
+            public static int NodesPerCacheLine = L1CacheSize / sizeof(PrefixTree.Node);
+            public static int DepthPerCacheLine = (int) Math.Log(NodesPerCacheLine, 2);
 
-            public static int NodesPerPage = 4096 * 1024 / sizeof(PrefixTree.Node);
-            public static int NodesPerCache = L1CacheSize / sizeof(PrefixTree.Node);
-            public static int TranslationTableInitialItems = 1950;
+            public static int TranslationTableInitialItems = 10000;
 
         }
     }

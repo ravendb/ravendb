@@ -43,6 +43,7 @@ namespace Voron.Data.Compact
         private readonly LowLevelTransaction _tx;
         private readonly PrefixTreeRootMutableState _header;
         private PrefixTreeTranslationTableHeader _innerCopy;
+        private readonly PageLocator _pageLocator;
 
         private bool _isModified;
 
@@ -53,6 +54,7 @@ namespace Voron.Data.Compact
             this._tx = tx;
             this._header = state;
             this._innerCopy = state.Pointer->TranslationTable;
+            this._pageLocator = new PageLocator(tx);
         }
 
         /// <summary>
@@ -180,23 +182,29 @@ namespace Voron.Data.Compact
 
         private long AllocateNodeInChunkSlow()
         {
-            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
-            int chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
+            if (!_tablePtr.IsValid || _innerCopy.PageNumber != _tablePtr.PageNumber)
+                _tablePtr = new PageHandlePtr(_pageLocator.GetReadOnlyPage(_innerCopy.PageNumber), false);
+
+            var table = _tablePtr.Value;
+            int chunkId = GetFreeSpaceTable(table).FindLeadingOne();
             while (chunkId >= 0)
             {               
                 long name;
                 if ( TryAllocateNodeInChunk(chunkId * _innerCopy.NodesPerChunk, out name))
                 {
-                    Debug.Assert(((long*)_tx.GetPage(_innerCopy.PageNumber).DataPointer)[chunkId] != -1);
+                    Debug.Assert(((long*)_pageLocator.GetReadOnlyPage(_innerCopy.PageNumber).DataPointer)[chunkId] != -1);
                     return name;
                 }    
                 else
                 {
-                    _table = _tx.ModifyPage(_innerCopy.PageNumber);
-                    GetFreeSpaceTable(_table).Set(chunkId, false);
+                    if (!_tablePtr.IsWritable || _innerCopy.PageNumber != _tablePtr.PageNumber)
+                        _tablePtr = new PageHandlePtr(_pageLocator.GetWritablePage(_innerCopy.PageNumber), true);
+
+                    table = _tablePtr.Value;
+                    GetFreeSpaceTable(table).Set(chunkId, false);
                 }
 
-                chunkId = GetFreeSpaceTable(_table).FindLeadingOne();
+                chunkId = GetFreeSpaceTable(table).FindLeadingOne();
             }
 
             // We need to allocate a larger table and update the relevant pages.
@@ -210,18 +218,25 @@ namespace Voron.Data.Compact
 
             throw new NotImplementedException();
         }
-        
+
+        private PageHandlePtr _tablePtr; 
+
         private bool TryAllocateNodeInChunk( long parentName, out long name )
-        {      
+        {
             int chunkIdx = (int)(parentName / _innerCopy.NodesPerChunk);
 
-            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
-            var freeSpace = GetFreeSpaceTable(_table);
+            if (!_tablePtr.IsValid || _innerCopy.PageNumber != _tablePtr.PageNumber)
+                _tablePtr = new PageHandlePtr(_pageLocator.GetReadOnlyPage(_innerCopy.PageNumber), false);
+
+            var table = _tablePtr.Value; // We are in read mode, no intention to modify yet (therefore no copy wasted)
+
+            var freeSpace = GetFreeSpaceTable(table);
             if (freeSpace.Get(chunkIdx)) // We still have free space reported here.
             {
-                PrefixTreePage chunkPage; 
+                PrefixTreePage chunkPage;
+
                 // We will retrieve the chunks mapping table.
-                long chunkPageNumber = ((long*)_table.DataPointer)[chunkIdx];
+                long chunkPageNumber = ((long*)table.DataPointer)[chunkIdx];
                 if ( chunkPageNumber == PrefixTree.Constants.InvalidPage )
                 {
                     // Perform the actual chunk allocation because it is still not allocated. 
@@ -229,14 +244,17 @@ namespace Voron.Data.Compact
                     chunkPageNumber = chunkPage.PageNumber;
 
                     // Update the physical page, therefore we need to get a copy that will be eventually committed. 
-                    _table = _tx.ModifyPage(_innerCopy.PageNumber);
-                    ((long*)_table.DataPointer)[chunkIdx] = chunkPageNumber;
+                    if (!_tablePtr.IsWritable || _innerCopy.PageNumber != _tablePtr.PageNumber)
+                        _tablePtr = new PageHandlePtr(_pageLocator.GetWritablePage(_innerCopy.PageNumber), true);
 
-                    Debug.Assert(GetFreeSpaceTable(_table).Get(chunkIdx) == true);
+                    table = _tablePtr.Value;
+                    ((long*)table.DataPointer)[chunkIdx] = chunkPageNumber;
+
+                    Debug.Assert(GetFreeSpaceTable(table).Get(chunkIdx) == true);
                 }
                 else
                 {
-                    chunkPage = _tx.GetPage(chunkPageNumber).ToPrefixTreePage();
+                    chunkPage = _pageLocator.GetWritablePage(chunkPageNumber).ToPrefixTreePage();
                 }
 
                 // We will try to allocate from the chunk free space.
@@ -244,15 +262,18 @@ namespace Voron.Data.Compact
                 if (idx < 0) // Check if we have space available. 
                 {
                     // We dont have, so we get the top level free space and set it as complete.
-                    _table = _tx.ModifyPage(_innerCopy.PageNumber);
-                    GetFreeSpaceTable(_table).Set(chunkIdx, false);
+                    if (!_tablePtr.IsWritable || _innerCopy.PageNumber != _tablePtr.PageNumber)
+                        _tablePtr = new PageHandlePtr(_pageLocator.GetWritablePage(_innerCopy.PageNumber), true);
+
+                    table = _tablePtr.Value;
+                    GetFreeSpaceTable(table).Set(chunkIdx, false);
 
                     name = PrefixTree.Constants.InvalidNodeName;
                     return false;
                 }
                 
                 // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
-                chunkPage = _tx.ModifyPage(chunkPageNumber).ToPrefixTreePage();
+                chunkPage = _pageLocator.GetWritablePage(chunkPageNumber).ToPrefixTreePage();
                 chunkPage.FreeSpace.Set(idx, false); // We mark the node as used.
 
                 name = chunkIdx * _innerCopy.NodesPerChunk + idx; // Convert relative naming to virtual node name.
@@ -275,6 +296,32 @@ namespace Voron.Data.Compact
             return AllocateNodeInChunkSlow();
         }
 
+        public void DeallocateNodeName(long nodeName)
+        {
+            int chunkIdx = (int)(nodeName / _innerCopy.NodesPerChunk);
+            int nodeIdx = (int)(nodeName % _innerCopy.NodesPerChunk);
+
+            var _table = _pageLocator.GetReadOnlyPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)            
+
+            // We will retrieve the chunks mapping table.
+            long chunkPageNumber = ((long*)_table.DataPointer)[chunkIdx];
+            Debug.Assert(chunkPageNumber != PrefixTree.Constants.InvalidPage);
+
+            // We can allocate, so we open the page for writing (we will pay the modify now and cache it at the transaction level). 
+            var chunkPage = _pageLocator.GetWritablePage(chunkPageNumber).ToPrefixTreePage();
+
+            // We mark the node as unused.
+            chunkPage.FreeSpace.Set(nodeIdx, true); 
+
+            if (!GetFreeSpaceTable(_table).Get(chunkIdx)) // It was full.
+            {
+                // Now we are going to be modifying the table.
+                _table = _pageLocator.GetWritablePage(_innerCopy.PageNumber);
+                // We mark the chunk as having free space 
+                GetFreeSpaceTable(_table).Set(chunkIdx, true); 
+            }            
+        }
+
         public PrefixTreeNodeLocationPtr MapVirtualToPhysical(long nodeName)
         {
             Debug.Assert(nodeName > PrefixTree.Constants.InvalidNodeName);
@@ -285,22 +332,23 @@ namespace Voron.Data.Compact
             if (_innerCopy.PageNumber == PrefixTree.Constants.InvalidPage) // This shouldnt happen at all. 
                 throw new InvalidOperationException("Mapping table has not being initialized.");
 
-            long chunkIdx = nodeName / _innerCopy.NodesPerChunk;
-            long nodeNameInChunk = nodeName % _innerCopy.NodesPerChunk; // This is the relative node inside this chunk.
+            if (!_tablePtr.IsValid || _innerCopy.PageNumber != _tablePtr.PageNumber)
+                _tablePtr = new PageHandlePtr(_pageLocator.GetReadOnlyPage(_innerCopy.PageNumber), false); // We are in read mode, no intention to modify yet (therefore no copy wasted)
 
-            var _table = _tx.GetPage(_innerCopy.PageNumber); // We are in read mode, no intention to modify yet (therefore no copy wasted)
-
+            var _table = _tablePtr.Value;
             Debug.Assert(_table.IsOverflow, "This must be an overflow page.");
 
+            long nodesPerChunk = _innerCopy.NodesPerChunk;
+            long chunkIdx = nodeName / nodesPerChunk;
+            long nodeNameInChunk = nodeName % nodesPerChunk; // This is the relative node inside this chunk.
+           
             // This cannot happen as we are allocating when we allocate the node itself.
             if (chunkIdx > _innerCopy.Items)
                 return new PrefixTreeNodeLocationPtr { PageNumber = PrefixTree.Constants.InvalidPage, NodeOffset = 0 };
 
             long physicalPage = ((long*)_table.DataPointer)[chunkIdx];
             if (physicalPage == PrefixTree.Constants.InvalidPage)
-            {
                 return new PrefixTreeNodeLocationPtr { PageNumber = PrefixTree.Constants.InvalidPage, NodeOffset = 0 };
-            }
 
             return new PrefixTreeNodeLocationPtr
             {
@@ -308,5 +356,7 @@ namespace Voron.Data.Compact
                 NodeOffset = nodeNameInChunk // This is the relative location inside this chunk.
             };
         }
+
+
     }
 }

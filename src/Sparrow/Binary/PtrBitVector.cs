@@ -109,8 +109,10 @@ namespace Sparrow.Binary
             value = 0;
             byte* bytePtr = Bits + words * BitVector.BytesPerWord;
 
-            int rotations = (count / BitVector.BitsPerByte);
-            if (count % BitVector.BitsPerByte != 0)
+            // We want to know how many bytes we have left. 
+            int bitsLeft = (count % BitVector.BitsPerWord);
+            int rotations = bitsLeft / BitVector.BitsPerByte;
+            if (bitsLeft % BitVector.BitsPerByte != 0)
                 rotations++;
 
             // TODO: Can we just write it in Little Endian Format (aka in reverse order)?

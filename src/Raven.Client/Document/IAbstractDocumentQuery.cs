@@ -321,20 +321,6 @@ namespace Raven.Client.Document
         void WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
 
         /// <summary>
-        ///   Instructs the query to wait for non stale results as of the cutoff date.
-        /// </summary>
-        /// <param name = "cutOff">The cut off.</param>
-        /// <returns></returns>
-        void WaitForNonStaleResultsAsOf(DateTime cutOff);
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of the cutoff date for the specified timeout
-        /// </summary>
-        /// <param name = "cutOff">The cut off.</param>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        void WaitForNonStaleResultsAsOf(DateTime cutOff, TimeSpan waitTimeout);
-
-        /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>

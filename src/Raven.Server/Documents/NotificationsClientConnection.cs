@@ -7,9 +7,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
@@ -173,7 +174,7 @@ namespace Raven.Server.Documents
 
         public async Task StartSendingNotifications()
         {
-            MemoryOperationContext context;
+            JsonOperationContext context;
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 using (var ms = new MemoryStream())
