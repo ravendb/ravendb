@@ -37,19 +37,22 @@ namespace Raven.Database.Actions
         {
             long id = -1;
 
-            Database.TransactionalStorage.Batch(accessor =>
+            using (Database.IdentityLock.Lock())
             {
-                id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
-
-                var config = new SubscriptionConfig
+                Database.TransactionalStorage.Batch(accessor =>
                 {
-                    SubscriptionId = id,
-                    Criteria = criteria,
-                    AckEtag = criteria.StartEtag ?? Etag.Empty,
-                };
+                    id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
 
-                SaveSubscriptionConfig(id, config);
-            });
+                    var config = new SubscriptionConfig
+                    {
+                        SubscriptionId = id,
+                        Criteria = criteria,
+                        AckEtag = criteria.StartEtag ?? Etag.Empty,
+                    };
+
+                    SaveSubscriptionConfig(id, config);
+                });
+            }
 
             return id;
         }
