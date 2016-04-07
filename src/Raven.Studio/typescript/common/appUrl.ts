@@ -616,12 +616,6 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forEditMerged(indexName: string, db: database): string {
-        return appUrl.forEditIndex(indexName, db) + "&"
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
-    }
-
     static forNewTransformer(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/transformers/edit?" + databasePart;
