@@ -808,6 +808,9 @@ namespace Voron.Data.Tables
 
         public void PrepareForCommit()
         {
+            if (_treesBySliceCache == null)
+                return;
+
             foreach( var item in _treesBySliceCache)
             {
                 var tree = item.Value;
