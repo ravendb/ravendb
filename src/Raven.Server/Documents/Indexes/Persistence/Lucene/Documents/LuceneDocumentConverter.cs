@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is LazyDoubleValue)
             {
-                var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner)); // TODO arek - 
+                var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner), CultureInfo.InvariantCulture); // TODO arek - 
 
                 yield return numericField.SetDoubleValue(doubleValue);
             }
