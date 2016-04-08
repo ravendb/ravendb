@@ -30,8 +30,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
-        private readonly object _writeLock = new object();
-
         private LuceneIndexWriter _indexWriter;
 
         private SnapshotDeletionPolicy _snapshotter;
@@ -64,26 +62,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized)
                 throw new InvalidOperationException();
 
-            lock (_writeLock)
+            if (_initialized)
+                throw new InvalidOperationException();
+
+            _directory = new LuceneVoronDirectory(environment);
+
+            using (var tx = environment.WriteTransaction())
             {
-                if (_initialized)
-                    throw new InvalidOperationException();
-
-                _directory = new LuceneVoronDirectory(environment);
-
-                using (var tx = environment.WriteTransaction())
+                using (_directory.SetTransaction(tx))
                 {
-                    using (_directory.SetTransaction(tx))
-                    {
-                        CreateIndexStructure();
-                        RecreateSearcher();
-                    }
-
-                    tx.Commit();
+                    CreateIndexStructure();
+                    RecreateSearcher();
                 }
 
-                _initialized = true;
+                tx.Commit();
             }
+
+            _initialized = true;
         }
 
         private void CreateIndexStructure()
@@ -99,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistence for index '{_definition.Name} ({_indexId})' was not initialized.");
 
-            return new IndexWriteOperation(_writeLock, _definition.Name, _definition.MapFields, _directory, _converter, writeTransaction, this); // TODO arek - 'this' :/
+            return new IndexWriteOperation(_definition.Name, _definition.MapFields, _directory, _converter, writeTransaction, this); // TODO arek - 'this' :/
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
@@ -140,18 +135,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Index));
 
-            lock (_writeLock)
-            {
-                if (_disposed)
-                    throw new ObjectDisposedException(nameof(Index));
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
 
-                _disposed = true;
+            _disposed = true;
 
-                _indexWriter?.Analyzer?.Dispose();
-                _indexWriter?.Dispose();
-                _converter?.Dispose();
-                _directory?.Dispose();
-            }
+            _indexWriter?.Analyzer?.Dispose();
+            _indexWriter?.Dispose();
+            _converter?.Dispose();
+            _directory?.Dispose();
         }
     }
 }

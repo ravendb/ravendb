@@ -22,8 +22,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
         private readonly Term _reduceKeyHash = new Term(Constants.ReduceKeyFieldName, "Dummy");
 
-        private readonly object _writeLock;
-
         private readonly string _name;
 
         private readonly LuceneIndexWriter _writer;
@@ -33,9 +31,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        public IndexWriteOperation(object writeLock, string name, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
+        public IndexWriteOperation(string name, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
         {
-            _writeLock = writeLock;
             _name = name;
             _converter = converter;
             _persistence = persistence;
@@ -49,8 +46,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new IndexAnalyzerException(e);
             }
             
-            Monitor.Enter(_writeLock);
-
             try
             {
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
@@ -64,7 +59,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                Monitor.Exit(_writeLock);
                 throw new IndexWriteException(e);
             }
         }
@@ -82,8 +76,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _locker?.Release();
                 _analyzer?.Dispose();
-
-                Monitor.Exit(_writeLock);
             }
         }
 
