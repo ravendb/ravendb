@@ -76,8 +76,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (_writer != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
                     _writer.Commit(); // just make sure changes are flushed to disk
 
-                _persistence.RecreateSearcher();
-
                 _releaseWriteTransaction?.Dispose();
             }
             finally

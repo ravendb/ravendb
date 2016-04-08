@@ -528,9 +528,8 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.Commit();
 
-                // TODO arek we need to recreate it here - after the transaction commit so it won't see the uncommitted changes
-                //if (writeOperation.IsValueCreated)
-                //    IndexPersistence.RecreateSearcher(); 
+                if (writeOperation.IsValueCreated)
+                    IndexPersistence.RecreateSearcher(); // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
             }
         }
 
