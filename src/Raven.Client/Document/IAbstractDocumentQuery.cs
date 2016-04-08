@@ -20,6 +20,11 @@ namespace Raven.Client.Document
         DocumentConvention DocumentConvention { get; }
 
         /// <summary>
+        /// Determines if it is a dynamic map-reduce query
+        /// </summary>
+        bool IsDynamicMapReduce { get; }
+
+        /// <summary>
         ///   Instruct the query to wait for non stale result for the specified wait timeout.
         /// </summary>
         /// <param name = "waitTimeout">The wait timeout.</param>

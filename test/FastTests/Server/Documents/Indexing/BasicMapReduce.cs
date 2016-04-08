@@ -202,7 +202,7 @@ namespace FastTests.Server.Documents.Indexing
 
         private static AutoMapReduceIndexDefinition GetUsersCountByLocationIndexDefinition()
         {
-            return new AutoMapReduceIndexDefinition("test", new[] { "Users" }, new[]
+            return new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
             {
                 new IndexField
                 {

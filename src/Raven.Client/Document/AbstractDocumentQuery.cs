@@ -260,6 +260,8 @@ namespace Raven.Client.Document
             get { return theSession; }
         }
 
+        public bool IsDynamicMapReduce => groupByFields.Length > 0;
+
         protected Action<QueryResult> afterQueryExecutedCallback;
         protected AfterStreamExecutedDelegate afterStreamExecutedCallback;
         protected long? cutoffEtag;

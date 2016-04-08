@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -18,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public unsafe class ReduceMapResults : IIndexingWork
     {
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
+        private readonly AutoMapReduceIndexDefinition _indexDefinition;
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _indexingWorkContext;
 
@@ -29,8 +31,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-        public ReduceMapResults(MetricsCountersManager metrics, MapReduceIndexingContext indexingWorkContext)
+        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, MetricsCountersManager metrics, MapReduceIndexingContext indexingWorkContext)
         {
+            _indexDefinition = indexDefinition;
             _metrics = metrics;
             _indexingWorkContext = indexingWorkContext;
         }
@@ -171,13 +174,29 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 foreach (var propertyName in obj.GetPropertyNames())
                 {
-                    int cur;
                     string stringValue;
 
-                    if ("Count".Equals(propertyName, StringComparison.OrdinalIgnoreCase) && obj.TryGet(propertyName, out cur))
+                    IndexField indexField;
+                    if (_indexDefinition.MapFields.TryGetValue(propertyName, out indexField))
                     {
-                        sum += cur;
-                        aggregatedResult[propertyName] = sum;
+                        switch (indexField.MapReduceOperation)
+                        {
+                            case FieldMapReduceOperation.Count:
+                                int cur;
+                                if (obj.TryGet(propertyName, out cur) == false)
+                                    throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
+
+                                sum += cur;
+                                aggregatedResult[propertyName] = sum;
+
+                                break;
+                            //case FieldMapReduceOperation.None:
+                            //case FieldMapReduceOperation.Sum:
+                            //    mappedResult[indexField.Name] = result;
+                            //    break;
+                            default:
+                                throw new ArgumentOutOfRangeException("TODO arek. Unhandled field type:" + indexField.MapReduceOperation);
+                        }
                     }
                     else if (obj.TryGet(propertyName, out stringValue))
                     {

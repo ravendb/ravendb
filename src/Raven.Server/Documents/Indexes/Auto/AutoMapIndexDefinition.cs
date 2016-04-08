@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Indexing;
@@ -13,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoMapIndexDefinition : IndexDefinitionBase
     {
         public AutoMapIndexDefinition(string collection, IndexField[] fields)
-            : base(FindIndexName(collection, fields), new[] { collection }, IndexLockMode.Unlock, fields)
+            : base(IndexNameFinder.FindMapIndexName(new[] { collection }, fields), new[] { collection }, IndexLockMode.Unlock, fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
@@ -23,26 +22,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         }
 
         public int CountOfMapFields => MapFields.Count;
-
-        private static string FindIndexName(string collection, IReadOnlyCollection<IndexField> fields)
-        {
-            var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
-
-            var sortOptions = fields.Where(x => x.SortOption != null).Select(x => x.Name).ToArray();
-            if (sortOptions.Length > 0)
-            {
-                combinedFields = $"{combinedFields}SortBy{string.Join(string.Empty, sortOptions.OrderBy(x => x))}";
-            }
-
-            var highlighted = fields.Where(x => x.Highlighted).Select(x => x.Name).ToArray();
-            if (highlighted.Length > 0)
-            {
-                combinedFields = $"{combinedFields}Highlight{string.Join("", highlighted.OrderBy(x => x))}";
-            }
-
-            return fields.Count == 0 ? $"Auto/{collection}" : $"Auto/{collection}/By{combinedFields}";
-        }
-
+        
         public override void Persist(TransactionOperationContext context)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree("Definition");

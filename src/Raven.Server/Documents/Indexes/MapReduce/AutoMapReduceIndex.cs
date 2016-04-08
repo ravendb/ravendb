@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
                 new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new ReduceMapResults(DocumentDatabase.Metrics, _indexingWorkContext)
+                new ReduceMapResults(Definition, DocumentDatabase.Metrics, _indexingWorkContext)
             };
         }
         
@@ -118,9 +118,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var reduceKey = new DynamicJsonValue();
             foreach (var indexField in Definition.MapFields.Values)
             {
-                object result;
-                _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
-                // explicitly adding this even if the value isn't there, as a null
                 switch (indexField.MapReduceOperation)
                 {
                     case FieldMapReduceOperation.Count:
@@ -128,6 +125,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         break;
                     case FieldMapReduceOperation.None:
                     case FieldMapReduceOperation.Sum:
+                        object result;
+                        _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
+
+                        // explicitly adding this even if the value isn't there, as a null
                         mappedResult[indexField.Name] = result;
                         break;
                     default:
