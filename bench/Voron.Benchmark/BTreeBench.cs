@@ -25,15 +25,12 @@ namespace Voron.Benchmark
             Console.WriteLine("General BTree Benchmarking.");
             Console.WriteLine();
 
-            Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw), this);
-
-            Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw), this);
+            Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw), this);
+            Benchmark.Time("insert rnd separate tx", sw => InsertRandomMultipleTransactionAfterFill(sw), this, delete: false, records: Configuration.ItemsPerTransaction * 100);
 
             Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw), this);
-
-            Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw), this);
-
-            Benchmark.Time("Data for tests", sw => FillSeqOneTransaction(sw), this);
+            Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw), this);
+            Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw), this);
 
             Benchmark.Time("read seq", ReadOneTransaction, this, delete: false);
 
@@ -53,6 +50,35 @@ namespace Voron.Benchmark
             Benchmark.Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4), this);
             Benchmark.Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8), this);
             Benchmark.Time("fill seq non then read parallel 16", stopwatch => ReadAndWriteOneTransaction(stopwatch, 16), this);
+        }
+
+        private void InsertRandomMultipleTransactionAfterFill(Stopwatch sw)
+        {
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            {
+                var value = new byte[100];
+                new Random().NextBytes(value);
+                var ms = new MemoryStream(value);
+
+                sw.Start();
+                var enumerator = _randomNumbers.GetEnumerator();
+                for (int x = 0; x < 100; x++)
+                {
+                    using (var tx = env.WriteTransaction())
+                    {
+                        var tree = tx.CreateTree("test");
+                        for (long i = 0; i < Configuration.ItemsPerTransaction; i++)
+                        {
+                            ms.Position = 0;
+                            enumerator.MoveNext();
+                            tree.Add((enumerator.Current).ToString("0000000000000000"), ms);
+                        }
+                        tx.Commit();
+                    }
+                }
+
+                sw.Stop();
+            }
         }
 
         private void FillRandomOneTransaction(Stopwatch sw)
@@ -166,6 +192,8 @@ namespace Voron.Benchmark
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
+                env.Options.ManualFlushing = true;
+
                 var value = new byte[100];
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
@@ -193,7 +221,13 @@ namespace Voron.Benchmark
 
                         tx.Commit();
                     }
+
+
+                    if (x % 100 == 0)
+                        env.FlushLogToDataFile();
                 }
+
+                env.FlushLogToDataFile();
                 sw.Stop();
             }
         }

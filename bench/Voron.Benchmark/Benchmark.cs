@@ -15,7 +15,7 @@ namespace Voron.Benchmark
 
     public static class Benchmark
     {
-        public static void Time(string name, Action<Stopwatch> action, IHasStorageLocation storage, bool delete = true)
+        public static void Time(string name, Action<Stopwatch> action, IHasStorageLocation storage, bool delete = true, int records = Configuration.Transactions * Configuration.ItemsPerTransaction)
         {
             if (delete)
                 DeleteDirectory(storage.Path);
@@ -26,7 +26,7 @@ namespace Voron.Benchmark
             try
             {
                 action(sp);
-                Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Configuration.Transactions * Configuration.ItemsPerTransaction / sp.Elapsed.TotalSeconds);
+                Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, records / sp.Elapsed.TotalSeconds);
             }
             catch (NotSupportedException)
             {
@@ -38,7 +38,7 @@ namespace Voron.Benchmark
             }
             catch (Exception e)
             {
-                Console.WriteLine($"\r{0,-35}: failed with {e.GetType().Name} exception.", name);
+                Console.WriteLine("\r{0,-35}: failed with {e.GetType().Name} exception.", name);
             }
         }
 
