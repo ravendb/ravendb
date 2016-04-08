@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Indexes
                     environment.Dispose();
                 else
                     options.Dispose();
-                
+
                 throw;
             }
         }
@@ -384,6 +384,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void ExecuteIndexing()
         {
+            using (CultureHelper.EnsureInvariantCulture())
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown, _cancellationTokenSource.Token))
             {
                 try
@@ -705,7 +706,7 @@ namespace Raven.Server.Documents.Indexes
                             await wait.WaitForIndexingAsync().ConfigureAwait(false);
                             continue;
                         }
-                        
+
                         var stats = ReadStats(indexTx);
 
                         result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
@@ -724,7 +725,7 @@ namespace Raven.Server.Documents.Indexes
                             result.Results = reader.Query(query, token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
                             result.TotalResults = totalResults.Value;
                         }
-                        
+
                         return result;
                     }
                 }
@@ -775,7 +776,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 fixed (long* buffer = indexEtagBytes)
                 {
-                    return (long)Hashing.XXHash64.Calculate((byte*) buffer, indexEtagBytes.Length * sizeof(long));
+                    return (long)Hashing.XXHash64.Calculate((byte*)buffer, indexEtagBytes.Length * sizeof(long));
                 }
             }
         }
