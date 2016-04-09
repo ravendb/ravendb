@@ -182,6 +182,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         switch (indexField.MapReduceOperation)
                         {
                             case FieldMapReduceOperation.Count:
+                            case FieldMapReduceOperation.Sum:
                                 int cur;
                                 if (obj.TryGet(propertyName, out cur) == false)
                                     throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
@@ -191,9 +192,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                 break;
                             //case FieldMapReduceOperation.None:
-                            //case FieldMapReduceOperation.Sum:
-                            //    mappedResult[indexField.Name] = result;
-                            //    break;
                             default:
                                 throw new ArgumentOutOfRangeException("TODO arek. Unhandled field type:" + indexField.MapReduceOperation);
                         }

@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
@@ -1149,7 +1150,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             documentQuery.AddRootType(expression.Arguments[0].Type.GetGenericArguments()[0]);
                     }
                     VisitExpression(expression.Arguments[0]);
-                        VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
+                    VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
                     break;
                 }
                 case "Skip":
@@ -1281,10 +1282,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (expression.Arguments.Count == 4)
                     {
                         // GroupBy(x => keySelector, x => elementSelector, x => resultSelector)
-
-                        var operand = ((UnaryExpression)expression.Arguments[3]).Operand;
-
-                        VisitSelect(operand);
+                        VisitSelect(((UnaryExpression)expression.Arguments[3]).Operand);
                     }
 
                     break;
@@ -1302,19 +1300,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (lambdaExpression == null)
                 throw new NotSupportedException("We expect GroupBy statement to have lambda expression");
 
-            var body = lambdaExpression.Body;
+            var field = GetSelectPath(linqPathProvider.GetMemberExpression(lambdaExpression));
 
-            switch (body.NodeType)
+            documentQuery.AddMapReduceField(new DynamicMapReduceField
             {
-                case ExpressionType.MemberAccess:
-                    var memberExpression = GetMember(body);
-                    var field = memberExpression.Path;
-
-                    documentQuery.AddGroupByField(field);
-                    break;
-                default:
-                    throw new NotSupportedException("Unsupported expression type in GroupBy method: " + body.NodeType);
-            }
+                Name = field,
+                IsGroupBy = true
+            });
         }
 
         private void VisitOrderBy(LambdaExpression expression, bool descending)
@@ -1454,10 +1446,35 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (Enum.TryParse(mapReduceOperationCall.Method.Name, out mapReduceOperation) == false)
                 throw new NotSupportedException($"Unhandled map reduce operation type: {mapReduceOperationCall.Method.Name}");
 
+            string renamedField = null;
+            string mapReduceField;
 
-            var mapReduceFieldName = GetSelectPath(memberInfo);
+            if (mapReduceOperationCall.Arguments.Count == 1)
+            {
+                mapReduceField = GetSelectPath(memberInfo);
+            }
+            else
+            {
+                renamedField = GetSelectPath(memberInfo);
+                mapReduceField = GetSelectPath(linqPathProvider.GetMemberExpression(mapReduceOperationCall.Arguments[1]));
+            }
 
-            AddToFieldsToFetch($"{mapReduceFieldName}/{mapReduceOperation}", null);
+            FieldsToFetch.Add(mapReduceField);
+
+            if (renamedField != null && mapReduceField != renamedField)
+            {
+                FieldsToRename.Add(new RenamedField
+                {
+                    NewField = renamedField,
+                    OriginalField = mapReduceField
+                });
+            }
+
+            documentQuery.AddMapReduceField(new DynamicMapReduceField
+            {
+                Name = mapReduceField,
+                OperationType = mapReduceOperation
+            });
         }
 
         private string GetSelectPath(MemberInfo member)

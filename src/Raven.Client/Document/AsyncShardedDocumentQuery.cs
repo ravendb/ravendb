@@ -99,7 +99,7 @@ namespace Raven.Client.Document
                 theWaitForNonStaleResults = theWaitForNonStaleResults,
                 theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
                 orderByFields = orderByFields,
-                groupByFields = groupByFields,
+                dynamicMapReduceFields = dynamicMapReduceFields,
                 isDistinct = isDistinct,
                 transformResultsFunc = transformResultsFunc,
                 includes = new HashSet<string>(includes),

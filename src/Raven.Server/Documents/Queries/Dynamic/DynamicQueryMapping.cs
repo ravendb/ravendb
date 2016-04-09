@@ -112,6 +112,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (query.GroupByFields == null)
             {
+                // auto map query
+
                 var fields = SimpleQueryParser.GetFieldsForDynamicQuery(query); // TODO arek - not sure if we really need a Tuple<string, string> here
 
                 if (query.SortedFields != null)
@@ -152,7 +154,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
             else
             {
-                // dynamic map reduce query
+                // dynamic map-reduce query
                 // TODO arek: sorted fields
 
                 dynamicQueryMapping.GroupByFields = query.GroupByFields;
@@ -161,10 +163,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     var fieldInfo = x.Split('/');
 
+                    if (fieldInfo.Length != 2)
+                        throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {x}");
+
+                    FieldMapReduceOperation operation;
+
+                    if (Enum.TryParse(fieldInfo[1], out operation) == false)
+                        throw new InvalidOperationException($"Could not parse map-reduce field operation: {fieldInfo[1] ?? "empty"}");
+
                     return new DynamicQueryMappingItem
                     {
                         Name = fieldInfo[0],
-                        MapReduceOperation = fieldInfo.Length > 1 ? (FieldMapReduceOperation)Enum.Parse(typeof(FieldMapReduceOperation), fieldInfo[1]) : FieldMapReduceOperation.None
+                        MapReduceOperation = operation
                     };
                 });
             }

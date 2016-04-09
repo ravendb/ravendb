@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 
 namespace Raven.Client.Document
 {
@@ -375,8 +377,8 @@ namespace Raven.Client.Document
         void SetOriginalQueryType(Type originalType);
 
         /// <summary>
-        /// Adds an grouping by a specific field to the query
+        /// Adds a dynamic query field to the query
         /// </summary>
-        void AddGroupByField(string fieldName);
+        void AddMapReduceField(DynamicMapReduceField field);
     }
 }

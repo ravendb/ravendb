@@ -5,10 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Indexing;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -87,9 +89,14 @@ namespace Raven.Abstractions.Data
         public SortedField[] SortedFields { get; set; }
 
         /// <summary>
-        /// Array of fields containing group by information.
+        /// Array of fields in a dynamic map reduce-query
         /// </summary>
-        public string[] GroupByFields { get; set; }
+        internal DynamicMapReduceField[] DynamicMapReduceFields { get; set; }
+
+        /// <summary>
+        /// Array containing only GroupBy fields of a dynamic map-reduce query
+        /// </summary>
+        internal string[] GroupByFields { get; set; }
 
         /// <summary>
         /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
@@ -253,11 +260,27 @@ namespace Raven.Abstractions.Data
             if (SkipDuplicateChecking)
                 path.Append("&skipDuplicateChecking=true");
 
-            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+            if (DynamicMapReduceFields == null || DynamicMapReduceFields.Length == 0)
+            {
+                FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+            }
+            else
+            {
+                foreach (var field in DynamicMapReduceFields)
+                {
+                    if (field.IsGroupBy)
+                        path.Append("&groupBy=").Append(Uri.EscapeDataString(field.Name));
+                    else
+                    {
+                        path.Append("&fetch=").Append(Uri.EscapeDataString(field.Name));
+                        path.Append("/");
+                        path.Append(field.OperationType);
+                    }
+                }
+            }
+
             SortedFields.ApplyIfNotNull(
                 field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
-
-            GroupByFields.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 
             if (string.IsNullOrEmpty(ResultsTransformer) == false)
             {
