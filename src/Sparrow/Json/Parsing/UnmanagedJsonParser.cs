@@ -588,7 +588,7 @@ namespace Sparrow.Json.Parsing
             try
             {
                 // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-                double.Parse(_doubleStringBuffer, NumberStyles.Any);
+                double.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
             }
             catch (Exception e)
             {
