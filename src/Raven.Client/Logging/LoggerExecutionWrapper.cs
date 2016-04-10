@@ -80,12 +80,12 @@ namespace Raven.Abstractions.Logging
                 return;
             }
 
-            var databaseName = LogContext.DatabaseName;
+            var resourceName = LogContext.ResourceName;
             foreach (var target in targets)
             {
                 target.Write(new LogEventInfo
                 {
-                    Database = databaseName,
+                    Database = resourceName,
                     Exception = null,
                     FormattedMessage = formattedMessage,
                     Level = logLevel,
