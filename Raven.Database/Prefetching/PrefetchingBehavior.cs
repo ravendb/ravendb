@@ -62,6 +62,21 @@ namespace Raven.Database.Prefetching
         private readonly string userDescription;
         private Etag recentEtag = Etag.Empty;
 
+        internal int DocumentsToRemoveCount
+        {
+            get
+            {
+                try
+                {
+                    return documentsToRemove.Count;
+                }
+                catch (OverflowException)
+                {
+                    return -1;
+                }
+            }
+        }
+
         public PrefetchingBehavior(PrefetchingUser prefetchingUser, 
             WorkContext context, 
             BaseBatchSizeAutoTuner autoTuner, 
@@ -1131,18 +1146,28 @@ namespace Raven.Database.Prefetching
                 }, linkedToken.Token)
                 .ContinueWith(t =>
                 {
-                    t.AssertNotFailed();
-                    cts.Dispose();
-                    linkedToken.Dispose();
+                    using (cts)
+                    using (linkedToken)
+                    {
+                        t.AssertNotFailed();
+                    }
                     return t.Result;
                 })
             };
 
             futureIndexBatch.Task.ContinueWith(t =>
             {
-                FutureBatchCompleted(t.Result.Count);
-            }, linkedToken.Token);
-            
+                try
+                {
+                    if (linkedToken.IsCancellationRequested == false)
+                        FutureBatchCompleted(t.Result.Count);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // this is an expected race with the actual task, this is fine
+                }
+            });
+
             return futureIndexBatches.TryAdd(nextEtag, futureIndexBatch);
         }
 

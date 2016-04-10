@@ -44,6 +44,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Json.Linq;
+using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Database
 {
@@ -95,6 +96,7 @@ namespace Raven.Database
         {
             TimerManager = new ResourceTimerManager();
             DocumentLock = new PutSerialLock();
+            IdentityLock = new PutSerialLock();
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;
@@ -304,6 +306,8 @@ namespace Raven.Database
         public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
         internal PutSerialLock DocumentLock { get; private set; }
+
+        internal PutSerialLock IdentityLock { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
         public AttachmentActions Attachments { get; private set; }
@@ -541,7 +545,9 @@ namespace Raven.Database
                     Errors = workContext.Errors,
                     DatabaseId = TransactionalStorage.Id,
                     SupportsDtc = TransactionalStorage.SupportsDtc,
-                    Is64Bit = Environment.Is64BitProcess
+                    Is64Bit = Environment.Is64BitProcess,
+                    IsMemoryStatisticThreadRuning = MemoryStatistics.LowMemoryWatcherThreadState == ThreadState.Background
+
                 };
 
                 TransactionalStorage.Batch(actions =>

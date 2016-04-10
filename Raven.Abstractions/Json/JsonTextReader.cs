@@ -34,14 +34,16 @@ namespace Raven.Imports.Newtonsoft.Json
                     // flush the remaing values
                     switch (iter)
                     {
+                        // base64 format: XXX=
                         case 3:
                             _largeBytesBuffer[bufferPos++] = (byte)((buf >> 10) & 255);
                             _largeBytesBuffer[bufferPos++] = (byte)((buf >> 2) & 255);
-                            _charPos += 2;
+                            _charPos++;;
                             break;
+                        // base64 format: XX==
                         case 2:
                             _largeBytesBuffer[bufferPos++] = (byte)((buf >> 4) & 255);
-                            _charPos++;
+                            _charPos += 2;
                             break;
                     }
                     break;
@@ -80,8 +82,6 @@ namespace Raven.Imports.Newtonsoft.Json
                 {
                     ReadData(false);
                 }
-                if (_chars[_charPos + 1] == quoteChar)
-                    _charPos += 2;
             }
 
             SetToken(JsonToken.String);
