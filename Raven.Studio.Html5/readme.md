@@ -19,7 +19,7 @@ The application code is written in <a href="http://typescriptlang.org">TypeScrip
 -	<b>/Scripts/typings</b> - TypeScript type definitions for 3rd party libraries.
 
 ## Running the app
-Build and run the Raven.Server project. Launch a web browser to locahost:8080, and the Studio will appear.
+Build and run the Raven.Server project. Launch a web browser to localhost:8080, and the Studio will appear.
 
 ## Debugging
 To debug the TypeScript inside Visual Studio, set a breakpoint as usual and start debugging in Internet Explorer.
