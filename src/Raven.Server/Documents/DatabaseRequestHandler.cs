@@ -41,11 +41,15 @@ namespace Raven.Server.Documents
             {
                 if (document == null)
                     continue;
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-                document.EnsureMetadata();
-                context.Write(writer, document.Data);
+
+                using (document.Data)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+                    document.EnsureMetadata();
+                    context.Write(writer, document.Data);
+                }
             }
 
             writer.WriteEndArray();
@@ -62,11 +66,15 @@ namespace Raven.Server.Documents
                 var document = documents[index];
                 if (document == null)
                     continue;
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-                document.EnsureMetadata();
-                context.Write(writer, document.Data);
+
+                using (document.Data)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+                    document.EnsureMetadata();
+                    context.Write(writer, document.Data);
+                }
             }
 
             writer.WriteEndArray();

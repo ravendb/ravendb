@@ -9,7 +9,7 @@ namespace Raven.Server.Indexing
     {
         private readonly string _name;
         private readonly Transaction _tx;
-        private FileStream _file;
+        private readonly FileStream _file;
 
         public VoronIndexOutput(string tempPath, string name, Transaction tx)
         {

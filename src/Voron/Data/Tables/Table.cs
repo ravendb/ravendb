@@ -267,7 +267,7 @@ namespace Voron.Data.Tables
             {
                 int itemSize;
                 var pos = ActiveDataSmallSection.DirectRead(idToMove, out itemSize);
-                var newId = AllocateFromSmallActiveSection(size);
+                var newId = AllocateFromSmallActiveSection(itemSize);
 
                 OnDataMoved(idToMove, newId, pos, itemSize);
 

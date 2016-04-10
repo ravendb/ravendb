@@ -3,8 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
-using NetTopologySuite.Noding;
-using NetTopologySuite.Utilities;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Json.Linq;
