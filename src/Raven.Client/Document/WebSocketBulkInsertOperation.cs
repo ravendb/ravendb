@@ -30,7 +30,9 @@ namespace Raven.Client.Document
         private UnmanagedBuffersPool _unmanagedBuffersPool;
         private JsonOperationContext _jsonOperationContext;
         private readonly BlockingCollection<MemoryStream> _documents = new BlockingCollection<MemoryStream>();
-        private readonly BlockingCollection<MemoryStream> _buffers = new BlockingCollection<MemoryStream>();
+        private readonly BlockingCollection<MemoryStream> _buffers = 
+            // we use a stack based back end to ensure that we always use the active buffers
+            new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
         private readonly Task _writeToServerTask;
 
 
@@ -88,7 +90,15 @@ namespace Raven.Client.Document
                 {
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    var jsonBuffer = _documents.Take();
+                    MemoryStream jsonBuffer;
+                    try
+                    {
+                        jsonBuffer = _documents.Take();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        break;
+                    }
                     using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
                         jsonParser, jsonParserState))
@@ -117,6 +127,7 @@ namespace Raven.Client.Document
                         await FlushBufferAsync();
                     }
                 }
+                await FlushBufferAsync();
             }
         }
 

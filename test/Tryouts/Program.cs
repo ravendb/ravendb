@@ -1,8 +1,11 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using FastTests.Client.BulkInsert;
+using FastTests.Server.Documents.Indexing;
+using FastTests.Server.OAuth;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 
@@ -21,32 +24,33 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            Sparrow.Hashing.XXHash64.CalculateRaw("MyStringValue");
-
-            //using (var x = new BulkInserts())
-            //{
-            //    x.SimpleBulkInsertShouldWork().Wait();
-            //}
-            //return;
-            using (var store = new DocumentStore
+            for (int i = 0; i < 100; i++)
             {
-                Url = "http://127.0.0.1:8081",
-                DefaultDatabase = "FooBar123"
-            })
-            {
-                store.Initialize();
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
-                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                Console.WriteLine(i);
+                using (var x = new BasicIndexing())
                 {
-                    Id = "FooBar123",
-                    Settings =
-                    {
-                        { "Raven/DataDir", "~\\FooBar123" }
-                    }
-                });
-
-                BulkInsert(store, 1024 * 1024 * 10).Wait();
+                    x.Errors();
+                }
             }
+            //using (var store = new DocumentStore
+            //{
+            //    Url = "http://10.0.0.80:8081",
+            //    DefaultDatabase = "FooBar123"
+            //})
+            //{
+            //    store.Initialize();
+            //    store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
+            //    store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+            //    {
+            //        Id = "FooBar123",
+            //        Settings =
+            //        {
+            //            { "Raven/DataDir", "~\\FooBar123" }
+            //        }
+            //    });
+
+            //    BulkInsert(store, 1024 * 512).Wait();
+            //}
         }
 
         public static async Task BulkInsert(DocumentStore store, int numOfItems)
