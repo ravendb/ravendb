@@ -12,6 +12,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Indexing;
 
 using Voron.Impl;
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<string> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults)
+        public IEnumerable<Document> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults, IQueryResultRetriever retriever)
         {
             var docsToGet = query.PageSize;
             var position = query.Start;
@@ -61,10 +62,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 totalResults.Value = search.TotalHits;
 
-                //RecordAlreadyPagedItemsInPreviousPage(start, search, indexSearcher);
-
-                //SetupHighlighter(documentQuery);
-
                 for (; position < search.ScoreDocs.Length && query.PageSize > 0; position++)
                 {
                     token.ThrowIfCancellationRequested();
@@ -72,25 +69,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var scoreDoc = search.ScoreDocs[position];
                     var document = _searcher.Doc(scoreDoc.Doc);
 
-                    //var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, scoreDoc);
-                    //if (indexQueryResult.Key == null && !string.IsNullOrEmpty(indexQuery.HighlighterKeyName))
-                    //{
-                    //    indexQueryResult.HighlighterKey = document.Get(indexQuery.HighlighterKeyName);
-                    //}
-
-                    //if (ShouldIncludeInResults(indexQueryResult) == false)
-                    //{
-                    //    indexQuery.SkippedResults.Value++;
-                    //    continue;
-                    //}
-
-                    //AddHighlighterResults(indexSearcher, scoreDoc, indexQueryResult);
-
-                    //AddQueryExplanation(documentQuery, indexSearcher, scoreDoc, indexQueryResult);
-
                     returnedResults++;
 
-                    yield return document.Get(Abstractions.Data.Constants.DocumentIdFieldName);
+                    yield return retriever.Get(document);
+
                     if (returnedResults == query.PageSize)
                         yield break;
                 }
@@ -190,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {
-                    sortOptions = SortOptions.NumbericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be veryfied better
+                    sortOptions = SortOptions.NumbericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
                 }
 
                 return new SortField(x.Field, (int)sortOptions, x.Descending);

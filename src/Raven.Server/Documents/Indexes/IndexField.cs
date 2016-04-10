@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexField()
         {
             Indexing = FieldIndexing.Default;
+            Storage = FieldStorage.No;
         }
 
         protected bool Equals(IndexField other)

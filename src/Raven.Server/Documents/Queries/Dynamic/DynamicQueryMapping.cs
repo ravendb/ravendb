@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Sort;
 
@@ -19,22 +20,44 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public DynamicQueryMappingItem[] MapFields { get; private set; } = new DynamicQueryMappingItem[0];
 
+        public string[] GroupByFields { get; private set; } = new string[0];
+
         public string[] HighlightedFields { get; private set; }
 
         private DynamicQueryMapping()
         {
         }
 
-        public AutoMapIndexDefinition CreateAutoIndexDefinition()
+        public IndexDefinitionBase CreateAutoIndexDefinition()
         {
-            return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
-                new IndexField
-                {
-                    Name = field.Name,
-                    Storage = FieldStorage.No,
-                    SortOption = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Field))?.FieldType,
-                    Highlighted = HighlightedFields.Any(x => field.Name.Equals(x))
-                }).ToArray());
+            if (GroupByFields.Length == 0)
+            {
+                return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
+                    new IndexField
+                    {
+                        Name = field.Name,
+                        Storage = FieldStorage.No,
+                        SortOption = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Field))?.FieldType,
+                        Highlighted = HighlightedFields.Any(x => field.Name.Equals(x))
+                    }).ToArray());
+            }
+            else
+            {
+                return new AutoMapReduceIndexDefinition(new [] { ForCollection }, MapFields.Select(field => 
+                    new IndexField
+                    {
+                        Name = field.Name,
+                        Storage = FieldStorage.Yes,
+                        MapReduceOperation = field.MapReduceOperation
+                    }).ToArray(),
+
+                    GroupByFields.Select(field => 
+                    new IndexField
+                    {
+                        Name = field,
+                        Storage = FieldStorage.Yes,
+                    }).ToArray());
+            }
         }
 
         public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
@@ -79,67 +102,91 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public static DynamicQueryMapping Create(string entityName, IndexQuery query)
         {
-            var fields = SimpleQueryParser.GetFieldsForDynamicQuery(query); // TODO arek - not sure if we really need a Tuple<string, string> here
-
-            if (query.SortedFields != null)
-            {
-                foreach (var sortedField in query.SortedFields)
-                {
-                    var field = sortedField.Field;
-
-                    if (field == Constants.TemporaryScoreValue)
-                        continue;
-
-                    if (field.StartsWith(Constants.AlphaNumericFieldName) ||
-                        field.StartsWith(Constants.RandomFieldName) ||
-                        field.StartsWith(Constants.CustomSortFieldName))
-                    {
-                        field = SortFieldHelper.CustomField(field).Name;
-                    }
-
-                    if (field.EndsWith("_Range"))
-                        field = field.Substring(0, field.Length - "_Range".Length);
-
-                    fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
-                }
-            }
-
             var dynamicQueryMapping = new DynamicQueryMapping
             {
                 ForCollection = entityName,
-                HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray(),
-                SortDescriptors = GetSortInfo(query.SortedFields, fields.Where(x => x.Item1.EndsWith("_Range")).Select(x => x.Item1).Distinct().ToArray())
+                
             };
 
-            dynamicQueryMapping.SetupFieldsToIndex(fields);
-            dynamicQueryMapping.SetupSortDescriptors(dynamicQueryMapping.SortDescriptors);
+            IEnumerable<DynamicQueryMappingItem> dynamicMappingItems;
 
-            return dynamicQueryMapping;
-        }
+            if (query.GroupByFields == null)
+            {
+                // auto map query
 
-        private void SetupSortDescriptors(DynamicSortInfo[] sortDescriptors)
-        {
-            foreach (var dynamicSortInfo in sortDescriptors)
+                var fields = SimpleQueryParser.GetFieldsForDynamicQuery(query); // TODO arek - not sure if we really need a Tuple<string, string> here
+
+                if (query.SortedFields != null)
+                {
+                    foreach (var sortedField in query.SortedFields)
+                    {
+                        var field = sortedField.Field;
+
+                        if (field == Constants.TemporaryScoreValue)
+                            continue;
+
+                        if (field.StartsWith(Constants.AlphaNumericFieldName) ||
+                            field.StartsWith(Constants.RandomFieldName) ||
+                            field.StartsWith(Constants.CustomSortFieldName))
+                        {
+                            field = SortFieldHelper.CustomField(field).Name;
+                        }
+
+                        if (field.EndsWith("_Range"))
+                            field = field.Substring(0, field.Length - "_Range".Length);
+
+                        fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
+                    }
+                }
+
+                dynamicMappingItems = fields.Select(x => new DynamicQueryMappingItem
+                {
+                    //From = x.Item1,
+                    //To = IndexField.ReplaceInvalidCharactersInFieldName(x.Item2),
+                    //QueryFrom = EscapeParentheses(x.Item2),
+                    Name = x.Item1.EndsWith("_Range") ? x.Item1.Substring(0, x.Item1.Length - "_Range".Length) : x.Item1
+                });
+
+                dynamicQueryMapping.SortDescriptors = GetSortInfo(query.SortedFields,
+                    fields.Where(x => x.Item1.EndsWith("_Range")).Select(x => x.Item1).Distinct().ToArray());
+
+                dynamicQueryMapping.HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray();
+            }
+            else
+            {
+                // dynamic map-reduce query
+                // TODO arek: sorted fields
+
+                dynamicQueryMapping.GroupByFields = query.GroupByFields;
+
+                dynamicMappingItems = query.FieldsToFetch.Select(x =>
+                {
+                    var fieldInfo = x.Split('/');
+
+                    if (fieldInfo.Length != 2)
+                        throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {x}");
+
+                    FieldMapReduceOperation operation;
+
+                    if (Enum.TryParse(fieldInfo[1], out operation) == false)
+                        throw new InvalidOperationException($"Could not parse map-reduce field operation: {fieldInfo[1] ?? "empty"}");
+
+                    return new DynamicQueryMappingItem
+                    {
+                        Name = fieldInfo[0],
+                        MapReduceOperation = operation
+                    };
+                });
+            }
+
+            foreach (var dynamicSortInfo in dynamicQueryMapping.SortDescriptors)
             {
                 dynamicSortInfo.Field = IndexField.ReplaceInvalidCharactersInFieldName(dynamicSortInfo.Field);
             }
-        }
 
-        private void SetupFieldsToIndex(IEnumerable<Tuple<string, string>> fields)
-        {
-            MapFields = fields.Select(x => new DynamicQueryMappingItem
-            {
-                //From = x.Item1,
-                //To = IndexField.ReplaceInvalidCharactersInFieldName(x.Item2),
-                //QueryFrom = EscapeParentheses(x.Item2),
-                Name = x.Item1.EndsWith("_Range") ? x.Item1.Substring(0, x.Item1.Length - "_Range".Length) : x.Item1
-            }).OrderByDescending(x => x.Name.Length).ToArray();
-
-        }
-
-        private string EscapeParentheses(string str)
-        {
-            return str.Replace("(", @"\(").Replace(")", @"\)");
+            dynamicQueryMapping.MapFields = dynamicMappingItems.OrderByDescending(x => x.Name.Length).ToArray();
+            
+            return dynamicQueryMapping;
         }
 
         public static DynamicSortInfo[] GetSortInfo(SortedField[] sortedFields, string[] numericFields)

@@ -739,5 +739,18 @@ namespace Sparrow.Json
         {
             _stream.CopyTo((byte*)ptr);
         }
+
+
+        public unsafe void CopyTo(MemoryStream stream)
+        {
+            stream.SetLength(stream.Position + SizeInBytes);
+            ArraySegment<byte> bytes;
+            stream.TryGetBuffer(out bytes);
+            fixed (byte* ptr = bytes.Array)
+            {
+                _stream.CopyTo(ptr + stream.Position);
+                stream.Position += SizeInBytes;
+            }
+        }
     }
 }

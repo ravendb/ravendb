@@ -15,7 +15,6 @@ namespace Voron.Data.Compact
     {
         private readonly LowLevelTransaction _tx;
         private readonly PrefixTreeRootHeader* _pointer;
-        private readonly PrefixTreeTranslationTableMutableState _translationTable;
         private readonly PrefixTreeTableMutableState _table;
 
         private IntPtr _innerCopyPtr;
@@ -37,14 +36,7 @@ namespace Voron.Data.Compact
 
             this._innerCopy->RootObjectType = RootObjectType.PrefixTree;
 
-            this._translationTable = new PrefixTreeTranslationTableMutableState(tx, this);
             this._table = new PrefixTreeTableMutableState(tx, this);
-        }
-
-        public PrefixTreeTranslationTableMutableState TranslationTable
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _translationTable; }
         }
 
         public PrefixTreeTableMutableState Table
@@ -122,7 +114,7 @@ namespace Voron.Data.Compact
         public bool IsModified
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _isModified || _translationTable.IsModified; }
+            get { return _isModified; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
@@ -135,8 +127,6 @@ namespace Voron.Data.Compact
         public void CopyTo(PrefixTreeRootHeader* header)
         {
             Memory.CopyInline((byte*)header, (byte*)_innerCopy, sizeof(PrefixTreeRootHeader));
-            if (_translationTable.IsModified)
-                _translationTable.CopyTo(header);
             if (_table.IsModified)
                 _table.CopyTo(header);
         }

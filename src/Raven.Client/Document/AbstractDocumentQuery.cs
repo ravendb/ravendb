@@ -33,6 +33,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Raven.Client.Document.Async;
+using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
@@ -101,7 +102,8 @@ namespace Raven.Client.Document
         /// The query listeners for this query
         /// </summary>
         protected readonly IDocumentQueryListener[] queryListeners;
-        protected readonly bool isMapReduce;
+
+        protected bool isMapReduce;
         /// <summary>
         /// The session for this query
         /// </summary>
@@ -111,6 +113,11 @@ namespace Raven.Client.Document
         ///   The fields to order the results by
         /// </summary>
         protected string[] orderByFields = new string[0];
+
+        /// <summary>
+        /// The fields of dynamic map-reduce query
+        /// </summary>
+        protected DynamicMapReduceField[] dynamicMapReduceFields = new DynamicMapReduceField[0];
 
         /// <summary>
         ///   The fields to highlight
@@ -255,6 +262,8 @@ namespace Raven.Client.Document
             get { return theSession; }
         }
 
+        public bool IsDynamicMapReduce => dynamicMapReduceFields.Length > 0;
+
         protected Action<QueryResult> afterQueryExecutedCallback;
         protected AfterStreamExecutedDelegate afterStreamExecutedCallback;
         protected long? cutoffEtag;
@@ -344,6 +353,7 @@ namespace Raven.Client.Document
             theSession = other.theSession;
             conventions = other.conventions;
             orderByFields = other.orderByFields;
+            dynamicMapReduceFields = other.dynamicMapReduceFields;
             pageSize = other.pageSize;
             queryText = other.queryText;
             start = other.start;
@@ -870,6 +880,18 @@ namespace Raven.Client.Document
         public void SetOriginalQueryType(Type originalType)
         {
             this.originalType = originalType;
+        }
+
+        public void AddMapReduceField(DynamicMapReduceField field)
+        {
+            isMapReduce = true;
+
+            field.Name = EnsureValidFieldName(new WhereParams
+            {
+                FieldName = field.Name
+            });
+            
+            dynamicMapReduceFields = dynamicMapReduceFields.Concat(new [] { field }).ToArray();
         }
 
         IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
@@ -1807,6 +1829,7 @@ If you really want to do in memory filtering on the data returned from the query
                     WaitForNonStaleResultsTimeout = timeout,
                     CutoffEtag = cutoffEtag,
                     SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+                    DynamicMapReduceFields = dynamicMapReduceFields,
                     FieldsToFetch = fieldsToFetch,
                     SpatialFieldName = spatialFieldName,
                     QueryShape = queryShape,
@@ -1843,6 +1866,7 @@ If you really want to do in memory filtering on the data returned from the query
                 WaitForNonStaleResults = theWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = timeout,
                 SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+                DynamicMapReduceFields = dynamicMapReduceFields,
                 FieldsToFetch = fieldsToFetch,
                 DefaultField = defaultField,
                 DefaultOperator = defaultOperator,

@@ -66,11 +66,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             indexWriter.DeleteDocuments(terms);
         }
 
-        public IndexReader GetReader()
-        {
-            return indexWriter.GetReader();
-        }
-
         public void Commit()
         {
             try

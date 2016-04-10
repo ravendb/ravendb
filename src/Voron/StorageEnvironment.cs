@@ -172,7 +172,7 @@ namespace Voron
                 metadataTree.Add("db-id", DbId.ToByteArray());
                 metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
 
-                treesTx.CommitTrees();
+                treesTx.PrepareForCommit();
 
                 tx.Commit();
             }

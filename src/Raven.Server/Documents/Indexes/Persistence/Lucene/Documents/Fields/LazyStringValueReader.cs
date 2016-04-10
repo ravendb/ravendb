@@ -3,7 +3,6 @@ using System.IO;
 using System.Text;
 
 using Raven.Server.Indexing.Corax;
-using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields

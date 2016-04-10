@@ -222,7 +222,7 @@ namespace Voron.Impl
                 pageSize = Environment.Options.PageSize;
             }
             
-            Memory.CopyInline(newPage.Pointer, currentPage.Pointer, pageSize);            
+            Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);            
 
             return newPage;
         }

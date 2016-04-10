@@ -128,9 +128,12 @@ namespace Raven.Server.Documents.Queries.Handlers
                         case "sort":
                             result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
                             break;
-                        // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
-                        // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
-                        // TODO: We also need to make sure that we aren't using headers
+                        case "groupBy":
+                            result.GroupByFields = item.Value;
+                            break;
+                            // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
+                            // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
+                            // TODO: We also need to make sure that we aren't using headers
                     }
                 }
                 catch (Exception e)

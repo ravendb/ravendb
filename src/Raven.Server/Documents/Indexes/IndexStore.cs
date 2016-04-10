@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public int CreateIndex(AutoMapIndexDefinition definition)
+        public int CreateIndex(IndexDefinitionBase definition)
         {
             lock (_locker)
             {
@@ -95,7 +96,14 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexId = _indexes.GetNextIndexId();
 
-                var index = AutoMapIndex.CreateNew(indexId, definition, _documentDatabase);
+                Index index;
+
+                if (definition is AutoMapIndexDefinition)
+                    index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition) definition, _documentDatabase);
+                else if (definition is AutoMapReduceIndexDefinition)
+                    index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition) definition, _documentDatabase);
+                else
+                    throw new NotImplementedException("Unknown index definition type: ");
 
                 if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                     index.Start();
@@ -301,10 +309,17 @@ namespace Raven.Server.Documents.Indexes
             //FlushMapIndexes();
             //FlushReduceIndexes();
 
+            var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(IndexStore)}");
+
             foreach (var index in _indexes)
             {
-                index.Dispose();
+                exceptionAggregator.Execute(() =>
+                {
+                    index.Dispose();
+                });
             }
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         private int ResetIndexInternal(Index index)
@@ -330,14 +345,24 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
+            lock (_locker)
             {
-                int indexId;
-                if (int.TryParse(indexDirectory.Name, out indexId) == false)
-                    continue;
+                foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
+                {
+                    int indexId;
+                    if (int.TryParse(indexDirectory.Name, out indexId) == false)
+                        continue;
 
-                var index = Index.Open(indexId, _documentDatabase);
-                _indexes.Add(index);
+                    try
+                    {
+                        var index = Index.Open(indexId, _documentDatabase);
+                        _indexes.Add(index);
+                    }
+                    catch (Exception e)
+                    {
+                        Log.ErrorException($"Could not open index with id {indexId}", e);
+                    }
+                }
             }
         }
 

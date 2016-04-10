@@ -20,6 +20,7 @@ namespace Voron
 
         internal byte[] Array;
         internal byte* Pointer;
+
         public ushort Size;
         public ushort KeyLength;
         public SliceOptions Options;

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Voron;
@@ -33,36 +35,67 @@ namespace FastTests.Voron.Tables
                 });
         }
 
-        public unsafe void SetHelper(Table table, params object[] args)
+        public unsafe long SetHelper(Table table, params object[] args)
         {
+            var handles1 = new List<GCHandle>();
+
             var builder = new TableValueBuilder();
-            var buffers = new List<byte[]>();
             foreach (var o in args)
             {
+                byte[] buffer;
+                GCHandle gcHandle;
+
                 var s = o as string;
                 if (s != null)
                 {
-                    buffers.Add(Encoding.UTF8.GetBytes(s));
+                    buffer = Encoding.UTF8.GetBytes(s);
+                    gcHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                    builder.Add((byte*)gcHandle.AddrOfPinnedObject(), buffer.Length);
+                    handles1.Add(gcHandle);
                     continue;
                 }
-                var l = (long) o;
-                buffers.Add(EndianBitConverter.Big.GetBytes(l));
+
+                var slice = o as Slice;
+                if (slice != null)
+                {
+                    if (slice.Array == null)
+                        throw new NotSupportedException();
+
+                    gcHandle = GCHandle.Alloc(slice.Array, GCHandleType.Pinned);
+                    builder.Add((byte*)gcHandle.AddrOfPinnedObject(), slice.Array.Length);
+                    handles1.Add(gcHandle);
+
+                    continue;
+                }
+
+                var stream = o as MemoryStream;
+                if (stream != null)
+                {
+                    buffer = stream.ToArray();
+                    gcHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                    builder.Add((byte*)gcHandle.AddrOfPinnedObject(), buffer.Length);
+                    handles1.Add(gcHandle);
+
+                    continue;
+                }
+
+                var l = (long)o;
+                buffer = EndianBitConverter.Big.GetBytes(l);
+                gcHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                builder.Add((byte*)gcHandle.AddrOfPinnedObject(), buffer.Length);
+                handles1.Add(gcHandle);
             }
-            var handles1 = new List<GCHandle>();
-            foreach (var buffer in buffers)
-            {
-                var gcHandle1 = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-                handles1.Add(gcHandle1);
-                builder.Add((byte*) gcHandle1.AddrOfPinnedObject(), buffer.Length);
-            }
+
             var handles = handles1;
 
-            table.Set(builder);
+            long id = table.Set(builder);
 
             foreach (var gcHandle in handles)
             {
                 gcHandle.Free();
             }
+
+            return id;
         }
     }
 }

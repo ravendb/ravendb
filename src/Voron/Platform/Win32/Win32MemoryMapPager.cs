@@ -202,11 +202,13 @@ namespace Voron.Platform.Win32
 
             if (startingBaseAddressPtr == (byte*)0) //system didn't succeed in mapping the address where we wanted
             {
+                var innerException = new Win32Exception();
+
                 var errorMessage = string.Format(
                     "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
                     (_fileStream.Length));
 
-                throw new OutOfMemoryException(errorMessage, new Win32Exception());
+                throw new OutOfMemoryException(errorMessage, innerException);
             }
 
             var allocationInfo = new PagerState.AllocationInfo

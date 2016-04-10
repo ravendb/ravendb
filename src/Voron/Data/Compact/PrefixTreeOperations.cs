@@ -32,7 +32,7 @@ namespace Voron.Data.Compact
         {
             if (@this->IsInternal)
             {
-                var refNode = tree.ReadNodeByName(((Internal*)@this)->ReferencePtr);
+                var refNode = tree.DirectRead(((Internal*)@this)->ReferencePtr);
                 return tree.Name(refNode);
             }
             else
@@ -51,7 +51,7 @@ namespace Voron.Data.Compact
             // This cannot happen. We will never call Handle() in a single item tree where the root is a leaf. 
             Debug.Assert(@this->ReferencePtr != Constants.InvalidNodeName); 
 
-            var refNode = tree.ReadNodeByName(@this->ReferencePtr);
+            var refNode = tree.DirectRead(@this->ReferencePtr);
             if (@this->IsInternal)
             {
                 int handleLength = tree.GetHandleLength(@this);
@@ -71,7 +71,7 @@ namespace Voron.Data.Compact
         {          
             if (@this->IsInternal)
             {
-                var refNode = tree.ReadNodeByName(@this->ReferencePtr);
+                var refNode = tree.DirectRead(@this->ReferencePtr);
                 var refName = tree.Name(refNode);
                 return refName.SubVector(0, ((Internal*)@this)->ExtentLength);
             }
@@ -150,7 +150,7 @@ namespace Voron.Data.Compact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetRightLeaf(this PrefixTree tree, long @thisName)
         {
-            var @this = tree.ReadNodeByName(@thisName);
+            var @this = tree.DirectRead(@thisName);
             if (@this->IsLeaf)
                 return @thisName;
 
@@ -159,7 +159,7 @@ namespace Voron.Data.Compact
             do
             {
                 nodeName = ((Internal*)node)->JumpRightPtr;
-                node = tree.ReadNodeByName(nodeName);
+                node = tree.DirectRead(nodeName);
             }
             while (node->IsInternal);
 
@@ -169,7 +169,7 @@ namespace Voron.Data.Compact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetLeftLeaf(this PrefixTree tree, long @thisName)
         {
-            var @this = tree.ReadNodeByName(@thisName);
+            var @this = tree.DirectRead(@thisName);
             if (@this->IsLeaf)
                 return @thisName;
 
@@ -178,7 +178,7 @@ namespace Voron.Data.Compact
             do
             {
                 nodeName = ((Internal*)node)->JumpLeftPtr;
-                node = tree.ReadNodeByName(nodeName);
+                node = tree.DirectRead(nodeName);
             }
             while (node->IsInternal);
 
@@ -206,7 +206,7 @@ namespace Voron.Data.Compact
             if (@this->IsInternal)
             {
                 var referenceName = @this->ReferencePtr;
-                leaf = (Leaf*)tree.ReadNodeByName(referenceName);
+                leaf = (Leaf*)tree.DirectRead(referenceName);
                 Debug.Assert(leaf->IsLeaf);
             }
             else

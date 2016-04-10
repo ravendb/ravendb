@@ -5,24 +5,58 @@ using System.Threading;
 using Lucene.Net.Store;
 using Raven.Abstractions.Extensions;
 using Sparrow;
+
+using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing
 {
     public unsafe class VoronIndexInput : IndexInput
     {
-        private readonly int _size;
-        private readonly byte* _basePtr;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private Stream _stream;
+        private MmapStream _stream;
         private bool _isOriginal = true;
 
-        public VoronIndexInput(byte* basePtr, int size)
+        private readonly long _originalTransactionId;
+        private readonly ThreadLocal<Transaction> _currentTransaction;
+
+        private readonly Slice _name;
+
+        private byte* _basePtr;
+
+        private int _size;
+
+        public VoronIndexInput(ThreadLocal<Transaction> transaction, Slice name)
         {
-            _basePtr = basePtr;
-            _size = size;
-            _stream = new MmapStream(_basePtr, _size);
+            _originalTransactionId = transaction.Value.LowLevelTransaction.Id;
+            _currentTransaction = transaction;
+            _name = name;
+
+            OpenInternal(this);
+        }
+
+        private void OpenInternal(VoronIndexInput input)
+        {
+            if (input._isOriginal || input._originalTransactionId != input._currentTransaction.Value.LowLevelTransaction.Id)
+            {
+                var filesTree = input._currentTransaction.Value.ReadTree("Files");
+                var readResult = filesTree.Read(input._name);
+                if (readResult == null)
+                    throw new FileNotFoundException("Could not find file", input._name.ToString());
+
+                input._basePtr = readResult.Reader.Base;
+                input._size = readResult.Reader.Length;
+                input._stream = new MmapStream(readResult.Reader.Base, readResult.Reader.Length);
+                return;
+            }
+
+            input._basePtr = _basePtr;
+            input._size = _size;
+            input._stream = new MmapStream(input._basePtr, input._size)
+            {
+                Position = _stream.Position
+            };
         }
 
         public override object Clone()
@@ -32,10 +66,9 @@ namespace Raven.Server.Indexing
             var clone = (VoronIndexInput)base.Clone();
             GC.SuppressFinalize(clone);
             clone._isOriginal = false;
-            clone._stream = new MmapStream(_basePtr, _size)
-            {
-                Position = _stream.Position
-            };
+            
+            OpenInternal(clone);
+
             return clone;
         }
 

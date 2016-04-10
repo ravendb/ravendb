@@ -9,14 +9,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexSearcherHolder
     {
+        private readonly Func<IndexSearcher> _recreateSearcher;
+
         private static readonly ILog Log = LogManager.GetLogger(typeof(IndexSearcherHolder));
 
         private volatile IndexSearcherHoldingState _current;
-        
-        public ManualResetEvent SetIndexSearcher(IndexSearcher searcher, bool wait)
+
+        public IndexSearcherHolder(Func<IndexSearcher> recreateSearcher)
+        {
+            _recreateSearcher = recreateSearcher;
+        }
+
+        public ManualResetEvent SetIndexSearcher(bool wait)
         {
             var old = _current;
-            _current = new IndexSearcherHoldingState(searcher);
+            _current = new IndexSearcherHoldingState(_recreateSearcher);
 
             if (old == null)
                 return null;
@@ -36,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var indexSearcherHoldingState = GetCurrentStateHolder();
             try
             {
-                searcher = indexSearcherHoldingState.IndexSearcher;
+                searcher = indexSearcherHoldingState.IndexSearcher.Value;
                 return indexSearcherHoldingState;
             }
             catch (Exception e)
@@ -66,15 +73,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal class IndexSearcherHoldingState : IDisposable
         {
-            public readonly IndexSearcher IndexSearcher;
+            public readonly Lazy<IndexSearcher> IndexSearcher;
 
             public volatile bool ShouldDispose;
             public int Usage;
             private readonly Lazy<ManualResetEvent> _disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
 
-            public IndexSearcherHoldingState(IndexSearcher indexSearcher)
+            public IndexSearcherHoldingState(Func<IndexSearcher> recreateSearcher)
             {
-                IndexSearcher = indexSearcher;
+                IndexSearcher = new Lazy<IndexSearcher>(recreateSearcher, LazyThreadSafetyMode.ExecutionAndPublication);
             }
 
             public void MarkForDisposal()
@@ -100,10 +107,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             private void DisposeRudely()
             {
-                if (IndexSearcher != null)
+                if (IndexSearcher.IsValueCreated)
                 {
-                    using (IndexSearcher)
-                    using (IndexSearcher.IndexReader) { }
+                    using (IndexSearcher.Value)
+                    using (IndexSearcher.Value.IndexReader) { }
                 }
                 if (_disposed.IsValueCreated)
                     _disposed.Value.Set();

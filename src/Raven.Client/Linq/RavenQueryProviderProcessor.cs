@@ -13,7 +13,9 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
+using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
@@ -1148,7 +1150,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             documentQuery.AddRootType(expression.Arguments[0].Type.GetGenericArguments()[0]);
                     }
                     VisitExpression(expression.Arguments[0]);
-                        VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
+                    VisitSelect(((UnaryExpression)expression.Arguments[1]).Operand);
                     break;
                 }
                 case "Skip":
@@ -1269,11 +1271,42 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitOrderBy((LambdaExpression)((UnaryExpression)expression.Arguments[1]).Operand,
                                  expression.Method.Name.EndsWith("Descending"));
                     break;
+                case "GroupBy":
+
+                    if (documentQuery.IndexQueried.StartsWith("dynamic/") == false)
+                        throw new NotSupportedException("GroupBy method is only supported in dynamic map-reduce queries");
+
+                    VisitExpression(expression.Arguments[0]);
+                    VisitGroupBy(((UnaryExpression) expression.Arguments[1]).Operand);
+
+                    if (expression.Arguments.Count == 4)
+                    {
+                        // GroupBy(x => keySelector, x => elementSelector, x => resultSelector)
+                        VisitSelect(((UnaryExpression)expression.Arguments[3]).Operand);
+                    }
+
+                    break;
                 default:
                 {
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
                 }
             }
+        }
+
+        private void VisitGroupBy(Expression expression)
+        {
+            var lambdaExpression = expression as LambdaExpression;
+
+            if (lambdaExpression == null)
+                throw new NotSupportedException("We expect GroupBy statement to have lambda expression");
+
+            var field = GetSelectPath(linqPathProvider.GetMemberExpression(lambdaExpression));
+
+            documentQuery.AddMapReduceField(new DynamicMapReduceField
+            {
+                Name = field,
+                IsGroupBy = true
+            });
         }
 
         private void VisitOrderBy(LambdaExpression expression, bool descending)
@@ -1338,13 +1371,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case ExpressionType.New:
                     var newExpression = ((NewExpression)body);
                     newExpressionType = newExpression.Type;
+
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
-                        var field = newExpression.Arguments[index] as MemberExpression;
-                        if (field == null)
-                            continue;
-                        var expression = linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
-                        AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
+                        if (documentQuery.IsDynamicMapReduce == false)
+                        {
+                            var field = newExpression.Arguments[index] as MemberExpression;
+                            if (field == null)
+                                continue;
+                            var expression = linqPathProvider.GetMemberExpression(newExpression.Arguments[index]);
+                            AddToFieldsToFetch(GetSelectPath(expression), GetSelectPath(newExpression.Members[index]));
+                        }
+                        else
+                        {
+                            var mapReduceOperationCall = newExpression.Arguments[index] as MethodCallExpression;
+
+                            if (mapReduceOperationCall == null)
+                                continue;
+
+                            AddMapReduceFieldToFetch(mapReduceOperationCall, newExpression.Members[index]);
+                        }
                     }
                     break;
                     //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -1353,14 +1399,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     newExpressionType = memberInitExpression.NewExpression.Type;
                     foreach (MemberBinding t in memberInitExpression.Bindings)
                     {
-                        var field = t as MemberAssignment;
-                        if (field == null)
-                            continue;
+                        if (documentQuery.IsDynamicMapReduce == false)
+                        {
+                            var field = t as MemberAssignment;
+                            if (field == null)
+                                continue;
 
-                        var expression = linqPathProvider.GetMemberExpression(field.Expression);
-                        var renamedField = GetSelectPath(expression);
+                            var expression = linqPathProvider.GetMemberExpression(field.Expression);
+                            var renamedField = GetSelectPath(expression);
 
-                        AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
+                            AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));
+                        }
+                        else
+                        {
+                            var field = t as MemberAssignment;
+
+                            var mapReduceOperationCall = field?.Expression as MethodCallExpression;
+
+                            if (mapReduceOperationCall == null)
+                                continue;
+
+                            AddMapReduceFieldToFetch(mapReduceOperationCall, t.Member);
+                        }
                     }
                     break;
                 case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -1374,6 +1434,47 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private void AddMapReduceFieldToFetch(MethodCallExpression mapReduceOperationCall, MemberInfo memberInfo)
+        {
+            if (mapReduceOperationCall.Method.DeclaringType != typeof (Enumerable))
+                throw new NotSupportedException(
+                    $"Unsupported method in select of dynamic map reduce query: {mapReduceOperationCall.Method.Name} of type {mapReduceOperationCall.Method.DeclaringType}");
+
+            FieldMapReduceOperation mapReduceOperation;
+            if (Enum.TryParse(mapReduceOperationCall.Method.Name, out mapReduceOperation) == false)
+                throw new NotSupportedException($"Unhandled map reduce operation type: {mapReduceOperationCall.Method.Name}");
+
+            string renamedField = null;
+            string mapReduceField;
+
+            if (mapReduceOperationCall.Arguments.Count == 1)
+            {
+                mapReduceField = GetSelectPath(memberInfo);
+            }
+            else
+            {
+                renamedField = GetSelectPath(memberInfo);
+                mapReduceField = GetSelectPath(linqPathProvider.GetMemberExpression(mapReduceOperationCall.Arguments[1]));
+            }
+
+            FieldsToFetch.Add(mapReduceField);
+
+            if (renamedField != null && mapReduceField != renamedField)
+            {
+                FieldsToRename.Add(new RenamedField
+                {
+                    NewField = renamedField,
+                    OriginalField = mapReduceField
+                });
+            }
+
+            documentQuery.AddMapReduceField(new DynamicMapReduceField
+            {
+                Name = mapReduceField,
+                OperationType = mapReduceOperation
+            });
         }
 
         private string GetSelectPath(MemberInfo member)
