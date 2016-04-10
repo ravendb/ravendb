@@ -523,7 +523,7 @@ class editDocument extends viewModelBase {
         } else {
             try {
                 var updatedDto;
-                if (this.isNewLineFriendlyMode() === true) {
+                if (this.isNewLineFriendlyMode()) {
                     updatedDto = JSON.parse(this.escapeNewlinesAndTabsInTextFields(this.documentText()));
                 } else {
                     updatedDto = JSON.parse(this.documentText());
@@ -611,7 +611,7 @@ class editDocument extends viewModelBase {
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = '';
+        target['@etag'] = '00000000-0000-0000-0000-000000000000';
         target['Raven-Entity-Name'] = !target['Raven-Entity-Name'] ? document.getEntityNameFromId(id) : target['Raven-Entity-Name'];
         target['@id'] = id;
     }

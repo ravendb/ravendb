@@ -65,6 +65,7 @@ namespace Raven.Bundles.Replication.Tasks
         private TimeSpan _lastQueriedFrequency;
         private Timer _indexReplicationTaskTimer;
         private Timer _lastQueriedTaskTimer;
+        
         private readonly object _indexReplicationTaskLock = new object();
         private readonly object _lastQueriedTaskLock = new object();
 
@@ -340,6 +341,7 @@ namespace Raven.Bundles.Replication.Tasks
                 {
                     if (prefetchingBehaviors.TryRemove(failingDestination, out prefetchingBehaviorToDispose))
                     {
+                        log.Debug("Disposing prefetching behavior for {0}", failingDestination);
                         prefetchingBehaviorToDispose.Dispose();
                     }
                 }
@@ -436,6 +438,16 @@ namespace Raven.Bundles.Replication.Tasks
             var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
             if (failureInformation.FailureCount > 1000)
             {
+                DestinationStats stats;
+                var now = SystemTime.UtcNow;
+                if (destinationStats.TryGetValue(dest.ConnectionStringOptions.Url, out stats) && 
+                    ((stats.LastFailureTimestamp ?? now) - now).TotalSeconds <= 15)
+                {
+                    if(log.IsDebugEnabled)
+                        log.Debug("Failure to send destination happened {0} seconds ago, skipping replication: {1}", ((stats.LastFailureTimestamp ?? now) - now).TotalSeconds, dest);
+                    return false;
+                }
+
                 var shouldReplicateTo = currentReplicationAttempts % 10 == 0;
                 log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
                     dest, failureInformation.FailureCount, shouldReplicateTo == false);

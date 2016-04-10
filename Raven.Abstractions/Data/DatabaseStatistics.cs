@@ -121,6 +121,11 @@ namespace Raven.Abstractions.Data
         /// Indicates if process is 64-bit
         /// </summary>
         public bool Is64Bit { get; set; }
+
+        /// <summary>
+        /// Indicates if the low memory thread is running
+        /// </summary>
+        public bool IsMemoryStatisticThreadRuning { get; set; }
     }
 
     public class TriggerInfo

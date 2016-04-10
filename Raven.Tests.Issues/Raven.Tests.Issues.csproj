@@ -140,10 +140,12 @@
     <Compile Include="ActualValueInJsonReaderException.cs" />
     <Compile Include="NewIndexOptimizationIssue.cs" />
     <Compile Include="RavenDB_4461.cs" />
+    <Compile Include="RavenDB-4446.cs" />
     <Compile Include="RavenDB-4196.cs" />
     <Compile Include="RavenDB-4300.cs" />
     <Compile Include="RavenDB-4379.cs" />
     <Compile Include="RavenDB-4393.cs" />
+    <Compile Include="RavenDB_4196.cs" />
     <Compile Include="RavenDB_3928.cs" />
     <Compile Include="RavenDB-4227.cs" />
     <Compile Include="RavenDB_4053.cs" />
@@ -502,6 +504,7 @@
     <Compile Include="RavenDB_542 .cs" />
     <Compile Include="RavenDB_554.cs" />
     <Compile Include="RavenDB_556.cs" />
+    <Compile Include="RavenDB_4453.cs" />
     <Compile Include="RavenDB_576.cs" />
     <Compile Include="RavenDB_578.cs" />
     <Compile Include="RavenDB_579.cs" />

@@ -113,11 +113,9 @@ namespace Raven.Abstractions.Smuggler
             {
                 using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
+                using (var jsonWriter = new JsonTextWriter(streamWriter))
                 {
-                    var jsonWriter = new JsonTextWriter(streamWriter)
-                    {
-                        Formatting = Formatting.Indented
-                    };
+                    jsonWriter.Formatting = Formatting.Indented;
 
                     var isLastExport = false;
                     var watch = Stopwatch.StartNew();
@@ -147,7 +145,7 @@ namespace Raven.Abstractions.Smuggler
                     }
 
                     jsonWriter.WriteEndObject();
-                    streamWriter.Flush();
+                    jsonWriter.Flush();
                 }
 
                 if (Options.Incremental)
