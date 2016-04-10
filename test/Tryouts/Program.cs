@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.BulkInsert;
 using Raven.Abstractions.Data;
@@ -47,6 +50,24 @@ namespace Tryouts
             }
         }
 
+        private static async Task DoWork()
+        {
+            using (var ws = new RavenClientWebSocket())
+            {
+                await ws.ConnectAsync(new Uri("ws://echo.websocket.org"), CancellationToken.None);
+
+                await
+                    ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("Hello there")),
+                        WebSocketMessageType.Text,
+                        true, CancellationToken.None);
+
+                var arraySegment = new ArraySegment<byte>(new byte[1024]);
+                var webSocketReceiveResult = await ws.ReceiveAsync(arraySegment, CancellationToken.None);
+                var s = Encoding.UTF8.GetString(arraySegment.Array, 0, webSocketReceiveResult.Count);
+                Console.WriteLine();
+                Console.WriteLine(s);
+            }
+        }
         public static async Task BulkInsert(DocumentStore store, int numOfItems)
         {
             Console.Write("Doing bulk-insert...");

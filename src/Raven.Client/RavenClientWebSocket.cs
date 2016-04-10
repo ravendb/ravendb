@@ -78,14 +78,12 @@ namespace Raven.Client.Document
                 Convert.ToBase64String(SHA1.Create().ComputeHash(Encoding.ASCII.GetBytes(secKey + Magic)));
 
             var headerString =
-                $@"GET {uri.PathAndQuery} HTTP/1.1
-Host: {uri.Host}
-Connection: Upgrade
-Upgrade: websocket
-Sec-WebSocket-Version: 13
-Sec-WebSocket-Key: {secKey}
-
-";
+                $"GET {uri.PathAndQuery} HTTP/1.1\r\n"+
+                $"Host: {uri.Host}\r\n"+
+                "Connection: Upgrade\r\n"+
+                "Upgrade: websocket\r\n"+
+                "Sec-WebSocket-Version: 13\r\n"+
+                $"Sec-WebSocket-Key: {secKey}\r\n\r\n";
 
             var bytes = Encoding.UTF8.GetBytes(headerString);
 
