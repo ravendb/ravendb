@@ -7,7 +7,7 @@
 using System;
 using Raven.Server.Indexing.Corax;
 using Raven.Server.Indexing.Corax.Queries;
-using Raven.Server.Json.Parsing;
+using Sparrow.Json.Parsing;
 using Voron;
 using Xunit;
 

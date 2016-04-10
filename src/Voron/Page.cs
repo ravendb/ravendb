@@ -66,7 +66,7 @@ namespace Voron
 
         public PrefixTreePage ToPrefixTreePage()
         {
-            return new PrefixTreePage(Pointer, Source.DebugInfo, Source.PageSize);
+            return new PrefixTreePage(Pointer, Source);
         }
     }
 }

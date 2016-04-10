@@ -1,6 +1,6 @@
 ﻿using System;
 using Raven.Server.Json;
-
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.ServerWide.Context
@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Context
         }
     }
 
-    public abstract class TransactionOperationContext<TTransaction> : MemoryOperationContext
+    public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
         where TTransaction : RavenTransaction
     {
         public TTransaction Transaction;

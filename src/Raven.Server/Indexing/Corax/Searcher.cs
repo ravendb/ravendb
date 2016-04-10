@@ -6,7 +6,7 @@ using Raven.Server.Indexing.Corax.Queries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
 using Voron;
 using Voron.Data.Tables;
 
@@ -64,11 +64,11 @@ namespace Raven.Server.Indexing.Corax
 
     public unsafe class EntrySorter : IComparer<QueryMatch>
     {
-        private readonly MemoryOperationContext _context;
+        private readonly JsonOperationContext _context;
         private readonly Table _entries;
         private readonly QueryDefinition.OrderBy[] _sort;
 
-        public EntrySorter(MemoryOperationContext context, Table entries, QueryDefinition.OrderBy[] sort)
+        public EntrySorter(JsonOperationContext context, Table entries, QueryDefinition.OrderBy[] sort)
         {
             _context = context;
             _entries = entries;

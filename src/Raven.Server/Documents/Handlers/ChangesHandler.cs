@@ -11,9 +11,10 @@ using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
                 //TODO: select small context size (maybe pool just for them?)
-                MemoryOperationContext context;
+                JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     try
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/changes/debug", "GET", "/databases/{databaseName:string}/changes/debug")]
         public Task GetConnectionsDebugInfo()
         {
-            MemoryOperationContext context;
+            JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private async Task HandleConnection(WebSocket webSocket, MemoryOperationContext context)
+        private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
         {
             var connection = new NotificationsClientConnection(webSocket, Database);
             Database.Notifications.Connect(connection);

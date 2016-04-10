@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 using Raven.Abstractions.Logging;
@@ -12,6 +11,8 @@ namespace Raven.Server.Documents
     public class DocumentTombstoneCleaner : IDisposable
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(DocumentTombstoneCleaner));
+
+        private bool _disposed;
 
         private readonly object _locker = new object();
 
@@ -48,8 +49,9 @@ namespace Raven.Server.Documents
 
             try
             {
-                if (_timer == null)
+                if (_disposed)
                     return;
+
                 var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
                 var storageEnvironment = _documentDatabase.DocumentsStorage.Environment;
                 if (storageEnvironment == null) // doc storage was disposed before us?
@@ -113,10 +115,10 @@ namespace Raven.Server.Documents
         {
             lock (_locker) // so we are sure we aren't running concurrently with the timer
             {
+                _disposed = true;
                 _timer?.Dispose();
                 _timer = null;
             }
-            
         }
     }
 

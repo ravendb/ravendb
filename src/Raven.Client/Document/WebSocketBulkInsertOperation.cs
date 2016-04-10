@@ -7,24 +7,46 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
+using Sparrow.Json;
 
 namespace Raven.Client.Document
 {
-    public class WebSocketBulkInsertOperation 
+    public class WebSocketBulkInsertOperation : IDisposable
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof (WebSocketBulkInsertOperation));
         private readonly CancellationTokenSource cts;
         private ClientWebSocket connection;
         private readonly Task socketConnectionTask;
-        private readonly MemoryStream buffer = new MemoryStream();
+        private readonly MemoryStream _jsonBuffer = new MemoryStream();
+        private readonly MemoryStream _networkBuffer = new MemoryStream();
+        private readonly BinaryWriter _networkBufferWriter;
         private readonly string url;
         private readonly Task getServerResponseTask;
+        private UnmanagedBuffersPool _unmanagedBuffersPool;
+        private JsonOperationContext _jsonOperationContext;
 
+        ~WebSocketBulkInsertOperation()
+        {
+            try
+            {
+                Log.Warn("Web socket bulk insert was not disposed, and is cleaned via finalizer");
+                Dispose();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Failed to dispose web socket bulk operation from finalizer", e);
+            }
+        }
 
         public WebSocketBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
+            _unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/client");
+            _jsonOperationContext = new JsonOperationContext(_unmanagedBuffersPool);
+            _networkBufferWriter = new BinaryWriter(_networkBuffer);
             this.cts = cts ?? new CancellationTokenSource();
             connection = new ClientWebSocket();
             url = asyncServerClient.Url;
@@ -115,10 +137,17 @@ namespace Raven.Client.Document
             metadata[Constants.MetadataDocId] = id;
             data[Constants.Metadata] = metadata;
 
+            _jsonBuffer.SetLength(0);
 
-            data.WriteTo(buffer);
+            data.WriteTo(_jsonBuffer);
+            _jsonBuffer.Position = 0;
+            using (var doc = _jsonOperationContext.Read(_jsonBuffer, id))
+            {
+                _networkBufferWriter.Write(doc.Size);// TODO: use variable size int
+                doc.CopyTo(_networkBuffer);
+            }
 
-            if (buffer.Length > 32*1024)
+            if (_networkBuffer.Length > 32*1024)
             {
                 await FlushBufferAsync();
             }
@@ -128,14 +157,14 @@ namespace Raven.Client.Document
         private async Task FlushBufferAsync()
         {
             ArraySegment<byte> segment;
-            buffer.Position = 0;
-            buffer.TryGetBuffer(out segment);
+            _networkBuffer.Position = 0;
+            _networkBuffer.TryGetBuffer(out segment);
 
-            await connection.SendAsync(segment, WebSocketMessageType.Text, false, cts.Token)
+            await connection.SendAsync(segment, WebSocketMessageType.Binary, true, cts.Token)
                 .ConfigureAwait(false);
             ReportProgress($"Batch sent to {url} (bytes count = {segment.Count})");
 
-            buffer.SetLength(0);
+            _networkBuffer.SetLength(0);
         }
 
 
@@ -146,11 +175,10 @@ namespace Raven.Client.Document
 
         public async Task DisposeAsync()
         {
-            if (connection == null)
-                return;
-
             try
             {
+                if (connection == null)
+                    return;
                 try
                 {
                     await FlushBufferAsync();
@@ -183,6 +211,11 @@ namespace Raven.Client.Document
             finally
             {
                 connection = null;
+                _jsonOperationContext?.Dispose();
+                _jsonOperationContext = null;
+                _unmanagedBuffersPool?.Dispose();
+                _unmanagedBuffersPool = null;
+                GC.SuppressFinalize(this);
             }
         }
 

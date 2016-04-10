@@ -22,15 +22,7 @@ namespace Raven.Server.Documents
     {
         public event Action<string> OnDatabaseLoaded = delegate { };
 
-        public override async Task<DocumentDatabase> GetResourceInternal(StringSegment resourceName)
-        {
-            var database = await TryGetOrCreateResourceStore(resourceName);
-            if (database == null)
-                return null;
-            return await database.ConfigureAwait(false);
-        }
-
-        public override async Task<Task<DocumentDatabase>> TryGetOrCreateResourceStore(StringSegment databaseName)
+        public override Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName)
         {
             if (Locks.Contains(DisposingLock))
                 throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");

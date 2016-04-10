@@ -81,15 +81,15 @@ namespace Raven.Server.Config.Categories
         public TimeSetting TombstoneProcessingTimeout { get; set; }
 
         [Description("How long the database should wait before marking an auto index with the idle flag")]
-        [DefaultValue(60)]
+        [DefaultValue(30)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
         public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; set; }
 
-        [Description("How long the database should wait before marking an auto index with the abandoned flag")]
+        [Description("How long the database should wait before deleting an auto index with the idle flag")]
         [DefaultValue(72)]
         [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsAbandonedInHrs")]
-        public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsAbandoned { get; set; }
+        [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs")]
+        public TimeSetting TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle { get; set; }
     }
 }

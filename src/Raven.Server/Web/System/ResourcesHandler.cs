@@ -1,10 +1,11 @@
 ﻿using System.Threading.Tasks;
 
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -35,7 +36,7 @@ namespace Raven.Server.Web.System
             return ReturnResources("ts/");
         }
 
-        private async Task ReturnResources(string prefix)
+        private Task ReturnResources(string prefix)
         {
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -66,6 +67,7 @@ namespace Raven.Server.Web.System
                     writer.WriteEndArray();
                 }
             }
+            return Task.CompletedTask;
         }
     }
 }

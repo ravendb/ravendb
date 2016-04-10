@@ -78,8 +78,6 @@ namespace Raven.Abstractions.Data
         IndexDemotedToIdle = 32,
         IndexPromotedFromIdle = 64,
 
-        IndexDemotedToAbandoned = 128,
-
         IndexDemotedToDisabled = 256,
 
         IndexMarkedAsErrored = 512,

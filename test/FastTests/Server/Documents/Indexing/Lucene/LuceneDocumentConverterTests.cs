@@ -5,11 +5,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
-
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Document = Raven.Server.Documents.Document;
 
@@ -20,13 +20,13 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         private LuceneDocumentConverter _sut;
 
         private readonly UnmanagedBuffersPool _pool;
-        private readonly MemoryOperationContext _ctx;
+        private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
 
         public LuceneDocumentConverterTests()
         {
             _pool = new UnmanagedBuffersPool("foo");
-            _ctx = new MemoryOperationContext(_pool);
+            _ctx = new JsonOperationContext(_pool);
         }
 
         [Fact]

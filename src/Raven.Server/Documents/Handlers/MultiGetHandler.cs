@@ -9,11 +9,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/multi_get", "POST", "/databases/{databaseName:string}/multi_get?parallel=[yes|no] body{ requests:Raven.Abstractions.Data.GetRequest[] }")]
         public async Task PostMultiGet()
         {
-            MemoryOperationContext context;
+            JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var requests = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);

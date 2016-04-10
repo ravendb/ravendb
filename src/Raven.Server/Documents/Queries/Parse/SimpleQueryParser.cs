@@ -9,6 +9,7 @@ using Lucene.Net.Search.Function;
 using Lucene.Net.Search.Spans;
 
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 
 namespace Raven.Server.Documents.Queries.Parse

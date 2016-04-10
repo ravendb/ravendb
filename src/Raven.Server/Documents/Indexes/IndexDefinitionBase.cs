@@ -14,24 +14,21 @@ namespace Raven.Server.Documents.Indexes
     {
         protected static readonly Slice DefinitionSlice = "Definition";
 
-        private readonly Dictionary<string, IndexField> _fieldsByName;
         private byte[] _cachedHashCodeAsBytes;
 
         protected IndexDefinitionBase(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
         {
             Name = name;
             Collections = collections;
-            MapFields = mapFields;
+            MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
             LockMode = lockMode;
-
-            _fieldsByName = MapFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
         }
 
         public string Name { get; }
 
         public string[] Collections { get; }
 
-        public IndexField[] MapFields { get; }
+        public Dictionary<string, IndexField> MapFields { get; }
 
         public IndexLockMode LockMode { get; set; }
 
@@ -43,11 +40,14 @@ namespace Raven.Server.Documents.Indexes
             indexDefinition.IndexId = index.IndexId;
             indexDefinition.Name = index.Name;
             indexDefinition.Fields = MapFields.ToDictionary(
-                x => x.Name,
+                x => x.Key,
                 x => new IndexFieldOptions
                 {
-                    Sort = x.SortOption,
-                    TermVector = x.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null
+                    Sort = x.Value.SortOption,
+                    TermVector = x.Value.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null,
+                    Analyzer = x.Value.Analyzer,
+                    Indexing = x.Value.Indexing,
+                    Storage = x.Value.Storage
                 });
 
             indexDefinition.Type = index.Type;
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes
             if (field.EndsWith("_Range"))
                 field = field.Substring(0, field.Length - 6);
 
-            return _fieldsByName.ContainsKey(field);
+            return MapFields.ContainsKey(field);
         }
 
         public IndexField GetField(string field)
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes
             if (field.EndsWith("_Range"))
                 field = field.Substring(0, field.Length - 6);
 
-            return _fieldsByName[field];
+            return MapFields[field];
         }
 
         public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
@@ -96,9 +96,9 @@ namespace Raven.Server.Documents.Indexes
         {
             unchecked
             {
-                var hashCode = (_fieldsByName != null ? _fieldsByName.GetDictionaryHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Name != null ? Name.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Collections != null ? Collections.GetEnumerableHashCode() : 0);
+                var hashCode = MapFields?.GetDictionaryHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ (Name?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Collections?.GetEnumerableHashCode() ?? 0);
                 return hashCode;
             }
         }

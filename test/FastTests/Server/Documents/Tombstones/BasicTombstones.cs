@@ -8,10 +8,10 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core;
-
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Documents.Tombstones
@@ -198,7 +198,7 @@ namespace FastTests.Server.Documents.Tombstones
             }
         }
 
-        private static BlittableJsonReaderObject CreateDocument(MemoryOperationContext context, string key, DynamicJsonValue value)
+        private static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }

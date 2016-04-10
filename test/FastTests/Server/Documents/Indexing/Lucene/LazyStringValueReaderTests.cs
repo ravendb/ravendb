@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Text;
-using Raven.Server.Documents.Indexes.Persistance.Lucene.Documents.Fields;
+
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
@@ -11,12 +13,12 @@ namespace FastTests.Server.Documents.Indexing.Lucene
     {
         private readonly LazyStringReader _sut = new LazyStringReader();
         private readonly UnmanagedBuffersPool _pool;
-        private readonly MemoryOperationContext _ctx;
+        private readonly JsonOperationContext _ctx;
 
         public LazyStringValueReaderTests()
         {
             _pool = new UnmanagedBuffersPool("foo");
-            _ctx = new MemoryOperationContext(_pool);
+            _ctx = new JsonOperationContext(_pool);
         }
 
         [Theory]

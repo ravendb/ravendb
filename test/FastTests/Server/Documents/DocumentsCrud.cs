@@ -4,8 +4,9 @@ using System.Linq;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Xunit;
 
@@ -35,6 +36,7 @@ namespace FastTests.Server.Documents
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
+        [InlineData("users/111112222233333333333444444445555556")]
         public void PutAndGetDocumentById(string key)
         {
             using (var ctx = new DocumentsOperationContext(_unmanagedBuffersPool, _documentDatabase))

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using StringSegment = Raven.Server.Utils.StringSegment;
+using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Documents.Includes
 {

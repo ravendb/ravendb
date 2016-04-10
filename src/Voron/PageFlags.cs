@@ -13,7 +13,7 @@ namespace Voron
         Overflow = 2,
         VariableSizeTreePage = 4,
         FixedSizeTreePage = 8,
-        ZFastTreePage = 16,
+        PrefixTreePage = 16,
         RawData = 32,
         Reserved2 = 64,
         Reserved3 = 128,

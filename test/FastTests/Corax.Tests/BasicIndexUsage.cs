@@ -7,7 +7,7 @@
 using Raven.Server.Indexing.Corax;
 using Raven.Server.Indexing.Corax.Analyzers;
 using Raven.Server.Indexing.Corax.Queries;
-using Raven.Server.Json.Parsing;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace Tryouts.Corax.Tests

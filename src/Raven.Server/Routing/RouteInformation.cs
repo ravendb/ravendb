@@ -65,7 +65,7 @@ namespace Raven.Server.Routing
         {
             var databaseName = context.RouteMatch.GetCapture();
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
-            var database = await databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var database =  databasesLandlord.TryGetOrCreateResourceStore(databaseName);
             if (database == null)
             {
                 throw new DatabaseDoesNotExistsException($"Database '{databaseName}' was not found");

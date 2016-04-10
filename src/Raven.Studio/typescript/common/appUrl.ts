@@ -616,12 +616,6 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forEditMerged(indexName: string, db: database): string {
-        return appUrl.forEditIndex(indexName, db) + "&"
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
-    }
-
     static forNewTransformer(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/transformers/edit?" + databasePart;
@@ -738,10 +732,6 @@ class appUrl {
     static forCounterStorage(cs: counterStorage): string {
         var counterStoragePart = appUrl.getEncodedCounterPart(cs);
         return "#counterstorages?" + counterStoragePart;
-    }
-
-    static serverUrl(): string {
-        return window.location.protocol + "//" + window.location.host;
     }
 
     static forIndexesRawData(db: database): string {
@@ -971,16 +961,7 @@ class appUrl {
     * Gets the server URL.
     */
     static forServer() {
-        // Ported this code from old Silverlight Studio. Do we still need this?
-        if (window.location.protocol === "file:") {
-            if (window.location.search.indexOf("fiddler")) {
-                return "http://localhost.fiddler:8080";
-            } else {
-                return "http://localhost:8080";
-            }
-        }
-
-        return window.location.protocol + "//" + window.location.host;
+        return window.location.protocol + "//" + window.location.host + appUrl.baseUrl;
     }
 
     /**

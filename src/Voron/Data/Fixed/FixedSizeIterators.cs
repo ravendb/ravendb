@@ -130,7 +130,7 @@ namespace Voron.Data.Fixed
             private void AssertNoChanges()
             {
                 if (_changesAtStart != _fst._changes)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException("You cannot perform modifications to tree when iterator is opened.");
             }
 
             public bool MoveNext()
@@ -172,13 +172,12 @@ namespace Voron.Data.Fixed
             private void AssertNoChanges()
             {
                 if (_changesAtStart != _parent._changes)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException("You cannot perform modifications to tree when iterator is opened.");
             }
-
 
             public void Dispose()
             {
-                
+
             }
 
             public bool Seek(long key)
@@ -200,7 +199,7 @@ namespace Voron.Data.Fixed
                     if (_currentPage == null)
                         throw new InvalidOperationException("No current page was set");
 
-                    return _parent.KeyFor(_currentPage,_currentPage.LastSearchPosition);
+                    return _parent.KeyFor(_currentPage, _currentPage.LastSearchPosition);
                 }
             }
 
@@ -231,7 +230,7 @@ namespace Voron.Data.Fixed
                         while (_currentPage.IsBranch)
                         {
                             _parent._cursor.Push(_currentPage);
-                            var childParentNumber = _parent.PageValueFor(_currentPage,_currentPage.LastSearchPosition);
+                            var childParentNumber = _parent.PageValueFor(_currentPage, _currentPage.LastSearchPosition);
                             _currentPage = _parent._tx.GetReadOnlyFixedSizeTreePage(childParentNumber);
 
                             _currentPage.LastSearchPosition = 0;

@@ -554,14 +554,13 @@ namespace Sparrow.Binary
             int extraBytes = (length + prefixAdjustment) % sizeof(ulong);
             if (extraBytes != 0)
                 size++;
-
-            int position;
+            
             ulong[] newValue = new ulong[size];
-
-            int lastLong = (length + prefixAdjustment) / sizeof(ulong);
+            
+            int lastLong = length / sizeof(ulong);
+            int position = 0;
             for (int i = 0; i < lastLong; i++)
-            {
-                position = i * sizeof(ulong);
+            {                
                 newValue[i] = (ulong)values[position] << 64 - 8 |
                               (ulong)values[position + 1] << 64 - 16 |
                               (ulong)values[position + 2] << 64 - 24 |
@@ -570,13 +569,18 @@ namespace Sparrow.Binary
                               (ulong)values[position + 5] << 16 |
                               (ulong)values[position + 6] << 8 |
                               (ulong)values[position + 7];
+
+                position += sizeof(ulong);
             }
           
-            if (extraBytes != 0)
+            int bytesLeft = length % sizeof(ulong);
+            if ( bytesLeft == 0)
             {
-                position = lastLong * sizeof(ulong);
-
-                int bytesLeft = length % sizeof(ulong);
+                if (lastLong != newValue.Length)
+                    newValue[lastLong] = 0;
+            }                    
+            else
+            {
                 ulong lastValue = 0;
                 do
                 {

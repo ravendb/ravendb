@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using NetTopologySuite.Noding;
@@ -8,9 +9,10 @@ using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Json.Linq;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Authentication
 {
@@ -30,9 +32,17 @@ namespace Raven.Server.Web.Authentication
                     return HttpContext.Response.WriteAsync("'name' query string must have exactly one value");
                 }
 
+                if (string.IsNullOrEmpty(name[0]))
+                {
+                    HttpContext.Response.StatusCode = 400;
+                    return HttpContext.Response.WriteAsync("'name' query string must be non-empty");
+                }
+
                 var apiKey = ctx.ReadForDisk(RequestBodyStream(), name[0]);
 
-                //TODO: Adi - Validate API Key Structure
+                var errorTask = ValidateApiKeyStructure(name[0], apiKey);
+                if (errorTask != null)
+                    return errorTask;
 
                 using (var tx = ctx.OpenWriteTransaction())
                 {
@@ -138,16 +148,92 @@ namespace Raven.Server.Web.Authentication
 
                         item.Data.Modifications = new DynamicJsonValue(item.Data)
                         {
-                            ["UserName"] = username,
+                            ["UserName"] = username
                         };
                         context.Write(writer, item.Data);
                     }
                     writer.WriteEndArray();
 
-                    }
+                }
             }
 
             return Task.CompletedTask;
+        }
+
+        private Task ValidateApiKeyStructure(string name, BlittableJsonReaderObject apiKey)
+        {
+            if (name.Contains("/"))
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'name' query string should not contain '/' separator");
+            }
+
+            ApiKeyDefinition testStructureOfApiKey = new ApiKeyDefinition();
+
+            if (apiKey.TryGet("Enabled", out testStructureOfApiKey.Enabled) == false)
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'ApiKey' must include 'Enabled' property");
+            }
+
+            if (apiKey.TryGet("Secret", out testStructureOfApiKey.Secret) == false)
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'ApiKey' must include 'Secret' property");
+            }
+
+            if (string.IsNullOrEmpty(testStructureOfApiKey.Secret))
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'ApiKey' must include non-empty 'Secret' property");
+            }
+
+            if (testStructureOfApiKey.Secret.Contains("/"))
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'Secret' string should not contain '/' separator");
+            }
+
+            if (apiKey.TryGet("ServerAdmin", out testStructureOfApiKey.ServerAdmin) == false)
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'ApiKey' must include 'ServerAdmin' property");
+            }
+
+            BlittableJsonReaderObject accessMode;
+            if (apiKey.TryGet("ResourcesAccessMode", out accessMode) == false)
+            {
+                HttpContext.Response.StatusCode = 400;
+                return HttpContext.Response.WriteAsync("'ApiKey' must include 'ResourcesAccessMode' property");
+            }
+
+            for (var i = 0; i < accessMode.Count; i++)
+            {
+                var dbName = accessMode.GetPropertyByIndex(i);
+
+                string accessValue;
+                if (accessMode.TryGet(dbName.Item1, out accessValue) == false)
+                {
+                    HttpContext.Response.StatusCode = 400;
+                    return HttpContext.Response.WriteAsync($"Missing value of dbName -'{dbName.Item1}' property");
+                }
+
+                if (string.IsNullOrEmpty(accessValue))
+                {
+                    HttpContext.Response.StatusCode = 400;
+                    return HttpContext.Response.WriteAsync("'ApiKey' must include non-empty 'AccessMode' DB Name' property");
+                }
+
+                AccessModes mode;
+                if (Enum.TryParse(accessValue, out mode) == false)
+                {
+                    HttpContext.Response.StatusCode = 400;
+                    return
+                        HttpContext.Response.WriteAsync(
+                            $"Invalid value of dbName -'{dbName.Item1}' property, cannot understand: {accessValue}");
+                }
+            }
+            return null;
         }
     }
 }
