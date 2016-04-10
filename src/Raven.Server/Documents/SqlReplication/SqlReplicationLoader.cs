@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.SqlReplication
         private readonly DocumentDatabase _database;
         private const int MaxSupportedSqlReplication = int.MaxValue; // TODO: Maybe this should be 128 or 1024
 
-        private readonly List<SqlReplication> _replications = new List<SqlReplication>();
+        public readonly List<SqlReplication> Replications = new List<SqlReplication>();
         private SqlConnections _connections;
 
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void WakeSqlReplication(DocumentChangeNotification documentChangeNotification)
         {
-            foreach (var replication in _replications)
+            foreach (var replication in Replications)
             {
                 replication.WaitForChanges.Set();
             }
@@ -43,11 +43,11 @@ namespace Raven.Server.Documents.SqlReplication
                 notification.Key.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase))
             {
                 _connections = null;
-                foreach (var replication in _replications)
+                foreach (var replication in Replications)
                 {
                     replication.Dispose();
                 }
-                _replications.Clear();
+                Replications.Clear();
 
                 LoadConfigurations();
 
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     var configuration = JsonDeserialization.SqlReplicationConfiguration(document.Data);
                     var sqlReplication = new SqlReplication(_database, configuration);
-                    _replications.Add(sqlReplication);
+                    Replications.Add(sqlReplication);
                     if (sqlReplication.ValidateName() == false ||
                         sqlReplication.PrepareSqlReplicationConfig(_connections) == false)
                         return;
@@ -92,7 +92,6 @@ namespace Raven.Server.Documents.SqlReplication
             _database.Notifications.OnDocumentChange -= WakeSqlReplication;
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
         }
-
 
         public DynamicJsonValue SimulateSqlReplicationSqlQueries(SimulateSqlReplication simulateSqlReplication, DocumentsOperationContext context)
         {

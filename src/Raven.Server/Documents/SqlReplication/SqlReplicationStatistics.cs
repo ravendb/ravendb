@@ -1,5 +1,7 @@
 using System;
 using Raven.Abstractions;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication
 {
@@ -7,7 +9,6 @@ namespace Raven.Server.Documents.SqlReplication
     {
         private readonly string _name;
         private readonly bool _reportToDatabaseAlerts;
-
 
         public SqlReplicationStatistics(string name, bool reportToDatabaseAlerts = true)
         {
@@ -152,6 +153,19 @@ namespace Raven.Server.Documents.SqlReplication
         public void ScriptSuccess()
         {
             ScriptSuccessCount++;
+        }
+
+        public DynamicJsonValue ToBlittable()
+        {
+            var json = new DynamicJsonValue
+            {
+                ["LastAlert"] = LastAlert,
+                ["LastErrorTime"] = LastErrorTime,
+                ["LastReplicatedEtag"] = LastReplicatedEtag,
+                ["SuccessCount"] = SuccessCount,
+                ["SuspendUntil"] = SuspendUntil,
+            };
+            return json;
         }
     }
 }

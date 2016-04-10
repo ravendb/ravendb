@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -16,66 +18,71 @@ namespace Raven.Server.Documents.SqlReplication
 {
     public class SqlReplicationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/sql-replication/stats", "GET", "/databases/{databaseName:string}/sql-replication/stats")]
+        [RavenAction("/databases/*/sql-replication/stats", "GET", "/databases/{databaseName:string}/sql-replication/stats?name={sqlReplicationName:string}")]
         public Task GetStats()
         {
-            throw new NotImplementedException();
+            var names = HttpContext.Request.Query["name"];
+            if (names.Count == 0)
+                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
+            var name = names[0];
+            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name);
 
-            /*
-               [HttpGet]
-                    [RavenRoute("debug/sql-replication-stats")]
-                    [RavenRoute("databases/{databaseName}/debug/sql-replication-stats")]
-                    public HttpResponseMessage SqlReplicationStats()
+            if (replication == null)
+            {
+                HttpContext.Response.StatusCode = 404;
+                return Task.CompletedTask;
+            }
+
+            JsonOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, replication.Statistics.ToBlittable());
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/sql-replication/debug/stats", "GET", "/databases/{databaseName:string}/sql-replication/debug/stats")]
+        public Task GetDebugStats()
+        {
+            JsonOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartArray();
+                    bool first = true;
+                    foreach (var replication in Database.SqlReplicationLoader.Replications)
                     {
-                        var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
-                        if (task == null)
-                            return GetMessageWithObject(new
-                            {
-                                Error = "SQL Replication bundle is not installed"
-                            }, HttpStatusCode.NotFound);
+                        if (first == false)
+                            writer.WriteComma();
+                        else
+                            first = false;
 
-
-                        //var metrics = task.SqlReplicationMetricsCounters.ToDictionary(x => x.Key, x => x.Value.ToSqlReplicationMetricsData());
-
-                        var statisticsAndMetrics = task.GetConfiguredReplicationDestinations().Select(x =>
+                        var json = new DynamicJsonValue
                         {
-                            SqlReplicationStatistics stats;
-                            task.Statistics.TryGetValue(x.Name, out stats);
-                            var metrics = task.GetSqlReplicationMetricsManager(x).ToSqlReplicationMetricsData();
-                            return new
+                            ["Name"] = replication.Name,
+                            ["Statistics"] = replication.Statistics.ToBlittable(),
+                            ["Metrics"] = new DynamicJsonValue
                             {
-                                x.Name,
-                                Statistics = stats,
-                                Metrics = metrics
-                            };
-                        });
-                        return GetMessageWithObject(statisticsAndMetrics);
+                                /*TODO: Metrics*/
+                            },
+                        };
+                        context.Write(writer, json);
                     }
-            */
+                    writer.WriteEndArray();
+                }
+            }
+            return Task.CompletedTask;
+        }
 
-            /*
-             [HttpGet]
-                    [RavenRoute("studio-tasks/get-sql-replication-stats")]
-                    [RavenRoute("databases/{databaseName}/studio-tasks/get-sql-replication-stats")]
-                    public HttpResponseMessage GetSQLReplicationStats(string sqlReplicationName)
-                    {
-                        new SqlConnection()
-                        var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
-                        if (task == null)
-                            return GetMessageWithObject(new
-                            {
-                                Error = "SQL Replication bundle is not installed"
-                            }, HttpStatusCode.NotFound);
-
-                        var matchingStats = task.Statistics.FirstOrDefault(x => x.Key == sqlReplicationName);
-
-                        if (matchingStats.Key != null)
-                        {
-                            return GetMessageWithObject(task.Statistics.FirstOrDefault(x => x.Key == sqlReplicationName));
-                        }
-                        return GetEmptyMessage(HttpStatusCode.NotFound);
-                    }
-            */
+        [RavenAction("/databases/*/sql-replication/debug/pref", "GET", "/databases/{databaseName:string}/sql-replication/debug/pref")]
+        public Task GetDebugPref()
+        {
+/* TODO: Implement*/
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/sql-replication/test-sql-connection", "GET", "/databases/{databaseName:string}/sql-replication/test-sql-connection?factoryName={factoryName:string}&connectionString{connectionString:string}")]
@@ -131,30 +138,30 @@ namespace Raven.Server.Documents.SqlReplication
         }
 
         [RavenAction("/databases/*/sql-replication/reset", "POST", "/databases/{databaseName:string}/sql-replication/reset?name={sqlReplicationName:string}")]
-        public Task PostReset()
+        public Task PostResetSqlReplication()
         {
-            /*
-            var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
-            if (task == null)
-                return GetMessageWithObjectAsTask(new
-                {
-                    Error = "SQL Replication bundle is not installed"
-                }, HttpStatusCode.NotFound);
-            SqlReplicationStatistics stats;
-            task.Statistics.TryRemove(sqlReplicationName, out stats);
-            var jsonDocument = Database.Documents.Get(SqlReplicationTask.RavenSqlReplicationStatus, null);
-            if (jsonDocument != null)
+            var names = HttpContext.Request.Query["name"];
+            if (names.Count == 0)
+                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
+            var name = names[0];
+            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name);
+
+            if (replication == null)
             {
-                var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
-                replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
-                
-                Database.Documents.Put(SqlReplicationTask.RavenSqlReplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
+                HttpContext.Response.StatusCode = 404;
+                return Task.CompletedTask;
             }
 
-            return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
-            */
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                Database.DocumentsStorage.Delete(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + name, null);
+                tx.Commit();
+            }
 
-            throw new NotImplementedException();
+            HttpContext.Response.StatusCode = 204;  // NoContent
+            return Task.CompletedTask;
         }
     }
 }

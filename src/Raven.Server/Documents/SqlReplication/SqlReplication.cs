@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         public readonly ManualResetEventSlim WaitForChanges = new ManualResetEventSlim();
 
-        private string Name => Configuration.Name;
+        public string Name => Configuration.Name;
 
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private Thread _sqlReplicationThread;
