@@ -342,11 +342,6 @@ namespace Voron
                 var state = _dataPager.PagerState;
                 tx.AddPagerState(state);
 
-                if (flags == TransactionFlags.ReadWrite)
-                {
-                    tx.AfterCommit = TransactionAfterCommit;
-                }
-
                 return tx;
             }
             catch (Exception)
@@ -365,7 +360,7 @@ namespace Voron
             get { return Volatile.Read(ref _transactionsCounter) + 1; }
         }
 
-        private void TransactionAfterCommit(LowLevelTransaction tx)
+        internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (_activeTransactions.Contains(tx) == false)
                 return;
