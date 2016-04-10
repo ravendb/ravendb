@@ -20,7 +20,7 @@ class globalConfigVersioning extends viewModelBase {
         super.canActivate(args);
 
         var deferred = $.Deferred();
-        var db = appUrl.getSystemDatabase();
+        var db = appUrl.getDatabase();
         this.fetchVersioningEntries(db)
             .done(() => deferred.resolve({ can: true }))
             .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(db) }));
@@ -49,7 +49,7 @@ class globalConfigVersioning extends viewModelBase {
     }
 
     syncChanges(deleteConfig: boolean) {
-        var db = appUrl.getSystemDatabase();
+        var db = appUrl.getDatabase();
         if (deleteConfig) {
             var deleteTask = new saveVersioningCommand(
                 db,

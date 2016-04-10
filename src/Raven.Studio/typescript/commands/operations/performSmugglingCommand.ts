@@ -23,7 +23,7 @@ class performSmugglingCommand extends commandBase {
     }
 
     private monitorOperation(parentPromise: JQueryDeferred<any>, operationId: number) {
-        new getOperationStatusCommand(appUrl.getSystemDatabase(), operationId)
+        new getOperationStatusCommand(appUrl.getDatabase(), operationId)
             .execute()
             .done((result: operationStatusDto) => {
             this.updateMigrationStatus(result);
