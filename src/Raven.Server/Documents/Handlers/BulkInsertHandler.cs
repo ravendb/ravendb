@@ -19,14 +19,14 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
+using Bits = Sparrow.Binary.Bits;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class BulkInsertHandler : DatabaseRequestHandler
     {
-        private readonly BlockingCollection<BlittableJsonReaderObject> _docs;		
-        private readonly ConcurrentQueue<BlittableJsonReaderObject> _toBeFreed = new ConcurrentQueue<BlittableJsonReaderObject>(); 
+        private readonly BlockingCollection<BulkBufferInfo> _fullBuffers = new BlockingCollection<BulkBufferInfo>();
+        private readonly BlockingCollection<BulkBufferInfo> _freeBuffers = new BlockingCollection<BulkBufferInfo>();
 
         public enum ResponseMessageType
         {
@@ -34,62 +34,54 @@ namespace Raven.Server.Documents.Handlers
             Error
         }
 
-        public BulkInsertHandler()
+        private class BulkBufferInfo
         {
-            _docs = new BlockingCollection<BlittableJsonReaderObject>(512);
+            public int Used;
+            public UnmanagedBuffersPool.AllocatedMemoryData Buffer;
         }
 
         private static readonly ArraySegment<byte> HeartbeatMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("Heartbeat"));
 
         private WebSocket _webSocket;
 
-        public void InsertDocuments()
+        public unsafe void InsertDocuments()
         {
             var lastHeartbeat = SystemTime.UtcNow;
             try
             {
-                var buffer = new List<BlittableJsonReaderObject>(_docs.BoundedCapacity);
                 DocumentsOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
                 {
-                    while (_docs.IsCompleted == false)
+                    while (_fullBuffers.IsCompleted == false)
                     {
-                        buffer.Clear();
-                        BlittableJsonReaderObject doc;
+                        BulkBufferInfo current;
                         try
                         {
-                            doc = _docs.Take(Database.DatabaseShutdown);
+                            current = _fullBuffers.Take(Database.DatabaseShutdown);
                         }
                         catch (InvalidOperationException) // adding completed
                         {
                             break;
                         }
-                        buffer.Add(doc);
-                        int queueSize = 0;
-                        while (true)
-                        {
-                            try
-                            {
-                                if (_docs.TryTake(out doc) == false)
-                                    break;
-                            }
-                            catch (InvalidOperationException)//adding completed
-                            {
-                                break;// need to still process the current buffer
-                            }
-                            queueSize += doc.Size;
-                            buffer.Add(doc);
-                            if (queueSize >= 1024*1024 * 8) //todo configurable?
-                                                            //probably this value needs to be adjusted
-                                break;
-                        }
-                        if(Log.IsDebugEnabled)
-                            Log.Debug($"Starting bulk insert batch with {buffer.Count} documents");
+                        if (Log.IsDebugEnabled)
+                            Log.Debug($"Starting bulk insert batch with size {current.Used:#,#;;0} bytes");
+                        int count = 0;
                         var sp = Stopwatch.StartNew();
                         using (var tx = context.OpenWriteTransaction())
                         {
-                            foreach (var reader in buffer)
+                            byte* docPtr = (byte*)current.Buffer.Address;
+                            var end = docPtr + current.Used;
+                            while (docPtr < end)
                             {
+                                count++;
+                                var size = *(int*)docPtr;
+                                docPtr += sizeof(int);
+                                if (size + docPtr > end) //TODO: Better error
+                                    throw new InvalidDataException(
+                                        "The blittable size specified is more than the available data, aborting...");
+                                //TODO: Paranoid mode, has to validate the data is safe
+                                var reader = new BlittableJsonReaderObject(docPtr, size, context);
+                                docPtr += size;
                                 string docKey;
                                 BlittableJsonReaderObject metadata;
                                 const string idKey = "@id";
@@ -100,27 +92,27 @@ namespace Raven.Server.Documents.Handlers
                                     throw new InvalidDataException(message);
                                 }
                                 Database.DocumentsStorage.Put(context, docKey, null, reader);
-                                _toBeFreed.Enqueue(reader);
                             }
+                            _freeBuffers.Add(current);
                             tx.Commit();
                         }
                         lastHeartbeat = SendHeartbeatIfNecessary(lastHeartbeat);
                         if (Log.IsDebugEnabled)
-                            Log.Debug($"Completed bulk insert batch with {buffer.Count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
+                            Log.Debug($"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
 
                     }
                 }
             }
             catch (Exception)
             {
-                _docs.CompleteAdding();				
+                _fullBuffers.CompleteAdding();
                 throw;
             }
         }
 
         private DateTime SendHeartbeatIfNecessary(DateTime lastHeartbeat)
         {
-            if ((SystemTime.UtcNow - lastHeartbeat).TotalSeconds >= 3)
+            if ((SystemTime.UtcNow - lastHeartbeat).TotalSeconds >= 15)
             {
                 _webSocket.SendAsync(HeartbeatMessage, WebSocketMessageType.Text, false,
                     Database.DatabaseShutdown)
@@ -129,7 +121,7 @@ namespace Raven.Server.Documents.Handlers
                         // ignore the exception, we don't care here
                         // this just force us to call the Exception property, thereby consuming the exception
                         GC.KeepAlive(t.Exception);
-                    },TaskContinuationOptions.OnlyOnFaulted);
+                    }, TaskContinuationOptions.OnlyOnFaulted);
                 lastHeartbeat = SystemTime.UtcNow;
             }
 
@@ -144,68 +136,77 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 Log.Debug("Starting bulk insert operation");
+
+                for (int i = 0; i < 8; i++)
+                {
+                    _freeBuffers.Add(new BulkBufferInfo
+                    {
+                        Buffer = context.GetMemory(1024 * 1024 * 4)
+                    });
+                }
+
                 var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
-                var state = new JsonParserState();
                 var task = Task.Factory.StartNew(InsertDocuments);
                 try
                 {
+                    const string bulkInsertDocumentDebugTag = "bulk/insert/document";
+                    using (var stream = context.GetStream(bulkInsertDocumentDebugTag))
+                    {
+                        var current = _freeBuffers.Take();
                     int count = 0;
                     var sp = Stopwatch.StartNew();
-                    const string bulkInsertDebugTag = "bulk/insert";
-                    using (var parser = new UnmanagedJsonParser(context, state, bulkInsertDebugTag))
+                        while (true)
                     {
                         var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-                        parser.SetBuffer(new ArraySegment<byte>(buffer.Array, buffer.Offset,
-                            result.Count));
+                            stream.Write(buffer.Array, 0, result.Count);
+                            if (result.EndOfMessage == false)
+                                continue;
 
-                        while (true)
-                        {
-                            BlittableJsonReaderObject docToFree;
-                            while (_toBeFreed.TryDequeue(out docToFree))
-                            {
-                                docToFree.Dispose();
-                            }
-
-                            const string bulkInsertDocumentDebugTag = "bulk/insert/document";
-                            var doc = new BlittableJsonDocumentBuilder(context,
-                                BlittableJsonDocumentBuilder.UsageMode.ToDisk,
-                                bulkInsertDocumentDebugTag,
-                                parser, state);
-                            doc.ReadObject();
-                            while (doc.Read() == false) //received partial document
-                            {
-                                if (_webSocket.State != WebSocketState.Open)
-                                    throw new EndOfStreamException();
-                                result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-                                parser.SetBuffer(new ArraySegment<byte>(buffer.Array, buffer.Offset,
-                                    result.Count));
-                            }
-                            doc.FinalizeDocument();
                             count++;
-                            var reader = doc.CreateReader();
-                            try
-                            {
-                                _docs.Add(reader);
+                            if (current.Used + stream.SizeInBytes > current.Buffer.SizeInBytes)
+                        {
+                                try
+                                {
+                                    _fullBuffers.Add(current);
+                                }
+                                catch (Exception)
+                                {
+                                    break;
+                                    // error in the actual insert, we'll get it when we await on the insert task
+                                }
+                                current = _freeBuffers.Take();
+                                if (current.Buffer.SizeInBytes < stream.SizeInBytes)
+                                {
+                                    context.ReturnMemory(current.Buffer);
+                                    current.Buffer = context.GetMemory(Bits.NextPowerOf2(stream.SizeInBytes));
                             }
-                            catch (InvalidOperationException)
-                            {
-                                // error in actual insert, abort
-                                // actual handling is done below
-                                break;
+                                current.Used = 0;
                             }
-                            if (result.EndOfMessage)
+                            stream.CopyTo(current.Buffer.Address + current.Used);
+                            current.Used += stream.SizeInBytes;
+                            stream.Clear();
+                            if (result.CloseStatus != null)
                                 break;
                         }
-                        _docs.CompleteAdding();
+                        try
+                        {
+                            _fullBuffers.Add(current);
                     }
+                        catch (Exception)
+                        {
+                            // error in the insert, we'll get it when we await on the insert task
+                        }
+                        _fullBuffers.CompleteAdding();
                     await task;
                     var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
+                        if (Log.IsDebugEnabled)
                     Log.Debug(msg);
                     await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg, CancellationToken.None);
                 }
+                }
                 catch (Exception e)
                 {
-                    _docs.CompleteAdding();
+                    _fullBuffers.CompleteAdding();
                     try
                     {
                         await _webSocket.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
@@ -215,7 +216,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         // nothing to do further
                     }
-                    Log.ErrorException("Failure in bulk insert",e);
+                    Log.ErrorException("Failure in bulk insert", e);
                 }
             }
         }
