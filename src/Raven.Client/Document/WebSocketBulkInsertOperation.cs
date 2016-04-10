@@ -19,7 +19,7 @@ namespace Raven.Client.Document
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof (WebSocketBulkInsertOperation));
         private readonly CancellationTokenSource cts;
-        private ClientWebSocket connection;
+        private RavenClientWebSocket connection;
         private readonly Task socketConnectionTask;
         private readonly MemoryStream _jsonBuffer = new MemoryStream();
         private readonly MemoryStream _networkBuffer = new MemoryStream();
@@ -48,7 +48,7 @@ namespace Raven.Client.Document
             _jsonOperationContext = new JsonOperationContext(_unmanagedBuffersPool);
             _networkBufferWriter = new BinaryWriter(_networkBuffer);
             this.cts = cts ?? new CancellationTokenSource();
-            connection = new ClientWebSocket();
+            connection = new RavenClientWebSocket();
             url = asyncServerClient.Url;
 
             var serverUri = new Uri(url);
