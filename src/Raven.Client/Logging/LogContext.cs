@@ -13,29 +13,29 @@ namespace Raven.Abstractions.Logging
 {
     public static class LogContext
     {
-        private static readonly ThreadLocal<string> databaseName = new ThreadLocal<string>();
+        private static readonly ThreadLocal<string> resourceName = new ThreadLocal<string>();
 
-        public static IDisposable WithDatabase(string database)
+        public static IDisposable WithResource(string resourceName)
         {
-            var old = databaseName.Value;
-            var db = database ?? Constants.SystemDatabase;
-            var disposable = LogManager.OpenMappedContext("database", db);
-            databaseName.Value = db;
+            var old = LogContext.resourceName.Value;
+            var name = resourceName ?? Constants.SystemDatabase;
+            var disposable = LogManager.OpenMappedContext("resource", name);
+            LogContext.resourceName.Value = name;
 
-            return new DisposableAction(()=>
+            return new DisposableAction(() =>
             {
-                databaseName.Value = old;
+                LogContext.resourceName.Value = old;
                 disposable.Dispose();
             });
         }
 
-        public static string DatabaseName
+        public static string ResourceName
         {
             get
             {
                 try
                 {
-                    return databaseName.Value;
+                    return resourceName.Value;
                 }
                 catch (ObjectDisposedException)
                 {
@@ -47,7 +47,7 @@ namespace Raven.Abstractions.Logging
             {
                 try
                 {
-                    databaseName.Value = value;
+                    resourceName.Value = value;
                 }
                 catch (ObjectDisposedException)
                 {

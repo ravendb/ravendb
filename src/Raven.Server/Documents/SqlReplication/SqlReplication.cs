@@ -6,13 +6,16 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication
 {
     public class SqlReplication : IDisposable
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof (SqlReplication));
+        private static readonly ILog Log = LogManager.GetLogger(typeof(SqlReplication));
 
         private readonly DocumentDatabase _database;
         public readonly SqlReplicationConfiguration Configuration;
@@ -24,7 +27,8 @@ namespace Raven.Server.Documents.SqlReplication
 
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private Thread _sqlReplicationThread;
-        private bool disposed;
+        private bool _disposed;
+        public PredefinedSqlConnection PredefinedSqlConnection { get; private set; }
 
         public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration)
         {
@@ -48,7 +52,8 @@ namespace Raven.Server.Documents.SqlReplication
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown, _cancellationTokenSource.Token))
             {
-                while (true)
+                LoadLastEtag();
+                while (cts.IsCancellationRequested == false)
                 {
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Starting sql replication for '{Name}'.");
@@ -100,17 +105,50 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
+        private void LoadLastEtag()
+        {
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+
+                var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
+                Statistics.LastReplicatedEtag = sqlReplicationStatus == null ? 0 : JsonDeserialization.SqlReplicationStatus(sqlReplicationStatus.Data).LastReplicatedEtag;
+            }
+        }
+
+        private void WriteLastEtag(DocumentsOperationContext context)
+        {
+            var key = Constants.SqlReplication.RavenSqlReplicationStatusPrefix + Name;
+            var document = context.ReadObject(new DynamicJsonValue
+            {
+                ["Name"] = Name,
+                ["LastReplicatedEtag"] = Statistics.LastReplicatedEtag,
+            }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            _database.DocumentsStorage.Put(context, key, null, document);
+        }
+
         private void DoWork(CancellationToken cancellationToken)
         {
             try
             {
                 DocumentsOperationContext databaseContext;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-                using (var tx = databaseContext.OpenWriteTransaction())
+                using (var tx = databaseContext.OpenReadTransaction())
                 {
-                    ReplicateDeletionsToDestination(databaseContext, cancellationToken);
+                    // TODO: We should not have here a write transaction
+
+                    // ReplicateDeletionsToDestination(databaseContext, cancellationToken);
                     ReplicateChangesToDestination(databaseContext, cancellationToken);
 
+                    tx.Commit();
+                }
+
+                //TODO: only do this on success or if we actually replicated
+
+                using (var tx = databaseContext.OpenWriteTransaction())
+                {
+                    WriteLastEtag(databaseContext);
                     tx.Commit();
                 }
             }
@@ -132,8 +170,8 @@ namespace Raven.Server.Documents.SqlReplication
             if (documents.Count == 0)
                 return;
 
-            var documentsKeys = documents.Select(tombstone => (string) tombstone.Key).ToList();
-            using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, Statistics, cancellationToken))
+            var documentsKeys = documents.Select(tombstone => (string)tombstone.Key).ToList();
+            using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, PredefinedSqlConnection, Statistics, cancellationToken))
             {
                 foreach (var sqlReplicationTable in Configuration.SqlReplicationTables)
                 {
@@ -149,9 +187,11 @@ namespace Raven.Server.Documents.SqlReplication
         {
             var pageSize = _database.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
-            var lastDocumentEtag = _database.DocumentsStorage.GetLastDocumentEtag(context, Configuration.Collection);
-            // TODO: fix etag
-            var documents = _database.DocumentsStorage.GetDocumentsAfter(context, Configuration.Collection, lastDocumentEtag + 1, 0, pageSize).ToList();
+            var documents = _database.DocumentsStorage.GetDocumentsAfter(context, Configuration.Collection, Statistics.LastReplicatedEtag + 1, 0, pageSize).ToList();
+            if (documents.Count == 0)
+                return true;
+
+            Statistics.LastReplicatedEtag = documents.Last().Etag;
 
             var scriptResult = ApplyConversionScript(documents, context);
             if (scriptResult.Keys.Count == 0)
@@ -160,7 +200,7 @@ namespace Raven.Server.Documents.SqlReplication
             var countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
             try
             {
-                using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, Statistics, cancellationToken))
+                using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, PredefinedSqlConnection, Statistics, cancellationToken))
                 {
                     if (writer.ExecuteScript(scriptResult))
                     {
@@ -202,7 +242,7 @@ namespace Raven.Server.Documents.SqlReplication
             foreach (var replicatedDoc in documents)
             {
                 _cancellationTokenSource.Token.ThrowIfCancellationRequested();
-                var patcher = new SqlReplicationPatchDocument(_database, result, Configuration, replicatedDoc.Key);
+                var patcher = new SqlReplicationPatchDocument(_database, context, result, Configuration, replicatedDoc.Key);
                 try
                 {
                     var scope = patcher.Apply(context, replicatedDoc, new PatchRequest { Script = Configuration.Script });
@@ -231,90 +271,46 @@ namespace Raven.Server.Documents.SqlReplication
             return result;
         }
 
-        public bool PrepareSqlReplicationConfig(PredefinedSqlConnections connections, bool writeToLog = true)
+        public bool PrepareSqlReplicationConfig(SqlConnections connections, bool writeToLog = true)
         {
-            if (string.IsNullOrEmpty(Configuration.ConnectionString) == false)
-                return true;
-
-            if (string.IsNullOrWhiteSpace(Configuration.PredefinedConnectionStringSettingName) == false)
+            if (string.IsNullOrWhiteSpace(Configuration.ConnectionStringName) == false)
             {
-                 var connection = connections.Connections[Configuration.PredefinedConnectionStringSettingName];
-                 if (connection != null)
-                 {
-                     Configuration.ConnectionString = connection.ConnectionString;
-                     Configuration.FactoryName = connection.FactoryName;
-                     return true;
-                 }
+                PredefinedSqlConnection = connections.Connections[Configuration.ConnectionStringName];
+                if (PredefinedSqlConnection != null)
+                    return true;
 
                 if (writeToLog)
-                    Log.Warn("Could not find predefined connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-                        Configuration.PredefinedConnectionStringSettingName,
+                    Log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+                        Configuration.ConnectionStringName,
                         Configuration.Name);
                 Statistics.LastAlert = new Alert
                 {
                     IsError = true,
                     CreatedAt = DateTime.UtcNow,
                     Title = "Could not start replication",
-                    Message = $"Could not find predefined connection string named '{Configuration.PredefinedConnectionStringSettingName}' for sql replication config: {Configuration.Name}, ignoring sql replication setting.",
+                    Message = $"Could not find connection string named '{Configuration.ConnectionStringName}' for sql replication config: {Configuration.Name}, ignoring sql replication setting.",
                 };
                 return false;
             }
 
-            throw new NotImplementedException();
-            if (string.IsNullOrWhiteSpace(Configuration.ConnectionStringName) == false)
+            if (writeToLog)
+                Log.Warn("Connection string name cannot be empty for sql replication config: {1}, ignoring sql replication setting.",
+                    Configuration.ConnectionStringName,
+                    Configuration.Name);
+            Statistics.LastAlert = new Alert
             {
-                throw new NotImplementedException();
-                /*var connectionString = JsonConfigurationManager.ConnectionStrings[_configuration.ConnectionStringName];
-                if (connectionString == null)
-                {
-                if (writeToLog)
-                    Log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-                        _configuration.ConnectionStringName, _configuration.Name);
-
-                    _statistics.LastAlert = new Alert
-                    {
-                        IsError = true,
-                        CreatedAt = DateTime.UtcNow,
-                        Title = "Could not start replication",
-                        Message = string.Format("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-                            _configuration.ConnectionStringName,
-                            _configuration.Name)
-                    };
-                    return false;
-                }
-                _configuration.ConnectionString = connectionString.ConnectionString;*/
-            }
-            else if (string.IsNullOrWhiteSpace(Configuration.ConnectionStringSettingName) == false)
-            {
-                throw new NotImplementedException();
-
-                /*  var setting = _database.Configuration.Settings[_configuration.ConnectionStringSettingName];
-                  if (string.IsNullOrWhiteSpace(setting))
-                  {
-                if (writeToLog)
-                          Log.Warn("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-              _configuration.ConnectionStringSettingName,
-              _configuration.Name);
-                      _statistics.LastAlert = new Alert
-                      {
-                  IsError = true,
-                          CreatedAt = DateTime.UtcNow,
-                          Title = "Could not start replication",
-                          Message = string.Format("Could not find setting named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
-                              _configuration.ConnectionStringSettingName,
-                              _configuration.Name)
-                      };
-                      return false;
-                  }
-              }
-              return true;*/
-            }
+                IsError = true,
+                CreatedAt = DateTime.UtcNow,
+                Title = "Could not start replication",
+                Message = $"Connection string name cannot be empty for sql replication config: {Configuration.Name}, ignoring sql replication setting.",
+            };
+            return false;
         }
 
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            disposed = true;
+            _disposed = true;
         }
 
         public bool ValidateName()

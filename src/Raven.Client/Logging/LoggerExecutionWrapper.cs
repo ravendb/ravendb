@@ -44,19 +44,19 @@ namespace Raven.Abstractions.Logging
         {
             if (logger.ShouldLog(logLevel))
             {
-            Func<string> wrappedMessageFunc = () =>
-            {
-                try
+                Func<string> wrappedMessageFunc = () =>
                 {
-                    return messageFunc();
-                }
-                catch (Exception ex)
-                {
-                    Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
-                }
-                return null;
-            };
-            logger.Log(logLevel, wrappedMessageFunc);
+                    try
+                    {
+                        return messageFunc();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
+                    }
+                    return null;
+                };
+                logger.Log(logLevel, wrappedMessageFunc);
             }
 
             if (targets.Count == 0)
@@ -80,10 +80,7 @@ namespace Raven.Abstractions.Logging
                 return;
             }
 
-            string databaseName = LogContext.DatabaseName;
-            if (string.IsNullOrWhiteSpace(databaseName))
-                databaseName = Constants.SystemDatabase;
-
+            var databaseName = LogContext.DatabaseName;
             foreach (var target in targets)
             {
                 target.Write(new LogEventInfo
@@ -132,6 +129,6 @@ namespace Raven.Abstractions.Logging
             return logger.ShouldLog(logLevel);
         }
 
-#endregion
+        #endregion
     }
 }

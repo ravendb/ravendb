@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.SqlReplication
 {
@@ -12,6 +13,6 @@ namespace Raven.Server.Documents.SqlReplication
     {
         public string DocumentKey { get; set; }
 
-        public object Columns { get; set; }
+        public List<SqlReplicationColumn> Columns { get; set; }
     }
 }

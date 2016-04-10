@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
-using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.SqlReplication
 {
@@ -20,30 +21,36 @@ namespace Raven.Server.Documents.SqlReplication
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
         private readonly SqlReplicationConfiguration _configuration;
+        private readonly PredefinedSqlConnection _predefinedSqlConnection;
         private readonly SqlReplicationStatistics _statistics;
         private readonly CancellationToken _cancellationToken;
 
         private readonly DbCommandBuilder _commandBuilder;
+        private readonly DbProviderFactory _providerFactory;
         private readonly DbConnection _connection;
         private readonly DbTransaction _tx;
+
+        private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
 
         private const int LongStatementWarnThresholdInMilliseconds = 3000;
 
         bool hadErrors;
 
-        public RelationalDatabaseWriter(DocumentDatabase database, DocumentsOperationContext context, 
-            SqlReplicationConfiguration configuration, SqlReplicationStatistics statistics, CancellationToken cancellationToken) : base(configuration)
+        public RelationalDatabaseWriter(DocumentDatabase database, DocumentsOperationContext context, SqlReplicationConfiguration configuration,
+            PredefinedSqlConnection predefinedSqlConnection, SqlReplicationStatistics statistics, CancellationToken cancellationToken) 
+            : base(predefinedSqlConnection)
         {
             _database = database;
             _context = context;
             _configuration = configuration;
+            _predefinedSqlConnection = predefinedSqlConnection;
             _statistics = statistics;
             _cancellationToken = cancellationToken;
 
-            var providerFactory = GetDbProviderFactory(configuration);
-            _commandBuilder = providerFactory.CreateCommandBuilder();
-            _connection = providerFactory.CreateConnection();
-            _connection.ConnectionString = configuration.ConnectionString;
+            _providerFactory = GetDbProviderFactory(configuration);
+            _commandBuilder = _providerFactory.CreateCommandBuilder();
+            _connection = _providerFactory.CreateConnection();
+            _connection.ConnectionString = predefinedSqlConnection.ConnectionString;
 
             try
             {
@@ -65,8 +72,8 @@ namespace Raven.Server.Documents.SqlReplication
 
             _tx = _connection.BeginTransaction();
 
-          /*  stringParserList = GenerateStringParsers();.
-            sqlReplicationMetrics = database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault().GetSqlReplicationMetricsManager(cfg);*/
+            stringParserList = GenerateStringParsers();
+            /* sqlReplicationMetrics = database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault().GetSqlReplicationMetricsManager(cfg);*/
         }
 
         public static void TestConnection(string factoryName, string connectionString)
@@ -90,11 +97,11 @@ namespace Raven.Server.Documents.SqlReplication
             DbProviderFactory providerFactory;
             try
             {
-                providerFactory = DbProviderFactories.GetFactory(configuration.FactoryName);
+                providerFactory = DbProviderFactories.GetFactory(_predefinedSqlConnection.FactoryName);
             }
             catch (Exception e)
             {
-                log.WarnException($"Could not find provider factory {configuration.FactoryName} to replicate to sql for {configuration.Name}, ignoring", e);
+                log.WarnException($"Could not find provider factory {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring", e);
 
                 _database.AddAlert(new Alert
                 {
@@ -102,8 +109,8 @@ namespace Raven.Server.Documents.SqlReplication
                     CreatedAt = SystemTime.UtcNow,
                     Exception = e.ToString(),
                     Title = "Sql Replication could not find factory provider",
-                    Message = $"Could not find factory provider {configuration.FactoryName} to replicate to sql for {configuration.Name}, ignoring",
-                    UniqueKey = $"Sql Replication Provider Not Found: {configuration.Name}, {configuration.FactoryName}",
+                    Message = $"Could not find factory provider {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring",
+                    UniqueKey = $"Sql Replication Provider Not Found: {configuration.Name}, {_predefinedSqlConnection.FactoryName}",
                 });
 
                 throw;
@@ -125,42 +132,43 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void InsertItems(string tableName, string pkName, List<ItemToReplicate> dataForTable, Action<DbCommand> commandCallback = null)
         {
-           /* var sqlReplicationTableMetrics = sqlReplicationMetrics.GetTableMetrics(tableName);
+            /*var sqlReplicationTableMetrics = sqlReplicationMetrics.GetTableMetrics(tableName);
             var replicationInsertActionsMetrics = sqlReplicationTableMetrics.SqlReplicationInsertActionsMeter;
             var replicationInsertActionsHistogram = sqlReplicationTableMetrics.SqlReplicationInsertActionsHistogram;
-            var replicationInsertDurationHistogram = sqlReplicationTableMetrics.SqlReplicationInsertActionsDurationHistogram;
+            var replicationInsertDurationHistogram = sqlReplicationTableMetrics.SqlReplicationInsertActionsDurationHistogram;*/
 
             var sp = new Stopwatch();
             foreach (var itemToReplicate in dataForTable)
             {
                 sp.Restart();
-                using (var cmd = connection.CreateCommand())
+                using (var cmd = _connection.CreateCommand())
                 {
-                    cmd.Transaction = tx;
+                    cmd.Transaction = _tx;
 
-                    database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+/*TODO: Should I throw here or return */
+                    _cancellationToken.ThrowIfCancellationRequested();
 
                     var sb = new StringBuilder("INSERT INTO ")
                         .Append(GetTableNameString(tableName))
                         .Append(" (")
-                        .Append(commandBuilder.QuoteIdentifier(pkName))
+                        .Append(_commandBuilder.QuoteIdentifier(pkName))
                         .Append(", ");
                     foreach (var column in itemToReplicate.Columns)
                     {
                         if (column.Key == pkName)
                             continue;
-                        sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
+                        sb.Append(_commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
                     }
                     sb.Length = sb.Length - 2;
 
                     var pkParam = cmd.CreateParameter();
 
-                    pkParam.ParameterName = GetParameterName(providerFactory, commandBuilder, pkName);
-                    pkParam.Value = itemToReplicate.DocumentId;
+                    pkParam.ParameterName = GetParameterName(pkName);
+                    pkParam.Value = itemToReplicate.DocumentKey;
                     cmd.Parameters.Add(pkParam);
 
                     sb.Append(") \r\nVALUES (")
-                        .Append(GetParameterName(providerFactory, commandBuilder, pkName))
+                        .Append(GetParameterName(pkName))
                         .Append(", ");
 
                     foreach (var column in itemToReplicate.Columns)
@@ -169,14 +177,14 @@ namespace Raven.Server.Documents.SqlReplication
                             continue;
                         var colParam = cmd.CreateParameter();
                         colParam.ParameterName = column.Key;
-                        SetParamValue(colParam, column.Value, stringParserList);
+                        SetParamValue(colParam, column, stringParserList);
                         cmd.Parameters.Add(colParam);
-                        sb.Append(GetParameterName(providerFactory, commandBuilder, column.Key)).Append(", ");
+                        sb.Append(GetParameterName(column.Key)).Append(", ");
                     }
                     sb.Length = sb.Length - 2;
                     sb.Append(")");
 
-                    if (IsSqlServerFactoryType && cfg.ForceSqlServerQueryRecompile)
+                    if (IsSqlServerFactoryType && _configuration.ForceSqlServerQueryRecompile)
                     {
                         sb.Append(" OPTION(RECOMPILE)");
                     }
@@ -195,34 +203,34 @@ namespace Raven.Server.Documents.SqlReplication
                     catch (Exception e)
                     {
                         log.WarnException(
-                            "Failure to replicate changes to relational database for: " + cfg.Name + " (doc: " + itemToReplicate.DocumentId + " ), will continue trying." +
+                            "Failure to replicate changes to relational database for: " + _configuration.Name + " (doc: " + itemToReplicate.DocumentKey + " ), will continue trying." +
                             Environment.NewLine + cmd.CommandText, e);
-                        replicationStatistics.RecordWriteError(e, database);
+                        _statistics.RecordWriteError(e, _database);
                         hadErrors = true;
                     }
                     finally
                     {
                         sp.Stop();
 
-                        var elapsedMiliseconds = sp.ElapsedMilliseconds;
+                        var elapsedMilliseconds = sp.ElapsedMilliseconds;
 
                         if (log.IsDebugEnabled)
                         {
-                            log.Debug("Insert took: {0}ms, statement: {1}", elapsedMiliseconds, stmt));
+                            log.Debug($"Insert took: {elapsedMilliseconds}ms, statement: {stmt}");
                         }
 
                         var elapsedMicroseconds = (long)(sp.ElapsedTicks * SystemTime.MicroSecPerTick);
-                        replicationInsertDurationHistogram.Update(elapsedMicroseconds);
+                       /* replicationInsertDurationHistogram.Update(elapsedMicroseconds);
                         replicationInsertActionsMetrics.Mark(1);
-                        replicationInsertActionsHistogram.Update(1);
+                        replicationInsertActionsHistogram.Update(1);*/
 
-                        if (elapsedMiliseconds > LongStatementWarnThresholdInMiliseconds)
+                        if (elapsedMilliseconds > LongStatementWarnThresholdInMilliseconds)
                         {
-                            HandleSlowSql(elapsedMiliseconds, stmt);
+                            HandleSlowSql(elapsedMilliseconds, stmt);
                         }
                     }
                 }
-            }*/
+            }
         }
 
         public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> documentKeys, Action<DbCommand> commandCallback = null)
@@ -255,7 +263,7 @@ namespace Raven.Server.Documents.SqlReplication
                         if (doNotParameterize == false)
                         {
                             var dbParameter = cmd.CreateParameter();
-                            dbParameter.ParameterName = GetParameterName(SqlClientFactory.Instance, "p" + j);
+                            dbParameter.ParameterName = GetParameterName("p" + j);
                             dbParameter.Value = documentKeys[j];
                             cmd.Parameters.Add(dbParameter);
                             sb.Append(dbParameter.ParameterName);
@@ -267,7 +275,7 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                     sb.Append(")");
 
-                    if (/*IsSqlServerFactoryType &&*/ _configuration.ForceSqlServerQueryRecompile)
+                    if (IsSqlServerFactoryType && _configuration.ForceSqlServerQueryRecompile)
                     {
                         sb.Append(" OPTION(RECOMPILE)");
                     }
@@ -345,9 +353,9 @@ namespace Raven.Server.Documents.SqlReplication
             return sqlValue.Replace("'", "''");
         }
 
-        private static string GetParameterName(DbProviderFactory providerFactory, string paramName)
+        private string GetParameterName(string paramName)
         {
-            switch (providerFactory.GetType().Name)
+            switch (_providerFactory.GetType().Name)
             {
                 case "SqlClientFactory":
                 case "MySqlClientFactory":
@@ -441,6 +449,117 @@ namespace Raven.Server.Documents.SqlReplication
             }
 
             _tx.Rollback();
+        }
+
+        public static void SetParamValue(DbParameter colParam, SqlReplicationColumn column, List<Func<DbParameter, string, bool>> stringParsers)
+        {
+            if (column.Value == null)
+                colParam.Value = DBNull.Value;
+            else
+            {
+                switch (column.Type & BlittableJsonReaderBase.TypesMask)
+                {
+                    case BlittableJsonToken.Null:
+                        colParam.Value = DBNull.Value;
+                        break;
+                    case BlittableJsonToken.Boolean:
+                    case BlittableJsonToken.Integer:
+                    case BlittableJsonToken.Float:
+                        colParam.Value = column.Value;
+                        break;
+
+                    case BlittableJsonToken.String:
+                        SetParamStringValue(colParam, ((LazyStringValue) column.Value).ToString(), stringParsers);
+                        break;
+                    case BlittableJsonToken.CompressedString:
+                        SetParamStringValue(colParam, ((LazyCompressedStringValue) column.Value).ToString(), stringParsers);
+                        break;
+
+                    case BlittableJsonToken.StartObject:
+                        var objectValue = (BlittableJsonReaderObject) column.Value;
+                        if (objectValue.Count >= 2)
+                        {
+                            object dbType, fieldValue;
+                            if (objectValue.TryGetMember("Type", out dbType) && objectValue.TryGetMember("Value", out fieldValue))
+                            {
+                                colParam.DbType = (DbType) Enum.Parse(typeof (DbType), dbType.ToString(), false);
+                                colParam.Value = fieldValue.ToString();
+
+                                object size;
+                                if (objectValue.TryGetMember("Size", out size))
+                                {
+                                    colParam.Size = (int) size;
+                                }
+                                break;
+                            }
+                        }
+                        colParam.Value = objectValue.ToString();
+                        break;
+                    case BlittableJsonToken.StartArray:
+                        var blittableJsonReaderArray = (BlittableJsonReaderArray)column.Value;
+                        colParam.Value = blittableJsonReaderArray.ToString();
+                        break;
+                    default:
+                        throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
+                }
+            }
+        }
+
+        private static void SetParamStringValue(DbParameter colParam, string value, List<Func<DbParameter, string, bool>> stringParsers)
+        {
+            if (value.Length > 0 && stringParsers != null)
+            {
+                foreach (var parser in stringParsers)
+                {
+                    if (parser(colParam, value))
+                    {
+                        return;
+                    }
+                }
+            }
+            colParam.Value = value;
+        }
+
+        public List<Func<DbParameter, string, bool>> GenerateStringParsers()
+        {
+            return new List<Func<DbParameter, string, bool>> {
+                (colParam, value) => {
+                    if( char.IsDigit( value[ 0 ] ) ) {
+                            DateTime dateTime;
+                            if (DateTime.TryParseExact(value, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+                            {
+                                switch(_providerFactory.GetType( ).Name ) {
+                                    case "MySqlClientFactory":
+                                        colParam.Value = dateTime.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+                                        break;
+                                    default:
+                                        colParam.Value = dateTime;
+                                        break;
+                                }
+                                return true;
+                            }
+                    }
+                    return false;
+                },
+                (colParam, value) => {
+                    if( char.IsDigit( value[ 0 ] ) ) {
+                        DateTimeOffset dateTimeOffset;
+                        if( DateTimeOffset.TryParseExact( value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                                                         DateTimeStyles.RoundtripKind, out dateTimeOffset ) ) {
+                            switch( _providerFactory.GetType( ).Name ) {
+                                case "MySqlClientFactory":
+                                    colParam.Value = dateTimeOffset.ToUniversalTime().ToString( "yyyy-MM-dd HH:mm:ss.ffffff" );
+                                    break;
+                                default:
+                                    colParam.Value = dateTimeOffset;
+                                    break;
+                            }
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            };
         }
     }
 }

@@ -8,16 +8,18 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Document;
+using Raven.Database.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.SqlReplication;
-using Raven.Server.Utils;
 using Raven.Tests.Core;
 using Xunit;
+using Xunit.Sdk;
 
 namespace FastTests.Server.Documents.SqlReplication
 {
@@ -43,11 +45,11 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 }";
 
 
-        private void CreateRdbmsSchema()
+        private void CreateRdbmsSchema(DocumentStore store)
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = MaybeSqlServerIsAvailableFactAttribute.ConnectionString;
+                con.ConnectionString = GetConnectionString(store);
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -83,12 +85,13 @@ CREATE TABLE [dbo].[Orders]
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task SimpleTransformation()
         {
-            CreateRdbmsSchema();
             using (var store = await GetDocumentStore())
             {
+                CreateRdbmsSchema(store);
+
                 var eventSlim = new ManualResetEventSlim(false);
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
@@ -116,7 +119,7 @@ CREATE TABLE [dbo].[Orders]
 
                 using (var con = new SqlConnection())
                 {
-                    con.ConnectionString = MaybeSqlServerIsAvailableFactAttribute.ConnectionString;
+                    con.ConnectionString = GetConnectionString(store);
                     con.Open();
 
                     using (var dbCommand = con.CreateCommand())
@@ -130,23 +133,24 @@ CREATE TABLE [dbo].[Orders]
             }
         }
 
-        /*[MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task NullPropagation()
         {
-            CreateRdbmsSchema();
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                    .First().AfterReplicationCompleted += successCount =>
-                    {
-                        if (successCount != 0)
-                            eventSlim.Set();
-                    };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    session.Store(new Order
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
@@ -154,7 +158,7 @@ CREATE TABLE [dbo].[Orders]
                             new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, @"var orderData = {
@@ -168,7 +172,7 @@ replicateToOrders(orderData);");
 
                 using (var con = new SqlConnection())
                 {
-                    con.ConnectionString = MaybeSqlServerIsAvailableFactAttribute.ConnectionString;
+                    con.ConnectionString = GetConnectionString(store);
                     con.Open();
 
                     using (var dbCommand = con.CreateCommand())
@@ -179,27 +183,27 @@ replicateToOrders(orderData);");
                         Assert.Equal(DBNull.Value, dbCommand.ExecuteScalar());
                     }
                 }
-
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task NullPropagation_WithExplicitNull()
         {
-            CreateRdbmsSchema();
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                    .First().AfterReplicationCompleted += successCount =>
-                    {
-                        if (successCount != 0)
-                            eventSlim.Set();
-                    };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    session.Store(new Order
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
                     {
                         Address = null,
                         OrderLines = new List<OrderLine>
@@ -208,7 +212,7 @@ replicateToOrders(orderData);");
                             new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, @"var orderData = {
@@ -222,7 +226,7 @@ replicateToOrders(orderData);");
 
                 using (var con = new SqlConnection())
                 {
-                    con.ConnectionString = MaybeSqlServerIsAvailableFactAttribute.ConnectionString;
+                    con.ConnectionString = GetConnectionString(store);
                     con.Open();
 
                     using (var dbCommand = con.CreateCommand())
@@ -233,39 +237,38 @@ replicateToOrders(orderData);");
                         Assert.Equal(DBNull.Value, dbCommand.ExecuteScalar());
                     }
                 }
-
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task ReplicateMultipleBatches()
         {
-            CreateRdbmsSchema();
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
+                CreateRdbmsSchema(store);
+
                 var eventSlim = new ManualResetEventSlim(false);
-
+                var database = await GetDatabase(store.DefaultDatabase);
                 int testCount = 5000;
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                    .First().AfterReplicationCompleted += successCount =>
-                    {
-                        if (GetOrdersCount() == testCount)
-                            eventSlim.Set();
-                    };
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                {
+                    if (GetOrdersCount(store) == testCount)
+                        eventSlim.Set();
+                };
 
-                using (var session = store.BulkInsert())
+                using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < testCount; i++)
                     {
-                        session.Store(new Order
-                                      {
-                                          OrderLines = new List<OrderLine>
-                                                       {
-                                                           new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
-                                                           new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
-                                                       }
+                        await bulkInsert.StoreAsync(new Order
+                        {
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
+                                new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
 
-                                      });
+                        });
                     }
                 }
 
@@ -273,60 +276,60 @@ replicateToOrders(orderData);");
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                Assert.Equal(testCount, GetOrdersCount());
-
+                Assert.Equal(testCount, GetOrdersCount(store));
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task RavenDB_3341()
         {
-            CreateRdbmsSchema();
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                    .First().AfterReplicationCompleted += successCount =>
-                    {
-                        if (successCount != 0)
-                            eventSlim.Set();
-                    };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    session.Store(new Order
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                            new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
-                
-                AssertCounts(1, 1);
+
+                AssertCounts(1, 1, store);
 
                 eventSlim.Reset();
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var order = session.Load<Order>(1);
+                    var order = await session.LoadAsync<Order>(1);
                     order.OrderLines.Clear();
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
-                AssertCounts(0, 0);
+                AssertCounts(0, 0, store);
             }
         }
-        private static int GetOrdersCount()
+
+        private static int GetOrdersCount(DocumentStore store)
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = MaybeSqlServerIsAvailableFactAttribute.ConnectionString;
+                con.ConnectionString = GetConnectionString(store);
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -337,71 +340,72 @@ replicateToOrders(orderData);");
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task CanUpdateToBeNoItemsInChildTable()
         {
-            CreateRdbmsSchema();
             using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                     .First().AfterReplicationCompleted += successCount =>
-                     {
-                         if (successCount != 0)
-                             eventSlim.Set();
-                     };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    session.Store(new Order
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                             new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
                             new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, defaultScript);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                AssertCounts(1, 2);
+                AssertCounts(1, 2, store);
 
                 eventSlim.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Load<Order>(1).OrderLines.Clear();
-                    session.SaveChanges();
+                    var order = await session.LoadAsync<Order>(1);
+                    order.OrderLines.Clear();
+                    await session.SaveChangesAsync();
                 }
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                AssertCounts(1, 0);
-
+                AssertCounts(1, 0, store);
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task CanDelete()
         {
-            CreateRdbmsSchema();
             using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                     .First().AfterReplicationCompleted += successCount =>
-                     {
-                         if (successCount != 0)
-                             eventSlim.Set();
-                     };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    session.Store(new Order
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
@@ -409,101 +413,100 @@ replicateToOrders(orderData);");
                             new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, defaultScript);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                AssertCounts(1, 2);
+                AssertCounts(1, 2, store);
 
                 eventSlim.Reset();
 
-                store.DatabaseCommands.Delete("orders/1", null);
+                await store.AsyncDatabaseCommands.DeleteAsync("orders/1", null);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                AssertCounts(0, 0);
-
+                AssertCounts(0, 0, store);
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task RavenDB_3172()
         {
-            CreateRdbmsSchema();
             using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                     .First().AfterReplicationCompleted += successCount =>
-                     {
-                         if (successCount != 0)
-                             eventSlim.Set();
-                     };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    session.Store(new Order
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
                     {
                         Id = "orders/1",
                         OrderLines = new List<OrderLine>
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                              new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
                             new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, defaultScript, insertOnly: true);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                AssertCounts(1, 2);
+                AssertCounts(1, 2, store);
 
                 eventSlim.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var order = session.Load<Order>("orders/1");
+                    var order = await session.LoadAsync<Order>("orders/1");
                     order.OrderLines.Add(new OrderLine
                     {
                         Cost = 5,
                         Product = "Sugar",
                         Quantity = 7
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
-
                 // we end up with duplicates
-                AssertCounts(2, 5);
+                AssertCounts(2, 5, store);
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+        [Fact]
         public async Task WillLog()
         {
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
 
-            CreateRdbmsSchema();
             using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                     .First().AfterReplicationCompleted += successCount =>
-                     {
-                         if (successCount != 0)
-                             eventSlim.Set();
-                     };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    session.Store(new Order());
-                    session.SaveChanges();
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order());
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
@@ -515,31 +518,32 @@ var nameArr = this.StepName.split('.');");
                 var warnLog = databaseMemoryTarget[Constants.SystemDatabase].WarnLog;
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
 
-
                 if (warnLog.Any(x=>x.FormattedMessage.Contains(msg)) == false)
                     throw new InvalidOperationException("Got bad message. Full warn log is: \r\n" + String.Join(Environment.NewLine, databaseMemoryTarget[Constants.SystemDatabase].WarnLog.Select(x=>x.FormattedMessage)));
             }
         }
 
-        [MaybeSqlServerIsAvailableFact]
+/*
+        [Fact]
         public async Task RavenDB_3106()
         {
-            CreateRdbmsSchema();
             using (var store = await GetDocumentStore())
             {
-                var eventSlim = new ManualResetEventSlim(false);
-                store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                     .First().AfterReplicationCompleted += successCount =>
-                     {
-                         if (successCount != 0)
-                             eventSlim.Set();
-                     };
+                CreateRdbmsSchema(store);
 
-                using (var session = store.OpenSession())
+                var eventSlim = new ManualResetEventSlim(false);
+                var database = await GetDatabase(store.DefaultDatabase);
+                database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
+                {
+                    if (statistics.SuccessCount != 0)
+                        eventSlim.Set();
+                };
+
+                using (var session = store.OpenAsyncSession())
                 {
                     for (var i = 0; i < 2048; i++)
                     {
-                        session.Store(new Order
+                        await session.StoreAsync(new Order
                         {
                             OrderLines = new List<OrderLine>
                             {
@@ -548,26 +552,22 @@ var nameArr = this.StepName.split('.');");
                             }
                         });
                     }
-
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 await SetupSqlReplication(store, defaultScript);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                AssertCountsWithTimeout(2048, 4096, TimeSpan.FromMinutes(1));
+                AssertCountsWithTimeout(2048, 4096, TimeSpan.FromMinutes(1), store);
 
                 eventSlim.Reset();
 
-                PauseReplication(0, store.DocumentDatabase);
+                PauseReplication(0, database);
 
                 WaitForIndexing(store);
 
-                store
-                    .DatabaseCommands
-                    .DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery { Query = "Tag:Orders OR Tag:OrderLines" })
-                    .WaitForCompletion();
+                await store.AsyncDatabaseCommands.DeleteCollectionAsync("Orders", "OrderLines");
 
                 WaitForIndexing(store);
 
@@ -589,11 +589,12 @@ var nameArr = this.StepName.split('.');");
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                AssertCountsWithTimeout(1, 2, TimeSpan.FromMinutes(1));
+                AssertCountsWithTimeout(1, 2, TimeSpan.FromMinutes(1), store);
             }
         }
+*/
 
-        private static void AssertCountsWithTimeout(int ordersCount, int orderLineCounts, TimeSpan timeout)
+        private static void AssertCountsWithTimeout(int ordersCount, int orderLineCounts, TimeSpan timeout, DocumentStore store)
         {
             Exception lastException = null;
 
@@ -602,10 +603,10 @@ var nameArr = this.StepName.split('.');");
             {
                 try
                 {
-                    AssertCounts(ordersCount, orderLineCounts);
+                    AssertCounts(ordersCount, orderLineCounts, store);
                     return;
                 }
-                catch (AssertException e)
+                catch (XunitException e)
                 {
                     lastException = e;
                 }
@@ -614,13 +615,13 @@ var nameArr = this.StepName.split('.');");
             }
 
             throw lastException;
-        }*/
+        }
 
-        private static void AssertCounts(int ordersCount, int orderLineCounts)
+        private static void AssertCounts(int ordersCount, int orderLineCounts, DocumentStore store)
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = MaybeSqlServerIsAvailableFactAttribute.ConnectionString;
+                con.ConnectionString = GetConnectionString(store);
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -637,12 +638,23 @@ var nameArr = this.StepName.split('.');");
         {
             using (var session = store.OpenAsyncSession())
             {
+                await session.StoreAsync(new SqlConnections
+                {
+                    Id = Constants.SqlReplication.SqlReplicationConnections,
+                    Connections =
+                    {
+                        ["Ci1"] = new PredefinedSqlConnection
+                        {
+                            ConnectionString = GetConnectionString(store),
+                            FactoryName = "System.Data.SqlClient",
+                        }
+                    }
+                });
                 await session.StoreAsync(new SqlReplicationConfiguration
                 {
-                    Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
+                    Id = Constants.SqlReplication.SqlReplicationConfigurationPrefix + "OrdersAndLines",
                     Name = "OrdersAndLines",
-                    ConnectionString = MaybeSqlServerIsAvailableFactAttribute.ConnectionString,
-                    FactoryName = MaybeSqlServerIsAvailableFactAttribute.ProviderName,
+                    ConnectionStringName = "Ci1",
                     Collection = "Orders",
                     SqlReplicationTables =
                     {
@@ -655,25 +667,10 @@ var nameArr = this.StepName.split('.');");
             }
         }
 
-        /*protected void PauseReplication(int serverIndex, DocumentDatabase database, bool waitToStop = true)
+        private static string GetConnectionString(DocumentStore store)
         {
-            var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
-
-            replicationTask.Pause();
-
-            if (waitToStop)
-                SpinWait.SpinUntil(() => replicationTask.IsRunning == false, TimeSpan.FromSeconds(10));
+            return $@"Data Source=ci1\sqlexpress;Initial Catalog=FastTests.Server.Documents.SqlReplication-{store.DefaultDatabase};Integrated Security=SSPI;Connection Timeout=1";
         }
-
-        protected void ContinueReplication(int serverIndex, DocumentDatabase database, bool waitToStart = true)
-        {
-            var replicationTask = database.StartupTasks.OfType<SqlReplicationTask>().First();
-
-            replicationTask.Continue();
-
-            if (waitToStart)
-                SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
-        }*/
 
         public class Order
         {

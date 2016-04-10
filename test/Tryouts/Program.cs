@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.SqlReplication;
@@ -19,30 +21,30 @@ namespace Tryouts
             public string[] Tags { get; set; }
         }
 
+        public static event EventHandler Foo;
+
         public static void Main(string[] args)
         {
-            new CanReplicate().SimpleTransformation().Wait();
+            Foo += Program_Foo;
+
+            var sp = Stopwatch.StartNew();
+            for (int i = 0; i < 1000*1000*10; i++)
+            {
+                Foo?.Invoke(null, EventArgs.Empty);
+                //Program_Foo2(null,EventArgs.Empty);
+            }
+            Console.WriteLine(sp.ElapsedMilliseconds);
         }
 
-        public static async Task BulkInsert(DocumentStore store, int numOfItems)
+        private static void Program_Foo(object sender, EventArgs e)
         {
-            Console.Write("Doing bulk-insert...");
+            //throw new NotImplementedException();
+        }
 
-            string[] tags = null;// Enumerable.Range(0, 1024*8).Select(x => "Tags i" + x).ToArray();
-
-            var sp = System.Diagnostics.Stopwatch.StartNew();
-            using (var bulkInsert = store.BulkInsert())
-            {
-                int id = 1;
-                for (int i = 0; i < numOfItems; i++)
-                    await bulkInsert.StoreAsync(new User
-                    {
-                        FirstName = $"First Name - {i}",
-                        LastName = $"Last Name - {i}",
-                        Tags = tags
-                    }, $"users/{id++}");
-            }
-            Console.WriteLine("done in " + sp.Elapsed);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void Program_Foo2(object sender, EventArgs e)
+        {
+            //throw new NotImplementedException();
         }
     }
 }

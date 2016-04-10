@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -356,7 +357,7 @@ namespace Raven.Server.Documents
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
-        public long GetLastTombstoneEtag(TransactionOperationContext context, string collection)
+        public long GetLastTombstoneEtag<TTransaction>(TransactionOperationContext<TTransaction> context, string collection) where TTransaction : RavenTransaction
         {
             Table table;
             try

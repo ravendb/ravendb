@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace Raven.Server.Documents.SqlReplication
 {
@@ -12,14 +14,18 @@ namespace Raven.Server.Documents.SqlReplication
         private readonly SqlReplicationConfiguration configuration;
         private readonly DbProviderFactory providerFactory;
         private readonly SqlReplicationStatistics statistics;
+        private readonly CancellationToken _cancellationToken;
         private readonly DbCommandBuilder commandBuilder;
 
-        public RelationalDatabaseWriterSimulator(DocumentDatabase database, SqlReplicationConfiguration configuration, SqlReplicationStatistics statistics) : base(configuration)
+        public RelationalDatabaseWriterSimulator(DocumentDatabase database, SqlReplicationConfiguration configuration, PredefinedSqlConnection predefinedSqlConnection, 
+            SqlReplicationStatistics statistics, CancellationToken cancellationToken) 
+            : base(predefinedSqlConnection)
         {
             this.database = database;
             this.configuration = configuration;
             this.statistics = statistics;
-            providerFactory = DbProviderFactories.GetFactory(configuration.FactoryName);
+            _cancellationToken = cancellationToken;
+            providerFactory = DbProviderFactories.GetFactory(predefinedSqlConnection.FactoryName);
             commandBuilder = providerFactory.CreateCommandBuilder();
         }
 
@@ -61,12 +67,12 @@ namespace Raven.Server.Documents.SqlReplication
                         .Append(" (")
                         .Append(commandBuilder.QuoteIdentifier(pkName))
                         .Append(", ");
-                /*foreach (var column in itemToReplicate.Columns)
+                foreach (var column in itemToReplicate.Columns)
                 {
                     if (column.Key == pkName)
                         continue;
                     sb.Append(commandBuilder.QuoteIdentifier(column.Key)).Append(", ");
-                }*/
+                }
                 sb.Length = sb.Length - 2;
 
 
@@ -74,14 +80,14 @@ namespace Raven.Server.Documents.SqlReplication
                     .Append(itemToReplicate.DocumentKey)
                     .Append(", ");
 
-                /*foreach (var column in itemToReplicate.Columns)
+                foreach (var column in itemToReplicate.Columns)
                 {
                     if (column.Key == pkName)
                         continue;
-                    DbParameter param = new OdbcParameter();
-                    RelationalDatabaseWriter.SetParamValue(param, column.Value, null);
-                    sb.Append("'").Append(param.Value).Append("'").Append(", ");
-                }*/
+                     DbParameter param = new SqlParameter(); /* TODO: Should we use here OdbcParameter? */
+                     RelationalDatabaseWriter.SetParamValue(param, column, null);
+                     sb.Append("'").Append(param.Value).Append("'").Append(", ");
+                }
                 sb.Length = sb.Length - 2;
                 sb.Append(")");
                 if (IsSqlServerFactoryType && configuration.ForceSqlServerQueryRecompile)
@@ -99,7 +105,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             const int maxParams = 1000;
 
-           // database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+           _cancellationToken.ThrowIfCancellationRequested();
             for (int i = 0; i < identifiers.Count; i += maxParams)
             {
 

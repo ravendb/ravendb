@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using Jint;
+using Jint.Native;
 using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.SqlReplication
 {
@@ -10,16 +14,15 @@ namespace Raven.Server.Documents.SqlReplication
     {
         private const int DefaultSize = 50;
 
+        private readonly DocumentsOperationContext _context;
         private readonly SqlReplicationScriptResult scriptResult;
         private readonly SqlReplicationConfiguration config;
         private readonly string _documentKey;
 
-        public SqlReplicationPatchDocument(DocumentDatabase database,
-                                                 SqlReplicationScriptResult scriptResult,
-                                                 SqlReplicationConfiguration config,
-                                                 string documentKey)
+        public SqlReplicationPatchDocument(DocumentDatabase database, DocumentsOperationContext context, SqlReplicationScriptResult scriptResult, SqlReplicationConfiguration config, string documentKey)
             : base(database)
         {
+            _context = context;
             this.scriptResult = scriptResult;
             this.config = config;
             this._documentKey = documentKey;
@@ -44,15 +47,15 @@ namespace Raven.Server.Documents.SqlReplication
             base.CustomizeEngine(engine, scope);
 
             engine.SetValue("documentId", _documentKey);
-            engine.SetValue("replicateTo", new Action<string, object>(ReplicateToFunction));
+            engine.SetValue("replicateTo", new Action<string, JsValue>((tableName, colsAsObject) => ReplicateToFunction(tableName, colsAsObject, scope)));
             scriptResult.Keys.Add(_documentKey);
             foreach (var sqlReplicationTable in config.SqlReplicationTables)
             {
                 var current = sqlReplicationTable;
-                engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<object>)(cols =>
+                engine.SetValue("replicateTo" + sqlReplicationTable.TableName, (Action<JsValue>)(cols =>
                 {
                     var tableName = current.TableName;
-                    ReplicateToFunction(tableName, cols);
+                    ReplicateToFunction(tableName, cols, scope);
                 }));
             }
 
@@ -60,19 +63,31 @@ namespace Raven.Server.Documents.SqlReplication
             engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
         }
 
-        private void ReplicateToFunction(string tableName, object colsAsObject)
+        private void ReplicateToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope)
         {
             if (tableName == null)
                 throw new ArgumentException("tableName parameter is mandatory");
-            if (colsAsObject == null)
-                throw new ArgumentException("cols parameter is mandatory");
+           /* if (colsAsObject == null)
+                throw new ArgumentException("cols parameter is mandatory");*/
 
             var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
-            Debugger.Break(); // TODO: see what we get here
+            var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
+            var blittableJsonReaderObject = _context.ReadObject(dynamicJsonValue, tableName);
+            var columns = new List<SqlReplicationColumn>();
+            for (var i = 0; i < blittableJsonReaderObject.Count; i++)
+            {
+                var property = blittableJsonReaderObject.GetPropertyByIndex(i);
+                columns.Add(new SqlReplicationColumn
+                {
+                    Key = property.Item1,
+                    Value = property.Item2,
+                    Type = property.Item3,
+                });
+            }
             itemToReplicates.Add(new ItemToReplicate
             {
                 DocumentKey = _documentKey,
-                Columns = colsAsObject
+                Columns = columns
             });
         }
 

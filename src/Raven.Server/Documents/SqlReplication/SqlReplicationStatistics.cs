@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.SqlReplication
 
         public Alert LastAlert { get; set; }
 
+        public long LastReplicatedEtag { get; set; }
+
         public void Success(int countOfItems)
         {
             LastErrorTime = null;

@@ -14,9 +14,9 @@ namespace Raven.Server.Documents.SqlReplication
             "System.Data.SqlServerCe.3.5"
         };
 
-        public RelationalDatabaseWriterBase(SqlReplicationConfiguration configuration)
+        public RelationalDatabaseWriterBase(PredefinedSqlConnection predefinedSqlConnection)
         {
-            if (SqlServerFactoryNames.Contains(configuration.FactoryName))
+            if (SqlServerFactoryNames.Contains(predefinedSqlConnection.FactoryName))
             {
                 IsSqlServerFactoryType = true;
             }

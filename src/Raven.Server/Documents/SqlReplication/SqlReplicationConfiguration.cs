@@ -26,12 +26,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         public string Script { get; set; }
 
-        public string FactoryName { get; set; }
-
-        public string ConnectionString { get; set; }
-        public string PredefinedConnectionStringSettingName { get; set; }
         public string ConnectionStringName { get; set; }
-        public string ConnectionStringSettingName { get; set; }
 
         public List<SqlReplicationTable> SqlReplicationTables { get; set; }
     }

@@ -4,7 +4,7 @@ namespace Raven.Server.Documents.SqlReplication
     {
         public string QuoteIdentifier(string unquotedIdentifier)
         {
-            return unquotedIdentifier;
+            return "[" + unquotedIdentifier + "]";
         }
     }
 }

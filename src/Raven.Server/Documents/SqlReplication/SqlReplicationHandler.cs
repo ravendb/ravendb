@@ -5,19 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow;
-using StringSegment = Raven.Server.Utils.StringSegment;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication
 {
@@ -99,7 +92,7 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 HttpContext.Response.StatusCode = 400; // Bad Request
 
-                MemoryOperationContext context;
+                JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
