@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Connection
@@ -99,6 +100,11 @@ namespace Raven.Abstractions.Connection
         {
         }
 #endif
+
+        public static ErrorResponseException FromException(TaskCanceledException e)
+        {
+            return new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), e.Message, "Unable to connect to the remote server\r\nStatus Code: ConnectFailure");
+        }
 
         public static ErrorResponseException FromException(HttpRequestException e)
         {

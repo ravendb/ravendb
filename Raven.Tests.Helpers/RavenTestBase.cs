@@ -29,6 +29,7 @@ using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -1157,6 +1158,13 @@ namespace Raven.Tests.Helpers
             NewRemoteDocumentStore(ravenDbServer: server);
 
             return server;
+        }
+
+        protected IDisposable WithCustomDatabaseSettings(Action<DatabaseDocument> settingConfigurator)
+        {
+            MultiDatabase.ConfigureDatabaseDocument = settingConfigurator;
+
+            return new DisposableAction(() => MultiDatabase.ConfigureDatabaseDocument = null);
         }
 
     }

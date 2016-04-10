@@ -35,17 +35,20 @@ namespace Rachis.Transport
 
         private readonly ConcurrentDictionary<string, SecuredAuthenticator> _securedAuthenticatorCache = new ConcurrentDictionary<string, SecuredAuthenticator>();
 
-        private readonly ConcurrentDictionary<string, ConcurrentQueue<HttpClient>> _httpClientsCache = new ConcurrentDictionary<string, ConcurrentQueue<HttpClient>>();
+        private readonly ConcurrentDictionary<HttpCacheKey, ConcurrentQueue<HttpClient>> _httpClientsCache = new ConcurrentDictionary<HttpCacheKey, ConcurrentQueue<HttpClient>>();
 
         private readonly ConcurrentDictionary<NodeConnectionInfo, int> _connectionFailureCounts = new ConcurrentDictionary<NodeConnectionInfo, int>();
 
         private readonly ILog _log;
 
-        public HttpTransportSender(string name, HttpTransportBus bus, CancellationToken cancellationToken)
+        private readonly TimeSpan _shortOperationsTimeout;
+
+        public HttpTransportSender(string name, TimeSpan shortOperationsTimeout, HttpTransportBus bus, CancellationToken cancellationToken)
         {
             _bus = bus;
             _cancellationToken = cancellationToken;
             _log = LogManager.GetLogger(GetType().Name + "." + name);
+            _shortOperationsTimeout = shortOperationsTimeout;
         }
 
         public void Stream(NodeConnectionInfo dest, InstallSnapshotRequest req, Action<Stream> streamWriter)
@@ -55,7 +58,7 @@ namespace Rachis.Transport
                 var requestUri =
                     string.Format("raft/installSnapshot?term={0}&lastIncludedIndex={1}&lastIncludedTerm={2}&from={3}&topology={4}&clusterTopologyId={5}",
                         req.Term, req.LastIncludedIndex, req.LastIncludedTerm, req.From, Uri.EscapeDataString(JsonConvert.SerializeObject(req.Topology)), req.ClusterTopologyId);
-                using (var request = CreateRequest(dest, requestUri, HttpMethods.Post))
+                using (var request = CreateRequest(dest, null, requestUri, HttpMethods.Post))
                 {
                     var httpResponseMessage = await request.WriteAsync(() => new SnapshotContent(streamWriter)).ConfigureAwait(false);
                     UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -95,12 +98,17 @@ namespace Rachis.Transport
             }
         }
 
-        private HttpRaftRequest CreateRequest(NodeConnectionInfo node, string url, HttpMethod httpMethod)
+        private HttpRaftRequest CreateRequest(NodeConnectionInfo node, TimeSpan? timeout, string url, HttpMethod httpMethod)
         {
+            if (timeout.HasValue == false)
+            {
+                timeout = TimeSpan.FromSeconds(20); // use default if not defined
+            }
+
             var request = new HttpRaftRequest(node, url, httpMethod, info =>
             {
                 HttpClient client;
-                var dispose = (IDisposable)GetConnection(info, out client);
+                var dispose = (IDisposable)GetConnection(info, timeout.Value, out client);
                 return Tuple.Create(dispose, client);
             },
             _cancellationToken)
@@ -185,7 +193,7 @@ namespace Rachis.Transport
             {
                 var requestUri = string.Format("raft/appendEntries?term={0}&leaderCommit={1}&prevLogTerm={2}&prevLogIndex={3}&entriesCount={4}&from={5}&clusterTopologyId={6}",
                     req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
-                using (var request = CreateRequest(dest, requestUri, HttpMethods.Post))
+                using (var request = CreateRequest(dest, _shortOperationsTimeout, requestUri, HttpMethods.Post))
                 {
                     var httpResponseMessage = await request.WriteAsync(() => new EntriesContent(req.Entries)).ConfigureAwait(false);
                     UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -248,7 +256,7 @@ namespace Rachis.Transport
             {
                 var requestUri = string.Format("raft/canInstallSnapshot?term={0}&index={1}&from={2}&clusterTopologyId={3}", req.Term, req.Index,
                     req.From, req.ClusterTopologyId);
-                using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
+                using (var request = CreateRequest(dest, null, requestUri, HttpMethods.Get))
                 {
                     var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
                     UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -274,7 +282,7 @@ namespace Rachis.Transport
             {
                 var requestUri = string.Format("raft/requestVote?term={0}&lastLogIndex={1}&lastLogTerm={2}&trialOnly={3}&forcedElection={4}&from={5}&clusterTopologyId={6}",
                     req.Term, req.LastLogIndex, req.LastLogTerm, req.TrialOnly, req.ForcedElection, req.From, req.ClusterTopologyId);
-                using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
+                using (var request = CreateRequest(dest, _shortOperationsTimeout, requestUri, HttpMethods.Get))
                 {
                     var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
                     UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -301,7 +309,7 @@ namespace Rachis.Transport
             LogStatus("timeout to " + dest, async () =>
             {
                 var requestUri = string.Format("raft/timeoutNow?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
-                using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
+                using (var request = CreateRequest(dest, null, requestUri, HttpMethods.Get))
                 {
                     var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
                     UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -322,7 +330,7 @@ namespace Rachis.Transport
             LogStatus("disconnect " + dest, async () =>
             {
                 var requestUri = string.Format("raft/disconnectFromCluster?term={0}&from={1}&clusterTopologyId={2}", req.Term, req.From, req.ClusterTopologyId);
-                using (var request = CreateRequest(dest, requestUri, HttpMethods.Get))
+                using (var request = CreateRequest(dest, null, requestUri, HttpMethods.Get))
                 {
                     var httpResponseMessage = await request.ExecuteAsync().ConfigureAwait(false);
                     UpdateConnectionFailureCounts(dest, httpResponseMessage);
@@ -401,9 +409,10 @@ namespace Rachis.Transport
             return _securedAuthenticatorCache.GetOrAdd(info.Name, _ => new SecuredAuthenticator(autoRefreshToken: false));
         }
 
-        internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)
+        internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, TimeSpan timeout, out HttpClient result)
         {
-            var connectionQueue = _httpClientsCache.GetOrAdd(nodeConnection.Name, _ => new ConcurrentQueue<HttpClient>());
+            var cacheKey = new HttpCacheKey(nodeConnection, timeout);
+            var connectionQueue = _httpClientsCache.GetOrAdd(cacheKey, _ => new ConcurrentQueue<HttpClient>());
 
             if (connectionQueue.TryDequeue(out result) == false)
             {
@@ -415,11 +424,54 @@ namespace Rachis.Transport
 
                 result = new HttpClient(webRequestHandler)
                 {
-                    BaseAddress = nodeConnection.Uri
+                    BaseAddress = nodeConnection.Uri,
+                    Timeout = timeout
                 };
             }
 
             return new ReturnToQueue(result, connectionQueue);
+        }
+
+        internal class HttpCacheKey
+        {
+            private NodeConnectionInfo NodeConnection { get; set; }
+            private TimeSpan Timeout { get; set; }
+
+            public HttpCacheKey(NodeConnectionInfo nodeConnection, TimeSpan timeout)
+            {
+                NodeConnection = nodeConnection;
+                Timeout = timeout;
+            }
+
+            protected bool Equals(HttpCacheKey other)
+            {
+                return Equals(NodeConnection, other.NodeConnection) && Timeout.Equals(other.Timeout);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj))
+                {
+                    return false;
+                }
+                if (ReferenceEquals(this, obj))
+                {
+                    return true;
+                }
+                if (obj.GetType() != this.GetType())
+                {
+                    return false;
+                }
+                return Equals((HttpCacheKey) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((NodeConnection != null ? NodeConnection.GetHashCode() : 0)*397) ^ Timeout.GetHashCode();
+                }
+            }
         }
 
         internal struct ReturnToQueue : IDisposable
