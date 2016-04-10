@@ -1892,8 +1892,6 @@ footer {
 }
 
 .licensing-status {
-    max-height: 60vh !important;
-
     .form-group {
         max-height: 30vh !important;
         overflow-x: hidden;
@@ -2487,4 +2485,383 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
 .no-outline {
     outline-style: none;
+}
+
+.fa-infinity {
+    font-family: inherit;
+
+    &:before {
+        content: '\221E';
+        color: @text-color;
+        font-family: inherit;
+        font-size: 32px;
+        margin-top:-7px;
+        top:7px;
+        position:relative;
+        display:inline-block;
+    }
+}
+
+.border-danger {
+    border:2px dashed darken(@gray-lighter,10%);
+    border-radius:8px;
+    font-size:13px;
+    margin-bottom:10px;
+
+    .icon-xl {
+        margin:20px 0;
+        .fa {
+            font-size:62px !important;
+            color:darken(@gray-lighter,9%);
+
+            &.text-danger{
+                color:lighten(@brand-danger,10%);
+            }
+        }
+    }
+}
+
+#licenceSupportModal {
+    width:840px !important;
+
+    .path {
+        word-break:break-word;
+        font-size:15px;
+        color:@gray;
+        font-weight:bold;
+    }
+
+    .expire-date {
+        font-size:11px;
+        color:@gray-light;
+    }
+
+    .licence-table {
+        overflow-y:auto;
+        max-height:420px;
+
+        table {
+            td {
+                width: 50%;
+            }
+        }
+    }
+
+    .bg-gray {
+        background-color: @gray-lighter;
+        overflow:hidden;
+    }
+
+    .padding {
+        padding: 20px;
+    }
+
+
+    .roundborder {
+        
+        display: inline-block;
+        width: 100px;
+        height: 100px;
+        position: relative;
+
+        @media (min-height:900px) {
+            margin-top: 30px;
+            width: 150px;
+            height: 150px;
+        }
+
+
+        & + hr {
+        }
+
+        &:after, &:before {
+            content: '';
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 300px;
+            border: solid 8px @gray-lighter;
+            -moz-transform: rotate(45deg);
+            -webkit-transform: rotate(45deg);
+            -o-transform: rotate(45deg);
+            -ms-transform: rotate(45deg);
+            transform: rotate(45deg);
+        }
+
+        &:before {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 85%;
+            height: 85%;
+            border: none;
+            -moz-transform: translateX(-50%) translateY(-50%);
+            -webkit-transform: translateX(-50%) translateY(-50%);
+            -o-transform: translateX(-50%) translateY(-50%);
+            -ms-transform: translateX(-50%) translateY(-50%);
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+
+        &.commercial {
+            &:after {
+                border-color: @brand-success;
+            }
+        }
+
+        &.expired {
+            &:after {
+                border-color: @brand-primary;
+            }
+        }
+
+        &.no-support, &.dev-only {
+            .fa {
+                color: @brand-danger;
+            }
+
+            &:after {
+                border-color: @gray-lighter;
+            }
+        }
+
+        &.professional-support {
+            &:before {
+                border: solid 8px @gray-lighter;
+            }
+
+            &:after {
+                border-color: @brand-success;
+            }
+        }
+
+
+        &.production-support {
+
+            &:before {
+                border: solid 8px @brand-success;
+            }
+
+            &:after {
+                border-color: @brand-success;
+            }
+        }
+
+        &.partial-support {
+            &:after {
+                border-color: @brand-success;
+                border-left-style: dotted;
+                border-bottom-style: dotted;
+            }
+        }
+
+        .fa {
+            color: @gray;
+            font-size: 50px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            -moz-transform: translateX(-50%) translateY(-50%);
+            -webkit-transform: translateX(-50%) translateY(-50%);
+            -o-transform: translateX(-50%) translateY(-50%);
+            -ms-transform: translateX(-50%) translateY(-50%);
+            transform: translateX(-50%) translateY(-50%);
+
+            @media (min-height:900px) {
+                font-size: 70px;
+                }
+        }
+    }
+
+
+    .bg-gray {
+
+        @media (min-height:900px) {
+            margin-top: 30px;
+        }
+
+        .fa {
+            font-size: 18px;
+        }
+
+        th {
+            color: @brand-info;
+
+            h4 {
+                color: @brand-primary;
+            }
+        }
+
+        .support-table {
+
+
+
+            td + td, th + th {
+                border-left: 1px solid darken(@gray-lighter,7%);
+            }
+
+
+            td, th {
+                text-align: center;
+            }
+
+            .fa {
+                display: block;
+                margin: 10px;
+                font-size: 22px;
+                color: darken(@gray-lighter,20%);
+               line-height: 12px;
+            }
+
+            .text-muted {
+                color: darken(@gray-lighter,30%);
+                display: block;
+            }
+        }
+
+        td, th {
+            vertical-align: top;
+            padding: 7px 0;
+            border-bottom: 1px solid darken(@gray-lighter,7%);
+            font-size: 12px;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        tr:last-of-type {
+            td {
+                border-bottom: none;
+            }
+        }
+
+        tr:first-of-type {
+            .active {
+                border-top: 2px solid darken(@gray-lighter,10%);
+            }
+        }
+
+        .active {
+            background-color: darken(@gray-lighter,2%);
+        }
+    }
+
+    table.alternate-align {
+        td {
+            &:nth-of-type(2n-1) {
+                text-align: right;
+            }
+        }
+    }
+    .modal-body {
+        h3 {
+            color: @gray;
+        }
+
+        h4 {
+            color: @gray;
+        }
+    }
+
+    .fa-times {
+        color: @brand-danger;
+    }
+
+    .fa-check {
+        color: @brand-success;
+    }
+}
+
+
+
+#shellFooter {
+    button {
+        margin-top: 7px;
+        border-width:1px;
+    }
+
+    .btn-group {
+        .btn {
+            border-bottom: 0 !important;
+            padding: 8px 10px 4px;
+        }
+    }
+
+    .roundborder {
+        display: inline-block;
+        width: 28px;
+        height: 28px;
+        position: relative;
+        top: 5px;
+        margin-top: -10px;
+
+
+        &:after {
+            //content:'';
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 300px;
+            //border:solid 14px #FFF;
+            background-color: #FFF;
+            -moz-transform: rotate(45deg);
+            -webkit-transform: rotate(45deg);
+            -o-transform: rotate(45deg);
+            -ms-transform: rotate(45deg);
+            transform: rotate(45deg);
+        }
+
+
+        .fa {
+            z-index: 1;
+            color: @gray;
+            font-size: 18px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            -moz-transform: translateX(-50%) translateY(-50%);
+            -webkit-transform: translateX(-50%) translateY(-50%);
+            -o-transform: translateX(-50%) translateY(-50%);
+            -ms-transform: translateX(-50%) translateY(-50%);
+            transform: translateX(-50%) translateY(-50%);
+        }
+    }
+
+
+    .expired {
+        background-color: @brand-primary !important;
+
+         .roundborder {
+            .fa {
+                color: #FFF;
+            }
+        }
+    }
+
+    .no-support, .dev-only {
+        background-color: @brand-danger !important;
+
+        .roundborder {
+            .fa {
+                color: #FFF;
+            }
+        }
+    }
+
+    .professional-support, .production-support, .commercial {
+        background-color: @brand-success !important;
+
+        .roundborder {
+            .fa {
+                color: #FFF;
+            }
+        }
+    }
+
+
+
+    .partial-support {
+        background-color: desaturate(lighten(@brand-success,15%),20%) !important;
+    }
 }

@@ -155,16 +155,7 @@ class shell extends viewModelBase {
     static serverMainVersion = ko.observable<number>(4);
     static serverMinorVersion = ko.observable<number>(5);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    localLicenseAndSupportStatusError = ko.computed(() => {
-        var licenseStatus = license.licenseStatus();
-        var supportStatus = license.supportCoverage();
-
-        if (licenseStatus == null || supportStatus == null) {
-            return false;
-        }
-
-        return licenseStatus.Error || supportStatus.Status === "LicenseNotFound" || supportStatus.Status === "InvalidStateSupportNotFound";
-    }) ;
+   
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
@@ -174,6 +165,9 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
     showSplash = viewModelBase.showSplash;
+
+    licenseStatus = license.licenseCssClass;
+    supportStatus = license.supportCssClass;
 
     static has40Features = ko.computed(() => shell.serverMainVersion() >= 4);
 

@@ -261,6 +261,7 @@ interface licenseStatusDto {
     Error: boolean;
     Details?:string;
     IsCommercial: boolean;
+    LicensePath: string;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
         periodicBackup: string;
@@ -268,6 +269,10 @@ interface licenseStatusDto {
         compression: string;
         quotas: string;
         authorization: string;
+        fips: string;
+        counters: string;
+        timeSeries: string;
+        globalConfiguration: string;
         documentExpiration: string;
         replication: string;
         versioning: string;
@@ -280,8 +285,10 @@ interface licenseStatusDto {
         maxParallelism: string;
         ravenfs: string;
         counterStorage: string;
-        timeSeries: string;
+        monitoring: string;
+        cluster: string;
         hotSpare: string;
+        updatesExpiration: string;
     }
 }
 
