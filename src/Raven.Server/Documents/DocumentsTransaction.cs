@@ -47,7 +47,14 @@ namespace Raven.Server.Documents
         {
             foreach (var notification in _afterCommitNotifications)
             {
-                _notifications.RaiseNotifications(notification);
+                if (notification.IsSystemDocument)
+                {
+                    _notifications.RaiseSystemNotifications(notification);
+                }
+                else
+                {
+                    _notifications.RaiseNotifications(notification);
+                }
             }
         }
     }

@@ -556,7 +556,8 @@ namespace Raven.Server.Documents
             }
 
             string originalCollectionName;
-            var collectionName = GetCollectionName(key, doc.Data, out originalCollectionName);
+            bool isSystemDocument;
+            var collectionName = GetCollectionName(key, doc.Data, out originalCollectionName, out isSystemDocument);
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
             CreateTombstone(context, table, doc, originalCollectionName);
@@ -568,7 +569,8 @@ namespace Raven.Server.Documents
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
                 Key = key,
-                CollectionName = originalCollectionName
+                CollectionName = originalCollectionName,
+                IsSystemDocument = isSystemDocument,
             });
 
             return true;
@@ -622,7 +624,8 @@ namespace Raven.Server.Documents
                     nameof(context));
 
             string originalCollectionName;
-            var collectionName = GetCollectionName(key, document, out originalCollectionName);
+            bool isSystemDocument;
+            var collectionName = GetCollectionName(key, document, out originalCollectionName, out isSystemDocument);
             _docsSchema.Create(context.Transaction.InnerTransaction, collectionName);
             var table = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
@@ -670,7 +673,7 @@ namespace Raven.Server.Documents
 
                 int oldSize;
                 var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
-                var oldCollectionName = GetCollectionFromMetadata(key, oldDoc);
+                var oldCollectionName = GetCollectionFromMetadata(key, oldDoc, out isSystemDocument);
                 if (oldCollectionName != originalCollectionName)
                     throw new InvalidOperationException(
                         $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
@@ -684,7 +687,8 @@ namespace Raven.Server.Documents
                 Etag = newEtag,
                 CollectionName = originalCollectionName,
                 Key = key,
-                Type = DocumentChangeTypes.Put
+                Type = DocumentChangeTypes.Put,
+                IsSystemDocument = isSystemDocument,
             });
 
             return new PutResult
@@ -729,9 +733,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static string GetCollectionName(string key, BlittableJsonReaderObject document, out string originalCollectionName)
+        private static string GetCollectionName(string key, BlittableJsonReaderObject document, out string originalCollectionName, out bool isSystemDocument)
         {
-            var collectionName = GetCollectionFromMetadata(key, document);
+            var collectionName = GetCollectionFromMetadata(key, document, out isSystemDocument);
 
             originalCollectionName = collectionName;
 
@@ -740,16 +744,19 @@ namespace Raven.Server.Documents
             return "@" + collectionName;
         }
 
-        private static string GetCollectionFromMetadata(string key, BlittableJsonReaderObject document)
+        private static string GetCollectionFromMetadata(string key, BlittableJsonReaderObject document, out bool isSystemDocument)
         {
-            string collectionName;
-            BlittableJsonReaderObject metadata;
             if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
             {
-                collectionName = SystemDocumentsCollection;
+                isSystemDocument = true;
+                return SystemDocumentsCollection;
             }
-            else if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                     metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
+
+            isSystemDocument = false;
+            string collectionName;
+            BlittableJsonReaderObject metadata;
+            if (document.TryGet(Constants.Metadata, out metadata) == false ||
+                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
             {
                 collectionName = NoCollectionSpecified;
             }

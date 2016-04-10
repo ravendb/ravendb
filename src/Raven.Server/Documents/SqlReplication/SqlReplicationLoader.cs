@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions;
@@ -18,7 +17,7 @@ namespace Raven.Server.Documents.SqlReplication
         private readonly DocumentDatabase _database;
         private const int MaxSupportedSqlReplication = int.MaxValue; // TODO: Maybe this should be 128 or 1024
 
-        private readonly ConcurrentDictionary<string, SqlReplication> _replications = new ConcurrentDictionary<string, SqlReplication>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<SqlReplication> _replications = new List<SqlReplication>();
         private SqlConnections _connections;
 
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents.SqlReplication
         public SqlReplicationLoader(DocumentDatabase database)
         {
             _database = database;
-            _database.Notifications.OnDocumentChange += HandleDocumentChange;
+            _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
             _database.Notifications.OnDocumentChange += WakeSqlReplication;
         }
 
@@ -34,130 +33,28 @@ namespace Raven.Server.Documents.SqlReplication
         {
             foreach (var replication in _replications)
             {
-                replication.Value.WaitForChanges.Set();
+                replication.WaitForChanges.Set();
             }
         }
 
-        private void HandleDocumentChange(DocumentChangeNotification notification)
+        private void HandleSystemDocumentChange(DocumentChangeNotification notification)
         {
-            if (notification.Key.StartsWith(Constants.SqlReplication.SqlReplicationConfigurationPrefix, StringComparison.OrdinalIgnoreCase))
+            if (notification.Key.StartsWith(Constants.SqlReplication.SqlReplicationConfigurationPrefix, StringComparison.OrdinalIgnoreCase) ||
+                notification.Key.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase))
             {
+                _connections = null;
+                foreach (var replication in _replications)
+                {
+                    replication.Dispose();
+                }
+                _replications.Clear();
+
+                LoadConfigurations();
+
                 if (Log.IsDebugEnabled)
-                    Log.Debug($"Sql Replication configuration was changed: {notification.Key}");
-
-                if (notification.Type == DocumentChangeTypes.Delete)
-                {
-                    SqlReplication sqlReplication;
-                    if (_replications.TryRemove(notification.Key, out sqlReplication))
-                    {
-                        sqlReplication.Dispose();
-                    }
-                }
-                else if (notification.Type == DocumentChangeTypes.Put)
-                {
-                    DocumentsOperationContext context;
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                    {
-                        context.OpenReadTransaction();
-
-                        var configuration = _database.DocumentsStorage.Get(context, notification.Key);
-                        if (configuration == null) // Should not happen, but can
-                        {
-                            SqlReplication sqlReplication;
-                            if (_replications.TryRemove(notification.Key, out sqlReplication))
-                            {
-                                sqlReplication.Dispose();
-                            }
-                        }
-                        else
-                        {
-                            var newSqlReplication = new SqlReplication(_database, JsonDeserialization.SqlReplicationConfiguration(configuration.Data));
-                            _replications.AddOrUpdate(notification.Key, s => newSqlReplication,
-                                (s, replication) =>
-                                {
-                                    replication.Dispose();
-                                    return newSqlReplication;
-                                });
-                            if (newSqlReplication.ValidateName() == false ||
-                                newSqlReplication.PrepareSqlReplicationConfig(_connections) == false)
-                                return;
-                            newSqlReplication.Start();
-                        }
-                    }
-                }
-                else
-                {
-                    Log.Warn($"Got notification for {notification.Key} of type '{notification.Type}' which is not supported");
-                }
-            }
-            else if (notification.Key.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase))
-            {
-                if (Log.IsDebugEnabled)
-                    Log.Debug("Sql replication connections was changed.");
-
-                if (notification.Type == DocumentChangeTypes.Delete)
-                {
-                    _connections = null;
-                }
-                else if (notification.Type == DocumentChangeTypes.Put)
-                {
-                    DocumentsOperationContext context;
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                    {
-                        context.OpenReadTransaction();
-
-                        var sqlReplicationConnections = _database.DocumentsStorage.Get(context, Constants.SqlReplication.SqlReplicationConnections);
-                        if (sqlReplicationConnections != null)
-                        {
-                            _connections = JsonDeserialization.PredefinedSqlConnections(sqlReplicationConnections.Data);
-                        }
-                    }
-                }
-                else
-                {
-                    Log.Warn($"Got notification for {notification.Key} of type '{notification.Type}' which is not supported");
-                }
-                    
-                foreach (var replication in _replications.Where(pair => pair.Value.Configuration.ConnectionStringName != null))
-                {
-                    replication.Value.PrepareSqlReplicationConfig(_connections);
-                    /*TODO: Should we have a renew etag here?*/
-                }
-            }
-            else if (notification.Key.StartsWith(Constants.SqlReplication.RavenSqlReplicationStatusPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Sql Replication configuration was changed: {notification.Key}");
-
-                var name = notification.Key;
-                name = name.Substring(name.LastIndexOf('/') + 1);
-                var replication = _replications.Select(pair => pair.Value).FirstOrDefault(sqlReplication => sqlReplication.Configuration.Name == name);
-                if (replication != null)
-                {
-                    if (notification.Type == DocumentChangeTypes.Delete)
-                    {
-                        replication.Statistics.LastReplicatedEtag = 0;
-                    }
-                    else if (notification.Type == DocumentChangeTypes.Put)
-                    {
-                        DocumentsOperationContext context;
-                        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                        {
-                            context.OpenReadTransaction();
-
-                            var sqlReplicationStatus = _database.DocumentsStorage.Get(context, notification.Key);
-                            replication.Statistics.LastReplicatedEtag = sqlReplicationStatus == null ? 0 :
-                                JsonDeserialization.SqlReplicationStatus(sqlReplicationStatus.Data).LastReplicatedEtag;
-                        }
-                    }
-                }
-                else
-                {
-                    Log.Warn($"Got a status change for not exist sql replication {notification.Key}");
-                }
+                    Log.Debug(() => $"Sql Replication configuration was changed: {notification.Key}");
             }
         }
-
 
         public void Initialize()
         {
@@ -172,17 +69,16 @@ namespace Raven.Server.Documents.SqlReplication
                 context.OpenReadTransaction();
 
                 var sqlReplicationConnections = _database.DocumentsStorage.Get(context, Constants.SqlReplication.SqlReplicationConnections);
-                if (sqlReplicationConnections != null)
-                {
-                    _connections = JsonDeserialization.PredefinedSqlConnections(sqlReplicationConnections.Data);
-                }
+                if (sqlReplicationConnections == null)
+                    return;
+                _connections = JsonDeserialization.PredefinedSqlConnections(sqlReplicationConnections.Data);
 
                 var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.SqlReplication.SqlReplicationConfigurationPrefix, null, null, 0, MaxSupportedSqlReplication);
                 foreach (var document in documents)
                 {
                     var configuration = JsonDeserialization.SqlReplicationConfiguration(document.Data);
                     var sqlReplication = new SqlReplication(_database, configuration);
-                    _replications.TryAdd(document.Key, sqlReplication);
+                    _replications.Add(sqlReplication);
                     if (sqlReplication.ValidateName() == false ||
                         sqlReplication.PrepareSqlReplicationConfig(_connections) == false)
                         return;
@@ -193,7 +89,8 @@ namespace Raven.Server.Documents.SqlReplication
 
         public void Dispose()
         {
-            _database.Notifications.OnDocumentChange -= HandleDocumentChange;
+            _database.Notifications.OnDocumentChange -= WakeSqlReplication;
+            _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
         }
 
 
