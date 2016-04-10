@@ -24,14 +24,15 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            Console.WriteLine(IntPtr.Size);
+            Parallel.For(0, 1000, i =>
             {
                 Console.WriteLine(i);
                 using (var x = new BasicIndexing())
                 {
                     x.Errors();
                 }
-            }
+            });
             //using (var store = new DocumentStore
             //{
             //    Url = "http://10.0.0.80:8081",
