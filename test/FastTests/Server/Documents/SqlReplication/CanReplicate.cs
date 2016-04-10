@@ -47,6 +47,8 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 
         private void CreateRdbmsSchema(DocumentStore store)
         {
+            CreateRdbmsDatabase(store);
+
             using (var con = new SqlConnection())
             {
                 con.ConnectionString = GetConnectionString(store);
@@ -54,14 +56,6 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 
                 using (var dbCommand = con.CreateCommand())
                 {
-                    dbCommand.CommandText = @"
-IF OBJECT_ID('Orders') is not null 
-    DROP TABLE [dbo].[Orders]
-IF OBJECT_ID('OrderLines') is not null 
-    DROP TABLE [dbo].[OrderLines]
-";
-                    dbCommand.ExecuteNonQuery();
-
                     dbCommand.CommandText = @"
 CREATE TABLE [dbo].[OrderLines]
 (
@@ -79,6 +73,27 @@ CREATE TABLE [dbo].[Orders]
     [TotalCost] [int] NOT NULL,
     [City] [nvarchar](50) NULL
 )
+";
+                    dbCommand.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private static void CreateRdbmsDatabase(DocumentStore store)
+        {
+            using (var con = new SqlConnection())
+            {
+                con.ConnectionString = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=1";
+                con.Open();
+
+                using (var dbCommand = con.CreateCommand())
+                {
+                    dbCommand.CommandText = $@"
+USE master
+IF EXISTS(select * from sys.databases where name='SqlReplication-{store.DefaultDatabase}')
+DROP DATABASE [SqlReplication-{store.DefaultDatabase}]
+
+CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
 ";
                     dbCommand.ExecuteNonQuery();
                 }
@@ -669,7 +684,7 @@ var nameArr = this.StepName.split('.');");
 
         private static string GetConnectionString(DocumentStore store)
         {
-            return $@"Data Source=ci1\sqlexpress;Initial Catalog=FastTests.Server.Documents.SqlReplication-{store.DefaultDatabase};Integrated Security=SSPI;Connection Timeout=1";
+            return $@"Data Source=ci1\sqlexpress;Initial Catalog=SqlReplication-{store.DefaultDatabase};Integrated Security=SSPI;Connection Timeout=1";
         }
 
         public class Order
