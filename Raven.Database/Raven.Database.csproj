@@ -242,9 +242,6 @@
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
     <Reference Include="System.Configuration" />
-    <Reference Include="Raven.SpecificPlatform.Windows">
-      <HintPath>..\SharedLibs\Raven.SpecificPlatform.Windows.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
