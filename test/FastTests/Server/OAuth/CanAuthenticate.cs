@@ -72,6 +72,7 @@ namespace FastTests.Server.OAuth
 
                 var exception = Assert.Throws<InvalidApiKeyException>(() => StoreSampleDoc(store, "test/1"));
                 Assert.Contains("Unable to authenticate api key", exception.Message);
+                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
             }
         }
 
@@ -137,6 +138,7 @@ namespace FastTests.Server.OAuth
                 oauth(authenticatedClient);
                 result = await authenticatedClient.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
                 Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+                Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
             }
         }
 
