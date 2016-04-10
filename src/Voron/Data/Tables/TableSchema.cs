@@ -1,12 +1,21 @@
 using System;
 using System.Collections.Generic;
 using Voron.Data.BTrees;
+using Voron.Data.Compact;
 using Voron.Data.RawData;
 using Voron.Impl;
 using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
 {
+    [Flags]
+    public enum TableIndexType
+    {
+        Default = 0x01,
+        BTree = 0x01,
+        Compact = 0x02,
+    }
+
     public unsafe class TableSchema
     {
         public static readonly Slice ActiveSectionSlice = "Active-Section";
@@ -21,6 +30,8 @@ namespace Voron.Data.Tables
 
         public class SchemaIndexDef
         {
+            public TableIndexType Type = TableIndexType.Default;
+
             /// <summary>
             /// Here we take advantage on the fact that the values are laid out in memory sequentially
             /// we can point to a certain item index, and use one or more fields in the key directly, 
@@ -31,7 +42,7 @@ namespace Voron.Data.Tables
             public Slice NameAsSlice;
             public string Name;
 
-            public bool IsGlobal;
+            public bool IsGlobal;                        
 
             public Slice GetSlice(TableValueReader value)
             {
@@ -75,7 +86,7 @@ namespace Voron.Data.Tables
                 var ptr = value.Read(StartIndex, out totalSize);
                 return EndianBitConverter.Big.ToInt64(ptr);
             }
-        }
+        }        
 
         private SchemaIndexDef _pk;
         private readonly Dictionary<string, SchemaIndexDef> _indexes = new Dictionary<string, SchemaIndexDef>();
@@ -144,29 +155,73 @@ namespace Voron.Data.Tables
 
             if (_pk != null)
             {
-                if (_pk.IsGlobal == false)
+                switch (_pk.Type)
                 {
-                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(TreeRootHeader));
-                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
-                }
-                else
-                {
-                    tx.CreateTree(_pk.Name);
+                    case TableIndexType.BTree:
+                        {
+                            if (_pk.IsGlobal == false)
+                            {
+                                var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                                var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(TreeRootHeader));
+                                indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                            }
+                            else
+                            {
+                                tx.CreateTree(_pk.Name);
+                            }
+
+                            break;
+                        }
+                    case TableIndexType.Compact:
+                        {
+                            if (_pk.IsGlobal == false)
+                            {
+                                var indexTree = PrefixTree.Create(tx, tableTree, _pk.Name);
+                                var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(PrefixTreeRootHeader));
+                                indexTree.State.CopyTo((PrefixTreeRootHeader*)treeHeader);
+                            }
+                            else
+                            {
+                                tx.CreatePrefixTree(_pk.Name);
+                            }
+                            break;
+                        }
                 }
             }
 
             foreach (var indexDef in _indexes.Values)
             {
-                if (indexDef.IsGlobal == false)
+                switch (indexDef.Type)
                 {
-                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(TreeRootHeader));
-                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
-                }
-                else
-                {
-                    tx.CreateTree(indexDef.Name);
+                    case TableIndexType.BTree:
+                        {
+                            if (indexDef.IsGlobal == false)
+                            {
+                                var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                                var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(TreeRootHeader));
+                                indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                            }
+                            else
+                            {
+                                tx.CreateTree(indexDef.Name);
+                            }
+
+                            break;
+                        }
+                    case TableIndexType.Compact:
+                        {
+                            if (indexDef.IsGlobal == false)
+                            {
+                                var indexTree = PrefixTree.Create(tx, tableTree, indexDef.NameAsSlice);
+                                var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(PrefixTreeRootHeader));
+                                indexTree.State.CopyTo((PrefixTreeRootHeader*)treeHeader);
+                            }
+                            else
+                            {
+                                tx.CreatePrefixTree(indexDef.Name);
+                            }
+                            break;
+                        }
                 }
             }
         }

@@ -53,7 +53,7 @@ namespace Voron.Data.Compact
 
             public bool IsCutLow(PrefixTree owner)
             {
-                var exitNode = owner.ReadNodeByName(this.Exit);
+                var exitNode = owner.DirectRead(this.Exit);
                 return owner.IsCutLow(exitNode, this.LongestPrefix);
             }
         }

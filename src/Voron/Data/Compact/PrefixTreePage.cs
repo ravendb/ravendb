@@ -41,23 +41,6 @@ namespace Voron.Data.Compact
             set { Header->PageNumber = value; }
         }
 
-        /// <summary>
-        /// This is the tree number following the growth strategy for the tree structure. This virtual chunks
-        /// are used to navigate the whole-tree in a cache concious fashion and are part of a virtual numbering of the nodes
-        /// used for fast retrieval of node offsets.
-        /// </summary>
-        /// <remarks>
-        /// While we would try to ensure multiple trees to share as much as possible chunks we cannot ensure 
-        /// that is going to be the case without running a defrag operation. 
-        /// </remarks>
-        public long Chunk
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Header->Chunk; }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set { Header->Chunk = value; }
-        }
-
         public ushort NodesPerChunk
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -83,6 +66,8 @@ namespace Voron.Data.Compact
 
         public void Initialize()
         {
+            Header->NodesPerChunk = (ushort)(Pager.PageMaxSpace / sizeof(PrefixTree.Node));           
+
             // We need to zero the values for the nodes in order to ensure that we will be getting proper data...
             // We can relax this, but then we will have to remove some runtime checks (assertions). 
             // Profile first, remove if necessary.
@@ -92,12 +77,27 @@ namespace Voron.Data.Compact
             Memory.SetInline(freeSpace, 0xFF, Header->NodesPerChunk / BitVector.BitsPerByte + 1);
         }
 
-        public PrefixTree.Node* GetNodePointer(long relativeNodeName)
+        public PrefixTree.Node* GetNodePtr(long offset)
         {
-            if (relativeNodeName >= Header->NodesPerChunk)
+            return (PrefixTree.Node*)(this.DataPointer + offset);
+        }
+
+        public PrefixTree.Node* GetNodePtrByIndex(long nodeIndex)
+        {
+            return (PrefixTree.Node*)(this.DataPointer + (nodeIndex * sizeof(PrefixTree.Node)));
+        }
+
+        public long GetDiskPointer(long nodeIndex)
+        {
+            if (nodeIndex >= Header->NodesPerChunk)
                 throw new InvalidOperationException("This shouldnt happen.");
 
-            return (PrefixTree.Node*)(this.DataPointer + (relativeNodeName * sizeof(PrefixTree.Node)));
+            return PageNumber * this.Pager.PageSize + (nodeIndex * sizeof(PrefixTree.Node));
+        }
+
+        public long GetIndexFromDiskPointer(long nodePtr)
+        {
+            return (nodePtr - (PageNumber * this.Pager.PageSize + sizeof(PrefixTreePageHeader))) / sizeof(PrefixTree.Node);
         }
     }
 }

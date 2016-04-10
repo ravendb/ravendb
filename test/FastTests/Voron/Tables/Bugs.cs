@@ -12,7 +12,7 @@ namespace FastTests.Voron.Tables
     public unsafe class Bugs : TableStorageTest
     {
         public const int ItemsPerTransaction = 100;
-        public const int Transactions = 2;
+        public const int Transactions = 10;
         public const string Template = "000000000000000000000000000000000000000000000000000";
 
         [Fact]

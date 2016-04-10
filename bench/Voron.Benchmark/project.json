@@ -1,6 +1,7 @@
 ﻿{
   "version": "4.0.0-*",
   "compilationOptions": {
+    "allowUnsafe": true,
     "emitEntryPoint": true
   },
 

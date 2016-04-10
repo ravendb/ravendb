@@ -9,24 +9,29 @@ using Voron.Data.RawData;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util.Conversion;
+using Voron.Data.Compact;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class Table
+    public unsafe class Table : ICommittable
     {
-        private Dictionary<Slice, Tree> _treesBySlice;
-        private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>();
-
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
-        public readonly string Name;
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
         private FixedSizeTree _fstKey;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
-        private readonly int _pageSize;
+        private readonly int _pageSize;      
+
+        private Dictionary<Slice, Tree> _treesBySliceCache;
+        private Dictionary<Slice, PrefixTree> _prefixTreesBySliceCache;
+        private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>();
+
+        public readonly string Name;
+
+        public long NumberOfEntries { get; private set; }
 
         public FixedSizeTree FixedSizeKey
         {
@@ -89,18 +94,23 @@ namespace Voron.Data.Tables
 
         public Table(TableSchema schema, string name, Transaction tx)
         {
+            Name = name;
+
             _schema = schema;
             _tx = tx;
-            Name = name;
+            _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
+
             _tableTree = _tx.ReadTree(name);
             if (_tableTree == null)
                 throw new InvalidDataException($"Cannot find collection name {name}");
-            _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
                 throw new InvalidDataException($"Cannot find stats value for table {name}");
+
             NumberOfEntries = stats->NumberOfEntries;
+
+            _tx.Register(this);
         }
 
         /// <summary>
@@ -131,24 +141,24 @@ namespace Voron.Data.Tables
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-            var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree.Read(key);
-            if (readResult == null)
+            if ((_schema.Key.Type & TableIndexType.Compact) != 0)
             {
-                id = -1;
-                return false;
+                var pkTree = GetPrefixTree(_schema.Key);
+                return pkTree.TryGet(key, out id);
             }
+            else
+            {
+                var pkTree = GetTree(_schema.Key);
+                var readResult = pkTree.Read(key);
+                if (readResult == null)
+                {
+                    id = -1;
+                    return false;
+                }
 
-            id = readResult.Reader.ReadLittleEndianInt64();
-            return true;
-        }
-
-        private Tree GetTree(TableSchema.SchemaIndexDef idx)
-        {
-            if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name);
-            return GetTree(idx.NameAsSlice);
-
+                id = readResult.Reader.ReadLittleEndianInt64();
+                return true;
+            }
         }
 
         public byte* DirectRead(long id, out int size)
@@ -283,20 +293,30 @@ namespace Voron.Data.Tables
 
 
         private void DeleteValueFromIndex(long id, TableValueReader value)
-        {
+        {            
             //TODO: Avoid all those allocations by using a single buffer
             if (_schema.Key != null)
             {
                 var keySlice = _schema.Key.GetSlice(value);
-                var pkTree = GetTree(_schema.Key);
-                pkTree.Delete(keySlice);
+
+                if ((_schema.Key.Type & TableIndexType.Compact) != 0)
+                {
+                    // This is a PrefixTree index.
+                    var pkTree = GetPrefixTree(_schema.Key);
+                    pkTree.Delete(keySlice);
+                }
+                else
+                {
+                    var pkTree = GetTree(_schema.Key);
+                    pkTree.Delete(keySlice);
+                }
             }
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
+                // For now we wont create secondary indexes on Compact trees.
                 var indexTree = GetTree(indexDef);
                 var val = indexDef.GetSlice(value);
-
                 var fst = GetFixedSizeTree(indexTree, val, 0);
                 fst.Delete(id);
             }
@@ -350,16 +370,27 @@ namespace Voron.Data.Tables
         }
 
         private void InsertIndexValuesFor(long id, TableValueReader value)
-        {
+        {          
             if (_schema.Key != null)
             {
                 var pkval = _schema.Key.GetSlice(value);
-                var pkIndex = GetTree(_schema.Key);
-                pkIndex.Add(pkval, new Slice((byte*)&id, sizeof(long)));
+
+                var pk = _schema.Key;
+                if ((pk.Type & TableIndexType.Compact) != 0)
+                {
+                    var pkIndex = GetPrefixTree(_schema.Key);
+                    pkIndex.Add(pkval, id);
+                }
+                else
+                {
+                    var pkIndex = GetTree(_schema.Key);
+                    pkIndex.Add(pkval, new Slice((byte*)&id, sizeof(long)));
+                }                          
             }
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
+                // For now we wont create secondary indexes on Compact trees.
                 var val = indexDef.GetSlice(value);
                 var indexTree = GetTree(indexDef);
                 var index = GetFixedSizeTree(indexTree, val, 0);
@@ -436,16 +467,30 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        public long NumberOfEntries { get; private set; }
-
-
-        private Tree GetTree(Slice name)
+        internal PrefixTree GetPrefixTree(Slice name)
         {
-            if (_treesBySlice == null)
-                _treesBySlice = new Dictionary<Slice, Tree>();
+            if (_prefixTreesBySliceCache == null)
+                _prefixTreesBySliceCache = new Dictionary<Slice, PrefixTree>();
+
+            PrefixTree tree;
+            if (_prefixTreesBySliceCache.TryGetValue(name, out tree))
+                return tree;
+
+            if (!PrefixTree.TryOpen(_tx, _tableTree, name, out tree))
+                throw new InvalidOperationException($"Cannot find prefix tree {name} in table {Name}");
+
+            _prefixTreesBySliceCache[name] = tree;
+
+            return tree;
+        }
+
+        internal Tree GetTree(Slice name)
+        {
+            if (_treesBySliceCache == null)
+                _treesBySliceCache = new Dictionary<Slice, Tree>();
 
             Tree tree;
-            if (_treesBySlice.TryGetValue(name, out tree))
+            if (_treesBySliceCache.TryGetValue(name, out tree))
                 return tree;
 
             var treeHeader = _tableTree.DirectRead(name);
@@ -453,20 +498,49 @@ namespace Voron.Data.Tables
                 throw new InvalidOperationException($"Cannot find tree {name} in table {Name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader);
-            _treesBySlice[name] = tree;
+            _treesBySliceCache[name] = tree;
             return tree;
+        }
+
+        private PrefixTree GetPrefixTree(TableSchema.SchemaIndexDef idx)
+        {
+            if (idx.IsGlobal)
+                return _tx.ReadPrefixTree(idx.Name);
+            return GetPrefixTree(idx.NameAsSlice);
+        }
+
+        private Tree GetTree(TableSchema.SchemaIndexDef idx)
+        {
+            if (idx.IsGlobal)
+                return _tx.ReadTree(idx.Name);
+            return GetTree(idx.NameAsSlice);
         }
 
         public void DeleteByKey(Slice key)
         {
-            var pkTree = GetTree(_schema.Key);
+            var pk = _schema.Key;
 
-            var readResult = pkTree.Read(key);
-            if (readResult == null)
-                return;
+            long id;
+            if ((pk.Type & TableIndexType.Compact) != 0)
+            {
+                // This is a PrefixTree index.
+                var pkTree = GetPrefixTree(_schema.Key);
 
-            // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
-            var id = readResult.Reader.ReadLittleEndianInt64();
+                // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
+                if (!pkTree.TryGet(key, out id))
+                    return;
+            }
+            else
+            {
+                var pkTree = GetTree(_schema.Key);
+
+                var readResult = pkTree.Read(key);
+                if (readResult == null)
+                    return;
+
+                // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
+                id = readResult.Reader.ReadLittleEndianInt64();
+            }
 
             // And delete the element accordingly. 
             Delete(id);
@@ -506,38 +580,56 @@ namespace Voron.Data.Tables
 
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith = false)
         {
-            var tree = GetTree(index);
-            using (var it = tree.Iterate())
+            if ((index.Type & TableIndexType.Compact) != 0)
             {
-                if (it.Seek(value) == false)
-                    yield break;
-
-                if (startsWith)
-                    it.RequiredPrefix = value;
-
-                do
+                // This is a PrefixTree index.
+                throw new NotImplementedException();
+            }
+            else
+            {
+                var tree = GetTree(index);
+                using (var it = tree.Iterate())
                 {
-                    yield return new SeekResult
+                    if (it.Seek(value) == false)
+                        yield break;
+
+                    if (startsWith)
+                        it.RequiredPrefix = value;
+
+                    do
                     {
-                        Key = it.CurrentKey,
-                        Results = GetSecondaryIndexForValue(tree, it.CurrentKey)
-                    };
-                } while (it.MoveNext());
+                        yield return new SeekResult
+                        {
+                            Key = it.CurrentKey,
+                            Results = GetSecondaryIndexForValue(tree, it.CurrentKey)
+                        };
+                    } while (it.MoveNext());
+                }
             }
         }
 
         public IEnumerable<TableValueReader> SeekByPrimaryKey(Slice value)
         {
-            var tree = GetTree(_schema.Key);
-            using (var it = tree.Iterate())
+            var pk = _schema.Key;
+            if ((pk.Type & TableIndexType.Compact) != 0)
             {
-                if (it.Seek(value) == false)
-                    yield break;
-
-                do
+                // This is a PrefixTree index.
+                throw new NotImplementedException();
+            }
+            else
+            {
+                var tree = GetTree(pk);
+                using (var it = tree.Iterate())
                 {
-                    yield return GetTableValueReader(it);
-                } while (it.MoveNext());
+                    if (it.Seek(value) == false)
+                        yield break;
+
+                    do
+                    {
+                        yield return GetTableValueReader(it);
+                    }
+                    while (it.MoveNext());
+                }
             }
         }
 
@@ -669,36 +761,66 @@ namespace Voron.Data.Tables
                 throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
 
             if (numberOfEntriesToDelete == 0)
-                return;
+                return;            
 
             var toDelete = new List<long>();
-            var tree = GetTree(index);
-            using (var it = tree.Iterate())
+            if ((index.Type & TableIndexType.Compact) != 0)
             {
-                if (it.Seek(value) == false)
-                    return;
-
-                do
+                // This is a PrefixTree index.
+                throw new NotImplementedException();
+            }
+            else
+            {
+                var tree = GetTree(index);
+                using (var it = tree.Iterate())
                 {
-                    var fst = GetFixedSizeTree(tree, it.CurrentKey, 0);
-                    using (var fstIt = fst.Iterate())
-                    {
-                        if (fstIt.Seek(long.MinValue) == false)
-                            break;
+                    if (it.Seek(value) == false)
+                        return;
 
-                        do
+                    do
+                    {
+                        var fst = GetFixedSizeTree(tree, it.CurrentKey, 0);
+                        using (var fstIt = fst.Iterate())
                         {
-                            toDelete.Add(fstIt.CurrentKey);
-                            numberOfEntriesToDelete--;
+                            if (fstIt.Seek(long.MinValue) == false)
+                                break;
+
+                            do
+                            {
+                                toDelete.Add(fstIt.CurrentKey);
+                                numberOfEntriesToDelete--;
+                            }
+                            while (numberOfEntriesToDelete > 0 && fstIt.MoveNext());
                         }
-                        while (numberOfEntriesToDelete > 0 && fstIt.MoveNext());
                     }
+                    while (numberOfEntriesToDelete > 0 && it.MoveNext());
                 }
-                while (numberOfEntriesToDelete > 0 && it.MoveNext());
             }
 
             foreach (var id in toDelete)
                 Delete(id);
+        }
+
+        public bool RequiresParticipation
+        {
+            get { return true; }
+        }
+
+        public void PrepareForCommit()
+        {
+            if (_treesBySliceCache == null)
+                return;
+
+            foreach( var item in _treesBySliceCache)
+            {
+                var tree = item.Value;
+                if (!tree.State.IsModified)
+                    continue;
+
+                var treeName = item.Key;               
+                var header = (TreeRootHeader*) _tableTree.DirectAdd(treeName, sizeof(TreeRootHeader));
+                tree.State.CopyTo(header);
+            }
         }
     }
 }
