@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Raven.Server.ServerWide;
 
@@ -21,7 +22,8 @@ namespace Raven.Server.Utils
 
             const string lineBorder = "+---------------------------------------------------------------+";
 
-            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, Commit {2}", ServerVersion.Build, ServerVersion.Version, ServerVersion.CommitHash);
+            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, Commit {2}, PID {3}",
+                ServerVersion.Build, ServerVersion.Version, ServerVersion.CommitHash, Process.GetCurrentProcess().Id);
             ConsoleWriteLineWithColor(ConsoleColor.DarkCyan, " Source Code (git repo): https://github.com/ravendb/ravendb");
             ConsoleWriteWithColor(new ConsoleText { Message = " Built with ", ForegroundColor = ConsoleColor.Gray },
                 new ConsoleText { Message = "love ", ForegroundColor = ConsoleColor.Red },
@@ -29,6 +31,7 @@ namespace Raven.Server.Utils
                 new ConsoleText { Message = "Hibernating Rhinos ", ForegroundColor = ConsoleColor.Yellow },
                 new ConsoleText { Message = "and awesome contributors!", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
             Console.WriteLine(lineBorder);
+            
         }
 
         private static void ConsoleWriteWithColor(params ConsoleText[] consoleTexts)

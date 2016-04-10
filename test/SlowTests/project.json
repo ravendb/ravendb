@@ -56,6 +56,7 @@
     }
   },
   "dependencies": {
+    "FastTests": "4.0.0-*",
     "Sparrow": "4.0.0-*",
     "Voron": "4.0.0-*",
     "xunit": "2.2.0-beta1-build3239"

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 
 namespace Raven.Client.Document
 {
@@ -18,6 +20,11 @@ namespace Raven.Client.Document
         /// Gets the document convention from the query session
         /// </summary>
         DocumentConvention DocumentConvention { get; }
+
+        /// <summary>
+        /// Determines if it is a dynamic map-reduce query
+        /// </summary>
+        bool IsDynamicMapReduce { get; }
 
         /// <summary>
         ///   Instruct the query to wait for non stale result for the specified wait timeout.
@@ -368,5 +375,10 @@ namespace Raven.Client.Document
         /// </summary>
         /// <param name="originalType"></param>
         void SetOriginalQueryType(Type originalType);
+
+        /// <summary>
+        /// Adds a dynamic query field to the query
+        /// </summary>
+        void AddMapReduceField(DynamicMapReduceField field);
     }
 }

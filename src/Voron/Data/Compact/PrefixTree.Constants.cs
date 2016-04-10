@@ -10,9 +10,9 @@ namespace Voron.Data.Compact
     {
         public unsafe static class Constants
         {
-            public const long HeadNodeName = -4;
-            public const long TailNodeName = -3;
-            public const long TombstoneNodeName = -2;
+            public const long TombstoneNodeName = unchecked((long)0xFFFFFFFFFFFFFFF0);
+            public const long HeadNodeName = unchecked((long)0xFFFFFFFFFFFFFFF1);
+            public const long TailNodeName = unchecked((long)0xFFFFFFFFFFFFFFF2);
             public const long InvalidNodeName = -1;
 
             public const long InvalidPage = -1;

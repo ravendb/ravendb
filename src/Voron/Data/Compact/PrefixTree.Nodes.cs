@@ -37,6 +37,18 @@ namespace Voron.Data.Compact
             public bool IsInternal => Type == NodeType.Internal;
             public bool IsTombstone => Type == NodeType.Tombstone;
             public bool IsUninitialized => !IsLeaf && !IsInternal && !IsTombstone;
+
+            public static bool IsTombstonePtr(long ptr)
+            {
+                ulong uPtr = (ulong)ptr;
+                return uPtr > unchecked((ulong)Constants.TombstoneNodeName) && uPtr != unchecked((ulong)Constants.InvalidNodeName);
+            }
+
+            public static bool IsValidPtr(long ptr)
+            {
+                ulong uPtr = (ulong)ptr;
+                return uPtr < unchecked((ulong)Constants.TombstoneNodeName);
+            }
         }
 
         /// <summary>

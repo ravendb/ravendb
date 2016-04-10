@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,14 +25,7 @@ namespace Sparrow
 
         public void SetByAsyncCompletion()
         {
-            // run the completion asynchronously to ensure that continuations (await WaitAsync()) won't happen as part of a call to TrySetResult
-            // http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
-
-            var tcs = _tcs;
-            Task.Factory.StartNew(s => ((TaskCompletionSource<bool>)s).TrySetResult(true),
-                tcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
-
-            tcs.Task.Wait();
+            SetInAsyncManner(_tcs);
         }
 
         public void Reset()
@@ -45,6 +39,31 @@ namespace Sparrow
 #pragma warning restore 420
                     return;
             }
+        }
+
+        public void SetAndResetAtomically()
+        {
+            // we intentionally reset it first to have this operation to behave as atomic
+
+            var previousTcs = _tcs;
+
+            Reset();
+
+            SetInAsyncManner(previousTcs);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetInAsyncManner(TaskCompletionSource<bool> tcs)
+        {
+            // run the completion asynchronously to ensure that continuations (await WaitAsync()) won't happen as part of a call to TrySetResult
+            // http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
+
+            var currentTcs = tcs;
+
+            Task.Factory.StartNew(s => ((TaskCompletionSource<bool>)s).TrySetResult(true),
+                currentTcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
+
+            currentTcs.Task.Wait();
         }
     }
 }

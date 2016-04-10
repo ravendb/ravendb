@@ -53,7 +53,7 @@ namespace Raven.Server.Indexing
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
             var readResult = filesTree.Read(name);
-            if(readResult == null)
+            if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
             return readResult.Version;
         }
@@ -90,21 +90,14 @@ namespace Raven.Server.Indexing
             filesTree.Delete(key);
         }
 
-        public override unsafe IndexInput OpenInput(string name)
+        public override IndexInput OpenInput(string name)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
-            Slice key = name;
-            var readResult = filesTree.Read(key);
-            if (readResult == null)
-                throw new FileNotFoundException("Could not find file", name);
-
-            return new VoronIndexInput(readResult.Reader.Base, readResult.Reader.Length);
+            return new VoronIndexInput(_currentTransaction, name);
         }
 
         public override IndexOutput CreateOutput(string name)
         {
-            //TODO: _environment.Options.TempPath
-            return new VoronIndexOutput(Path.GetTempPath(),name, _currentTransaction.Value);
+            return new VoronIndexOutput(_environment.Options.TempPath, name, _currentTransaction.Value);
         }
 
         public IDisposable SetTransaction(Transaction tx)
@@ -116,7 +109,6 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
-            
         }
     }
 }
