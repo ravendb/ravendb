@@ -32,7 +32,6 @@ namespace FastTests.Server.OAuth
             }
         };
 
-        [NonLinuxFact]
         public async Task CanGetDocWithValidToken()
         {
             DoNotReuseServer();
@@ -56,7 +55,6 @@ namespace FastTests.Server.OAuth
             }
         }
 
-        [NonLinuxFact]
         public async Task CanNotGetDocWithInalidToken()
         {
             DoNotReuseServer();
@@ -101,7 +99,6 @@ namespace FastTests.Server.OAuth
             }
         }
 
-        [NonLinuxFact]
         public async Task CanGetTokenFromServer()
         {
             DoNotReuseServer();
@@ -142,7 +139,6 @@ namespace FastTests.Server.OAuth
             }
         }
 
-        [NonLinuxFact]
         public async Task ThrowOnForbiddenRequest()
         {
             DoNotReuseServer();

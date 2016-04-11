@@ -20,7 +20,6 @@ namespace FastTests.Server.Documents.Notifications
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
         }
 
-        [NonLinuxFact]
         public async Task CanGetNotificationAboutDocumentPut()
         {
             using (var store = await GetDocumentStore())
@@ -47,7 +46,6 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [NonLinuxFact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = await GetDocumentStore())
@@ -76,7 +74,6 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [NonLinuxFact]
         public async Task CanGetNotificationAboutDocumentDelete()
         {
             using (var store = await GetDocumentStore())
@@ -108,7 +105,6 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [NonLinuxFact] 
         public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = await GetDocumentStore())
