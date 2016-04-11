@@ -52,7 +52,6 @@ namespace Raven.Server.Documents.SqlReplication
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown, _cancellationTokenSource.Token))
             {
-                LoadLastEtag();
                 while (cts.IsCancellationRequested == false)
                 {
                     if (Log.IsDebugEnabled)
@@ -60,7 +59,6 @@ namespace Raven.Server.Documents.SqlReplication
 
                     WaitForChanges.Reset();
 
-                    var startTime = SystemTime.UtcNow;
                     try
                     {
                         cts.Token.ThrowIfCancellationRequested();
@@ -84,15 +82,6 @@ namespace Raven.Server.Documents.SqlReplication
                         Log.WarnException($"Exception occured for '{Name}'.", e);
                     }
 
-                    /* try
-                        {
-                            UpdateStats(startTime, stats);
-                        }
-                        catch (Exception e)
-                        {
-                            Log.ErrorException($"Could not update stats for '{Name} ({IndexId})'.", e);
-                        }*/
-
                     try
                     {
                         WaitForChanges.Wait(cts.Token);
@@ -105,15 +94,19 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
-        private void LoadLastEtag()
+        private void LoadLastEtag(DocumentsOperationContext context)
         {
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
+            if (sqlReplicationStatus == null)
             {
-                context.OpenReadTransaction();
-
-                var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
-                Statistics.LastReplicatedEtag = sqlReplicationStatus == null ? 0 : JsonDeserialization.SqlReplicationStatus(sqlReplicationStatus.Data).LastReplicatedEtag;
+                Statistics.LastReplicatedEtag = 0;
+                Statistics.LastTombstonesEtag = 0;
+            }
+            else
+            {
+                var replicationStatus = JsonDeserialization.SqlReplicationStatus(sqlReplicationStatus.Data);
+                Statistics.LastReplicatedEtag = replicationStatus.LastReplicatedEtag;
+                Statistics.LastTombstonesEtag = replicationStatus.LastTombstonesEtag;
             }
         }
 
@@ -124,6 +117,7 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 ["Name"] = Name,
                 ["LastReplicatedEtag"] = Statistics.LastReplicatedEtag,
+                ["LastTombstonesEtag"] = Statistics.LastTombstonesEtag,
             }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             _database.DocumentsStorage.Put(context, key, null, document);
         }
@@ -132,24 +126,25 @@ namespace Raven.Server.Documents.SqlReplication
         {
             try
             {
-                DocumentsOperationContext databaseContext;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-                using (var tx = databaseContext.OpenReadTransaction())
+                DocumentsOperationContext context;
+                bool updateEtag;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
                 {
-                    // TODO: We should not have here a write transaction
-
-                    // ReplicateDeletionsToDestination(databaseContext, cancellationToken);
-                    ReplicateChangesToDestination(databaseContext, cancellationToken);
+                    LoadLastEtag(context);
+                    updateEtag = ReplicateDeletionsToDestination(context, cancellationToken) ||
+                                 ReplicateChangesToDestination(context, cancellationToken);
 
                     tx.Commit();
                 }
 
-                //TODO: only do this on success or if we actually replicated
-
-                using (var tx = databaseContext.OpenWriteTransaction())
+                if (updateEtag)
                 {
-                    WriteLastEtag(databaseContext);
-                    tx.Commit();
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        WriteLastEtag(context);
+                        tx.Commit();
+                    }
                 }
             }
             finally
@@ -159,16 +154,15 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
-        private void ReplicateDeletionsToDestination(DocumentsOperationContext context, CancellationToken cancellationToken)
+        private bool ReplicateDeletionsToDestination(DocumentsOperationContext context, CancellationToken cancellationToken)
         {
             var pageSize = _database.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
-            var lastTombstoneEtag = _database.DocumentsStorage.GetLastTombstoneEtag(context, Configuration.Collection);
-            // TODO: compare to latest etag
-            var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, lastTombstoneEtag + 1, 0, pageSize).ToList();
-
+            var documents = _database.DocumentsStorage.GetTombstonesAfter(context, Configuration.Collection, Statistics.LastTombstonesEtag + 1, 0, pageSize).ToList();
             if (documents.Count == 0)
-                return;
+                return false;
+
+            Statistics.LastTombstonesEtag = documents.Last().Etag;
 
             var documentsKeys = documents.Select(tombstone => (string)tombstone.Key).ToList();
             using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, PredefinedSqlConnection, Statistics, cancellationToken))
@@ -181,6 +175,7 @@ namespace Raven.Server.Documents.SqlReplication
                 if (Log.IsDebugEnabled)
                     Log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", documentsKeys), Configuration.Name);
             }
+            return true;
         }
 
         private bool ReplicateChangesToDestination(DocumentsOperationContext context, CancellationToken cancellationToken)
@@ -189,7 +184,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             var documents = _database.DocumentsStorage.GetDocumentsAfter(context, Configuration.Collection, Statistics.LastReplicatedEtag + 1, 0, pageSize).ToList();
             if (documents.Count == 0)
-                return true;
+                return false;
 
             Statistics.LastReplicatedEtag = documents.Last().Etag;
 

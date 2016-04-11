@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.SqlReplication
         public Alert LastAlert { get; set; }
 
         public long LastReplicatedEtag { get; set; }
+        public long LastTombstonesEtag { get; set; }
 
         public void Success(int countOfItems)
         {
@@ -162,6 +163,7 @@ namespace Raven.Server.Documents.SqlReplication
                 ["LastAlert"] = LastAlert,
                 ["LastErrorTime"] = LastErrorTime,
                 ["LastReplicatedEtag"] = LastReplicatedEtag,
+                ["LastTombstonesEtag"] = LastTombstonesEtag,
                 ["SuccessCount"] = SuccessCount,
                 ["SuspendUntil"] = SuspendUntil,
             };
