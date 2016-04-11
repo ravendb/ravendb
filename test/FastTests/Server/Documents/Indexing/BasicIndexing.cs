@@ -13,6 +13,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -119,7 +120,7 @@ namespace FastTests.Server.Documents.Indexing
 
             using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(2) != null, TimeSpan.FromSeconds(15)));
+                database.IndexStore._openIndexesTask.Wait();
 
                 var indexes = database
                     .IndexStore
