@@ -14,6 +14,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Client.Platform;
 using Raven.Json.Linq;
 
 namespace Raven.Client.OAuth
@@ -58,7 +59,7 @@ namespace Raven.Client.OAuth
             ThrowIfBadUrlOrApiKey(url, apiKey);
             uri = new Uri(url.Replace("http://", "ws://").Replace("https://", "wss://"));
 
-            using (var webSocket = new ClientWebSocket())
+            using (var webSocket = new RavenClientWebSocket())
             {
                 try
                 {
@@ -104,7 +105,7 @@ namespace Raven.Client.OAuth
                 throw new InvalidApiKeyException("DoAuthRequest provided with null apiKey");
         }
 
-        private async Task Send(ClientWebSocket webSocket, string command, string commandParameter)
+        private async Task Send(RavenClientWebSocket webSocket, string command, string commandParameter)
         {
             Logger.Info($"Sending WebSocket Authentication Command {command} - {commandParameter} to {uri}");
 
@@ -172,7 +173,7 @@ namespace Raven.Client.OAuth
             return apiKeyParts;
         }
 
-        private async Task<RavenJObject> Recieve(ClientWebSocket webSocket)
+        private async Task<RavenJObject> Recieve(RavenClientWebSocket webSocket)
         {
             try
             {

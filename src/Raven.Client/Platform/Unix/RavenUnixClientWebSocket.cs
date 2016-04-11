@@ -10,9 +10,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 
-namespace Raven.Client
+namespace Raven.Client.Platform.Unix
 {
-    public class RavenClientWebSocket : WebSocket, IDisposable
+    public class RavenUnixClientWebSocket : WebSocket, IDisposable
     {
         private const int MessageTypeText = 1;
         private const int MessageTypeBinary = 2;
@@ -30,7 +30,7 @@ namespace Raven.Client
 
         public override WebSocketState State => _state;
 
-        public RavenClientWebSocket()
+        public RavenUnixClientWebSocket()
         {
             _connection = new TcpClient
             {
@@ -308,7 +308,7 @@ namespace Raven.Client
             _state = WebSocketState.CloseSent;
         }
 
-        async Task SendCloseFrame(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
+        private async Task SendCloseFrame(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken)
         {
             var statusDescBuffer = string.IsNullOrEmpty(statusDescription) ? new byte[2] : new byte[2 + Encoding.UTF8.GetByteCount(statusDescription)];
             statusDescBuffer[0] = (byte)(((ushort)closeStatus) >> 8);

@@ -12,6 +12,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Client.Platform;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
@@ -55,7 +56,7 @@ namespace Raven.Client.Changes
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.onDispose = onDispose;
             Conventions = conventions;
-            webSocket = new ClientWebSocket();
+            webSocket = new RavenClientWebSocket();
 
             ConnectionTask = EstablishConnection()
                 .ObserveException()
@@ -215,7 +216,7 @@ namespace Raven.Client.Changes
         }
 
         private volatile bool disposed;
-        private readonly ClientWebSocket webSocket;
+        private readonly RavenClientWebSocket webSocket;
 
         public Task DisposeAsync()
         {
