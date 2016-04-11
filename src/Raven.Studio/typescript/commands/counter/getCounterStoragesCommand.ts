@@ -10,7 +10,7 @@ class getCounterStoragesCommand extends commandBase {
         var url = "/cs";
 
         var resultsSelector = (counterStorages: counterStorageDto[]) => 
-            counterStorages.map((cs: counterStorageDto) => new counterStorage(cs.Name, cs.IsAdminCurrentTenant, cs.Disabled, cs.Bundles));
+            counterStorages.map((cs: counterStorageDto) => new counterStorage(cs.Name, cs.IsAdminCurrentTenant, cs.Disabled));
         return this.query(url, args, null, resultsSelector);
     }
 }

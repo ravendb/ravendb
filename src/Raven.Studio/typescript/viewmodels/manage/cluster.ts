@@ -26,7 +26,7 @@ class cluster extends viewModelBase {
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var db = appUrl.getSystemDatabase();
+        var db = null;
         $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
             .done(() => {
                 deferred.resolve({ can: true });
@@ -37,8 +37,8 @@ class cluster extends viewModelBase {
     }
 
     refresh() {
-        this.fetchClusterTopology(appUrl.getSystemDatabase())
-            .done(() => this.fetchStatus(appUrl.getSystemDatabase()));
+       /* this.fetchClusterTopology(appUrl.getSystemDatabase())
+            .done(() => this.fetchStatus(appUrl.getSystemDatabase()));*/
     }
 
     fetchClusterTopology(db: database): JQueryPromise<any> {
@@ -80,7 +80,7 @@ class cluster extends viewModelBase {
     }
 
     addAnotherServerToCluster(forcedAdd: boolean) {
-        var newNode = nodeConnectionInfo.empty();
+       /* var newNode = nodeConnectionInfo.empty();
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
         dialog
             .onExit()
@@ -89,11 +89,11 @@ class cluster extends viewModelBase {
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
-        app.showDialog(dialog);
+        app.showDialog(dialog);*/
     }
 
     createCluster() {
-        var newNode = nodeConnectionInfo.empty();
+        /*var newNode = nodeConnectionInfo.empty();
         newNode.name(this.systemDatabaseId());
         newNode.uri(this.serverUrl());
         var dialog = new editNodeConnectionInfoDialog(newNode, false);
@@ -110,20 +110,20 @@ class cluster extends viewModelBase {
                 });
 
         });
-        app.showDialog(dialog);
+        app.showDialog(dialog);*/
     }
 
     initializeNewCluster() {
-        this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
+       /* this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
             .done(() => {
             new initializeNewClusterCommand(appUrl.getSystemDatabase())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
-            });
+            });*/
     }
 
     editNode(node: nodeConnectionInfo) {
-        var dialog = new editNodeConnectionInfoDialog(node, true);
+        /*var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
             .done(nci => {
                 new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto())
@@ -131,16 +131,16 @@ class cluster extends viewModelBase {
                     .done(() => setTimeout(() => this.refresh(), 500));
             });
 
-        app.showDialog(dialog);
+        app.showDialog(dialog);*/
     }
 
     leaveCluster(node: nodeConnectionInfo) {
-        this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
+       /* this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
             .done(() => {
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
-        });
+        });*/
     }
 }
 

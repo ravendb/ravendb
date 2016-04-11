@@ -4,16 +4,12 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import appUrl = require("common/appUrl");
 import documentClass = require("models/database/documents/document");
 import serverBuildReminder = require("common/serverBuildReminder");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 
 class studioConfig extends viewModelBase {
 
-    systemDatabase: database;
     configDocument = ko.observable<documentClass>();
-    warnWhenUsingSystemDatabase = ko.observable<boolean>(true);
-    disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
     isForbidden = ko.observable<boolean>();
@@ -32,10 +28,8 @@ class studioConfig extends viewModelBase {
 
     constructor() {
         super();
-        this.systemDatabase = appUrl.getSystemDatabase();
 
         this.timeUntilRemindToUpgrade(serverBuildReminder.get());
-        this.disableEventSource(eventSourceSettingStorage.get());
         this.mute = ko.computed(() => {
             var lastBuildCheck = this.timeUntilRemindToUpgrade();
             var timestamp = Date.parse(lastBuildCheck);
@@ -56,7 +50,7 @@ class studioConfig extends viewModelBase {
         this.selectedColor(selectedColor);
         
         var self = this;
-        this.selectedColor.subscribe((newValue) => self.setEnviromentColor(newValue));
+        this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
 
         this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
         this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
@@ -66,15 +60,15 @@ class studioConfig extends viewModelBase {
         var deferred = $.Deferred();
 
         if (this.isForbidden() === false) {
-            new getDocumentWithMetadataCommand(this.documentId, this.systemDatabase)
+         /*TODO: This need to be implemented
+            new getDocumentWithMetadataCommand(this.documentId, this.activeDatabase())
                 .execute()
                 .done((doc: documentClass) => {
                     this.configDocument(doc);
-                    this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
                 })
                 .fail(() => this.configDocument(documentClass.empty()))
                 .always(() => deferred.resolve({ can: true }));
-        } else {
+        */} else {
             deferred.resolve({ can: true });
         }
 
@@ -105,7 +99,7 @@ class studioConfig extends viewModelBase {
         });
     }
 
-    setEnviromentColor(envColor: environmentColor) {
+    setEnvironmentColor(envColor: environmentColor) {
         var newDocument = this.configDocument();
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
@@ -115,23 +109,8 @@ class studioConfig extends viewModelBase {
         });
     }
 
-    setSystemDatabaseWarning(warnSetting: boolean) {
-        if (this.warnWhenUsingSystemDatabase() !== warnSetting) {
-            var newDocument = this.configDocument();
-            this.warnWhenUsingSystemDatabase(warnSetting);
-            newDocument["WarnWhenUsingSystemDatabase"] = warnSetting;
-            var saveTask = this.saveStudioConfig(newDocument);
-            saveTask.fail(() => this.warnWhenUsingSystemDatabase(!warnSetting));
-        }
-    }
-
     private pickColor() {
         $("#select-color button").css("backgroundColor", this.selectedColor().backgroundColor);
-    }
-
-    setEventSourceDisabled(setting: boolean) {
-        this.disableEventSource(setting);
-        eventSourceSettingStorage.setValue(setting);
     }
 
     setUpgradeReminder(upgradeSetting: boolean) {
@@ -142,7 +121,8 @@ class studioConfig extends viewModelBase {
         var deferred = $.Deferred();
 
         require(["commands/saveDocumentCommand"], saveDocumentCommand => {
-            var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
+  // This need to be implemented
+            var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.activeDatabase()).execute();
             saveTask
                 .done((saveResult: bulkDocumentDto[]) => {
                     this.configDocument(newDocument);

@@ -36,7 +36,7 @@ namespace Voron.Impl.Paging
             }
         }
 
-	    private string _debugInfo;
+        private string _debugInfo;
 
         public string DebugInfo
         {
@@ -48,7 +48,7 @@ namespace Voron.Impl.Paging
             Debug.Assert((pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
             PageSize = pageSize;
-	        PageMaxSpace = PageSize - Constants.TreePageHeaderSize;
+            PageMaxSpace = PageSize - Constants.TreePageHeaderSize;
             NodeMaxSize = PageMaxSpace/2 - 1;
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
@@ -237,7 +237,7 @@ namespace Voron.Impl.Paging
         public static int GetMaxKeySize()
         {
             // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-		    return 2038;
+            return 2038;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

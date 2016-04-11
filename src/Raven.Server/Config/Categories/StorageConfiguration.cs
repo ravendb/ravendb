@@ -63,6 +63,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/TransactionJournalsPath")]
         public string JournalsStoragePath { get; set; }
 
+        // TODO: We always uses voron
         [Description("Whether to allow Voron to run in 32 bits process.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Storage/AllowOn32Bits")]

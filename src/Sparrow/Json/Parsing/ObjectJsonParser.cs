@@ -57,9 +57,19 @@ namespace Sparrow.Json.Parsing
     public class DynamicJsonArray : IEnumerable<object>
     {
         public int SourceIndex = -1;
-        public Queue<object> Items = new Queue<object>();
+        public readonly Queue<object> Items;
         public List<int> Removals;
         public bool AlreadySeen;
+
+        public DynamicJsonArray()
+        {
+            Items = new Queue<object>();
+        }
+
+        public DynamicJsonArray(IEnumerable<object> collection)
+        {
+            Items = new Queue<object>(collection);
+        }
 
         public void RemoveAt(int index)
         {
@@ -73,6 +83,8 @@ namespace Sparrow.Json.Parsing
             Items.Enqueue(obj);
         }
 
+        public int Count => Items.Count;
+
         public IEnumerator<object> GetEnumerator()
         {
             throw new NotImplementedException();
@@ -83,6 +95,7 @@ namespace Sparrow.Json.Parsing
             return GetEnumerator();
         }
     }
+
     public unsafe class ObjectJsonParser : IJsonParser
     {
         private readonly JsonParserState _state;

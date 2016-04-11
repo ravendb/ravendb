@@ -6,7 +6,7 @@ class saveApiKeysCommand extends executeBulkDocsCommand {
     constructor(apiKeys: apiKey[], deletedApiKeys: apiKey[]) {
         var newApiKeysBulkDocs = apiKeys.map(k => k.toBulkDoc("PUT"));
         var deletedApiKeysBulkDocs = deletedApiKeys.map(k => k.toBulkDoc("DELETE"));
-        super(newApiKeysBulkDocs.concat(deletedApiKeysBulkDocs), appUrl.getSystemDatabase());
+        super(newApiKeysBulkDocs.concat(deletedApiKeysBulkDocs), null);
     }
 
     execute(): JQueryPromise<bulkDocumentDto[]> {

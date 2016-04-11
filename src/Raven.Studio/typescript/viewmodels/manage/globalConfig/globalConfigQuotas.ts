@@ -21,7 +21,7 @@ class globalConfigQuotas extends viewModelBase {
         super.canActivate(args);
 
         var deferred = $.Deferred();
-        var db = appUrl.getSystemDatabase();
+        var db = appUrl.getDatabase();
         if (db) {
             // fetch current quotas from the database
             this.fetchQuotas(db)
@@ -68,7 +68,7 @@ class globalConfigQuotas extends viewModelBase {
     }
 
     syncChanges(deleteConfig:boolean) {
-        var db = appUrl.getSystemDatabase();
+        var db = appUrl.getDatabase();
         if (db) {
             var settingsDocument = this.settingsDocument();
             settingsDocument["@metadata"] = this.settingsDocument().__metadata;

@@ -245,16 +245,6 @@ namespace Raven.Client.Connection
             }
         }
 
-        /// <summary>
-        /// Advanced: Don't set this unless you know what you are doing!
-        /// 
-        /// 
-        /// Enable using basic authentication using http
-        /// By default, RavenDB only allows basic authentication over HTTPS, setting this property to true
-        /// will instruct RavenDB to make unsecured calls (usually only good for testing / internal networks).
-        /// </summary>
-        public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
-
         private volatile bool disposed;
         private int numberOfCacheResets;
 

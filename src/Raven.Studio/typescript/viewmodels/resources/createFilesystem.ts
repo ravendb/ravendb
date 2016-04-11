@@ -16,16 +16,6 @@ class createFilesystem extends createResourceBase {
 
     constructor(parent: dialogViewModelBase) {
         super(shell.fileSystems, parent);
-
-        this.fetchAllowVoron();
-    }
-
-    fetchAllowVoron() {
-        $.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
-            new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
-            ).done((stats: Array<databaseStatisticsDto>, config: any) => {
-            this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
-        });
     }
 
     nextOrCreate() {

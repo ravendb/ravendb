@@ -5,7 +5,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 class tasks extends viewModelBase {
 
     router: DurandalRootRouter = null;
-    isOnSystemDatabase: KnockoutComputed<boolean>;
     isOnUserDatabase: KnockoutComputed<boolean>;
     activeSubViewTitle: KnockoutComputed<string>;
     appUrls: computedAppUrls;
@@ -13,8 +12,7 @@ class tasks extends viewModelBase {
     constructor() {
         super();
 
-        this.isOnSystemDatabase = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().isSystem);
-        this.isOnUserDatabase = ko.computed(() => !!this.activeDatabase() && !this.isOnSystemDatabase());
+        this.isOnUserDatabase = ko.computed(() => !!this.activeDatabase());
         this.appUrls = appUrl.forCurrentDatabase();
 
         var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(this.activeDatabase()));

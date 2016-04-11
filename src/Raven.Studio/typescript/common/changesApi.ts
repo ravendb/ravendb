@@ -8,7 +8,6 @@ import commandBase = require("commands/commandBase");
 import folder = require("models/filesystem/folder");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import idGenerator = require("common/idGenerator");
-import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import changesApiWarnStorage = require("common/changesApiWarnStorage");
 import messagePublisher = require("common/messagePublisher");
 
@@ -20,8 +19,6 @@ class changesApi {
     private resourcePath: string;
     public connectToChangesApiTask: JQueryDeferred<any>;
     private webSocket: WebSocket;
-    static isServerSupportingWebSockets: boolean = true;
-    private eventSource: EventSource;
     private readyStateOpen = 1;
     private isDisposing = false;
 
@@ -62,15 +59,8 @@ class changesApi {
         this.resourcePath = appUrl.forResourceQuery(this.rs);
         this.connectToChangesApiTask = $.Deferred();
 
-        if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
+        if ("WebSocket" in window) {
             this.connect(this.connectWebSocket);
-        }
-        else if ("EventSource" in window) {
-            if (eventSourceSettingStorage.useEventSource()) {
-                this.connect(this.connectEventSource);
-            } else {
-                this.connectToChangesApiTask.reject();
-            }
         }
         else {
             //The browser doesn't support nor websocket nor eventsource
@@ -119,53 +109,27 @@ class changesApi {
             });
     }
 
-    private connectWebSocket(connectionString: string) {
+    private connectWebSocket() {
         var connectionOpened: boolean = false;
 
         var wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-        var url = wsProtocol + window.location.host + this.resourcePath + "/changes/websocket?" + connectionString;
+        var url = wsProtocol + window.location.host + this.resourcePath + "/changes";
         this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
             if (connectionOpened === false) {
-                this.serverNotSupportingWebsocketsErrorHandler();
-            } else {
                 this.onError(e);
             }
         };
         this.webSocket.onclose = (e: CloseEvent) => {
-            if (this.isCleanClose === false && changesApi.isServerSupportingWebSockets) {
+            if (this.isCleanClose === false) {
                 // Connection has closed uncleanly, so try to reconnect.
                 this.connect(this.connectWebSocket);
             }
         }
         this.webSocket.onopen = () => {
             console.log("Connected to WebSocket changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
-            this.reconnect();
-            this.successfullyConnectedOnce = true;
-            connectionOpened = true;
-            this.connectToChangesApiTask.resolve();
-        }
-    }
-
-    private connectEventSource(connectionString: string) {
-        var connectionOpened: boolean = false;
-
-        this.eventSource = new EventSource(this.resourcePath + "/changes/events?" + connectionString);
-
-        this.eventSource.onmessage = (e) => this.onMessage(e);
-        this.eventSource.onerror = (e) => {
-            if (connectionOpened === false) {
-                this.connectToChangesApiTask.reject();
-            } else {
-                this.onError(e);
-                this.eventSource.close();
-                this.connect(this.connectEventSource);
-            }
-        };
-        this.eventSource.onopen = () => {
-            console.log("Connected to EventSource changes API (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
             this.reconnect();
             this.successfullyConnectedOnce = true;
             connectionOpened = true;
@@ -194,45 +158,8 @@ class changesApi {
         }
     }
 
-    private serverNotSupportingWebsocketsErrorHandler() {
-        var warningMessage: string;
-        var details;
-
-        if ("EventSource" in window) {
-            if (eventSourceSettingStorage.useEventSource()) {
-                this.connect(this.connectEventSource, true);
-                warningMessage = "Your server doesn't support the WebSocket protocol!";
-                details = "EventSource API is going to be used instead. However, multi tab usage isn't supported.\r\n" +
-                "WebSockets are only supported on servers running on Windows Server 2012 and equivalent. \r\n" +
-                " If you have issues with WebSockets on Windows Server 2012 and equivalent use Status > Debug > WebSocket to debug.";
-                if (changesApi.isServerSupportingWebSockets) {
-                    changesApi.isServerSupportingWebSockets = false;
-                    if (changesApiWarnStorage.showChangesApiWarning()) {
-                        this.commandBase.reportWarningWithButton(warningMessage, details, "Don't warn me again", () => {
-                            if (changesApiWarnStorage.showChangesApiWarning()) {
-                                changesApiWarnStorage.setValue(true);
-                                messagePublisher.reportInfo("Disabled notification about WebSocket.");
-                            }
-                        });
-                    }
-                }
-            } else {
-                changesApi.isServerSupportingWebSockets = false;
-                this.connectToChangesApiTask.reject();
-            }
-        } else {
-            this.connectToChangesApiTask.reject();
-            warningMessage = "Changes API is Disabled!";
-            details = "Your server doesn't support the WebSocket protocol and your browser doesn't support the EventSource API.\r\n" +
-            "In order to use it, please use a browser that supports the EventSource API.";
-            if (changesApi.isServerSupportingWebSockets) {
-                changesApi.isServerSupportingWebSockets = false;
-                this.commandBase.reportWarning(warningMessage, details);
-            }
-        }
-    }
-
     private send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
+        /*TODO: Implement
         this.connectToChangesApiTask.done(() => {
             var args = {
                 id: this.eventsId,
@@ -245,7 +172,7 @@ class changesApi {
             //TODO: exception handling?
             this.commandBase.query("/changes/config", args, this.rs)
                 .done(() => this.saveSentMessages(needToSaveSentMessages, command, args));
-        });
+        });*/
     }
 
     private saveSentMessages(needToSaveSentMessages: boolean, command: string, args) {
@@ -593,11 +520,6 @@ class changesApi {
             if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){
                 console.log("Disconnecting from WebSocket changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
                 this.webSocket.close(this.normalClosureCode, this.normalClosureMessage);
-                isCloseNeeded = true;
-            }
-            else if (this.eventSource && this.eventSource.readyState === this.readyStateOpen) {
-                console.log("Disconnecting from EventSource changes API for (" + this.rs.fullTypeName + " = " + this.rs.name + ")");
-                this.eventSource.close();
                 isCloseNeeded = true;
             }
 

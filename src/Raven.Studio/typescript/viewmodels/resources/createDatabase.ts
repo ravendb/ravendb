@@ -32,9 +32,6 @@ class createDatabase extends createResourceBase {
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
 
-    customBundles = ko.observableArray<string>();
-    selectedCustomBundles = ko.observableArray<string>([]);
-
     replicationBundleChangeDisabled = ko.computed(() => {
         var clusterMode = shell.clusterMode();
         var clusterWide = this.isClusterWideChecked();
@@ -58,35 +55,17 @@ class createDatabase extends createResourceBase {
             return errorMessage;
         });
 
-        this.fetchCustomBundles();
-        this.fetchAllowVoron();
-
         this.fetchClusterWideConfig();
     }
 
     fetchClusterWideConfig() {
+       /* TODO: Implement
         new getClusterTopologyCommand(appUrl.getSystemDatabase())
             .execute()
             .done((topology: topology) => {
                 this.isClusterWideVisible(topology.allNodes().length > 0);
             });
-    }
-
-    fetchCustomBundles() {
-        new getPluginsInfoCommand(appUrl.getSystemDatabase())
-            .execute()
-            .done((result: pluginsInfoDto) => {
-            this.customBundles(result.CustomBundles);
-        });
-    }
-
-    fetchAllowVoron() {
-        $.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
-            new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
-        ).done((stats: Array<databaseStatisticsDto>, config: any) => {
-            this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
-        });
-    }
+*/    }
 
     nextOrCreate() {
         this.creationTaskStarted = true;
@@ -142,18 +121,6 @@ class createDatabase extends createResourceBase {
         this.isScriptedIndexBundleEnabled.toggle();
     }
 
-    toggleCustomBundle(name: string) {
-        if (this.selectedCustomBundles.contains(name)) {
-            this.selectedCustomBundles.remove(name);
-        } else {
-            this.selectedCustomBundles.push(name);
-        }
-    }
-
-    isCustomBundleEnabled(name: string) {
-        return this.selectedCustomBundles().contains(name);
-    }
-
     private getActiveBundles(): string[] {
         var activeBundles: string[] = [];
         if (this.isCompressionBundleEnabled()) {
@@ -191,8 +158,6 @@ class createDatabase extends createResourceBase {
         if (this.isScriptedIndexBundleEnabled()) {
             activeBundles.push("ScriptedIndexResults");
         }
-
-        activeBundles.pushAll(this.selectedCustomBundles());
 
         return activeBundles;
     }

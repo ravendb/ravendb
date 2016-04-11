@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Server.Documents
 {
     public class Alert
     {
@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Alert severity level.
         /// </summary>
-        public AlertLevel AlertLevel { get; set; }
+        public bool IsError { get; set; }
 
         /// <summary>
         /// Exception that occured.
@@ -44,11 +44,5 @@ namespace Raven.Abstractions.Data
         /// Unique key for the alert.
         /// </summary>
         public string UniqueKey { get; set; }
-    }
-
-    public enum AlertLevel
-    {
-        Warning,
-        Error
     }
 }

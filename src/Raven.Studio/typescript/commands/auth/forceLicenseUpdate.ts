@@ -8,7 +8,7 @@ class forceLicenseUpdate extends commandBase {
 
     execute(): JQueryPromise<boolean> {
         var url = "/admin/license/forceUpdate";
-        return this.query(url, null, appUrl.getSystemDatabase(), r => r.Success);
+        return this.query(url, null, null, r => r.Success);
     }
 
 }

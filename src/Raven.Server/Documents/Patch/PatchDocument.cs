@@ -37,17 +37,34 @@ namespace Raven.Server.Documents.Patch
             allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
         }
 
+        public virtual PatchResultData Apply(DocumentsOperationContext context, Document document, PatchRequest patch)
+        {
+            if (document == null)
+                return null;
+
+            if (string.IsNullOrEmpty(patch.Script))
+                throw new InvalidOperationException("Patch script must be non-null and not empty");
+
+            var scope = ApplySingleScript(context, document, false, patch);
+            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key); /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
+            return new PatchResultData
+            {
+                ModifiedDocument = modifiedDocument ?? document.Data,
+                DebugInfo = scope.DebugInfo,
+            };
+        }
+
         public unsafe PatchResultData Apply(DocumentsOperationContext context,
-            string documentId,
+            string documentKey,
             long? etag,
             PatchRequest patch,
             PatchRequest patchIfMissing,
             bool isTestOnly = false,
             bool skipPatchIfEtagMismatch = false)
         {
-            var document = _database.DocumentsStorage.Get(context, documentId);
+            var document = _database.DocumentsStorage.Get(context, documentKey);
             if (Log.IsDebugEnabled)
-                Log.Debug(string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentId, document != null));
+                Log.Debug(string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentKey, document != null));
 
             if (etag.HasValue && document != null && document.Etag != etag.Value)
             {
@@ -62,8 +79,8 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 if (Log.IsDebugEnabled)
-                    Log.Debug($"Got concurrent exception while tried to patch the following document: {documentId}");
-                throw new ConcurrencyException($"Could not patch document '{documentId}' because non current etag was used")
+                    Log.Debug($"Got concurrent exception while tried to patch the following document: {documentKey}");
+                throw new ConcurrencyException($"Could not patch document '{documentKey}' because non current etag was used")
                 {
                     ActualETag = document.Etag,
                     ExpectedETag = etag.Value,
@@ -84,9 +101,9 @@ namespace Raven.Server.Documents.Patch
                 }
                 patchRequest = patchIfMissing;
             }
-            var scope = ApplyInternal(context, document, etag, isTestOnly, patchRequest);
+            var scope = ApplySingleScript(context, document, isTestOnly, patchRequest);
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()),
-                documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                documentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             var result = new PatchResultData
             {
@@ -117,7 +134,7 @@ namespace Raven.Server.Documents.Patch
 
             if (document == null)
             {
-                _database.DocumentsStorage.Put(context, documentId, null, modifiedDocument);
+                _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
             }
             else
             {
@@ -139,7 +156,7 @@ namespace Raven.Server.Documents.Patch
             return result;
         }
 
-        private PatcherOperationScope ApplyInternal(DocumentsOperationContext context, Document document, long? etag, bool isTestOnly, PatchRequest patch)
+        private PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, bool isTestOnly, PatchRequest patch)
         {
             var scope = new PatcherOperationScope(_database, context, isTestOnly)
             {
