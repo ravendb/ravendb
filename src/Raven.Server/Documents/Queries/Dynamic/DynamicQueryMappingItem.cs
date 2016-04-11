@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Documents.Queries.Dynamic
+﻿using Raven.Abstractions.Indexing;
+
+namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryMappingItem
     {
@@ -7,5 +9,7 @@
         //public string From { get; set; }
         //public string To { get; set; }
         public string Name { get; set; }
+
+        public FieldMapReduceOperation MapReduceOperation { get; set; }
     }
 }

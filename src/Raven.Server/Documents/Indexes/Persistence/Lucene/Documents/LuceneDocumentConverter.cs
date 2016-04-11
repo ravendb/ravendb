@@ -8,7 +8,6 @@ using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
-using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -34,9 +33,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private readonly ICollection<IndexField> _fields;
 
-        public LuceneDocumentConverter(ICollection<IndexField> fields)
+        private readonly bool _reduceOutput;
+
+        public LuceneDocumentConverter(ICollection<IndexField> fields, bool reduceOutput = false)
         {
             _fields = fields;
+            _reduceOutput = reduceOutput;
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -56,7 +58,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             if (document.Key != null)
             {
-                yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+                if (_reduceOutput == false)
+                    yield return GetOrCreateField(Constants.DocumentIdFieldName, null, document.Key, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+                else
+                    yield return GetOrCreateField(Constants.ReduceKeyFieldName, null, document.Key, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
             }
             
             foreach (var indexField in _fields)
@@ -216,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is LazyDoubleValue)
             {
-                var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner)); // TODO arek - 
+                var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner), CultureInfo.InvariantCulture); // TODO arek - 
 
                 yield return numericField.SetDoubleValue(doubleValue);
             }

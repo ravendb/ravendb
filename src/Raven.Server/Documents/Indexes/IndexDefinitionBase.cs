@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes
     {
         protected static readonly Slice DefinitionSlice = "Definition";
 
-        private byte[] _cachedHashCodeAsBytes;
+        private int? _cachedHashCode;
 
         protected IndexDefinitionBase(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
         {
@@ -82,23 +82,20 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
-
-        public virtual byte[] GetDefinitionHash()
-        {
-            if (_cachedHashCodeAsBytes != null)
-                return _cachedHashCodeAsBytes;
-
-            _cachedHashCodeAsBytes = BitConverter.GetBytes(GetHashCode());
-            return _cachedHashCodeAsBytes;
-        }
-
+        
         public override int GetHashCode()
         {
+            if (_cachedHashCode != null)
+                return _cachedHashCode.Value;
+
             unchecked
             {
                 var hashCode = MapFields?.GetDictionaryHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ (Name?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Collections?.GetEnumerableHashCode() ?? 0);
+
+                _cachedHashCode = hashCode;
+
                 return hashCode;
             }
         }

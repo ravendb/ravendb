@@ -76,6 +76,10 @@ namespace Raven.Server.Documents.Handlers
                                 count++;
                                 var size = *(int*)docPtr;
                                 docPtr += sizeof(int);
+                                if (size + docPtr > end) //TODO: Better error
+                                    throw new InvalidDataException(
+                                        "The blittable size specified is more than the available data, aborting...");
+                                //TODO: Paranoid mode, has to validate the data is safe
                                 var reader = new BlittableJsonReaderObject(docPtr, size, context);
                                 docPtr += size;
                                 string docKey;

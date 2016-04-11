@@ -99,12 +99,27 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(DocumentsStorage)}");
+
+            exceptionAggregator.Execute(() =>
+            {
             _unmanagedBuffersPool?.Dispose();
             _unmanagedBuffersPool = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
             ContextPool?.Dispose();
             ContextPool = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
             Environment?.Dispose();
             Environment = null;
+            });
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public void Initialize()
@@ -357,7 +372,7 @@ namespace Raven.Server.Documents
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
-        public long GetLastTombstoneEtag<TTransaction>(TransactionOperationContext<TTransaction> context, string collection) where TTransaction : RavenTransaction
+        public long GetLastTombstoneEtag(DocumentsOperationContext context, string collection)
         {
             Table table;
             try
@@ -382,7 +397,7 @@ namespace Raven.Server.Documents
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
-        public long GetNumberOfTombstonesWithDocumentEtagLowerThan(TransactionOperationContext context, string collection, long etag)
+        public long GetNumberOfTombstonesWithDocumentEtagLowerThan(DocumentsOperationContext context, string collection, long etag)
         {
             Table table;
             try

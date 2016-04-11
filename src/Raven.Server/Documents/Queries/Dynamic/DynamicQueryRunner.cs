@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var map = DynamicQueryMapping.Create(collection, query);
 
-            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0)
+            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.GroupByFields.Length == 0)
             {
                 // we optimize for empty queries without sorting options
                 var result = new DocumentQueryResult
@@ -63,9 +63,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             Index index;
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
-                var autoIndexDef = map.CreateAutoIndexDefinition();
+                var definition = map.CreateAutoIndexDefinition();
 
-                var id = _indexStore.CreateIndex(autoIndexDef);
+                var id = _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
                 if (query.WaitForNonStaleResultsTimeout == null)

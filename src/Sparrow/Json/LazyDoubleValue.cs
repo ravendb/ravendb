@@ -19,7 +19,7 @@ namespace Sparrow.Json
             if (self._val != null)
                 return self._val.Value;
 
-            var val = double.Parse(self.Inner, CultureInfo.InvariantCulture);
+            var val = double.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
             self._val = val;
             return val;
         }

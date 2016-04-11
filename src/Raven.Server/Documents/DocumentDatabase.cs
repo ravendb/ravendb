@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Threading;
-using Raven.Abstractions.Data;
+
+using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,6 +18,8 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(DocumentDatabase));
+
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public readonly PatchDocument Patch;
 
@@ -80,17 +83,33 @@ namespace Raven.Server.Documents
         {
             _databaseShutdown.Cancel();
 
-            SqlReplicationLoader?.Dispose();
-            SqlReplicationLoader = null;
+            var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(DocumentDatabase)}");
 
-            IndexStore?.Dispose();
-            IndexStore = null;
+            exceptionAggregator.Execute(() =>
+            {
+                IndexStore?.Dispose();
+                IndexStore = null;
+            });
 
-            DocumentTombstoneCleaner?.Dispose();
-            DocumentTombstoneCleaner = null;
+            exceptionAggregator.Execute(() =>
+            {
+                DocumentTombstoneCleaner?.Dispose();
+                DocumentTombstoneCleaner = null;
+            });
 
-            DocumentsStorage?.Dispose();
-            DocumentsStorage = null;
+            exceptionAggregator.Execute(() =>
+            {
+                SqlReplicationLoader?.Dispose();
+                SqlReplicationLoader = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                DocumentsStorage?.Dispose();
+                DocumentsStorage = null;
+            });
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public void RunIdleOperations()

@@ -24,13 +24,9 @@ namespace Voron.Impl
         private readonly long _id;
         private Tree _root;
 
-        internal Action<LowLevelTransaction> AfterCommit = delegate { };
         public bool FlushedToJournal { get; private set; }
 
-        public Tree RootObjects
-        {
-            get { return _root; }
-        }
+        public Tree RootObjects => _root;
 
         private readonly WriteAheadJournal _journal;
         private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
@@ -222,7 +218,7 @@ namespace Voron.Impl
                 pageSize = Environment.Options.PageSize;
             }
             
-            Memory.CopyInline(newPage.Pointer, currentPage.Pointer, pageSize);            
+            Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);            
 
             return newPage;
         }
@@ -516,7 +512,7 @@ namespace Voron.Impl
             _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, -1);
 
             Committed = true;
-            AfterCommit(this);
+            _env.TransactionAfterCommit(this);
         }
 
 

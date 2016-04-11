@@ -20,6 +20,7 @@ namespace Voron.Impl
 
         private readonly Dictionary<string, PrefixTree> _prefixTrees = new Dictionary<string, PrefixTree>();
         private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
+        private readonly HashSet<ICommittable> _participants = new HashSet<ICommittable>();
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
@@ -55,11 +56,19 @@ namespace Voron.Impl
 
         public void Commit()
         {
-            CommitTrees();
+            if (_lowLevelTransaction.Flags != (TransactionFlags.ReadWrite))
+                return; // nothing to do
+
+            PrepareForCommit();
             _lowLevelTransaction.Commit();
         }
 
-        internal void CommitTrees()
+        public void Register(ICommittable participant)
+        {
+            _participants.Add(participant);
+        }
+
+        internal void PrepareForCommit()
         {
             if (_multiValueTrees != null)
             {
@@ -69,8 +78,7 @@ namespace Voron.Impl
                     var key = multiValueTree.Key.Item2;
                     var childTree = multiValueTree.Value;
 
-                    var trh =
-                        (TreeRootHeader*)parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
+                    var trh = (TreeRootHeader*)parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
                     childTree.State.CopyTo(trh);
                 }
             }
@@ -79,6 +87,7 @@ namespace Voron.Impl
             {
                 if (tree == null)
                     continue;
+
                 tree.State.InWriteTransaction = false;
                 var treeState = tree.State;
                 if (treeState.IsModified)
@@ -88,18 +97,10 @@ namespace Voron.Impl
                 }
             }
 
-            foreach (var prefixTree in PrefixTrees)
+            foreach (var participant in _participants)
             {
-                // FEDERICO: This should never happen, why it happens on tree still eludes me. 
-                if (prefixTree == null)
-                    continue;
-
-                var treeState = prefixTree.State;
-                if (treeState.IsModified)
-                {
-                    var treePtr = (PrefixTreeRootHeader*)_lowLevelTransaction.RootObjects.DirectAdd((Slice)prefixTree.Name, sizeof(PrefixTreeRootHeader));
-                    treeState.CopyTo(treePtr);
-                }
+                if (participant.RequiresParticipation)
+                    participant.PrepareForCommit();
             }
         }
 
@@ -226,7 +227,7 @@ namespace Voron.Impl
             if (_prefixTrees.TryGetValue(treeName, out tree))
                 return tree;
 
-            if (PrefixTree.TryOpen(_lowLevelTransaction, _lowLevelTransaction.RootObjects, treeName, out tree))
+            if (PrefixTree.TryOpen(this, _lowLevelTransaction.RootObjects, treeName, out tree))
             {
                 _prefixTrees.Add(treeName, tree);
                 return tree;
@@ -246,7 +247,7 @@ namespace Voron.Impl
 
             Slice key = name;
 
-            tree = PrefixTree.Create(LowLevelTransaction, LowLevelTransaction.RootObjects, name, subtreeDepth);
+            tree = PrefixTree.Create(this, LowLevelTransaction.RootObjects, name, subtreeDepth);
             tree.Name = name;
 
             AddPrefixTree(name, tree);

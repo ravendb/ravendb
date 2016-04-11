@@ -8,8 +8,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     {
         public IndexField[] GroupByFields;
 
-        public AutoMapReduceIndexDefinition(string name, string[] collections, IndexField[] mapFields, IndexField[] groupByFields)
-            : base(name, collections, IndexLockMode.Unlock, mapFields)
+        public AutoMapReduceIndexDefinition(string[] collections, IndexField[] mapFields, IndexField[] groupByFields)
+            : base(IndexNameFinder.FindMapReduceIndexName(collections, mapFields, groupByFields), collections, IndexLockMode.Unlock, mapFields)
         {
             GroupByFields = groupByFields;
         }
