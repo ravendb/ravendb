@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Indexes
                         _indexingInProgress = true;
 
                         if (Log.IsDebugEnabled)
-                            Log.Debug($"Starting indexing for '{Name} ({IndexId})'.'");
+                            Log.Debug($"Starting indexing for '{Name} ({IndexId})'.");
 
                         _mre.Reset();
 

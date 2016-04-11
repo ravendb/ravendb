@@ -23,71 +23,65 @@ namespace FastTests.Utils
                 {
                     ["Bar"] = new DynamicJsonValue
                     {
-                        ["C"] = new DynamicJsonArray
+                        ["C"] = new DynamicJsonArray(new[]
                         {
-                            Items = new Queue<object>(new[]
+                            new DynamicJsonValue
                             {
-                                new DynamicJsonValue
+                                ["X"] = new DynamicJsonValue
                                 {
-                                    ["X"] = new DynamicJsonValue
-                                    {
-                                        ["Y"] = "ccc/1"
-                                    }
-                                },
-                                new DynamicJsonValue
+                                    ["Y"] = "ccc/1"
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["X"] = new DynamicJsonValue
                                 {
-                                    ["X"] = new DynamicJsonValue
-                                    {
-                                        ["Y"] = "ccc/2"
-                                    }
-                                },
-                                new DynamicJsonValue
+                                    ["Y"] = "ccc/2"
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["X"] = new DynamicJsonValue
                                 {
-                                    ["X"] = new DynamicJsonValue
-                                    {
-                                        ["Y"] = "ccc/3"
-                                    }
-                                },
-                                new DynamicJsonValue
+                                    ["Y"] = "ccc/3"
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["X"] = new DynamicJsonValue
                                 {
-                                    ["X"] = new DynamicJsonValue
-                                    {
-                                        ["YD"] = "ccc/4"
-                                    }
-                                },
-                                new DynamicJsonValue
+                                    ["YD"] = "ccc/4"
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["X"] = new DynamicJsonValue
                                 {
-                                    ["X"] = new DynamicJsonValue
-                                    {
-                                        ["Y"] = "ccc/5"
-                                    }
-                                },
-                            })
-                        }
+                                    ["Y"] = "ccc/5"
+                                }
+                            },
+                        })
                     }
                 },
-                ["ContactInfoId"] = new DynamicJsonArray
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = "foobar/1"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = "foobar/2"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = "foobar/3"
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = "foobar/4"
-                        },
-                    })
-                }
+                        ["Foo"] = "foobar/1"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = "foobar/2"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = "foobar/3"
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = "foobar/4"
+                    },
+                })
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
@@ -110,15 +104,12 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    Items = new Queue<object>(new[]
-                    {
-                        GetStringArray("foo"),
-                        GetStringArray("bar"),
-                        GetStringArray("foobar")
-                    })
-                }
+                    GetStringArray("foo"),
+                    GetStringArray("bar"),
+                    GetStringArray("foobar")
+                })
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
@@ -141,15 +132,12 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    Items = new Queue<object>(new[]
-                    {
-                        GetObjectArray("foo"),
-                        GetObjectArray("bar"),
-                        GetObjectArray("foobar")
-                    })
-                }
+                    GetObjectArray("foo"),
+                    GetObjectArray("bar"),
+                    GetObjectArray("foobar")
+                })
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
@@ -172,15 +160,12 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    Items = new Queue<object>(new[]
-                    {
-                        GetNestedObjectArray("foo"),
-                        GetNestedObjectArray("bar"),
-                        GetNestedObjectArray("foobar")
-                    })
-                }
+                    GetNestedObjectArray("foo"),
+                    GetNestedObjectArray("bar"),
+                    GetNestedObjectArray("foobar")
+                })
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
@@ -203,24 +188,21 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = GetNestedObjectArray("foo")
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = GetNestedObjectArray("bar")
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = GetNestedObjectArray("foobar")
-                        },
-                    })
-                }
+                        ["Foo"] = GetNestedObjectArray("foo")
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = GetNestedObjectArray("bar")
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = GetNestedObjectArray("foobar")
+                    },
+                })
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
@@ -243,33 +225,30 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
+                        ["BarX"] = new DynamicJsonValue
                         {
-                            ["BarX"] = new DynamicJsonValue
-                            {
-                                ["Foo"] = GetNestedObjectArray("foo")
-                            }
-                        },
-                        new DynamicJsonValue
+                            ["Foo"] = GetNestedObjectArray("foo")
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["BarX"] = new DynamicJsonValue
                         {
-                            ["BarX"] = new DynamicJsonValue
-                            {
-                                ["Foo"] = GetNestedObjectArray("bar")
-                            }
-                        },
-                        new DynamicJsonValue
+                            ["Foo"] = GetNestedObjectArray("bar")
+                        }
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["BarX"] = new DynamicJsonValue
                         {
-                            ["BarX"] = new DynamicJsonValue
-                            {
-                                ["Foo"] = GetNestedObjectArray("foobar")
-                            }
-                        },
-                    })
-                }
+                            ["Foo"] = GetNestedObjectArray("foobar")
+                        }
+                    },
+                })
             };
 
             using (var pool = new UnmanagedBuffersPool("test"))
@@ -288,65 +267,54 @@ namespace FastTests.Utils
 
         private static DynamicJsonArray GetStringArray(string prefix)
         {
-            return new DynamicJsonArray
-            {
-                Items = new Queue<object>(new[] { $"{prefix}/1", $"{prefix}/2", $"{prefix}/3" })
-            };
+            return new DynamicJsonArray(new[] {$"{prefix}/1", $"{prefix}/2", $"{prefix}/3"});
         }
 
         private static DynamicJsonArray GetObjectArray(string prefix)
         {
-            var array = new DynamicJsonArray
+            return new DynamicJsonArray(new[]
             {
-                Items = new Queue<object>(new[]
+                new DynamicJsonValue
                 {
-                    new DynamicJsonValue
-                    {
-                        ["Foo"] = $"{prefix}/1"
-                    },
-                    new DynamicJsonValue
-                    {
-                        ["Foo"] = $"{prefix}/2"
-                    },
-                    new DynamicJsonValue
-                    {
-                        ["Foo"] = $"{prefix}/3"
-                    },
-                })
-            };
-            return array;
+                    ["Foo"] = $"{prefix}/1"
+                },
+                new DynamicJsonValue
+                {
+                    ["Foo"] = $"{prefix}/2"
+                },
+                new DynamicJsonValue
+                {
+                    ["Foo"] = $"{prefix}/3"
+                },
+            });
         }
 
         private static DynamicJsonArray GetNestedObjectArray(string prefix)
         {
-            var array = new DynamicJsonArray
+            return new DynamicJsonArray(new[]
             {
-                Items = new Queue<object>(new[]
+                new DynamicJsonValue
                 {
-                    new DynamicJsonValue
+                    ["Bar"] = new DynamicJsonValue
                     {
-                        ["Bar"] = new DynamicJsonValue
-                        {
-                            ["Foo"] = $"{prefix}/1"
-                        }
-                    },
-                    new DynamicJsonValue
+                        ["Foo"] = $"{prefix}/1"
+                    }
+                },
+                new DynamicJsonValue
+                {
+                    ["Bar"] = new DynamicJsonValue
                     {
-                        ["Bar"] = new DynamicJsonValue
-                        {
-                            ["Foo"] = $"{prefix}/2"
-                        }
-                    },
-                    new DynamicJsonValue
+                        ["Foo"] = $"{prefix}/2"
+                    }
+                },
+                new DynamicJsonValue
+                {
+                    ["Bar"] = new DynamicJsonValue
                     {
-                        ["Bar"] = new DynamicJsonValue
-                        {
-                            ["Foo"] = $"{prefix}/3"
-                        }
-                    },
-                })
-            };
-            return array;
+                        ["Foo"] = $"{prefix}/3"
+                    }
+                },
+            });
         }
 
         [Fact]
@@ -359,57 +327,59 @@ namespace FastTests.Utils
                 {
                     ["Bar"] = new DynamicJsonValue
                     {
-                        ["C"] = new DynamicJsonArray
+                        ["C"] = new DynamicJsonArray(new[]
                         {
-                            Items = new Queue<object>(new[]
+                            new DynamicJsonValue
                             {
-                                new DynamicJsonValue
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = "ccc/1"
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = "ccc/1"
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["YABC"] = "ccc/2"
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["YABC"] = "ccc/2"
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = "ccc/3"
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = "ccc/3"
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = "ccc/4"
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = "ccc/4"
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = "ccc/5"
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = "ccc/5"
                                     }
-                                },
-                            })
-                        }
+                                }
+                            },
+                        })
                     }
                 }
             };
@@ -434,57 +404,59 @@ namespace FastTests.Utils
                 {
                     ["Bar"] = new DynamicJsonValue
                     {
-                        ["C"] = new DynamicJsonArray
+                        ["C"] = new DynamicJsonArray(new[]
                         {
-                            Items = new Queue<object>(new[]
+                            new DynamicJsonValue
                             {
-                                new DynamicJsonValue
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = 1
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 1
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["YABC"] = 2
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["YABC"] = 2
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = 3
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 3
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = 4
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 4
                                     }
-                                },
-                                new DynamicJsonValue
+                                }
+                            },
+                            new DynamicJsonValue
+                            {
+                                ["A"] = new DynamicJsonValue
                                 {
-                                    ["A"] = new DynamicJsonValue {
-                                        ["X"] = new DynamicJsonValue
-                                        {
-                                            ["Y"] = 5
-                                        }
+                                    ["X"] = new DynamicJsonValue
+                                    {
+                                        ["Y"] = 5
                                     }
-                                },
-                            })
-                        }
+                                }
+                            },
+                        })
                     }
                 }
             };
@@ -504,10 +476,7 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
-                {
-                    Items = new Queue<object>(new object[] { 1, 2, 3 })
-                }
+                ["ContactInfoId"] = new DynamicJsonArray(new object[] {1, 2, 3})
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new JsonOperationContext(pool))
@@ -525,28 +494,25 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
+                ["ContactInfoId"] = new DynamicJsonArray(new[]
                 {
-                    Items = new Queue<object>(new[]
+                    new DynamicJsonValue
                     {
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = 11
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = 2
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = 3
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["Foo"] = 4
-                        },
-                    })
-                }
+                        ["Foo"] = 11
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = 2
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = 3
+                    },
+                    new DynamicJsonValue
+                    {
+                        ["Foo"] = 4
+                    },
+                })
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new JsonOperationContext(pool))
@@ -564,10 +530,7 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId"] = new DynamicJsonArray
-                {
-                    Items = new Queue<object>(new[] { "foo/1", "foo/2", "foo/3" })
-                }
+                ["ContactInfoId"] = new DynamicJsonArray(new[] { "foo/1", "foo/2", "foo/3" })
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new JsonOperationContext(pool))
@@ -589,15 +552,9 @@ namespace FastTests.Utils
                 {
                     ["Bar"] = new DynamicJsonValue
                     {
-                        ["ContactInfoId"] = new DynamicJsonArray
-                        {
-                            Items = new Queue<object>(new[] { "foo/1", "foo/2", "foo/3" })
-                        }
+                        ["ContactInfoId"] = new DynamicJsonArray(new[] { "foo/1", "foo/2", "foo/3" })
                     },
-                    ["ContactInfoId2"] = new DynamicJsonArray
-                    {
-                        Items = new Queue<object>(new[] { "foo/1", "foo/2", "foo/3" })
-                    }
+                    ["ContactInfoId2"] = new DynamicJsonArray(new[] { "foo/1", "foo/2", "foo/3" })
                 }
             };
             using (var pool = new UnmanagedBuffersPool("test"))
@@ -620,18 +577,9 @@ namespace FastTests.Utils
             var obj = new DynamicJsonValue
             {
                 ["Name"] = "John Doe",
-                ["ContactInfoId1"] = new DynamicJsonArray
-                {
-                    Items = new Queue<object>(new object[] { 1, 2, 3 })
-                },
-                ["ContactInfoId2"] = new DynamicJsonArray
-                {
-                    Items = new Queue<object>(new object[] { 1.1, 2.2, 3.3 })
-                },
-                ["ContactInfoId3"] = new DynamicJsonArray
-                {
-                    Items = new Queue<object>(new object[] { (long)1, (long)2, (long)3 })
-                }
+                ["ContactInfoId1"] = new DynamicJsonArray(new object[] { 1, 2, 3 }),
+                ["ContactInfoId2"] = new DynamicJsonArray(new object[] { 1.1, 2.2, 3.3 }),
+                ["ContactInfoId3"] = new DynamicJsonArray(new object[] { (long)1, (long)2, (long)3 })
             };
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var context = new JsonOperationContext(pool))

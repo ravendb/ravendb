@@ -2,7 +2,6 @@
 
 class resource {
     isAdminCurrentTenant = ko.observable<boolean>(false);
-    isSystem = false;
     isSelected = ko.observable<boolean>(false);
     isChecked = ko.observable<boolean>(false);
     itemCountText: KnockoutComputed<string>;
@@ -11,7 +10,7 @@ class resource {
     isLoaded = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>(false);
     isLicensed: KnockoutComputed<boolean>;
-    activeBundles = ko.observableArray<string>();
+    activeBundles = ko.observableArray<string>(); // TODO: This should be removed
     isImporting = ko.observable<boolean>(false);
     importStatus = ko.observable<string>("");
     statistics: KnockoutObservable<any>;

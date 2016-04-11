@@ -71,7 +71,7 @@ class restore extends viewModelBase {
         this.isForbidden(shell.isGlobalAdmin() === false);
         if (this.isForbidden() === false) {
             this.isBusy(true);
-            var db = appUrl.getSystemDatabase();
+            var db = appUrl.getDatabase();
             var self = this;
 
             new getDocumentWithMetadataCommand("Raven/Restore/InProgress", db, true).execute()

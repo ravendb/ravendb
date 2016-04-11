@@ -35,7 +35,7 @@ class globalConfigReplications extends viewModelBase {
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
-        var db = appUrl.getSystemDatabase();
+        var db = null;
         if (db) {
             $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
                 .done(() => deferred.resolve({ can: true }) )
@@ -115,7 +115,7 @@ class globalConfigReplications extends viewModelBase {
     }
 
     syncChanges(deleteConfig: boolean) {
-        if (deleteConfig) {
+        /*if (deleteConfig) {
             var task1 = new deleteDocumentCommand("Raven/Global/Replication/Config", appUrl.getSystemDatabase())
                 .execute();
             var task2 = new deleteDocumentCommand("Raven/Global/Replication/Destinations", appUrl.getSystemDatabase())
@@ -143,7 +143,7 @@ class globalConfigReplications extends viewModelBase {
                     }
                 }
             }
-        }
+        }*/
     }
 
     private prepareAndSaveReplicationSetup(source: string) {
@@ -152,7 +152,7 @@ class globalConfigReplications extends viewModelBase {
     }
 
     private saveReplicationSetup() {
-        var db = appUrl.getSystemDatabase();
+        var db = null;
         if (db) {
             new saveReplicationDocumentCommand(this.replicationsSetup().toDto(false), db, true)
                 .execute()
@@ -161,7 +161,7 @@ class globalConfigReplications extends viewModelBase {
     }
 
     saveAutomaticConflictResolutionSettings() {
-        var db = appUrl.getSystemDatabase();
+        var db = null;
         if (db) {
             new saveAutomaticConflictResolutionDocumentCommand(this.replicationConfig().toDto(), db, true)
                 .execute()

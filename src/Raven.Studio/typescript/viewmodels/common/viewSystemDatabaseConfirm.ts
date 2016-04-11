@@ -5,8 +5,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 class viewSystemDatabaseConfirm extends dialogViewModelBase {
 
     public viewTask = $.Deferred();
-    private wasConfirmed:boolean = false;
-    
+    private wasConfirmed: boolean = false;
+
     constructor(private confirmationMessage: string, private previousDb: database = null) {
         super();
     }

@@ -35,6 +35,8 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public string CollectionName { get; set; }
 
+        public bool IsSystemDocument { get; set; }
+
         /// <summary>
         /// Document type name.
         /// </summary>

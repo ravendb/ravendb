@@ -115,7 +115,7 @@ namespace Raven.Server.Documents
         {
             if (databaseName.IsNullOrWhiteSpace())
                 throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
-            if (databaseName.Equals("<system>"))
+            if (databaseName.Equals("<system>")) // This is here to guard against old ravendb tests
                 throw new ArgumentNullException(nameof(databaseName), "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
 
             var document = GetDatabaseDocument(databaseName, ignoreDisabledDatabase);

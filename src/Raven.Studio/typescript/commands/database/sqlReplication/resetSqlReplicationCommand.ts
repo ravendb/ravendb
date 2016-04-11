@@ -7,7 +7,7 @@ class resetSqlReplicationCommand extends commandBase {
 
     execute() {
         var args = { sqlReplicationName: this.sqlReplicationName };
-        var url = "/studio-tasks/reset-sql-replication" + super.urlEncodeArgs(args);
+        var url = "/sql-replication/reset" + super.urlEncodeArgs(args);
         return this.post(url, null, this.db);
     }
 }

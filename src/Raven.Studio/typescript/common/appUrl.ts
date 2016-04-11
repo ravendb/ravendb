@@ -22,7 +22,7 @@ class appUrl {
     }
 
     //private static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    private static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
+    public static baseUrl = appUrl.detectAppUrl(); // This should be used when serving HTML5 Studio from the server app.
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
@@ -659,7 +659,7 @@ class appUrl {
     }
 
     static forResourceQuery(res: resource): string {
-        if (res && res instanceof database && !res.isSystem) {
+        if (res && res instanceof database) {
             return appUrl.baseUrl + "/databases/" + res.name;
         } else if (res && res instanceof filesystem) {
             return appUrl.baseUrl + "/fs/" + res.name;
@@ -861,19 +861,11 @@ class appUrl {
             var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd);
             var unescapedDatabaseName = decodeURIComponent(databaseName);
             var db = new database(unescapedDatabaseName);
-            db.isSystem = unescapedDatabaseName === "<system>";
             return db;
         } else {
             // No database is specified in the URL. Assume it's the system database.
             return null;
         } 
-    }
-
-    static getSystemDatabase(): database {
-        var db = new database("<system>");
-        db.isSystem = true;
-        db.isVisible(false);
-        return db;
     }
 
     /**
@@ -1063,8 +1055,6 @@ class appUrl {
     private static getEncodedCounterPart(cs?: counterStorage) {
         return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
-
-    public static warnWhenUsingSystemDatabase: boolean = true;
 
     public static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {

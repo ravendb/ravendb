@@ -31,6 +31,7 @@ namespace Raven.Abstractions.Data
 
         public const string RavenLastModified = "Raven-Last-Modified";
 
+        // TODO: Delete this, we don't have system database anymore
         public const string SystemDatabase = "<system>";
 
         public const string TemporaryScoreValue = "Temp-Index-Score";
@@ -145,8 +146,6 @@ namespace Raven.Abstractions.Data
         public const string RavenReplicationIndexesTombstones = "Raven/Replication/Indexes/Tombstones";
         public const string RavenReplicationTransformerTombstones = "Raven/Replication/Transformers/Tombstones";
 
-        public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
-
         //Periodic export
         public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
 
@@ -258,7 +257,9 @@ namespace Raven.Abstractions.Data
 
         public class SqlReplication
         {
-            public const string SqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
+            public const string SqlReplicationConnections = "Raven/SqlReplication/Connections";
+            public const string SqlReplicationConfigurationPrefix = "Raven/SqlReplication/Configuration/";
+            public const string RavenSqlReplicationStatusPrefix = "Raven/SqlReplication/Status/";
         }
 
         public class PeriodicExport
@@ -270,25 +271,6 @@ namespace Raven.Abstractions.Data
             public const string AzureStorageAccount = "Raven/AzureStorageAccount";
 
             public const string AzureStorageKey = "Raven/AzureStorageKey";
-        }
-
-        public class Global
-        {
-            public const string GlobalSettingsDocumentKey = "Raven/Global/Settings";
-
-            public const string ReplicationConflictResolutionDocumentName = "Raven/Global/Replication/Config";
-
-            public const string ReplicationDestinationsDocumentName = "Raven/Global/Replication/Destinations";
-
-            public const string VersioningDocumentPrefix = "Raven/Global/Versioning/";
-
-            public const string VersioningDefaultConfigurationDocumentName = "Raven/Global/Versioning/DefaultConfiguration";
-
-            public const string PeriodicExportDocumentName = "Raven/Global/Backup/Periodic/Setup";
-
-            public const string SqlReplicationConnectionsDocumentName = "Raven/Global/SqlReplication/Connections";
-
-            public const string JavascriptFunctions = "Raven/Global/Javascript/Functions";
         }
 
         public static class Smuggler

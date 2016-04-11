@@ -31,10 +31,8 @@ class trafficWatchClient {
 
     public connect() {
         var connectionString = 'singleUseAuthToken=' + this.token + '&id=' + this.eventsId;
-        if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
+        if ("WebSocket" in window) {
             this.connectWebSocket(connectionString);
-        } else if ("EventSource" in window) {
-            this.connectEventSource(connectionString);
         } else {
             //The browser doesn't support nor websocket nor eventsource
             //or we are in IE10 or IE11 and the server doesn't support WebSockets.
@@ -68,28 +66,6 @@ class trafficWatchClient {
         }
     }
 
-    private connectEventSource(connectionString: string) {
-        var connectionOpened: boolean = false;
-
-        this.eventSource = new EventSource(this.resourcePath + '/traffic-watch/events?' + connectionString);
-
-        this.eventSource.onmessage = (e) => this.onMessage(e);
-        this.eventSource.onerror = (e) => {
-            if (connectionOpened == false) {
-                this.connectionOpeningTask.reject();
-            } else {
-                this.eventSource.close();
-                this.connectionClosingTask.resolve(e);
-            }
-        };
-        this.eventSource.onopen = () => {
-            console.log("Connected to EventSource HTTP Trace for " + ((!!this.resourcePath) ? (this.resourcePath) : "admin"));
-            this.successfullyConnectedOnce = true;
-            connectionOpened = true;
-            this.connectionOpeningTask.resolve();
-        }
-    }
-    
     private fireEvents<T>(events: Array<any>, param: T, filter: (T) => boolean) {
         for (var i = 0; i < events.length; i++) {
             if (filter(param)) {

@@ -58,7 +58,7 @@ class globalConfigCustomFunctions extends viewModelBase {
     }
 
     fetchCustomFunctions() {
-        var fetchTask = new getCustomFunctionsCommand(appUrl.getSystemDatabase(), true).execute();
+        var fetchTask = new getCustomFunctionsCommand(appUrl.getDatabase(), true).execute();
         fetchTask.done((cf: customFunctions) => {
             this.documentText(cf.functions);
             this.activated(true);
@@ -76,7 +76,7 @@ class globalConfigCustomFunctions extends viewModelBase {
 
     syncChanges(deleteConfig: boolean) {
         if (deleteConfig) {
-            new deleteDocumentCommand("Raven/Global/Javascript/Functions", appUrl.getSystemDatabase())
+            new deleteDocumentCommand("Raven/Global/Javascript/Functions", appUrl.getDatabase())
                 .execute()
                 .done(() => messagePublisher.reportSuccess("Global Settings were successfully saved!"))
                 .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save global settings!", response.responseText, response.statusText));
@@ -94,7 +94,7 @@ class globalConfigCustomFunctions extends viewModelBase {
                 var cf = new customFunctions({
                     Functions: this.documentText()
                 });
-                var saveTask = new saveCustomFunctionsCommand(appUrl.getSystemDatabase(), cf, true).execute();
+                var saveTask = new saveCustomFunctionsCommand(appUrl.getDatabase(), cf, true).execute();
                 saveTask.done(() => this.dirtyFlag().reset());
             }
             else {

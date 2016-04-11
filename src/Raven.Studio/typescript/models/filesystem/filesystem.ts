@@ -10,11 +10,10 @@ class filesystem extends resource {
     static type = "filesystem";
     iconName = "fa fa-file-image-o";
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, isLoaded: boolean = false, bundles: string[] = []) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, isLoaded: boolean = false) {
         super(name, TenantType.FileSystem, isAdminCurrentTenant);
         this.fullTypeName = "File System";
         this.disabled(isDisabled);
-        this.activeBundles(bundles);
         this.isLoaded(isLoaded);
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().fileCountText() : "");
         this.isLicensed = ko.computed(() => {

@@ -17,7 +17,6 @@ class adminSettings extends viewModelBase {
         super();
 
         this.isSystemDatabaseForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
-        this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
 
         var licenseInformation = { route: 'admin/settings/licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation() };
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };
@@ -57,7 +56,7 @@ class adminSettings extends viewModelBase {
             consoleRoute,
             studioConfigRoute
         ];
-        if (license.licenseStatus().Attributes.hotSpare === "true")
+        if (!!license && license.licenseStatus().Attributes.hotSpare === "true")
             routes.push(hotSpareRoute);
         if (!shell.has40Features()) {
             routes.remove(clusterRoute);
@@ -79,15 +78,6 @@ class adminSettings extends viewModelBase {
 
     canActivate(args): any {
         return true;
-    }
-
-    navigateToSystemDatabase() {
-        this.promptNavSystemDb(true).done(() => {
-            var db: database = appUrl.getSystemDatabase();
-            db.activate();
-            var url = appUrl.forDocuments(null, db);
-            this.navigate(url);
-        });
     }
 }
 

@@ -14,11 +14,11 @@ class database extends resource {
     static type = "database";
     iconName: KnockoutComputed<string>;
 
-    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = [], isIndexingDisabled: boolean = false, isRejectClientsMode = false, isLoaded = false, clusterWide = false) {
+    constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, isIndexingDisabled: boolean = false, isRejectClientsMode = false, isLoaded = false, clusterWide = false) {
         super(name, TenantType.Database, isAdminCurrentTenant);
         this.fullTypeName = "Database";
         this.disabled(isDisabled);
-        this.activeBundles(bundles);
+        this.activeBundles(['sql-replication', 'replication']);
         this.indexingDisabled(isIndexingDisabled);
         this.rejectClientsMode(isRejectClientsMode);
         this.isLoaded(isLoaded);
@@ -26,13 +26,7 @@ class database extends resource {
         this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-database" : "fa-cubes");
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
         this.isLicensed = ko.computed(() => {
-            if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
-                var attributes = license.licenseStatus().Attributes;
-                var result = this.activeBundles()
-                    .map(bundleName => this.attributeValue(attributes, bundleName === "periodicBackup" ? "periodicExport" : bundleName))
-                    .reduce((a, b) => /^true$/i.test(a) && /^true$/i.test(b), true);
-                return result;
-            }
+            // TODO: Implement
             return true;
         });
         this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + name;
@@ -52,26 +46,9 @@ class database extends resource {
         this.statistics().fromDto(dto);
     }
 
-    private attributeValue(attributes, bundleName: string) {
-        for (var key in attributes){
-            if (attributes.hasOwnProperty(key) && key.toLowerCase() === bundleName.toLowerCase()) {
-                return attributes[key];
-            }
-        }
-        return "true";
-    }
-
     static getNameFromUrl(url: string) {
         var index = url.indexOf("databases/");
         return (index > 0) ? url.substring(index + 10) : "";
-    }
-
-    isBundleActive(bundleName: string) {
-        if (!!bundleName) {
-            var bundle = this.activeBundles.first((x: string) => x.toLowerCase() === bundleName.toLowerCase());
-            return !!bundle;
-        }
-        return false;
     }
 }
 

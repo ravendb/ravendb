@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Raven.Abstractions.Data;
-using Raven.Client.Data;
 
 namespace Raven.Server.Documents
 {
     public class DocumentsNotifications
     {
         public readonly ConcurrentDictionary<long, NotificationsClientConnection> Connections = new ConcurrentDictionary<long, NotificationsClientConnection>();
+
+        public event Action<DocumentChangeNotification> OnSystemDocumentChange;
 
         public event Action<DocumentChangeNotification> OnDocumentChange;
 
@@ -16,6 +17,14 @@ namespace Raven.Server.Documents
         public void RaiseNotifications(IndexChangeNotification indexChangeNotification)
         {
             OnIndexChange?.Invoke(indexChangeNotification);
+        }
+
+        public void RaiseSystemNotifications(DocumentChangeNotification documentChangeNotification)
+        {
+            OnSystemDocumentChange?.Invoke(documentChangeNotification);
+
+            foreach (var connection in Connections)
+                connection.Value.SendDocumentChanges(documentChangeNotification);
         }
 
         public void RaiseNotifications(DocumentChangeNotification documentChangeNotification)
