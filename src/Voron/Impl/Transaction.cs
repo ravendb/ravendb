@@ -56,6 +56,9 @@ namespace Voron.Impl
 
         public void Commit()
         {
+            if (_lowLevelTransaction.Flags != (TransactionFlags.ReadWrite))
+                return; // nothing to do
+
             PrepareForCommit();
             _lowLevelTransaction.Commit();
         }
