@@ -39,6 +39,7 @@ namespace Voron.Benchmark
             catch (Exception e)
             {
                 Console.WriteLine("\r{0,-35}: failed with {1} exception.", name, e.GetType().Name);
+                Console.WriteLine(e);
             }
         }
 
