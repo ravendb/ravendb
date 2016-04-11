@@ -157,7 +157,7 @@ namespace Voron.Data.BTrees
                 var tempPagePointer = tmp.TempPagePointer;
                 while (true)
                 {
-                    var read = value.Read(tempPageBuffer, 0, tx.DataPager.PageSize);
+                    var read = value.Read(tempPageBuffer, 0, tempPageBuffer.Length);
                     if (read == 0)
                         break;
 

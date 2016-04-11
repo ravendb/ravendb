@@ -7,6 +7,7 @@
 using System;
 using Xunit;
 using Voron;
+using Voron.Impl;
 
 namespace FastTests.Voron.Bugs
 {
@@ -14,7 +15,7 @@ namespace FastTests.Voron.Bugs
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxScratchBufferSize = 1024*1024*1 + 4096;
+            options.MaxScratchBufferSize = 1024*1024*1 + Constants.Storage.PageSize;
             options.ManualFlushing = true;
         }
 

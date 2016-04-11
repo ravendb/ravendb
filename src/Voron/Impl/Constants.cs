@@ -9,6 +9,20 @@ namespace Voron.Impl
 
         public const ulong TransactionHeaderMarker = 0x1A4C92AD90ABC123;
 
+        public static class Storage
+        {
+            public const int PageSize = 8 * Size.Kilobyte;
+        }
+
+        public static class Size
+        {
+            public const int Kilobyte = 1024;
+            public const int Megabyte = 1024 * Kilobyte;
+            public const int Gigabyte = 1024 * Megabyte;
+            public const long Terabyte = 1024 * (long)Gigabyte;
+        }
+
+
         /// <summary>
         /// If there are less than 2 keys in a page, we no longer have a tree
         /// This impacts the MakKeySize available
