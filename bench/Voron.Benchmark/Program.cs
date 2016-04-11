@@ -16,8 +16,8 @@ namespace Voron.Benchmark
 
         public static void Main()
         {
-
-            Console.WriteLine(IntPtr.Size);
+            string architecture = IntPtr.Size == 8 ? "x64" : "x86";
+            Console.WriteLine($"Running on {architecture}");
 #if DEBUG
             var oldfg = Console.ForegroundColor;
             var oldbg = Console.BackgroundColor;
@@ -36,8 +36,8 @@ namespace Voron.Benchmark
             var defaultBench = new TableBench(_randomNumbers, TableIndexType.BTree);
             defaultBench.Execute();
 
-            //var btreeBench = new BTreeBench(_randomNumbers);
-            //btreeBench.Execute();
+            var btreeBench = new BTreeBench(_randomNumbers);
+            btreeBench.Execute();
         }
 
         private static HashSet<long> InitRandomNumbers(int count)
