@@ -266,14 +266,18 @@ namespace Raven.Server.Documents.SqlReplication
             return result;
         }
 
-        public bool PrepareSqlReplicationConfig(SqlConnections connections, bool writeToLog = true)
+        public bool PrepareSqlReplicationConfig(BlittableJsonReaderObject connections, bool writeToLog = true)
         {
             if (string.IsNullOrWhiteSpace(Configuration.ConnectionStringName) == false)
             {
-                if (connections.Connections.TryGetValue(Configuration.ConnectionStringName, out _predefinedSqlConnection) &&
-                    _predefinedSqlConnection != null)
+                object connection;
+                if (connections.TryGetMember(Configuration.ConnectionStringName, out connection))
                 {
-                    return true;
+                    _predefinedSqlConnection = JsonDeserialization.PredefinedSqlConnection(connection as BlittableJsonReaderObject);
+                    if (_predefinedSqlConnection != null)
+                    {
+                        return true;
+                    }
                 }
 
                 if (writeToLog)

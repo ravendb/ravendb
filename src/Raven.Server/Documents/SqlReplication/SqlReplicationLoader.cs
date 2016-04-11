@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.SqlReplication
         private const int MaxSupportedSqlReplication = int.MaxValue; // TODO: Maybe this should be 128 or 1024
 
         public readonly List<SqlReplication> Replications = new List<SqlReplication>();
-        private SqlConnections _connections;
+        private BlittableJsonReaderObject _connections;
 
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
 
@@ -69,9 +70,14 @@ namespace Raven.Server.Documents.SqlReplication
                 context.OpenReadTransaction();
 
                 var sqlReplicationConnections = _database.DocumentsStorage.Get(context, Constants.SqlReplication.SqlReplicationConnections);
-                if (sqlReplicationConnections == null)
-                    return;
-                _connections = JsonDeserialization.PredefinedSqlConnections(sqlReplicationConnections.Data);
+                if (sqlReplicationConnections != null)
+                {
+                    object connections;
+                    if (sqlReplicationConnections.Data.TryGetMember("Connections", out connections))
+                    {
+                        _connections = connections as BlittableJsonReaderObject;
+                    }
+                }
 
                 var documents = _database.DocumentsStorage.GetDocumentsStartingWith(context, Constants.SqlReplication.SqlReplicationConfigurationPrefix, null, null, 0, MaxSupportedSqlReplication);
                 foreach (var document in documents)
