@@ -25,15 +25,7 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            Foo += Program_Foo;
-
-            var sp = Stopwatch.StartNew();
-            for (int i = 0; i < 1000*1000*10; i++)
-            {
-                Foo?.Invoke(null, EventArgs.Empty);
-                //Program_Foo2(null,EventArgs.Empty);
-            }
-            Console.WriteLine(sp.ElapsedMilliseconds);
+            new CanReplicate().SimpleTransformation().Wait();
         }
 
         private static void Program_Foo(object sender, EventArgs e)
