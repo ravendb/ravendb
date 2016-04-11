@@ -16,12 +16,17 @@ namespace Voron.Platform.Posix
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
+        private bool _isSyncDirAllowed;
         
         private static object lockObj = new object();
 
         public PosixMemoryMapPager(int pageSize,string file, long? initialFileSize = null):base(pageSize)
         {
             _file = file;
+            _isSyncDirAllowed = PosixHelper.CheckSyncDirectoryAllowed(_file);
+
+            PosixHelper.EnsurePathExists(_file);
+
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
@@ -45,7 +50,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.AllocateFileSpace(_fd, (ulong) _totalAllocationSize);
             }
 
-            if (PosixHelper.SyncDirectory(file) == -1)
+            if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);
@@ -95,7 +100,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize));
 
-            if (PosixHelper.SyncDirectory(_file) == -1)
+            if (_isSyncDirAllowed && PosixHelper.SyncDirectory(_file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -12,7 +13,7 @@ using Voron.Platform.Win32;
 
 namespace Voron.Platform.Posix
 {
-    internal class PosixHelper
+    public class PosixHelper
     {
         public static void AllocateFileSpace(int fd, ulong size)
         {
@@ -86,6 +87,23 @@ namespace Voron.Platform.Posix
             }
         }
 
+        public static bool CheckSyncDirectoryAllowed(string path)
+        { 
+            DriveInfo[] allDrives = DriveInfo.GetDrives();
+
+            foreach (DriveInfo d in allDrives)
+            {
+                if (path.Contains(d.Name))
+                {
+                    // TODO : Add other types
+                    if (d.DriveFormat.Equals("cifs"))
+                        return false;
+                    return true;
+                }
+            }
+            return true;
+        }
+
         public static int SyncDirectory(string path)
         {
             var dir = Path.GetDirectoryName(path);
@@ -137,6 +155,34 @@ namespace Voron.Platform.Posix
                     fd = -1;
                 }
             }
+        }
+
+        public static string FixLinuxPath(string path)
+        {
+            if (path != null)
+            {
+                var length = Path.GetPathRoot(path).Length;
+                if (length > 0)
+                    path = "/" + path.Substring(length);
+                path = path.Replace('\\', '/');
+                path = path.Replace("/./", "/");
+                path = path.Replace("//", "/");
+            }
+            return path;
+        }
+
+        public static void EnsurePathExists(string file)
+        {
+            var dirpath = Path.GetDirectoryName(file);
+            List<string> dirsToCreate = new List<string>();
+            while (Directory.Exists(dirpath) == false)
+            {
+                dirsToCreate.Add(dirpath);
+                dirpath = Directory.GetParent(dirpath).ToString();
+                if (dirpath == null)
+                    break;
+            }
+            dirsToCreate.ForEach(x => Directory.CreateDirectory(x));
         }
     }
 }

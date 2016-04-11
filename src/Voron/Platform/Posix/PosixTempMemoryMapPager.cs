@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Voron.Impl;
@@ -33,6 +34,8 @@ namespace Voron.Platform.Posix
             : base(pageSize)
         {
             _file = file;
+            PosixHelper.EnsurePathExists(file);
+
             _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
                 
