@@ -680,6 +680,11 @@ namespace Raven.Client.Connection
         Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
 
         /// <summary>
+        /// Gets the primary database Url
+        /// </summary>
+        string Url { get; }
+
+        /// <summary>
         ///     Get the full URL for the given document key
         /// </summary>
         string UrlFor(string documentKey);
