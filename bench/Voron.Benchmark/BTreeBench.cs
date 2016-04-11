@@ -25,10 +25,10 @@ namespace Voron.Benchmark
             Console.WriteLine("General BTree Benchmarking.");
             Console.WriteLine();
 
+            Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw), this);
             Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw), this);
             Benchmark.Time("insert rnd separate tx", sw => InsertRandomMultipleTransactionAfterFill(sw), this, delete: false, records: Configuration.ItemsPerTransaction * 100);
 
-            Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw), this);
             Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw), this);
             Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw), this);
 
@@ -149,8 +149,6 @@ namespace Voron.Benchmark
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
-                env.Options.ManualFlushing = true;
-
                 var value = new byte[100];
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
@@ -178,12 +176,7 @@ namespace Voron.Benchmark
                         }
                         tx.Commit();
                     }
-
-                    if (x % 100 == 0)
-                        env.FlushLogToDataFile();
                 }
-
-                env.FlushLogToDataFile();
                 sw.Stop();
             }
         }
@@ -192,8 +185,6 @@ namespace Voron.Benchmark
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
-                env.Options.ManualFlushing = true;
-
                 var value = new byte[100];
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
@@ -221,13 +212,8 @@ namespace Voron.Benchmark
 
                         tx.Commit();
                     }
-
-
-                    if (x % 100 == 0)
-                        env.FlushLogToDataFile();
                 }
 
-                env.FlushLogToDataFile();
                 sw.Stop();
             }
         }
