@@ -12,8 +12,8 @@ namespace Voron.Impl.Paging
 {
     public unsafe abstract class AbstractPager : IVirtualPager
     {
-        protected int MinIncreaseSize { get { return 16 * PageSize; } } // 64 KB
-        protected int MaxIncreaseSize { get { return 262144 * PageSize; } } // 1 GB
+        protected int MinIncreaseSize { get { return 16 * PageSize; } } // 64 KB with 4Kb pages. 
+        protected int MaxIncreaseSize { get { return Constants.Size.Gigabyte; } }
 
         private long _increaseSize;
         private DateTime _lastIncrease;

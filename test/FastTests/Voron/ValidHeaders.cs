@@ -65,7 +65,7 @@ namespace FastTests.Voron
 
             ptr->LastPageNumber = (long)rnd.NextDouble();
             ptr->MagicMarker = Constants.MagicMarker;
-            ptr->PageSize = 4096;
+            ptr->PageSize = Constants.Storage.PageSize;
 
             ptr->TransactionId = (long)rnd.NextDouble();
             ptr->Version = rnd.Next();
@@ -96,7 +96,7 @@ namespace FastTests.Voron
 
             Assert.Equal(ptr->LastPageNumber, (long)rnd.NextDouble());
             Assert.Equal(ptr->MagicMarker, Constants.MagicMarker);
-            Assert.Equal(ptr->PageSize, 4096);
+            Assert.Equal(ptr->PageSize, Constants.Storage.PageSize);
 
             Assert.Equal(ptr->TransactionId, (long)rnd.NextDouble());
             Assert.Equal(ptr->Version, rnd.Next());

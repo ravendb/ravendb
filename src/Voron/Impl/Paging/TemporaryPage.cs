@@ -8,8 +8,8 @@ namespace Voron.Impl.Paging
     {
 	    private readonly StorageEnvironmentOptions _options;
 	    private readonly byte[] _tempPageBuffer;
-        private GCHandle _tempPageHandle;
-        private IntPtr _tempPage;
+        private readonly GCHandle _tempPageHandle;
+        private readonly IntPtr _tempPage;
 
 		public TemporaryPage(StorageEnvironmentOptions options)
 		{

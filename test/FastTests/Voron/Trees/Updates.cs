@@ -2,11 +2,20 @@
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Impl;
 
 namespace FastTests.Voron.Trees
 {
     public class Updates : StorageTest
     {
+
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            options.PageSize = 4 * Constants.Size.Kilobyte;
+
+            base.Configure(options);
+        }
+
         [Fact]
         public void CanUpdateVeryLargeValueAndThenDeleteIt()
         {
@@ -32,7 +41,6 @@ namespace FastTests.Voron.Trees
             buffer = new byte[8192 * 2];
             random.NextBytes(buffer);
 
-
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
@@ -40,7 +48,6 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
             }
-
 
             using (var tx = Env.ReadTransaction())
             {

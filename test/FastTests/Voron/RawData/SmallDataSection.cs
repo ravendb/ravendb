@@ -6,6 +6,7 @@ using Sparrow;
 using Xunit;
 using Voron.Data.RawData;
 using Voron;
+using Voron.Impl;
 
 namespace FastTests.Voron.RawData
 {
@@ -88,30 +89,37 @@ namespace FastTests.Voron.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction,"test");
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
 
-            long id, idToFree = -1;
             using (var tx = Env.WriteTransaction())
             {
                 var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
-                for (int i = 0; i < 192; i++)
+
+                int allocationSize = 1020;
+                int allocations = section.Size / allocationSize;
+
+                int i = 0;
+                var rnd = new Random();
+                int selected = rnd.Next(allocations - 2);
+
+                long id, idToFree = 0;
+
+                while (section.TryAllocate(allocationSize, out id))
                 {
-                    Assert.True(section.TryAllocate(1020, out id), i.ToString());
-                    if (i%77 == 0)
-                    {
+                    if (i == selected)
                         idToFree = id;
-                    }
+
+                    i++;
                 }
 
-
-                Assert.False(section.TryAllocate(1020, out id));
+                Assert.False(section.TryAllocate(allocationSize, out id));
 
                 section.Free(idToFree);
 
-                Assert.True(section.TryAllocate(1020, out id));
+                Assert.True(section.TryAllocate(allocationSize, out id));
             }
         }
 
