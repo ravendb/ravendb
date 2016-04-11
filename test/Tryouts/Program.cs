@@ -24,34 +24,26 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            Console.WriteLine(IntPtr.Size);
-            Parallel.For(0, 1000, i =>
-            {
-                Console.WriteLine(i);
-                using (var x = new BasicIndexing())
-                {
-                    x.Errors();
-                }
-            });
-            //using (var store = new DocumentStore
-            //{
-            //    Url = "http://10.0.0.80:8081",
-            //    DefaultDatabase = "FooBar123"
-            //})
-            //{
-            //    store.Initialize();
-            //    store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
-            //    store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-            //    {
-            //        Id = "FooBar123",
-            //        Settings =
-            //        {
-            //            { "Raven/DataDir", "~\\FooBar123" }
-            //        }
-            //    });
 
-            //    BulkInsert(store, 1024 * 512).Wait();
-            //}
+            using (var store = new DocumentStore
+            {
+                Url = "http://127.0.0.1:8081",
+                DefaultDatabase = "FooBar123"
+            })
+            {
+                store.Initialize();
+                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
+                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                {
+                    Id = "FooBar123",
+                    Settings =
+                    {
+                        { "Raven/DataDir", "~\\FooBar123" }
+                    }
+                });
+
+                BulkInsert(store, 1024 * 512).Wait();
+            }
         }
 
         public static async Task BulkInsert(DocumentStore store, int numOfItems)
