@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
 using Raven.Server.Config;
@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
