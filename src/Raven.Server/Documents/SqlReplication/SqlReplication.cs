@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.SqlReplication
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private Thread _sqlReplicationThread;
         private bool _disposed;
-        public PredefinedSqlConnection PredefinedSqlConnection { get; private set; }
+        private PredefinedSqlConnection _predefinedSqlConnection;
 
         public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration)
         {
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.SqlReplication
             Statistics.LastTombstonesEtag = documents.Last().Etag;
 
             var documentsKeys = documents.Select(tombstone => (string)tombstone.Key).ToList();
-            using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, PredefinedSqlConnection, Statistics, cancellationToken))
+            using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, _predefinedSqlConnection, Statistics, cancellationToken))
             {
                 foreach (var sqlReplicationTable in Configuration.SqlReplicationTables)
                 {
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.SqlReplication
             var countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
             try
             {
-                using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, PredefinedSqlConnection, Statistics, cancellationToken))
+                using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, _predefinedSqlConnection, Statistics, cancellationToken))
                 {
                     if (writer.ExecuteScript(scriptResult))
                     {
@@ -270,9 +270,11 @@ namespace Raven.Server.Documents.SqlReplication
         {
             if (string.IsNullOrWhiteSpace(Configuration.ConnectionStringName) == false)
             {
-                PredefinedSqlConnection = connections.Connections[Configuration.ConnectionStringName];
-                if (PredefinedSqlConnection != null)
+                if (connections.Connections.TryGetValue(Configuration.ConnectionStringName, out _predefinedSqlConnection) &&
+                    _predefinedSqlConnection != null)
+                {
                     return true;
+                }
 
                 if (writeToLog)
                     Log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
@@ -322,6 +324,40 @@ namespace Raven.Server.Documents.SqlReplication
                 Message = $"Could not find name for sql replication document {Configuration.Name}, ignoring"
             };
             return false;
+        }
+
+        public DynamicJsonValue Simulate(SimulateSqlReplication simulateSqlReplication, DocumentsOperationContext context, SqlReplicationScriptResult result)
+        {
+            if (simulateSqlReplication.PerformRolledBackTransaction)
+            {
+                using (var writer = new RelationalDatabaseWriter(_database, context, simulateSqlReplication.Configuration,
+                    _predefinedSqlConnection, Statistics, _database.DatabaseShutdown))
+                {
+                    return new DynamicJsonValue
+                    {
+                        ["Results"] = new DynamicJsonArray(writer.RolledBackExecute(result).ToArray()),
+                        ["LastAlert"] = Statistics.LastAlert,
+                    };
+                }
+            }
+
+            var simulatedwriter = new RelationalDatabaseWriterSimulator(_database, simulateSqlReplication.Configuration, _predefinedSqlConnection, Statistics, _database.DatabaseShutdown);
+            var tableQuerySummaries = new List<RelationalDatabaseWriter.TableQuerySummary>
+                {
+                    new RelationalDatabaseWriter.TableQuerySummary
+                    {
+                        Commands = simulatedwriter.SimulateExecuteCommandText(result)
+                            .Select(x => new RelationalDatabaseWriter.TableQuerySummary.CommandData
+                            {
+                                CommandText = x
+                            }).ToArray()
+                    }
+                }.ToArray();
+            return new DynamicJsonValue
+            {
+                ["Results"] = new DynamicJsonArray(tableQuerySummaries),
+                ["LastAlert"] = Statistics.LastAlert,
+            };
         }
     }
 }

@@ -97,7 +97,6 @@ namespace Raven.Server.Documents.SqlReplication
         {
             try
             {
-                var stats = new SqlReplicationStatistics(simulateSqlReplication.Configuration.Name, false);
                 var document = _database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
                 var sqlReplication = new SqlReplication(_database, simulateSqlReplication.Configuration);
 
@@ -107,40 +106,11 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     return new DynamicJsonValue
                     {
-                        ["LastAlert"] = stats.LastAlert,
+                        ["LastAlert"] = sqlReplication.Statistics.LastAlert,
                     };
                 }
 
-                if (simulateSqlReplication.PerformRolledBackTransaction)
-                {
-                    using (var writer = new RelationalDatabaseWriter(_database, context, simulateSqlReplication.Configuration, 
-                        sqlReplication.PredefinedSqlConnection, stats, _database.DatabaseShutdown))
-                    {
-                        return new DynamicJsonValue
-                        {
-                            ["Results"] = new DynamicJsonArray(writer.RolledBackExecute(result).ToArray()),
-                            ["LastAlert"] = stats.LastAlert,
-                        };
-                    }
-                }
-
-                var simulatedwriter = new RelationalDatabaseWriterSimulator(_database, simulateSqlReplication.Configuration, sqlReplication.PredefinedSqlConnection, stats, _database.DatabaseShutdown);
-                var tableQuerySummaries = new List<RelationalDatabaseWriter.TableQuerySummary>
-                {
-                    new RelationalDatabaseWriter.TableQuerySummary
-                    {
-                        Commands = simulatedwriter.SimulateExecuteCommandText(result)
-                            .Select(x => new RelationalDatabaseWriter.TableQuerySummary.CommandData
-                            {
-                                CommandText = x
-                            }).ToArray()
-                    }
-                }.ToArray();
-                return new DynamicJsonValue
-                {
-                    ["Results"] = new DynamicJsonArray(tableQuerySummaries),
-                    ["LastAlert"] = stats.LastAlert,
-                };
+                return sqlReplication.Simulate(simulateSqlReplication, context, result);
             }
             catch (Exception e)
             {
