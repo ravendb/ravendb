@@ -54,7 +54,11 @@ namespace Raven.Database.Backup
 
         private static void EnsureDirectoryExists(string dir)
         {
-            var tempPath = Path.Combine(dir, Guid.NewGuid().ToString());
+            if (dir.Length > 248)
+                throw new ArgumentOutOfRangeException("Length of the directory exceeds 248 chars and can't be created:\n {0}", dir);            
+            var tempPath = Path.Combine(dir, Guid.NewGuid().GetHashCode().ToString());
+            if(tempPath.Length>260)
+                throw new ArgumentOutOfRangeException("Length of the fully qualified file name exceeds 260 chars and can't be created:\n {0}",tempPath);
             var retries = 5;
             while (true)
             {
