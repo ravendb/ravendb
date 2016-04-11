@@ -32,7 +32,7 @@ namespace Voron
         private readonly IVirtualPager _dataPager;
 
         private readonly WriteAheadJournal _journal;
-        private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
+        private readonly object _txWriter = new object();
         private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
 
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
@@ -52,7 +52,7 @@ namespace Voron
 
         public StorageEnvironmentState State { get; private set; }
 
-
+     
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
@@ -306,12 +306,13 @@ namespace Voron
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-                    if (_txWriter.Wait(wait, _cancellationTokenSource.Token) == false)
+                    Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
+                    if (txLockTaken == false)
                     {
+                        _flushWriter.Set();
                         throw new TimeoutException("Waited for " + wait +
                                                     " for transaction write lock, but could not get it");
                     }
-                    txLockTaken = true;
                     if (_endOfDiskSpace != null)
                     {
                         if (_endOfDiskSpace.CanContinueWriting)
@@ -348,7 +349,7 @@ namespace Voron
             {
                 if (txLockTaken)
                 {
-                    _txWriter.Release();
+                    Monitor.Exit(_txWriter);
                 }
                 throw;
             }
@@ -400,7 +401,7 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
-            _txWriter.Release();
+            Monitor.Exit(_txWriter);
         }
 
         public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
