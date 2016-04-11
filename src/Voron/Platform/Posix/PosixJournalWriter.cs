@@ -27,7 +27,6 @@ namespace Voron.Platform.Posix
             _options = options;
             _filename = filename;
 
-            
 
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
@@ -42,7 +41,7 @@ namespace Voron.Platform.Posix
             if (result != 0)
                 PosixHelper.ThrowLastError(result);
 
-            if (PosixHelper.SyncDirectory(filename) == -1)
+            if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(filename) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 PosixHelper.ThrowLastError(err);

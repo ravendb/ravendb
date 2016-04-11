@@ -144,6 +144,11 @@ namespace Voron
 
         public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
         {
+            if (RunningOnPosix)
+            {
+                path = PosixHelper.FixLinuxPath(path);
+                tempPath = PosixHelper.FixLinuxPath(tempPath);
+            }
             return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
         }
 

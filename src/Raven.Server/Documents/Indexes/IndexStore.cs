@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Lucene.Net.DNX;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -12,6 +12,8 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Utils;
+using Voron.Platform.Posix;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -48,6 +50,10 @@ namespace Raven.Server.Documents.Indexes
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
                     _path = _documentDatabase.Configuration.Indexing.IndexStoragePath;
+
+                    if (Platform.RunningOnPosix)
+                        _path = PosixHelper.FixLinuxPath(_path);
+
                     if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
                         Directory.CreateDirectory(_path);
                 }
