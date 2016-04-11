@@ -111,36 +111,36 @@ namespace Voron.Benchmark
             Console.WriteLine();
 
             string benchmarkType = _indexType == TableIndexType.Compact ? "Prefix Tree" : "BTree";
-            Console.WriteLine($"{benchmarkType} Table Benchmarking.");
-            Console.WriteLine();
+            //Console.WriteLine($"{benchmarkType} Table Benchmarking.");
+            //Console.WriteLine();
 
-            Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw), this);
-            Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw), this);
-            Benchmark.Time("insert rnd separate tx", sw => InsertRandomMultipleTransactionAfterFill(sw), this, delete: false, records: Configuration.ItemsPerTransaction * 100);
+            //Benchmark.Time("fill rnd", sw => FillRandomOneTransaction(sw), this);
+            //Benchmark.Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw), this);
+            //Benchmark.Time("insert rnd separate tx", sw => InsertRandomMultipleTransactionAfterFill(sw), this, delete: false, records: Configuration.ItemsPerTransaction * 100);
 
-            Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw), this);
+            //Benchmark.Time("fill seq", sw => FillSeqOneTransaction(sw), this);
             Benchmark.Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw), this);
 
-            Benchmark.Time("read seq", ReadOneTransaction, this, delete: false);
+            //Benchmark.Time("read seq", ReadOneTransaction, this, delete: false);
 
-            Benchmark.Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), this, delete: false);
-            Benchmark.Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), this, delete: false);
-            Benchmark.Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), this, delete: false);
-            Benchmark.Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), this, delete: false);
-            Benchmark.Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), this, delete: false);
+            //Benchmark.Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), this, delete: false);
+            //Benchmark.Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), this, delete: false);
+            //Benchmark.Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), this, delete: false);
+            //Benchmark.Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), this, delete: false);
+            //Benchmark.Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), this, delete: false);
 
-            if (_indexType != TableIndexType.Compact)
-            {
-                Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), this, delete: false);
-                Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), this, delete: false);
-                Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), this, delete: false);
-                Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), this, delete: false);
-                Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), this, delete: false);
-            }
+            //if (_indexType != TableIndexType.Compact)
+            //{
+            //    Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), this, delete: false);
+            //    Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), this, delete: false);
+            //    Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), this, delete: false);
+            //    Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), this, delete: false);
+            //    Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), this, delete: false);
+            //}
 
-            Benchmark.Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4), this);
-            Benchmark.Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8), this);
-            Benchmark.Time("fill seq non then read parallel 16", stopwatch => ReadAndWriteOneTransaction(stopwatch, 16), this);
+            //Benchmark.Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4), this);
+            //Benchmark.Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8), this);
+            //Benchmark.Time("fill seq non then read parallel 16", stopwatch => ReadAndWriteOneTransaction(stopwatch, 16), this);
         }
 
         private void InsertRandomMultipleTransactionAfterFill(Stopwatch sw)
@@ -297,8 +297,6 @@ namespace Voron.Benchmark
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
-                env.Options.ManualFlushing = true;
-
                 var docsSchema = Configure(env);
 
                 var value = new byte[100];
@@ -315,6 +313,7 @@ namespace Voron.Benchmark
                 int counter = 0;
                 for (int x = 0; x < Configuration.Transactions; x++)
                 {
+                    var sp = Stopwatch.StartNew();
                     using (var tx = env.WriteTransaction())
                     {
                         var docs = new Table(docsSchema, "docs", tx);
@@ -328,11 +327,11 @@ namespace Voron.Benchmark
 
                         tx.Commit();
 
-                        if (x % 100 == 0)
-                            env.FlushLogToDataFile();
                     }
-
-                    env.FlushLogToDataFile();
+                    if (sp.ElapsedMilliseconds > 100)
+                    {
+                        Console.WriteLine(sp.ElapsedMilliseconds);
+                    }
                 }
                 sw.Stop();
             }
