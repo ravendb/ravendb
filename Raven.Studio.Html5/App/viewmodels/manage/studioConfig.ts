@@ -101,7 +101,6 @@ class studioConfig extends viewModelBase {
 
         $("#select-color li").each((index, element) => {
             var color = this.environmentColors[index];
-            //$(element).css("color", color.textColor);
             $(element).css("backgroundColor", color.backgroundColor);
         });
     }
@@ -140,20 +139,12 @@ class studioConfig extends viewModelBase {
     }
 
     saveStudioConfig(newDocument: documentClass) {
-        var deferred = $.Deferred();
-
-        require(["commands/saveDocumentCommand"], saveDocumentCommand => {
-            var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
-            saveTask
-                .done((saveResult: bulkDocumentDto[]) => {
-                    this.configDocument(newDocument);
-                    this.configDocument().__metadata['etag'] = saveResult[0].Etag;
-                    deferred.resolve();
-                })
-                .fail(() => deferred.reject());
-        });
-
-        return deferred;
+        return new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase)
+            .execute()
+            .done((saveResult: bulkDocumentDto[]) => {
+                this.configDocument(newDocument);
+                this.configDocument().__metadata['etag'] = saveResult[0].Etag;
+            });
     }
 }
 
