@@ -6,6 +6,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -225,6 +227,8 @@ namespace Raven.Tests.Core
         public void Dispose()
         {
             GC.SuppressFinalize(this);
+
+            SystemTime.UtcDateTime = null;
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
             foreach (var store in CreatedStores)
