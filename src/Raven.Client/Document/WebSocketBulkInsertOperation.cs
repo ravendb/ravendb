@@ -21,7 +21,7 @@ namespace Raven.Client.Document
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(WebSocketBulkInsertOperation));
         private readonly CancellationTokenSource _cts;
-        private ClientWebSocket _connection;
+        private RavenClientWebSocket _connection;
         private readonly Task _socketConnectionTask;
         private readonly MemoryStream _networkBuffer = new MemoryStream();
         private readonly BinaryWriter _networkBufferWriter;
@@ -55,7 +55,7 @@ namespace Raven.Client.Document
             _jsonOperationContext = new JsonOperationContext(_unmanagedBuffersPool);
             _networkBufferWriter = new BinaryWriter(_networkBuffer);
             this._cts = cts ?? new CancellationTokenSource();
-            _connection = new ClientWebSocket();
+            _connection = new RavenClientWebSocket();
             _url = asyncServerClient.Url;
 
             var serverUri = new Uri(_url);
@@ -76,10 +76,10 @@ namespace Raven.Client.Document
 
             _socketConnectionTask = _connection.ConnectAsync(uriBuilder.Uri, this._cts.Token);
             _getServerResponseTask = GetServerResponse();
-            _writeToServerTask = Task.Run(WriteToServer);
+            _writeToServerTask = Task.Run(async () => await WriteToServer());
         }
 
-        private async Task WriteToServer()
+        private async Task<int> WriteToServer()
         {
             const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
@@ -129,6 +129,7 @@ namespace Raven.Client.Document
                 }
                 await FlushBufferAsync();
             }
+            return 0;
         }
 
         private async Task GetServerResponse()
@@ -270,14 +271,6 @@ namespace Raven.Client.Document
                     var res = await Task.WhenAny(timeoutTask, _getServerResponseTask);
                     if (timeoutTask == res)
                         throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
-                }
-                catch (Exception e)
-                {
-                    if (e is TimeoutException)
-                        throw;
-
-                    // those can throw, but we are shutting down anyway, so no point in 
-                    // doing anything here
                 }
                 finally
                 {
