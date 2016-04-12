@@ -87,7 +87,7 @@ namespace Sparrow.Json.Parsing
 
         public IEnumerator<object> GetEnumerator()
         {
-            throw new NotImplementedException();
+            return Items.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Patch
                     errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
                 if (scope.DebugInfo.Items.Count != 0)
                     errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
-                                string.Join(Environment.NewLine, scope.DebugInfo);
+                                string.Join(Environment.NewLine, scope.DebugInfo.Items);
 
                 if (error != null)
                     errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
