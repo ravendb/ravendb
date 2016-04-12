@@ -3,11 +3,8 @@ using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
 using Raven.Tests.Core;
@@ -17,7 +14,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Tombstones
 {
-    public class BasicTombstones : RavenTestBase
+    public class BasicTombstones : RavenLowLevelTestBase
     {
         [Fact]
         public void CanCreateAndGetTombstone()
@@ -74,7 +71,7 @@ namespace FastTests.Server.Documents.Tombstones
         [Fact]
         public void Cleanup()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
@@ -202,14 +199,6 @@ namespace FastTests.Server.Documents.Tombstones
         private static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)
         {
             return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-        }
-
-        private static DocumentDatabase CreateDocumentDatabase()
-        {
-            var documentDatabase = new DocumentDatabase("Test", new RavenConfiguration { Core = { RunInMemory = true } }, new MetricsScheduler());
-            documentDatabase.Initialize();
-
-            return documentDatabase;
         }
     }
 }

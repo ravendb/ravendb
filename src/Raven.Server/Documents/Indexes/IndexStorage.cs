@@ -287,6 +287,9 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = environment.ReadTransaction())
             {
                 var statsTree = tx.ReadTree(Schema.StatsTree);
+                if (statsTree == null)
+                    throw new InvalidOperationException($"Index '{indexId}' does not contain 'Stats' tree.");
+
                 var result = statsTree.Read(Schema.TypeSlice);
                 if (result == null)
                     throw new InvalidOperationException($"Stats tree does not contain 'Type' entry in index '{indexId}'.");
