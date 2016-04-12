@@ -26,7 +26,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler = null)
+        public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler)
         {
             Name = name;
             Configuration = configuration;
@@ -34,10 +34,10 @@ namespace Raven.Server.Documents
             Notifications = new DocumentsNotifications();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
-            SqlReplicationLoader = new SqlReplicationLoader(this);
+            SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
 
-            Metrics = new MetricsCountersManager(metricsScheduler ?? new MetricsScheduler());
+            Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
         }
 
