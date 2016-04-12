@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -16,6 +17,7 @@ namespace Raven.Server.Documents.SqlReplication
         private readonly ILog Log = LogManager.GetLogger(typeof(SqlReplicationLoader));
 
         private readonly DocumentDatabase _database;
+        private readonly MetricsScheduler _metricsScheduler;
         private const int MaxSupportedSqlReplication = int.MaxValue; // TODO: Maybe this should be 128 or 1024
 
         public readonly List<SqlReplication> Replications = new List<SqlReplication>();
@@ -23,9 +25,10 @@ namespace Raven.Server.Documents.SqlReplication
 
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
 
-        public SqlReplicationLoader(DocumentDatabase database)
+        public SqlReplicationLoader(DocumentDatabase database, MetricsScheduler metricsScheduler)
         {
             _database = database;
+            _metricsScheduler = metricsScheduler;
             _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
             _database.Notifications.OnDocumentChange += WakeSqlReplication;
         }
@@ -83,7 +86,7 @@ namespace Raven.Server.Documents.SqlReplication
                 foreach (var document in documents)
                 {
                     var configuration = JsonDeserialization.SqlReplicationConfiguration(document.Data);
-                    var sqlReplication = new SqlReplication(_database, configuration);
+                    var sqlReplication = new SqlReplication(_database, configuration, _metricsScheduler);
                     Replications.Add(sqlReplication);
                     if (sqlReplication.ValidateName() == false ||
                         sqlReplication.PrepareSqlReplicationConfig(_connections) == false)
@@ -104,7 +107,7 @@ namespace Raven.Server.Documents.SqlReplication
             try
             {
                 var document = _database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
-                var sqlReplication = new SqlReplication(_database, simulateSqlReplication.Configuration);
+                var sqlReplication = new SqlReplication(_database, simulateSqlReplication.Configuration, _metricsScheduler);
 
                 var result = sqlReplication.ApplyConversionScript(new List<Document> {document}, context);
 

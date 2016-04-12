@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
@@ -8,6 +9,7 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -25,16 +27,21 @@ namespace Raven.Server.Documents.SqlReplication
 
         public string Name => Configuration.Name;
 
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
+
         private Thread _sqlReplicationThread;
         private bool _disposed;
         private PredefinedSqlConnection _predefinedSqlConnection;
+        public readonly SqlReplicationMetricsCountersManager MetricsCountersManager;
 
-        public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration)
+        public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration, MetricsScheduler metricsScheduler)
         {
             _database = database;
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             Configuration = configuration;
             Statistics = new SqlReplicationStatistics(configuration.Name);
+            MetricsCountersManager = new SqlReplicationMetricsCountersManager(metricsScheduler);
         }
 
         public void Start()
@@ -50,46 +57,56 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void ExecuteSqlReplication()
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown, _cancellationTokenSource.Token))
+            while (_cancellationTokenSource.IsCancellationRequested == false)
             {
-                while (cts.IsCancellationRequested == false)
+                if (Log.IsDebugEnabled)
+                    Log.Debug($"Starting sql replication for '{Name}'.");
+
+                WaitForChanges.Reset();
+
+                try
                 {
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                    var startTime = SystemTime.UtcNow;
+                    var spRepTime = new Stopwatch();
+                    spRepTime.Start();
+                    int countOfReplicatedItems;
+                    DoWork(out countOfReplicatedItems);
+                    spRepTime.Stop();
+
                     if (Log.IsDebugEnabled)
-                        Log.Debug($"Starting sql replication for '{Name}'.");
+                        Log.Debug($"Finished sql replication for '{Name}'.");
 
-                    WaitForChanges.Reset();
+                    MetricsCountersManager.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
+                    MetricsCountersManager.UpdateReplicationPerformance(new SqlReplicationPerformanceStats
+                    {
+                        BatchSize = countOfReplicatedItems,
+                        Duration = spRepTime.Elapsed,
+                        Started = startTime
+                    });
+                }
+                catch (OutOfMemoryException oome)
+                {
+                    Log.WarnException($"Out of memory occured for '{Name}'.", oome);
+                    // TODO [ppekrol] GC?
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Log.WarnException($"Exception occured for '{Name}'.", e);
+                }
 
-                    try
-                    {
-                        cts.Token.ThrowIfCancellationRequested();
-
-                        DoWork(cts.Token);
-
-                        if (Log.IsDebugEnabled)
-                            Log.Debug($"Finished sql replication for '{Name}'.");
-                    }
-                    catch (OutOfMemoryException oome)
-                    {
-                        Log.WarnException($"Out of memory occured for '{Name}'.", oome);
-                        // TODO [ppekrol] GC?
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        Log.WarnException($"Exception occured for '{Name}'.", e);
-                    }
-
-                    try
-                    {
-                        WaitForChanges.Wait(cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        return;
-                    }
+                try
+                {
+                    WaitForChanges.Wait(_cancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
                 }
             }
         }
@@ -122,8 +139,10 @@ namespace Raven.Server.Documents.SqlReplication
             _database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        private void DoWork(CancellationToken cancellationToken)
+        private void DoWork(out int countOfReplicatedItems)
         {
+            countOfReplicatedItems = 0;
+
             try
             {
                 DocumentsOperationContext context;
@@ -132,8 +151,9 @@ namespace Raven.Server.Documents.SqlReplication
                 using (var tx = context.OpenReadTransaction())
                 {
                     LoadLastEtag(context);
-                    updateEtag = ReplicateDeletionsToDestination(context, cancellationToken) ||
-                                 ReplicateChangesToDestination(context, cancellationToken);
+                    
+                    updateEtag = ReplicateDeletionsToDestination(context) ||
+                                 ReplicateChangesToDestination(context, out countOfReplicatedItems);
 
                     tx.Commit();
                 }
@@ -154,7 +174,7 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
-        private bool ReplicateDeletionsToDestination(DocumentsOperationContext context, CancellationToken cancellationToken)
+        private bool ReplicateDeletionsToDestination(DocumentsOperationContext context)
         {
             var pageSize = _database.Configuration.Indexing.MaxNumberOfTombstonesToFetch;
 
@@ -165,7 +185,7 @@ namespace Raven.Server.Documents.SqlReplication
             Statistics.LastTombstonesEtag = documents.Last().Etag;
 
             var documentsKeys = documents.Select(tombstone => (string)tombstone.Key).ToList();
-            using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, _predefinedSqlConnection, Statistics, cancellationToken))
+            using (var writer = new RelationalDatabaseWriter(_database, context, _predefinedSqlConnection, this))
             {
                 foreach (var sqlReplicationTable in Configuration.SqlReplicationTables)
                 {
@@ -178,8 +198,9 @@ namespace Raven.Server.Documents.SqlReplication
             return true;
         }
 
-        private bool ReplicateChangesToDestination(DocumentsOperationContext context, CancellationToken cancellationToken)
+        private bool ReplicateChangesToDestination(DocumentsOperationContext context, out int countOfReplicatedItems)
         {
+            countOfReplicatedItems = 0;
             var pageSize = _database.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap;
 
             var documents = _database.DocumentsStorage.GetDocumentsAfter(context, Configuration.Collection, Statistics.LastReplicatedEtag + 1, 0, pageSize).ToList();
@@ -192,10 +213,10 @@ namespace Raven.Server.Documents.SqlReplication
             if (scriptResult.Keys.Count == 0)
                 return true;
 
-            var countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
+            countOfReplicatedItems = scriptResult.Data.Sum(x => x.Value.Count);
             try
             {
-                using (var writer = new RelationalDatabaseWriter(_database, context, Configuration, _predefinedSqlConnection, Statistics, cancellationToken))
+                using (var writer = new RelationalDatabaseWriter(_database, context, _predefinedSqlConnection, this))
                 {
                     if (writer.ExecuteScript(scriptResult))
                     {
@@ -334,8 +355,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             if (simulateSqlReplication.PerformRolledBackTransaction)
             {
-                using (var writer = new RelationalDatabaseWriter(_database, context, simulateSqlReplication.Configuration,
-                    _predefinedSqlConnection, Statistics, _database.DatabaseShutdown))
+                using (var writer = new RelationalDatabaseWriter(_database, context, _predefinedSqlConnection, this))
                 {
                     return new DynamicJsonValue
                     {
@@ -345,7 +365,7 @@ namespace Raven.Server.Documents.SqlReplication
                 }
             }
 
-            var simulatedwriter = new RelationalDatabaseWriterSimulator(_database, simulateSqlReplication.Configuration, _predefinedSqlConnection, Statistics, _database.DatabaseShutdown);
+            var simulatedwriter = new RelationalDatabaseWriterSimulator(_predefinedSqlConnection, this);
             var tableQuerySummaries = new List<RelationalDatabaseWriter.TableQuerySummary>
                 {
                     new RelationalDatabaseWriter.TableQuerySummary
