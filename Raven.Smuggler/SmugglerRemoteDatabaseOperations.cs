@@ -188,10 +188,9 @@ namespace Raven.Smuggler
             return result;
         }
 
-        public async Task<string> GetVersion(RavenConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(RavenConnectionStringOptions server)
         {
-            var buildNumber = await Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
-            return buildNumber.ProductVersion;
+            return Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
         }
 
         public void PurgeTombstones(OperationState result)
