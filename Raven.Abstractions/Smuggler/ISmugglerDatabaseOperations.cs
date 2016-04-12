@@ -49,7 +49,7 @@ namespace Raven.Abstractions.Smuggler
 
         Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start);
 
-        Task<string> GetVersion(RavenConnectionStringOptions server);
+        Task<BuildNumber> GetVersion(RavenConnectionStringOptions server);
 
         void PurgeTombstones(OperationState result);
 
