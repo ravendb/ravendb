@@ -192,8 +192,10 @@ namespace Raven.Server.Documents.Patch
                         if (jsValue.IsNumber() && Math.Abs(num - jsValue.AsNumber()) < double.Epsilon)
                             return originalValue;
 
-                        if (originalValue is int)
-                            return (long) num;
+                        //We might have change the type of num from Integer to long in the script by design 
+                        //Making sure the number isn't a real float before returning it as integer
+                        if (originalValue is int && (Math.Abs(num - Math.Floor(num)) <= double.Epsilon || Math.Abs(num - Math.Ceiling(num)) <= double.Epsilon))
+                            return (long)num;
                         return num; //float
                     }
                 }
