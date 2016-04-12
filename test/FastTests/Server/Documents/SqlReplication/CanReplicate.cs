@@ -109,9 +109,9 @@ CREATE TABLE [dbo].[Orders]
                         var readAllLines = File.ReadAllLines(@"P:\Build\SqlReplicationPassword.txt");
                         return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        throw new InvalidOperationException("Use a valid connection string");
+                        throw new InvalidOperationException("Use a valid connection", e);
                     }
                 }
             }
