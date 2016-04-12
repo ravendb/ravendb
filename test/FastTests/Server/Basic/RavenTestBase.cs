@@ -19,6 +19,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Metrics;
 using Sparrow.Collections;
 using Xunit;
 
@@ -358,7 +359,7 @@ namespace Raven.Tests.Core
             configuration.Core.RunInMemory = runInMemory;
             configuration.Core.DataDirectory = dataDirectory;
 
-            var documentDatabase = new DocumentDatabase(name, configuration);
+            var documentDatabase = new DocumentDatabase(name, configuration, new MetricsScheduler());
             documentDatabase.Initialize();
 
             return documentDatabase;

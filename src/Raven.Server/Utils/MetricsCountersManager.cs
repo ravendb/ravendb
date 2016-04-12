@@ -22,6 +22,7 @@ namespace Raven.Database.Util
         public MeterMetric IndexedPerSecond { get; private set; }
         public MeterMetric MapReduceMappedPerSecond { get; set; }
         public MeterMetric MapReduceReducedPerSecond { get; set; }
+        public MeterMetric SqlReplicationBatchSizeMeter { get; set; }
 
         public long ConcurrentRequestsCount;
         private readonly MetricsScheduler _metricsScheduler;
@@ -38,6 +39,8 @@ namespace Raven.Database.Util
             IndexedPerSecond = new MeterMetric(_metricsScheduler);
             MapReduceMappedPerSecond = new MeterMetric(_metricsScheduler);
             MapReduceReducedPerSecond = new MeterMetric(_metricsScheduler);
+
+            SqlReplicationBatchSizeMeter = new MeterMetric(_metricsScheduler);
         }
 
         public void Dispose()
@@ -55,19 +58,19 @@ namespace Raven.Database.Util
         {
             var metricsStatsJsonValue = new DynamicJsonValue
             {
-                ["DocsPerSecond"] = self.DocPutsPerSecond.CreateMeterDataJsonValue(),
-                ["IndexedPerSecond"] = self.DocPutsPerSecond.CreateMeterDataJsonValue(),
-                ["RequestDuationMetric"] = self.DocPutsPerSecond.CreateMeterDataJsonValue(),
-                ["RequestsMeter "] = self.RequestsMeter.CreateMeterDataJsonValue(),
-                ["RequestsPerSecondCounter"] = self.RequestsPerSecondCounter.CreateMeterDataJsonValue(),
-                ["MapReduceMappedPerSecond"] = self.MapReduceMappedPerSecond.CreateMeterDataJsonValue(),
-                ["MapReduceReducedPerSecond"] = self.MapReduceReducedPerSecond.CreateMeterDataJsonValue(),
+                ["DocsPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
+                ["IndexedPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
+                ["RequestDuationMetric"] = self.DocPutsPerSecond.CreateMeterData(),
+                ["RequestsMeter "] = self.RequestsMeter.CreateMeterData(),
+                ["RequestsPerSecondCounter"] = self.RequestsPerSecondCounter.CreateMeterData(),
+                ["MapReduceMappedPerSecond"] = self.MapReduceMappedPerSecond.CreateMeterData(),
+                ["MapReduceReducedPerSecond"] = self.MapReduceReducedPerSecond.CreateMeterData(),
                 ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount
             };
             return metricsStatsJsonValue;
         }
 
-        public static DynamicJsonValue CreateMeterDataJsonValue(this MeterMetric self)
+        public static DynamicJsonValue CreateMeterData(this MeterMetric self)
         {
             var meterValue = self;
             
