@@ -10,11 +10,10 @@ using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Util;
 using Raven.Server.Config;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -168,12 +167,21 @@ namespace Raven.Server.Web.System
                     var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
                     if (configuration == null)
                     {
-                        writer.WriteString(context.GetLazyString($"Database {name} wasn't found"));
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["name"] = name,
+                            ["deleted"] = false,
+                            ["reason"] = "database not found",
+                        });
                         continue;
                     }
 
                     DeleteDatabase(name, context, isHardDelete, configuration);
-                    writer.WriteString(context.GetLazyString($"Database {name} was deleted successfully"));
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["name"] = name,
+                        ["deleted"] = true,
+                    });
                 }
                 writer.WriteEndArray();
             }
