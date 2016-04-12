@@ -539,7 +539,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact(Skip = "Fitzchak, fix ME!")]
+        [Fact(Skip = "Waiting for RavenDB-4398: Internal log")]
         public async Task WillLog()
         {
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
@@ -552,7 +552,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LastReplicatedEtag > 0)
                         eventSlim.Set();
                 };
 
