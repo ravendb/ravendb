@@ -2,7 +2,7 @@
 
 PKG_INSTALLER="apt-get" # supports : sudo ${PKG_INSTALLER} install <pkgname>   (apt-get and yum currently supported)
 
-CLR_VER="1.0.0-rc1-update1"
+CLR_VER="1.0.0-rc1-update2"
 CLR_RUNTIME="coreclr"
 CLR_ARCH="x64"
 
@@ -33,7 +33,7 @@ REPORT_ATTACH=()
 ATTACHMENTS=()
 
 function printWelcome () {
-	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.3) ${NC}\n"
+	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.4) ${NC}\n"
 	printf "${PURPLE}============================${NC}\n"
 }
 

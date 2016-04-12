@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Lucene.Net.DNX;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -12,6 +12,8 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Utils;
+using Voron.Platform.Posix;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -29,6 +31,8 @@ namespace Raven.Server.Documents.Indexes
 
         private string _path;
         private bool _run = true;
+
+        internal Task _openIndexesTask;
 
         public IndexStore(DocumentDatabase documentDatabase)
         {
@@ -48,11 +52,15 @@ namespace Raven.Server.Documents.Indexes
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
                     _path = _documentDatabase.Configuration.Indexing.IndexStoragePath;
+
+                    if (Platform.RunningOnPosix)
+                        _path = PosixHelper.FixLinuxPath(_path);
+
                     if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
                         Directory.CreateDirectory(_path);
                 }
 
-                Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
+                _openIndexesTask = Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
 
                 _initialized = true;
             }
@@ -99,9 +107,9 @@ namespace Raven.Server.Documents.Indexes
                 Index index;
 
                 if (definition is AutoMapIndexDefinition)
-                    index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition) definition, _documentDatabase);
+                    index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition)definition, _documentDatabase);
                 else if (definition is AutoMapReduceIndexDefinition)
-                    index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition) definition, _documentDatabase);
+                    index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
                 else
                     throw new NotImplementedException("Unknown index definition type: ");
 
@@ -347,22 +355,22 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_locker)
             {
+                var exceptionAggregator = new ExceptionAggregator(Log, "Could not load some of the indexes.");
+
                 foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
                 {
                     int indexId;
                     if (int.TryParse(indexDirectory.Name, out indexId) == false)
                         continue;
 
-                    try
+                    exceptionAggregator.Execute(() =>
                     {
                         var index = Index.Open(indexId, _documentDatabase);
                         _indexes.Add(index);
-                    }
-                    catch (Exception e)
-                    {
-                        Log.ErrorException($"Could not open index with id {indexId}", e);
-                    }
+                    });
                 }
+
+                exceptionAggregator.ThrowIfNeeded();
             }
         }
 
