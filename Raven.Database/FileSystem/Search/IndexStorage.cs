@@ -581,12 +581,16 @@ namespace Raven.Database.FileSystem.Search
             lock (writerLock)
             {
                 writer.DeleteDocuments(new Term("__key", lowerKey));
-                writer.Optimize();
                 writer.Commit();
                 ReplaceSearcher(writer);
             }
         }
 
+        public void OptimizeIndex()
+        {
+            writer.Optimize();
+        }
+        
         private void ReplaceSearcher(IndexWriter writer)
         {
             currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(writer.GetReader()));
