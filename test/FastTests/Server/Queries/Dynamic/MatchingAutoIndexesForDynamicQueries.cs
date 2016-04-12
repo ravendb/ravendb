@@ -1,29 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Utils.Metrics;
+
 using Xunit;
 
 namespace FastTests.Server.Queries.Dynamic
 {
-    public class MatchingAutoIndexesForDynamicQueries : IDisposable
+    public class MatchingAutoIndexesForDynamicQueries : RavenLowLevelTestBase
     {
         private readonly DocumentDatabase _documentDatabase;
         private readonly DynamicQueryToIndexMatcher _sut;
 
         public MatchingAutoIndexesForDynamicQueries()
         {
-            var config = new RavenConfiguration { Core = { RunInMemory = true } };
-
-            _documentDatabase = new DocumentDatabase("Test", config, new MetricsScheduler());
-            _documentDatabase.Initialize();
+            _documentDatabase = CreateDocumentDatabase();
 
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }
@@ -353,9 +349,16 @@ namespace FastTests.Server.Queries.Dynamic
             return _documentDatabase.IndexStore.GetIndex(name);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
-            _documentDatabase.Dispose();
+            try
+            {
+                _documentDatabase.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
         }
     }
 }

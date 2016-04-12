@@ -19,6 +19,8 @@ namespace FastTests
 {
     public abstract class RavenLowLevelTestBase : IDisposable
     {
+        private MetricsScheduler _metricsScheduler = new MetricsScheduler();
+
         private readonly ConcurrentSet<string> _pathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         protected static void WaitForIndexMap(Index index, long etag)
@@ -41,7 +43,7 @@ namespace FastTests
             configuration.Core.RunInMemory = runInMemory;
             configuration.Core.DataDirectory = dataDirectory;
 
-            var documentDatabase = new DocumentDatabase(name, configuration, new MetricsScheduler());
+            var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler);
             documentDatabase.Initialize();
 
             return documentDatabase;
@@ -55,7 +57,7 @@ namespace FastTests
             return path;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             GC.SuppressFinalize(this);
 
@@ -65,6 +67,12 @@ namespace FastTests
             GC.WaitForPendingFinalizers();
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
+
+            exceptionAggregator.Execute(() =>
+            {
+                _metricsScheduler?.Dispose();
+                _metricsScheduler = null;
+            });
 
             RavenTestHelper.DeletePaths(_pathsToDelete, exceptionAggregator);
 
