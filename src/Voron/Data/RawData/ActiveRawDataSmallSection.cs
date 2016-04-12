@@ -191,7 +191,8 @@ namespace Voron.Data.RawData
             var numberOfPagesInSmallSection = GetNumberOfPagesInSmallSection(tx);
             Debug.Assert((numberOfPagesInSmallSection * 2) + ReservedHeaderSpace <= tx.DataPager.PageSize);
 
-            var sectionStart = tx.AllocatePage(numberOfPagesInSmallSection + 1);
+            var sectionStart = tx.AllocatePage(numberOfPagesInSmallSection);
+            numberOfPagesInSmallSection--; // we take one page for the active section header
             tx.BreakLargeAllocationToSeparatePages(sectionStart.PageNumber);
 
             var sectionHeader = (RawDataSmallSectionPageHeader*)sectionStart.Pointer;
