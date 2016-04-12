@@ -9,6 +9,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Metrics;
 using Raven.Tests.Core;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -205,7 +206,7 @@ namespace FastTests.Server.Documents.Tombstones
 
         private static DocumentDatabase CreateDocumentDatabase()
         {
-            var documentDatabase = new DocumentDatabase("Test", new RavenConfiguration { Core = { RunInMemory = true } });
+            var documentDatabase = new DocumentDatabase("Test", new RavenConfiguration { Core = { RunInMemory = true } }, new MetricsScheduler());
             documentDatabase.Initialize();
 
             return documentDatabase;

@@ -4,47 +4,39 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
-using System.Threading;
 
 namespace Raven.Server.Documents.SqlReplication
 {
     public class RelationalDatabaseWriterSimulator : RelationalDatabaseWriterBase
     {
-        private DocumentDatabase database;
-        private readonly SqlReplicationConfiguration configuration;
         private readonly DbProviderFactory providerFactory;
-        private readonly SqlReplicationStatistics statistics;
-        private readonly CancellationToken _cancellationToken;
+        private readonly SqlReplication _sqlReplication;
         private readonly DbCommandBuilder commandBuilder;
 
-        public RelationalDatabaseWriterSimulator(DocumentDatabase database, SqlReplicationConfiguration configuration, PredefinedSqlConnection predefinedSqlConnection, 
-            SqlReplicationStatistics statistics, CancellationToken cancellationToken) 
+        public RelationalDatabaseWriterSimulator(PredefinedSqlConnection predefinedSqlConnection, SqlReplication sqlReplication) 
             : base(predefinedSqlConnection)
         {
-            this.database = database;
-            this.configuration = configuration;
-            this.statistics = statistics;
-            _cancellationToken = cancellationToken;
+            _sqlReplication = sqlReplication;
             providerFactory = DbProviderFactories.GetFactory(predefinedSqlConnection.FactoryName);
             commandBuilder = providerFactory.CreateCommandBuilder();
         }
 
         public IEnumerable<string> SimulateExecuteCommandText(SqlReplicationScriptResult scriptResult)
         {
-            foreach (var sqlReplicationTable in configuration.SqlReplicationTables)
+            foreach (var sqlReplicationTable in _sqlReplication.Configuration.SqlReplicationTables)
             {
                 if (sqlReplicationTable.InsertOnlyMode)
                     continue;
 
                 // first, delete all the rows that might already exist there
-                foreach (string deleteQuery in GenerateDeleteItemsCommandText(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, configuration.ParameterizeDeletesDisabled,
+                foreach (string deleteQuery in GenerateDeleteItemsCommandText(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, _sqlReplication.Configuration.ParameterizeDeletesDisabled,
                     scriptResult.Keys))
                 {
                     yield return deleteQuery;
                 }
             }
 
-            foreach (var sqlReplicationTable in configuration.SqlReplicationTables)
+            foreach (var sqlReplicationTable in _sqlReplication.Configuration.SqlReplicationTables)
             {
                 List<ItemToReplicate> dataForTable;
                 if (scriptResult.Data.TryGetValue(sqlReplicationTable.TableName, out dataForTable) == false)
@@ -84,13 +76,13 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     if (column.Key == pkName)
                         continue;
-                     DbParameter param = new SqlParameter(); /* TODO: Should we use here OdbcParameter? */
+                     DbParameter param = new SqlParameter();
                      RelationalDatabaseWriter.SetParamValue(param, column, null);
                      sb.Append("'").Append(param.Value).Append("'").Append(", ");
                 }
                 sb.Length = sb.Length - 2;
                 sb.Append(")");
-                if (IsSqlServerFactoryType && configuration.ForceSqlServerQueryRecompile)
+                if (IsSqlServerFactoryType && _sqlReplication.Configuration.ForceSqlServerQueryRecompile)
                 {
                     sb.Append(" OPTION(RECOMPILE)");
                 }
@@ -105,7 +97,7 @@ namespace Raven.Server.Documents.SqlReplication
         {
             const int maxParams = 1000;
 
-           _cancellationToken.ThrowIfCancellationRequested();
+           _sqlReplication.CancellationToken.ThrowIfCancellationRequested();
             for (int i = 0; i < identifiers.Count; i += maxParams)
             {
 
@@ -131,7 +123,7 @@ namespace Raven.Server.Documents.SqlReplication
                 }
                 sb.Append(")");
 
-                if (IsSqlServerFactoryType && configuration.ForceSqlServerQueryRecompile)
+                if (IsSqlServerFactoryType && _sqlReplication.Configuration.ForceSqlServerQueryRecompile)
                 {
                     sb.Append(" OPTION(RECOMPILE)");
                 }
@@ -145,7 +137,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         private string GetTableNameString(string tableName)
         {
-            if (configuration.QuoteTables)
+            if (_sqlReplication.Configuration.QuoteTables)
             {
                 return string.Join(".", tableName.Split('.').Select(x => commandBuilder.QuoteIdentifier(x)).ToArray());
             }

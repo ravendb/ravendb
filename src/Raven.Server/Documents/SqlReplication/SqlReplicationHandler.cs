@@ -65,10 +65,7 @@ namespace Raven.Server.Documents.SqlReplication
                         {
                             ["Name"] = replication.Name,
                             ["Statistics"] = replication.Statistics.ToBlittable(),
-                            ["Metrics"] = new DynamicJsonValue
-                            {
-                                /*TODO: Metrics*/
-                            },
+                            ["Metrics"] = replication.MetricsCountersManager.ToSqlReplicationMetricsData(),
                         };
                         context.Write(writer, json);
                     }
@@ -81,7 +78,7 @@ namespace Raven.Server.Documents.SqlReplication
         [RavenAction("/databases/*/sql-replication/debug/pref", "GET", "/databases/{databaseName:string}/sql-replication/debug/pref")]
         public Task GetDebugPref()
         {
-/* TODO: Implement*/
+            /* TODO: Implement this */
             return Task.CompletedTask;
         }
 

@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Utils.Metrics;
 using Xunit;
 
 namespace FastTests.Server.Queries.Dynamic
@@ -21,7 +22,7 @@ namespace FastTests.Server.Queries.Dynamic
         {
             var config = new RavenConfiguration { Core = { RunInMemory = true } };
 
-            _documentDatabase = new DocumentDatabase("Test", config);
+            _documentDatabase = new DocumentDatabase("Test", config, new MetricsScheduler());
             _documentDatabase.Initialize();
 
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
