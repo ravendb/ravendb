@@ -3,11 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Impl;
 
 namespace FastTests.Voron.Trees
 {
     public class Basic : StorageTest
     {
+
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            options.PageSize = 4 * Constants.Size.Kilobyte;
+            base.Configure(options);
+        }
 
         [Fact]
         public void CanAddVeryLargeValue()

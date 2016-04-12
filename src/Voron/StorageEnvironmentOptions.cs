@@ -111,21 +111,22 @@ namespace Voron
         protected StorageEnvironmentOptions(string tempPath)
         {
             TempPath = tempPath;
-            PageSize = 4096;
-            ShouldUseKeyPrefix = name => false;
-            MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
+
+            PageSize = Constants.Storage.PageSize;
+
+            ShouldUseKeyPrefix = name => false;            
+
+            MaxLogFileSize = 64 * Constants.Size.Megabyte;
+
+            InitialLogFileSize = 64 * Constants.Size.Kilobyte;
+
+            MaxScratchBufferSize = 512 * Constants.Size.Megabyte;
+
+            MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB when 4Kb             
+            MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB when 4Kb
 
             IdleFlushTimeout = 5000; // 5 seconds
-
-            MaxLogFileSize = 64 * 1024 * 1024;
-
-            InitialLogFileSize = 64 * 1024;
-
-            MaxScratchBufferSize = 512 * 1024 * 1024;
-
-            ScratchBufferOverflowTimeout = 5000;
-
-            MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB
+            ScratchBufferOverflowTimeout = 5000; // 5 seconds
 
             OwnsPagers = true;
             IncrementalBackupEnabled = false;
