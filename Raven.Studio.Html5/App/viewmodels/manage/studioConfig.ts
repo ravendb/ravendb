@@ -8,6 +8,7 @@ import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
+import numberFormattingStorage = require("common/numberFormattingStorage");
 
 class studioConfig extends viewModelBase {
 
@@ -19,6 +20,8 @@ class studioConfig extends viewModelBase {
     mute: KnockoutComputed<boolean>;
     isForbidden = ko.observable<boolean>();
     isReadOnly: KnockoutComputed<boolean>;
+    browserFormatExample = 5050.99.toLocaleString();
+    rawFormat = ko.observable<boolean>();
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
@@ -61,6 +64,8 @@ class studioConfig extends viewModelBase {
 
         this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
         this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
+
+        this.rawFormat(numberFormattingStorage.shouldUseRaw());
     }
 
     canActivate(args): any {
@@ -136,6 +141,11 @@ class studioConfig extends viewModelBase {
 
     setUpgradeReminder(upgradeSetting: boolean) {
         serverBuildReminder.mute(upgradeSetting);
+    }
+
+    setNumberFormat(raw: boolean) {
+        this.rawFormat(raw);
+        numberFormattingStorage.save(raw);
     }
 
     saveStudioConfig(newDocument: documentClass) {

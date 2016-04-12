@@ -11,6 +11,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -168,8 +169,16 @@ namespace Raven.Database.Server.Controllers
                         RavenJToken value;
                         if (jObject.TryGetValue(column, out value))
                         {
-                            var valueAsString = value.ToString();
-                            filteredObject[column] = valueAsString.Length > DocPreviewColumnTextLimit ? valueAsString.Substring(0, DocPreviewColumnTextLimit) + "..." : valueAsString;
+                            var jValue = value as RavenJValue;
+                            if (jValue != null && (jValue.Type == JTokenType.Float || jValue.Type == JTokenType.Integer))
+                            {
+                                filteredObject[column] = jValue;
+                            }
+                            else
+                            {
+                                var valueAsString = value.ToString();
+                                filteredObject[column] = valueAsString.Length > DocPreviewColumnTextLimit ? valueAsString.Substring(0, DocPreviewColumnTextLimit) + "..." : valueAsString;
+                            }
                         }
                     }
                 }
