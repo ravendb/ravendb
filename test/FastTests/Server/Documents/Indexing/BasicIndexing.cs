@@ -120,8 +120,6 @@ namespace FastTests.Server.Documents.Indexing
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                database.IndexStore._openIndexesTask.Wait();
-
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
@@ -635,10 +633,6 @@ namespace FastTests.Server.Documents.Indexing
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                var exception = Assert.Throws<AggregateException>(() => database.IndexStore._openIndexesTask.Wait());
-
-                Assert.NotNull(exception);
-
                 var index = database
                     .IndexStore
                     .GetIndex(1);

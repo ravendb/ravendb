@@ -55,7 +55,6 @@ namespace Raven.Server.Documents.Handlers
                 WriteDocuments(context, documents);
                 return Task.CompletedTask;
             }
-            return Task.CompletedTask;
         }
 
         private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)

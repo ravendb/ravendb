@@ -78,6 +78,7 @@ namespace Raven.Server.Documents
             IndexStore.Initialize();
             SqlReplicationLoader.Initialize();
             DocumentTombstoneCleaner.Initialize();
+            IndexStore.OpenIndexesTask.Wait(DatabaseShutdown);
         }
 
         public void Dispose()

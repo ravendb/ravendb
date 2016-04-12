@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
@@ -34,9 +33,7 @@ namespace Raven.Server.Documents.Indexes
         private string _path;
         private bool _run = true;
 
-        internal Task _openIndexesTask;
-
-        private readonly ManualResetEventSlim _openIndexesMre = new ManualResetEventSlim();
+        internal Task OpenIndexesTask;
 
         public IndexStore(DocumentDatabase documentDatabase)
         {
@@ -64,7 +61,7 @@ namespace Raven.Server.Documents.Indexes
                         Directory.CreateDirectory(_path);
                 }
 
-                _openIndexesTask = Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
+                OpenIndexesTask = Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
 
                 _initialized = true;
             }
@@ -90,9 +87,6 @@ namespace Raven.Server.Documents.Indexes
 
         public int CreateIndex(IndexDefinitionBase definition)
         {
-            if (_openIndexesMre.Wait(TimeSpan.FromSeconds(5)) == false)
-                throw new InvalidOperationException("Can't create new indexes before current ones will load. We have waited for 5 seconds.");
-
             lock (_locker)
             {
                 Index existingIndex;
@@ -326,8 +320,6 @@ namespace Raven.Server.Documents.Indexes
 
             var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(IndexStore)}");
 
-            _openIndexesMre.Wait();
-
             foreach (var index in _indexes)
             {
                 if (index is FaultyInMemoryIndex)
@@ -362,52 +354,38 @@ namespace Raven.Server.Documents.Indexes
 
         private void OpenIndexes()
         {
-            try
-            {
-                if (_documentDatabase.Configuration.Indexing.RunInMemory)
-                    return;
+            if (_documentDatabase.Configuration.Indexing.RunInMemory)
+                return;
 
-                lock (_locker)
+            lock (_locker)
+            {
+
+                foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
                 {
-                    var exceptionAggregator = new ExceptionAggregator(Log, "Could not load some of the indexes.");
+                    if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                        return;
 
-                    foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
+                    int indexId;
+                    if (int.TryParse(indexDirectory.Name, out indexId) == false)
+                        continue;
+                    try
                     {
-                        if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-                            return;
-
-                        int indexId;
-                        if (int.TryParse(indexDirectory.Name, out indexId) == false)
-                            continue;
-
-                        exceptionAggregator.Execute(() =>
-                        {
-                            try
-                            {
-                                var index = Index.Open(indexId, _documentDatabase);
-                                _indexes.Add(index);
-                            }
-                            catch (Exception e)
-                            {
-                                // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
-                                var fakeIndex = new FaultyInMemoryIndex(indexId);
-
-                                Log.ErrorException($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
-                                // TODO arek: add alert
-
-                                _indexes.Add(fakeIndex);
-
-                                throw;
-                            }
-                        });
+                        var index = Index.Open(indexId, _documentDatabase);
+                        _indexes.Add(index);
                     }
+                    catch (Exception e)
+                    {
+                        // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
+                        var fakeIndex = new FaultyInMemoryIndex(indexId);
 
-                    exceptionAggregator.ThrowIfNeeded();
+                        Log.ErrorException(
+                            $"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}",
+                            e);
+                        // TODO arek: add alert
+
+                        _indexes.Add(fakeIndex);
+                    }
                 }
-            }
-            finally
-            {
-                _openIndexesMre.Set();
             }
         }
 
