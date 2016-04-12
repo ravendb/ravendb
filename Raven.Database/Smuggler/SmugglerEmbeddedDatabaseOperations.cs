@@ -281,6 +281,11 @@ namespace Raven.Database.Smuggler
             return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(items.GetEnumerator()));
         }
 
+        public Task<List<KeyValuePair<string, long>>> GetIdentities()
+        {
+            throw new NotSupportedException("Should support multi-part.");
+        }
+
         public RavenJToken DisableVersioning(RavenJObject metadata)
         {
             if (metadata != null)

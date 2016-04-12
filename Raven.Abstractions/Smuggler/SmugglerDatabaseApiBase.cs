@@ -127,8 +127,6 @@ namespace Raven.Abstractions.Smuggler
                         {
                             var maxEtags = Operations.FetchCurrentMaxEtags();
                             lastException = await RunSingleExportAsync(exportOptions, result, maxEtags, jsonWriter, ownedStream).ConfigureAwait(false);
-                            if (IsMultiPartExportSupported == false)
-                                isLastExport = true;
                         }
                         else
                             await RunLastExportAsync(exportOptions, result, jsonWriter).ConfigureAwait(false);
@@ -190,6 +188,12 @@ namespace Raven.Abstractions.Smuggler
 
             writer.WriteEndArray();
 
+            if (IsMultiPartExportSupported == false)
+            {
+                await ExportIdentities(writer, Options.OperateOnTypes).ConfigureAwait(false);
+                return;
+            }
+
             using (var enumerator = await Operations.ExportItems(Options.OperateOnTypes, state).ConfigureAwait(false))
             {
                 string currentProperty = null;
@@ -237,6 +241,69 @@ namespace Raven.Abstractions.Smuggler
                     state.LastDocDeleteEtag = summary.LastDocDeleteEtag;
                     state.LastDocsEtag = summary.LastDocsEtag;
                 }
+            }
+        }
+
+        private async Task ExportIdentities(JsonTextWriter jsonWriter, ItemType operateOnTypes)
+        {
+            var retries = RetriesCount;
+
+            Operations.ShowProgress("Exporting Identities");
+
+            while (true)
+            {
+                List<KeyValuePair<string, long>> identities;
+                try
+                {
+                    identities = await Operations.GetIdentities();
+                }
+                catch (Exception e)
+                {
+                    if (retries-- == 0 && IgnoreErrorsAndContinue)
+                    {
+                        Operations.ShowProgress("Failed to fetch identities too much times. Cancelling identities export. Message: {0}", e.Message);
+                        return;
+                    }
+
+                    if (IgnoreErrorsAndContinue == false)
+                        throw;
+
+                    Operations.ShowProgress("Failed to fetch identities. {0} retries remaining. Message: {1}", retries, e.Message);
+                    continue;
+                }
+
+                Operations.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
+
+                var filteredIdentities = identities.Where(x => FilterIdentity(x.Key, operateOnTypes)).ToList();
+
+                Operations.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
+
+                jsonWriter.WritePropertyName("Identities");
+                jsonWriter.WriteStartArray();
+
+                foreach (var identityInfo in filteredIdentities)
+                {
+                    try
+                    {
+                        new RavenJObject
+                        {
+                            { "Key", identityInfo.Key },
+                            { "Value", identityInfo.Value }
+                        }.WriteTo(jsonWriter);
+                    }
+                    catch (Exception e)
+                    {
+                        if (IgnoreErrorsAndContinue == false)
+                            throw;
+
+                        Operations.ShowProgress("Export of identity {0} failed. Message: {1}", identityInfo.Key, e.Message);
+                    }
+                }
+
+                jsonWriter.WriteEndArray();
+
+                Operations.ShowProgress("Done with exporting identities");
+                return;
             }
         }
 
