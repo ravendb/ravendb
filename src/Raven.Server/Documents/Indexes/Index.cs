@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexType Type { get; }
 
-        public IndexingPriority Priority { get; private set; }
+        public IndexingPriority Priority { get; protected set; }
 
         public IndexDefinitionBase Definition { get; }
 

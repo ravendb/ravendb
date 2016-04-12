@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
@@ -321,6 +322,9 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var index in _indexes)
             {
+                if (index is FaultyInMemoryIndex)
+                    continue;
+
                 exceptionAggregator.Execute(() =>
                 {
                     index.Dispose();
@@ -365,8 +369,23 @@ namespace Raven.Server.Documents.Indexes
 
                     exceptionAggregator.Execute(() =>
                     {
-                        var index = Index.Open(indexId, _documentDatabase);
-                        _indexes.Add(index);
+                        try
+                        {
+                            var index = Index.Open(indexId, _documentDatabase);
+                            _indexes.Add(index);
+                        }
+                        catch (Exception e)
+                        {
+                            // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
+                            var fakeIndex = new FaultyInMemoryIndex(indexId);
+
+                            Log.ErrorException($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
+                            // TODO arek: add alert
+                            
+                            _indexes.Add(fakeIndex);
+
+                            throw;
+                        }  
                     });
                 }
 

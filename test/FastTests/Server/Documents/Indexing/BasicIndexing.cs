@@ -10,6 +10,7 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -606,6 +607,47 @@ namespace FastTests.Server.Documents.Indexing
 
                 index1.SetLock(IndexLockMode.LockedError);
                 Assert.Throws<InvalidOperationException>(() => database.IndexStore.CreateIndex(definition2));
+            }
+        }
+
+        [Fact]
+        public void IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert()
+        {
+            var path = NewDataPath();
+            string indexStoragePath;
+
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var name1 = new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = true,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.String
+                };
+
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {name1})));
+
+                indexStoragePath = database.Configuration.Indexing.IndexStoragePath;
+            }
+
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.one"));
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.two"));
+
+            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var exception = Assert.Throws<AggregateException>(() => database.IndexStore._openIndexesTask.Wait());
+
+                Assert.NotNull(exception);
+
+                var index = database
+                    .IndexStore
+                    .GetIndex(1);
+
+                Assert.IsType<FaultyInMemoryIndex>(index);
+                Assert.Equal(IndexingPriority.Error, index.Priority);
+
+                // TODO arek: verify that alert was created as well
             }
         }
 
