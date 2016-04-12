@@ -102,16 +102,28 @@ CREATE TABLE [dbo].[Orders]
                     }
                     return local;
                 }
-                catch (Exception)
+                catch
                 {
                     try
                     {
                         var readAllLines = File.ReadAllLines(@"P:\Build\SqlReplicationPassword.txt");
                         return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
                     }
-                    catch (Exception)
+                    catch
                     {
-                        throw new InvalidOperationException("Use a valid connection string");
+                        try
+                        {
+                            local = @"Data Source=(localdb)\v11.0;Integrated Security=SSPI;Connection Timeout=1";
+                            using (var con = new SqlConnection(local))
+                            {
+                                con.Open();
+                            }
+                            return local;
+                        }
+                        catch 
+                        {
+                            throw new InvalidOperationException("Use a valid connection string");
+                        }                    
                     }
                 }
             }
