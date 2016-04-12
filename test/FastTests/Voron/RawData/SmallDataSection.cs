@@ -124,6 +124,26 @@ namespace FastTests.Voron.RawData
         }
 
         [Fact]
+        public void WhatShouldWeDoHere()
+        {
+            long pageNumber;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, "test");
+                pageNumber = section.PageNumber;
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+
+                section.Free(0);
+
+            }
+        }
+
+        [Fact]
         public void CanReadAndWriteFromSection_SingleTx()
         {
             Env.Options.ManualFlushing = true;

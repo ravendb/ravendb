@@ -193,6 +193,7 @@ namespace Voron.Data.RawData
 
             var sectionStart = tx.AllocatePage(numberOfPagesInSmallSection);
             numberOfPagesInSmallSection--; // we take one page for the active section header
+            Debug.Assert(numberOfPagesInSmallSection > 0);
             tx.BreakLargeAllocationToSeparatePages(sectionStart.PageNumber);
 
             var sectionHeader = (RawDataSmallSectionPageHeader*)sectionStart.Pointer;

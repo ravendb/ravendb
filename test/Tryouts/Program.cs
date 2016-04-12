@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.BulkInsert;
+using FastTests.Voron.RawData;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Platform;
@@ -25,29 +26,13 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            //using (var x = new BulkInserts())
-            //{
-            //    x.SimpleBulkInsertShouldWork().Wait();
-            //}
-            //return;
-            using (var store = new DocumentStore
+            for (int i = 0; i < 100; i++)
             {
-                Url = "http://127.0.0.1:8081",
-                DefaultDatabase = "FooBar123"
-            })
-            {
-                store.Initialize();
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
-                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                Console.WriteLine(i);
+                using (var x = new SmallDataSection())
                 {
-                    Id = "FooBar123",
-                    Settings =
-                    {
-                        { "Raven/DataDir", "~\\FooBar123" }
-                    }
-                });
-
-                BulkInsert(store, 1024  *512).Wait();
+                    x.WhatShouldWeDoHere();
+                }
             }
         }
 
