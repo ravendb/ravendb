@@ -92,6 +92,7 @@
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
+    <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />

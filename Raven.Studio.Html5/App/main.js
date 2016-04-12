@@ -23,7 +23,7 @@ define('dagre', ['d3/d3', 'd3/dagre'], function (d3, dagre) { return dagre; });
 // OPTIMIZED BUILD INLINE DURANDAL HERE
 
 define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], function (system, app, viewLocator, dialog, composition) {
-    //system.debug(true);
+    system.debug(true);
     
     NProgress.configure({ showSpinner: false });
 
