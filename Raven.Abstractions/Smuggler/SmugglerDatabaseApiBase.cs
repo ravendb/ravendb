@@ -1590,13 +1590,13 @@ namespace Raven.Abstractions.Smuggler
                 IsIdentitiesSmugglingSupported = false;
                 IsMultiPartExportSupported = false;
 
-                Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", version, versionAtt.Version);
+                Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
                 return;
             }
 
             if (intServerVersion == 25)
             {
-                Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", version, versionAtt.Version);
+                Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
 
                 IsTransformersSupported = true;
                 IsDocsStreamingSupported = true;
@@ -1613,6 +1613,9 @@ namespace Raven.Abstractions.Smuggler
                     IsMultiPartExportSupported = false;
                 else
                     IsMultiPartExportSupported = build == 13 || build >= 30100;
+
+                if (IsMultiPartExportSupported == false)
+                    Operations.ShowProgress("Multi-part export is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
 
                 IsTransformersSupported = true;
                 IsDocsStreamingSupported = true;
