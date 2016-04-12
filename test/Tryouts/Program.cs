@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests.Client.BulkInsert;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Client.Platform;
 
 namespace Tryouts
 {
