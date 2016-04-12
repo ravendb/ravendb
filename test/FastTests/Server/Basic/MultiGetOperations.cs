@@ -1,5 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+
+using FastTests;
+
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.Client;

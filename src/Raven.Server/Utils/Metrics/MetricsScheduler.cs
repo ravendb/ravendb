@@ -15,18 +15,17 @@ namespace Raven.Server.Utils.Metrics
     /// The scheduling code is inspired form Daniel Crenna's metrics port
     /// https://github.com/danielcrenna/metrics-net/blob/master/src/metrics/Reporting/ReporterBase.cs
     /// </remarks>
-    public sealed class MetricsScheduler:IDisposable
+    public sealed class MetricsScheduler : IDisposable
     {
         private readonly Thread _schedulerThread;
         private readonly ManualResetEvent _done = new ManualResetEvent(false);
 
         private readonly ConcurrentSet<MeterMetric> _scheduledActions =
             new ConcurrentSet<MeterMetric>();
-        
-        
+
         public MetricsScheduler()
         {
-            _tickIntervalInNanoseconds =Clock.NanosecondsInSecond;
+            _tickIntervalInNanoseconds = Clock.NanosecondsInSecond;
             _schedulerThread = new Thread(SchedulerTicking)
             {
                 IsBackground = true,
@@ -35,7 +34,7 @@ namespace Raven.Server.Utils.Metrics
             _schedulerThread.Start();
         }
 
-        private ILog _logger = LogManager.GetLogger(typeof (MetricsScheduler));
+        private ILog _logger = LogManager.GetLogger(typeof(MetricsScheduler));
 
         private readonly int _tickIntervalInNanoseconds;
 
@@ -55,15 +54,15 @@ namespace Raven.Server.Utils.Metrics
                     }
                     catch (Exception e)
                     {
-                        _logger.Error("Error occured during MetricsScheduler ticking of a single action",e);
+                        _logger.Error("Error occured during MetricsScheduler ticking of a single action", e);
                     }
                 }
 
-                var elapsedNanoseconds = sp.ElapsedTicks*Clock.FrequencyFactor;
-                millisecondsDelay = (int) (_tickIntervalInNanoseconds - elapsedNanoseconds)/Clock.NanosecondsInMillisecond;
+                var elapsedNanoseconds = sp.ElapsedTicks * Clock.FrequencyFactor;
+                millisecondsDelay = (int)(_tickIntervalInNanoseconds - elapsedNanoseconds) / Clock.NanosecondsInMillisecond;
                 if (millisecondsDelay < 0)
                     millisecondsDelay = 0;
-            } while (_done.WaitOne(Math.Max(millisecondsDelay,0)) == false);
+            } while (_done.WaitOne(Math.Max(millisecondsDelay, 0)) == false);
         }
 
         public void StartTickingMetric(TimeSpan interval, MeterMetric tickable)
