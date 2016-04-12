@@ -110,7 +110,7 @@ namespace Raven.Smuggler
         public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
         {
             var attachment = await Store.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
-            if (attachment == null) 
+            if (attachment == null)
                 return null;
 
             return attachment.Data().ReadData();
@@ -155,7 +155,7 @@ namespace Raven.Smuggler
             {
                 result.Add(new RavenJObject
                            {
-                               { "name", index.Name }, 
+                               { "name", index.Name },
                                { "definition", RavenJObject.FromObject(index) }
                            });
             }
@@ -180,7 +180,7 @@ namespace Raven.Smuggler
             {
                 result.Add(new RavenJObject
                            {
-                               { "name", transformer.Name }, 
+                               { "name", transformer.Name },
                                { "definition", RavenJObject.FromObject(transformer) }
                            });
             }
@@ -296,7 +296,7 @@ namespace Raven.Smuggler
                     var configuration = (RavenJObject)request.ReadResponseJson();
 
                     var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
-                    if (maxNumberOfItemsToProcessInSingleBatch <= 0) 
+                    if (maxNumberOfItemsToProcessInSingleBatch <= 0)
                         return;
 
                     var current = databaseOptions.BatchSize;
@@ -317,7 +317,7 @@ namespace Raven.Smuggler
             if (isIdentitiesSmugglingSupported() == false)
                 return new CompletedTask();
 
-            if(identityName != null)
+            if (identityName != null)
                 return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
 
             return new CompletedTask();
@@ -330,6 +330,36 @@ namespace Raven.Smuggler
             var client = (AsyncServerClient)Store.AsyncDatabaseCommands;
 
             return client.StreamExportAsync(options);
+        }
+
+        public async Task<List<KeyValuePair<string, long>>> GetIdentities()
+        {
+            if (isIdentitiesSmugglingSupported() == false)
+                return new List<KeyValuePair<string, long>>();
+
+            var start = 0;
+            const int PageSize = 1024;
+            long totalIdentitiesCount;
+            var identities = new List<KeyValuePair<string, long>>();
+
+            do
+            {
+                var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + PageSize;
+                using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+                {
+                    var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
+                    totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
+
+                    foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+                    {
+                        identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
+                    }
+
+                    start += PageSize;
+                }
+            } while (identities.Count < totalIdentitiesCount);
+
+            return identities;
         }
     }
 }
