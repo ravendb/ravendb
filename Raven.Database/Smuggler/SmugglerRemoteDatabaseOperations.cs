@@ -172,7 +172,7 @@ namespace Raven.Smuggler
             {
                 result.Add(new RavenJObject
                            {
-                               { "name", index.Name }, 
+                               { "name", index.Name },
                                { "definition", RavenJObject.FromObject(index) }
                            });
             }
@@ -197,7 +197,7 @@ namespace Raven.Smuggler
             {
                 result.Add(new RavenJObject
                            {
-                               { "name", transformer.Name }, 
+                               { "name", transformer.Name },
                                { "definition", RavenJObject.FromObject(transformer) }
                            });
             }
@@ -205,10 +205,9 @@ namespace Raven.Smuggler
             return result;
         }
 
-        public async Task<string> GetVersion(RavenConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(RavenConnectionStringOptions server)
         {
-            var buildNumber = await Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false);
-            return buildNumber.ProductVersion;
+            return Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
         }
 
         public void PurgeTombstones(OperationState result)
