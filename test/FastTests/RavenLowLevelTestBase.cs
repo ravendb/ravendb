@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 using Raven.Abstractions;
@@ -66,6 +67,9 @@ namespace FastTests
             GC.Collect(2);
             GC.WaitForPendingFinalizers();
 
+#pragma warning disable 618 // Yes, I know this is obselete
+            var alreadyHasException = Marshal.GetExceptionCode() == 0;
+#pragma warning restore 618
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
             exceptionAggregator.Execute(() =>
@@ -75,8 +79,8 @@ namespace FastTests
             });
 
             RavenTestHelper.DeletePaths(_pathsToDelete, exceptionAggregator);
-
-            exceptionAggregator.ThrowIfNeeded();
+            if(alreadyHasException == false)
+                exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

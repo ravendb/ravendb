@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
@@ -26,10 +27,14 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var x = new BasicIndexing())
+            Parallel.For(0, 100, i =>
             {
-                x.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert();
-            }
+                Console.WriteLine(i);
+                using (var x = new BasicIndexing())
+                {
+                    x.CanDelete();
+                }
+            });
             return;
             //using (var store = new DocumentStore
             //{
