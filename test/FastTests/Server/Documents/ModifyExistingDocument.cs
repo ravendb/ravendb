@@ -23,8 +23,8 @@ namespace FastTests.Server.Documents
                         RavenJObject.Parse("{\"Email\":\"support@hibernatingrhinos.com\"}"),
                         RavenJObject.Parse("{\"Raven-Entity-Name\":\"UserAddresses\"}"));
                 });
-                Assert.Contains(@"InvalidOperationException: Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported.
-Delete the document and recreate the document users/1.", exception.Message);
+                Assert.Contains("InvalidOperationException: Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported.\n"
+                                + "Delete the document and recreate the document users/1.", exception.Message);
             }
         }
     }

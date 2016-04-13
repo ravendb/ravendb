@@ -109,7 +109,7 @@ CREATE TABLE [dbo].[Orders]
                     {
                         string path;
                         if (Platform.RunningOnPosix)
-                            path = @"/tmp/SqlReplicationPassword.txt";
+                            path = @"/tmp/sqlReplicationPassword.txt";
                         else
                             path = @"P:\Build\SqlReplicationPassword.txt";
 

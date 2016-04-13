@@ -284,8 +284,8 @@ namespace FastTests.Server.Documents.Patching
                     });
                 });
 
-                Assert.Contains(@"Raven.Server.Documents.Patch.ParseException: Could not parse: 
-this.Id = 'Something", parseException.Message);
+                Assert.Contains("Raven.Server.Documents.Patch.ParseException: Could not parse: \n"
+                                + "this.Id = 'Something", parseException.Message);
             }
         }
 
@@ -304,11 +304,11 @@ this.Id = 'Something", parseException.Message);
                     });
                 });
 
-                Assert.Contains(@"System.InvalidOperationException: Unable to execute JavaScript: 
-throw 'problem'
-
-Error: 
-problem", invalidOperationException.Message);
+                Assert.Contains("System.InvalidOperationException: Unable to execute JavaScript: \n"
+                                + "throw 'problem'\n" 
+                                + "\n"
+                                + "Error: \n"
+                                + "problem", invalidOperationException.Message);
             }
         }
 
