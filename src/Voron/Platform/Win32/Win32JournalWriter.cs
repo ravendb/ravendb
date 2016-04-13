@@ -20,6 +20,7 @@ namespace Voron.Platform.Win32
     public unsafe class Win32FileJournalWriter : IJournalWriter
     {
         private readonly StorageEnvironmentOptions _options;
+        private readonly int _pageSizeMultiplier;
         private readonly string _filename;
         private readonly SafeFileHandle _handle;
         private SafeFileHandle _readHandle;
@@ -36,7 +37,8 @@ namespace Voron.Platform.Win32
                 Win32NativeFileCreationDisposition.OpenAlways,
                 Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering | Win32NativeFileAttributes.Overlapped, IntPtr.Zero);
 
-            
+            _pageSizeMultiplier = options.PageSize / (4 * Constants.Size.Kilobyte);
+
             if (_handle.IsInvalid)
                 throw new Win32Exception();
 
@@ -55,24 +57,47 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 throw new ObjectDisposedException("Win32JournalWriter");
 
-            EnsureSegmentsSize(pages);
-
+            var physicalPages = EnsureSegmentsSize(pages);
 
             _nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
             _nativeOverlapped->OffsetHigh = (int) (position >> 32);
-            _nativeOverlapped->EventHandle = IntPtr.Zero; // _manualResetEvent.SafeWaitHandle.DangerousGetHandle();
+            _nativeOverlapped->EventHandle = IntPtr.Zero;
 
-            for (int i = 0; i < pages.Length; i++)
+            if (_pageSizeMultiplier == 1)
             {
-                if (IntPtr.Size == 4)
-                    _segments[i].Alignment = (ulong) pages[i];
+                for (int i = 0; i < pages.Length; i++)
+                {
+                    if (IntPtr.Size == 4)
+                        _segments[i].Alignment = (ulong)pages[i];
 
-                else
-                    _segments[i].Buffer = pages[i];
+                    else
+                        _segments[i].Buffer = pages[i];
+                }
+
+                _segments[pages.Length].Alignment = 0; // null terminating
             }
-            _segments[pages.Length].Alignment = 0; // null terminating
+            else
+            {
+                var pageLength = pages.Length * _pageSizeMultiplier;
+                for ( int step = 0; step < _pageSizeMultiplier; step++ )
+                {
+                    int offset = step * 4 * Constants.Size.Kilobyte;                    
+                    for (int i = 0, ptr = step; i < pages.Length; i++, ptr += _pageSizeMultiplier)
+                    {
+                        if (IntPtr.Size == 4)
+                            _segments[ptr].Alignment = (ulong)(pages[i] + offset);
 
-            var operationCompleted = Win32NativeFileMethods.WriteFileGather(_handle, _segments, (uint) pages.Length*4096, IntPtr.Zero, _nativeOverlapped);
+                        else
+                            _segments[ptr].Buffer = pages[i] + offset;
+                    }
+                }
+
+                _segments[pageLength].Alignment = 0; // null terminating
+            }            
+          
+            // WriteFileGather will only be able to write x pages of size GetSystemInfo().dwPageSize. Usually that is 4096 (4kb). If you are
+            // having trouble with this method, ensure that this value havent changed for your environment. 
+            var operationCompleted = Win32NativeFileMethods.WriteFileGather(_handle, _segments, (uint)(physicalPages * 4096), IntPtr.Zero, _nativeOverlapped);
 
             uint lpNumberOfBytesWritten;
 
@@ -95,17 +120,19 @@ namespace Voron.Platform.Win32
             }
         }
 
-        private void EnsureSegmentsSize(IntPtr[] pages)
+        private int EnsureSegmentsSize(IntPtr[] pages)
         {
-            if (_segmentsSize >= pages.Length + 1)
-                return;
+            int physicalPages = (pages.Length * _pageSizeMultiplier);
+            if (_segmentsSize >= physicalPages + 1)
+                return physicalPages;
 
-            _segmentsSize = Bits.NextPowerOf2(pages.Length + 1);
+            _segmentsSize = Bits.NextPowerOf2(physicalPages + 1);
 
             if (_segments != null)
                 Marshal.FreeHGlobal((IntPtr) _segments);
 
             _segments = (Win32NativeFileMethods.FileSegmentElement*) (Marshal.AllocHGlobal(_segmentsSize*sizeof (Win32NativeFileMethods.FileSegmentElement)));
+            return physicalPages;
         }
 
         public long NumberOfAllocatedPages { get; private set; }

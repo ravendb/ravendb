@@ -874,7 +874,7 @@ namespace Voron.Impl.Journal
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(compressionBuffer + len, 0, remainder);
+                UnmanagedMemory.Set(compressionBuffer + len, 0, pageSize - remainder);
             }
 
             var pages = new IntPtr[compressedPages + 1];
