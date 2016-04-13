@@ -2,11 +2,13 @@
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
 
+using Sparrow.Json;
+
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {
-        public IndexField[] GroupByFields;
+        public readonly IndexField[] GroupByFields;
 
         public AutoMapReduceIndexDefinition(string[] collections, IndexField[] mapFields, IndexField[] groupByFields)
             : base(IndexNameFinder.FindMapReduceIndexName(collections, mapFields, groupByFields), collections, IndexLockMode.Unlock, mapFields)
@@ -14,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             GroupByFields = groupByFields;
         }
 
-        public override void Persist(TransactionOperationContext context)
+        protected override void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
         }
 

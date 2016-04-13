@@ -357,7 +357,6 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_locker)
             {
-
                 foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
                 {
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
@@ -381,11 +380,9 @@ namespace Raven.Server.Documents.Indexes
                         exceptions?.Add(e);
 
                         // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
-                        var fakeIndex = new FaultyInMemoryIndex(indexId);
+                        var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadName(indexDirectory));
 
-                        Log.ErrorException(
-                            $"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}",
-                            e);
+                        Log.ErrorException($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
                         // TODO arek: add alert
 
                         _indexes.Add(fakeIndex);

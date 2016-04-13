@@ -1,17 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
+
+using Sparrow.Json;
+
 using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {
     public abstract class IndexDefinitionBase
     {
+        protected const string MetadataFileName = "metadata";
+
         protected static readonly Slice DefinitionSlice = "Definition";
 
         private int? _cachedHashCode;
@@ -32,7 +40,32 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexLockMode LockMode { get; set; }
 
-        public abstract void Persist(TransactionOperationContext context);
+        public void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
+        {
+            if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+            {
+                using (var stream = File.Open(Path.Combine(options.BasePath, MetadataFileName), FileMode.Create))
+                using (var writer = new StreamWriter(stream, Encoding.UTF8))
+                {
+                    writer.Write(Name);
+                    writer.Flush();
+                }
+            }
+
+            var tree = context.Transaction.InnerTransaction.CreateTree("Definition");
+            using (var stream = new MemoryStream())
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                Persist(context, writer);
+
+                writer.Flush();
+
+                stream.Position = 0;
+                tree.Add(DefinitionSlice, stream.ToArray());
+            }
+        }
+
+        protected abstract void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer);
 
         public IndexDefinition ConvertToIndexDefinition(Index index)
         {
@@ -82,7 +115,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
-        
+
         public override int GetHashCode()
         {
             if (_cachedHashCode != null)
@@ -98,6 +131,19 @@ namespace Raven.Server.Documents.Indexes
 
                 return hashCode;
             }
+        }
+
+        public static string TryReadName(DirectoryInfo directory)
+        {
+            var metadataFile = Path.Combine(directory.FullName, MetadataFileName);
+            if (File.Exists(metadataFile) == false)
+                return null;
+
+            var name = File.ReadAllText(metadataFile, Encoding.UTF8);
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            return name;
         }
     }
 }

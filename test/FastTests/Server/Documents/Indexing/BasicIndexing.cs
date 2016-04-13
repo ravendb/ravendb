@@ -612,6 +612,7 @@ namespace FastTests.Server.Documents.Indexing
         {
             var path = NewDataPath();
             string indexStoragePath;
+            string indexName;
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
@@ -624,6 +625,7 @@ namespace FastTests.Server.Documents.Indexing
                 };
 
                 Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {name1})));
+                indexName = database.IndexStore.GetIndex(1).Name;
 
                 indexStoragePath = database.Configuration.Indexing.IndexStoragePath;
             }
@@ -639,6 +641,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.IsType<FaultyInMemoryIndex>(index);
                 Assert.Equal(IndexingPriority.Error, index.Priority);
+                Assert.Equal(indexName, index.Name);
 
                 // TODO arek: verify that alert was created as well
             }
