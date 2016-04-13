@@ -1077,6 +1077,11 @@ class appUrl {
             }
         });
     }
+
+    static getSystemDatabase(): database {
+        /*TODO: Delete this*/
+        return null;
+    }
 }
 
 export = appUrl;

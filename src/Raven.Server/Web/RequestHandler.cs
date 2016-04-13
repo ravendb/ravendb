@@ -184,17 +184,11 @@ namespace Raven.Server.Web
             return val;
         }
 
-        protected bool GetBoolValueQueryString(string name, bool required = true)
+        protected bool GetBoolValueQueryString(string name, bool required = false)
         {
-            var boolAsString = GetStringQueryString(name, required: false);
-
+            var boolAsString = GetStringQueryString(name, required);
             if (boolAsString == null)
-            {
-                if (required)
-                    throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
-
                 return false;
-            }
 
             bool result;
             if (bool.TryParse(boolAsString, out result) == false)
