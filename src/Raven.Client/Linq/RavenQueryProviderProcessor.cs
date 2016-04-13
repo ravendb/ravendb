@@ -1443,6 +1443,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         var field = newExpression.Arguments[index];
 
+                        var parameterExpression = field as ParameterExpression;
+
+                        if (lambdaExpression != null && lambdaExpression.Parameters.Count == 2 &&
+                            parameterExpression != null && lambdaExpression.Parameters[0].Name == parameterExpression.Name)
+                        {
+                            AddGroupBySelectFieldToRename(newExpression.Members[index]);
+                            continue;
+                        }
+
                         var keyExpression = field as MemberExpression;
                         
                         if (keyExpression != null && "Key".Equals(GetSelectPath(keyExpression)))
@@ -1516,6 +1525,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     NewField = groupByKey,
                     OriginalField = groupByFields[0].Name
                 });
+
+                groupByFields[0].ClientSideName = groupByKey;
             }
         }
 
@@ -1550,6 +1561,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             FieldsToFetch.Add(mapReduceField);
 
+            var dynamicMapReduceField = new DynamicMapReduceField
+            {
+                Name = mapReduceField,
+                OperationType = mapReduceOperation
+            };
+
             if (renamedField != null && mapReduceField != renamedField)
             {
                 FieldsToRename.Add(new RenamedField
@@ -1557,13 +1574,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     NewField = renamedField,
                     OriginalField = mapReduceField
                 });
-            }
 
-            documentQuery.AddMapReduceField(new DynamicMapReduceField
-            {
-                Name = mapReduceField,
-                OperationType = mapReduceOperation
-            });
+                dynamicMapReduceField.ClientSideName = renamedField;
+            }
+            
+            documentQuery.AddMapReduceField(dynamicMapReduceField);
         }
 
         private string GetSelectPath(MemberInfo member)

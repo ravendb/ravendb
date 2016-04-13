@@ -167,15 +167,29 @@ namespace FastTests.Server.Queries
                                     NameOfProduct = anyKeyName,
                                     OrderedQuantity = g.Sum()
                                 })
+                            .Where(x => x.NameOfProduct == "Chair")
                             .ToList();
 
-                    Assert.Equal(2, sumOfLinesByNameClass.Count);
+                    Assert.Equal(1, sumOfLinesByNameClass.Count);
 
                     Assert.Equal(4, sumOfLinesByNameClass[0].OrderedQuantity);
                     Assert.Equal("Chair", sumOfLinesByNameClass[0].NameOfProduct);
 
-                    Assert.Equal(2, sumOfLinesByNameClass[1].OrderedQuantity);
-                    Assert.Equal("Desk", sumOfLinesByNameClass[1].NameOfProduct);
+                    var sumOfLinesByName =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity,
+                            (anyKeyName, g) =>
+                                new
+                                {
+                                    NameOfProduct = anyKeyName,
+                                    OrderedQuantity = g.Sum()
+                                })
+                            .Where(x => x.OrderedQuantity == 2)
+                            .ToList();
+
+                    Assert.Equal(1, sumOfLinesByName.Count);
+
+                    Assert.Equal(2, sumOfLinesByName[0].OrderedQuantity);
+                    Assert.Equal("Desk", sumOfLinesByName[0].NameOfProduct);
                 }
             }
         }

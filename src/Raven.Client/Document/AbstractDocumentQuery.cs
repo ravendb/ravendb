@@ -885,11 +885,6 @@ namespace Raven.Client.Document
         public void AddMapReduceField(DynamicMapReduceField field)
         {
             isMapReduce = true;
-
-            field.Name = EnsureValidFieldName(new WhereParams
-            {
-                FieldName = field.Name
-            });
             
             dynamicMapReduceFields = dynamicMapReduceFields.Concat(new [] { field }).ToArray();
         }
@@ -1213,8 +1208,21 @@ If you really want to do in memory filtering on the data returned from the query
 
         private string EnsureValidFieldName(WhereParams whereParams)
         {
-            if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath || isMapReduce)
+            if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
                 return whereParams.FieldName;
+
+            if (isMapReduce)
+            {
+                if (IsDynamicMapReduce)
+                {
+                    var renamedField = dynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == whereParams.FieldName);
+
+                    if (renamedField != null)
+                        return whereParams.FieldName = renamedField.Name;
+                }
+
+                return whereParams.FieldName;
+            }
 
             foreach (var rootType in rootTypes)
             {
