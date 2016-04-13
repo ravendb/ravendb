@@ -63,37 +63,7 @@ namespace Voron.Platform.Win32
             _nativeOverlapped->OffsetHigh = (int) (position >> 32);
             _nativeOverlapped->EventHandle = IntPtr.Zero;
 
-            if (_pageSizeMultiplier == 1)
-            {
-                for (int i = 0; i < pages.Length; i++)
-                {
-                    if (IntPtr.Size == 4)
-                        _segments[i].Alignment = (ulong)pages[i];
-
-                    else
-                        _segments[i].Buffer = pages[i];
-                }
-
-                _segments[pages.Length].Alignment = 0; // null terminating
-            }
-            else
-            {
-                var pageLength = pages.Length * _pageSizeMultiplier;
-                for ( int step = 0; step < _pageSizeMultiplier; step++ )
-                {
-                    int offset = step * 4 * Constants.Size.Kilobyte;                    
-                    for (int i = 0, ptr = step; i < pages.Length; i++, ptr += _pageSizeMultiplier)
-                    {
-                        if (IntPtr.Size == 4)
-                            _segments[ptr].Alignment = (ulong)(pages[i] + offset);
-
-                        else
-                            _segments[ptr].Buffer = pages[i] + offset;
-                    }
-                }
-
-                _segments[pageLength].Alignment = 0; // null terminating
-            }            
+            PreparePagesToWrite(pages);            
           
             // WriteFileGather will only be able to write x pages of size GetSystemInfo().dwPageSize. Usually that is 4096 (4kb). If you are
             // having trouble with this method, ensure that this value havent changed for your environment. 
@@ -118,6 +88,40 @@ namespace Voron.Platform.Win32
                 default:
                     throw new VoronUnrecoverableErrorException("Could not write to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
             }
+        }
+
+        private void PreparePagesToWrite(IntPtr[] pages)
+        {
+            if (_pageSizeMultiplier == 1)
+            {
+                for (int i = 0; i < pages.Length; i++)
+                {
+                    if (IntPtr.Size == 4)
+                        _segments[i].Alignment = (ulong)pages[i];
+
+                    else
+                        _segments[i].Buffer = pages[i];
+                }
+
+                _segments[pages.Length].Alignment = 0; // null terminating
+                return;
+            }
+
+            var pageLength = pages.Length*_pageSizeMultiplier;
+            for (int step = 0; step < _pageSizeMultiplier; step++)
+            {
+                int offset = step*4*Constants.Size.Kilobyte;
+                for (int i = 0, ptr = step; i < pages.Length; i++, ptr += _pageSizeMultiplier)
+                {
+                    if (IntPtr.Size == 4)
+                        _segments[ptr].Alignment = (ulong)(pages[i] + offset);
+
+                    else
+                        _segments[ptr].Buffer = pages[i] + offset;
+                }
+            }
+
+            _segments[pageLength].Alignment = 0; // null terminating
         }
 
         private int EnsureSegmentsSize(IntPtr[] pages)
