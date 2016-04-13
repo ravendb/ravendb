@@ -5,6 +5,8 @@ using System.Threading;
 
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
+using Voron.Platform.Posix;
+using Sparrow.Platform;
 
 using Sparrow.Collections;
 
@@ -19,6 +21,10 @@ namespace FastTests
             testName = testName?.Replace("<", "").Replace(">", "");
 
             var newDataDir = Path.GetFullPath($".\\Databases\\{testName ?? "TestDatabase"}_{serverPort}-{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff")}-{Interlocked.Increment(ref _pathCount)}");
+
+            if (Platform.RunningOnPosix)
+                newDataDir = PosixHelper.FixLinuxPath(newDataDir);
+
             if (forceCreateDir && Directory.Exists(newDataDir) == false)
                 Directory.CreateDirectory(newDataDir);
 

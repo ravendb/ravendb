@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Raven.Server.Utils;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents
 {
@@ -8,7 +9,9 @@ namespace Raven.Server.Documents
     {
         public static string MakeSureEndsWithSlash(string filePath)
         {
-            return filePath.TrimEnd('\\') + "\\";
+            if (Platform.RunningOnPosix == false)
+                return filePath.TrimEnd('\\') + "\\";
+            return filePath.TrimEnd('\\').TrimEnd('/') + "/";
         }
 
         public static string StripWorkingDirectory(string workDir, string dir)

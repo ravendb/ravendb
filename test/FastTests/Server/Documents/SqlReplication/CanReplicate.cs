@@ -19,6 +19,7 @@ using Raven.Database.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Tests.Core;
+using Sparrow.Platform;
 using Xunit;
 using Xunit.Sdk;
 
@@ -106,7 +107,13 @@ CREATE TABLE [dbo].[Orders]
                 {
                     try
                     {
-                        var readAllLines = File.ReadAllLines(@"P:\Build\SqlReplicationPassword.txt");
+                        string path;
+                        if (Platform.RunningOnPosix)
+                            path = @"/tmp/SqlReplicationPassword.txt";
+                        else
+                            path = @"P:\Build\SqlReplicationPassword.txt";
+
+                        var readAllLines = File.ReadAllLines(path);
                         return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
                     }
 
