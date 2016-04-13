@@ -601,8 +601,8 @@ namespace Raven.Database.FileSystem.Search
             IndexSearcher searcher;
             using (GetSearcher(out searcher))
             {
-                var termEnum = searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty));
-                try
+                using (var termDocs = searcher.IndexReader.HasDeletions ? searcher.IndexReader.TermDocs() : null)
+                using (var termEnum = searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty)))
                 {
                     if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
                     {
@@ -612,22 +612,35 @@ namespace Raven.Database.FileSystem.Search
                                 yield break;
                         }
                     }
-                    while (termEnum.Term == null ||
-                        field.Equals(termEnum.Term.Field))
+
+                    while (termEnum.Term == null || field.Equals(termEnum.Term.Field))
                     {
                         if (termEnum.Term != null)
                         {
-                            var item = termEnum.Term.Text;
-                            yield return item;
+                            if (termDocs != null)
+                            {
+                                var totalDocCountIncludingDeletes = termEnum.DocFreq();
+
+                                termDocs.Seek(termEnum.Term);
+
+                                while (termDocs.Next() && totalDocCountIncludingDeletes-- > 0)
+                                {
+                                    if (searcher.IndexReader.IsDeleted(termDocs.Doc))
+                                        continue;
+
+                                    yield return termEnum.Term.Text;
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                yield return termEnum.Term.Text;
+                            }
                         }
 
                         if (termEnum.Next() == false)
                             break;
                     }
-                }
-                finally
-                {
-                    termEnum.Dispose();
                 }
             }
         }
