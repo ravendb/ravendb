@@ -93,6 +93,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
+      <Link>Properties\TestAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\LandlordBug.cs" />
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
