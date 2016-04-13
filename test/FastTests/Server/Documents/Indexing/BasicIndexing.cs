@@ -631,7 +631,7 @@ namespace FastTests.Server.Documents.Indexing
             IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.one"));
             IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.two"));
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened = false))
             {
                 var index = database
                     .IndexStore

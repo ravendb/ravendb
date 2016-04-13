@@ -366,6 +366,11 @@ namespace Raven.Server.Documents.Indexes
                     int indexId;
                     if (int.TryParse(indexDirectory.Name, out indexId) == false)
                         continue;
+
+                    List<Exception> exceptions = null;
+                    if (_documentDatabase.Configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened)
+                        exceptions = new List<Exception>();
+
                     try
                     {
                         var index = Index.Open(indexId, _documentDatabase);
@@ -373,6 +378,8 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch (Exception e)
                     {
+                        exceptions?.Add(e);
+
                         // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
                         var fakeIndex = new FaultyInMemoryIndex(indexId);
 
@@ -383,6 +390,9 @@ namespace Raven.Server.Documents.Indexes
 
                         _indexes.Add(fakeIndex);
                     }
+
+                    if (exceptions != null && exceptions.Count > 0)
+                        throw new AggregateException("Could not load some of the indexes", exceptions);
                 }
             }
         }
