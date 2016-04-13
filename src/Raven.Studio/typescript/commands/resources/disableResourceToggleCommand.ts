@@ -14,6 +14,7 @@ class disableResourceToggleCommand extends commandBase {
         var action = this.isDisabled ? "disable" : "enable";
 
         var path = "/admin/";
+        var resource = this.resources[0];
         switch (resource.type) {
         case TenantType.Database:
             path += "databases";
@@ -34,7 +35,6 @@ class disableResourceToggleCommand extends commandBase {
 
         let isOneResource = this.resources.length === 1;
         if (isOneResource) {
-            var resource = this.resources[0];
             this.reportInfo("Trying to " + action + " " + resource.name + "...");
         } else {
             this.reportInfo("Trying to " + action + " " + this.resources.length + " resources...");
