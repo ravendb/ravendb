@@ -31,7 +31,7 @@ namespace Tryouts
                 Console.WriteLine(i);
                 using (var x = new SmallDataSection())
                 {
-                    x.WhatShouldWeDoHere();
+                    x.CanAllocateEnoughToFillEntireSection();
                 }
             }
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using FastTests.Voron.FixedSize;
+using NetTopologySuite.Operation.Overlay.Snap;
 using Sparrow;
 using Xunit;
 using Voron.Data.RawData;
@@ -99,23 +100,19 @@ namespace FastTests.Voron.RawData
                 var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
 
                 int allocationSize = 1020;
-                int allocations = section.Size / allocationSize;
 
-                int i = 0;
-                var rnd = new Random();
-                int selected = rnd.Next(allocations - 2);
+                long id;
 
-                long id, idToFree = 0;
+                var list = new List<long>();
 
                 while (section.TryAllocate(allocationSize, out id))
                 {
-                    if (i == selected)
-                        idToFree = id;
-
-                    i++;
+                    list.Add(id);
                 }
 
                 Assert.False(section.TryAllocate(allocationSize, out id));
+
+                var idToFree = list[list.Count/2];
 
                 section.Free(idToFree);
 
@@ -138,7 +135,7 @@ namespace FastTests.Voron.RawData
             {
                 var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
 
-                section.Free(0);
+                Assert.Throws<InvalidOperationException>(() => section.Free(0));
 
             }
         }

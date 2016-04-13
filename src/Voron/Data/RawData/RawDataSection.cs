@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -306,7 +307,16 @@ namespace Voron.Data.RawData
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected RawDataSmallPageHeader* PageHeaderFor(long pageNumber)
         {
-            return PageHeaderFor(_tx, pageNumber);
+            var pageHeader = PageHeaderFor(_tx, pageNumber);
+
+            if ((pageHeader->Flags & PageFlags.RawData) != PageFlags.RawData)
+                ThrowInvalidPage(pageNumber);
+            return pageHeader;
+        }
+
+        private static void ThrowInvalidPage(long id)
+        {
+            throw new InvalidOperationException($"Page {id} is not a raw data section page");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
