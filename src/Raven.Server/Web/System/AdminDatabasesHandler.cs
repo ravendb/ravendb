@@ -21,14 +21,15 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases/$", "GET", "/admin/databases/{databaseName:string}")]
         public Task Get()
         {
+            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+            if (string.IsNullOrWhiteSpace(name))
+                throw new InvalidOperationException("Database name was not provided");
+
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
 
-                var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-                if (string.IsNullOrWhiteSpace(name))
-                    throw new InvalidOperationException("Database name was not provided");
                 var dbId = Constants.Database.Prefix + name;
                 var dbDoc = ServerStore.Read(context, dbId);
                 if (dbDoc == null)
@@ -43,8 +44,9 @@ namespace Raven.Server.Web.System
                 // TODO: Implement etags
 
                 context.Write(ResponseBodyStream(), dbDoc);
-                return Task.CompletedTask;
             }
+
+            return Task.CompletedTask;
         }
 
         private void UnprotectSecuredSettingsOfDatabaseDocument(BlittableJsonReaderObject obj)
@@ -125,22 +127,35 @@ namespace Raven.Server.Web.System
         public Task Delete()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var isHardDelete = GetBoolValueQueryString("isHardDelete", false);
+            var isHardDelete = GetBoolValueQueryString("isHardDelete");
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
                 if (configuration == null)
                 {
                     HttpContext.Response.StatusCode = 404;
-                    return HttpContext.Response.WriteAsync("Database wasn't found");
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["name"] = name,
+                        ["deleted"] = false,
+                        ["reason"] = "database not found",
+                    });
+                    return Task.CompletedTask;
                 }
 
                 DeleteDatabase(name, context, isHardDelete, configuration);
-                HttpContext.Response.StatusCode = 204; // No Content
-                return Task.CompletedTask;
+                HttpContext.Response.StatusCode = 200;
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["name"] = name,
+                    ["deleted"] = true,
+                });
             }
+
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
@@ -201,6 +216,88 @@ namespace Raven.Server.Web.System
                 if (isHardDelete)
                     DatabaseHelper.DeleteDatabaseFiles(configuration);
             });
+        }
+
+        [RavenAction("/admin/databases/toggle-disable", "POST", "/admin/databases/toggle-disable?name={databaseName:string|multiple}&isDisabled={isDisabled:bool}")]
+        public Task PostToggleDisableDatabases()
+        {
+            var names = HttpContext.Request.Query["name"];
+            if (names.Count == 0)
+                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
+            var isDisabled = GetBoolValueQueryString("isDisabled", true);
+
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var name in names)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    var dbId = Constants.Database.Prefix + name;
+                    BlittableJsonReaderObject dbDoc;
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        dbDoc = ServerStore.Read(context, dbId);
+                    }
+                    if (dbDoc == null)
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["name"] = name,
+                            ["success"] = false,
+                            ["reason"] = "database not found",
+                        });
+                        continue;
+                    }
+
+                    object disabledValue;
+                    var disabled = false;
+                    if (dbDoc.TryGetMember("Disabled", out disabledValue))
+                    {
+                        disabled = (bool)disabledValue;
+                    }
+
+                    if (disabled != isDisabled)
+                    {
+                        var state = isDisabled ? "disabled" : "enabled";
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["name"] = name,
+                            ["success"] = false,
+                            ["reason"] = $"Database already {state}",
+                        });
+                        continue;
+                    }
+
+                    var newDoc = new DynamicJsonValue(dbDoc);
+                    var newDisabled = isDisabled == false;
+                    newDoc.Properties.Enqueue(Tuple.Create("Disabled", (object)newDisabled));
+                    var newDoc2 = context.ReadObject(newDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
+                    {
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            ServerStore.Write(context, dbId, newDoc2);
+                            tx.Commit();
+                        }
+                    });
+
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["name"] = name,
+                        ["success"] = true,
+                        ["disabled"] = newDisabled,
+                    });
+                }
+                writer.WriteEndArray();
+            }
+            return Task.CompletedTask;
         }
     }
 }
