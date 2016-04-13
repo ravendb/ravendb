@@ -894,6 +894,11 @@ namespace Raven.Client.Document
             dynamicMapReduceFields = dynamicMapReduceFields.Concat(new [] { field }).ToArray();
         }
 
+        public DynamicMapReduceField[] GetGroupByFields()
+        {
+            return dynamicMapReduceFields.Where(x => x.IsGroupBy).ToArray();
+        }
+
         IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
         {
             this.SetHighlighterTags(preTag, postTag);

@@ -19,23 +19,23 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of an faulty index");
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
         public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext)
         {
-            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of an faulty index");
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
         public override void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext)
         {
-            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of an faulty index");
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext,
             TransactionOperationContext indexContext)
         {
-            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of an faulty index");
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
     }
 }

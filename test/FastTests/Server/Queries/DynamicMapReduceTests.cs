@@ -1,8 +1,6 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -91,25 +89,6 @@ namespace FastTests.Server.Queries
                     Assert.Equal(2, addressesTotalCount[0].TotalCount);
                     Assert.Equal("Torun", addressesTotalCount[0].City);
                 }
-                
-                //using (var session = store.OpenSession())
-                //{
-                //    var addresses =
-                //        session.Query<Address>().Customize(x => x.WaitForNonStaleResults())
-                //        .Where(x => x.City != "Torun") check this
-                //        .GroupBy(x => x.City).Select(
-                //            x =>
-                //                new
-                //                {
-                //                    City = x.Key,
-                //                    NumberOfCities = x.Count()
-                //                })
-                //            .Where(x => x.NumberOfCities == 2)
-                //            .ToList();
-
-                //    Assert.Equal(2, addresses[0].NumberOfCities);
-                //    Assert.Equal("Torun", addresses[0].City);
-                //}
             }
         }
 
@@ -146,7 +125,7 @@ namespace FastTests.Server.Queries
                             x =>
                                 new
                                 {
-                                    ProductName = x.Key,
+                                    NameOfProduct = x.Key,
                                     TotalQuantity = x.Sum(_ => _.Quantity)
                                 })
                             .ToList();
@@ -154,32 +133,50 @@ namespace FastTests.Server.Queries
                     Assert.Equal(2, sumOfLinesByName.Count);
 
                     Assert.Equal(4, sumOfLinesByName[0].TotalQuantity);
-                    Assert.Equal("Chair", sumOfLinesByName[0].ProductName);
+                    Assert.Equal("Chair", sumOfLinesByName[0].NameOfProduct);
 
                     Assert.Equal(2, sumOfLinesByName[1].TotalQuantity);
-                    Assert.Equal("Desk", sumOfLinesByName[1].ProductName);
+                    Assert.Equal("Desk", sumOfLinesByName[1].NameOfProduct);
 
-                    // TODO arek
-                    //var sumOfLinesByNameClass =
-                    //    session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
-                    //        x =>
-                    //            new OrderLineReduceResult
-                    //            {
-                    //                NameOfProduct = x.Key,
-                    //                OrderedQuantity = x.Sum(_ => _.Quantity)
-                    //            })
-                    //        .ToList();
+                    var sumOfLinesByNameClass =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = x.Key,
+                                    OrderedQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .ToList();
 
-                    //Assert.Equal(2, sumOfLinesByNameClass.Count);
+                    Assert.Equal(2, sumOfLinesByNameClass.Count);
 
-                    //Assert.Equal(4, sumOfLinesByNameClass[0].OrderedQuantity);
-                    //Assert.Equal("Chair", sumOfLinesByNameClass[0].NameOfProduct);
+                    Assert.Equal(4, sumOfLinesByNameClass[0].OrderedQuantity);
+                    Assert.Equal("Chair", sumOfLinesByNameClass[0].NameOfProduct);
 
-                    //Assert.Equal(2, sumOfLinesByNameClass[1].OrderedQuantity);
-                    //Assert.Equal("Desk", sumOfLinesByNameClass[1].NameOfProduct);
+                    Assert.Equal(2, sumOfLinesByNameClass[1].OrderedQuantity);
+                    Assert.Equal("Desk", sumOfLinesByNameClass[1].NameOfProduct);
                 }
 
-                // TODO use different GroupBy syntax
+                using (var session = store.OpenSession())
+                {
+                    var sumOfLinesByNameClass =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity,
+                            (anyKeyName, g) =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = anyKeyName,
+                                    OrderedQuantity = g.Sum()
+                                })
+                            .ToList();
+
+                    Assert.Equal(2, sumOfLinesByNameClass.Count);
+
+                    Assert.Equal(4, sumOfLinesByNameClass[0].OrderedQuantity);
+                    Assert.Equal("Chair", sumOfLinesByNameClass[0].NameOfProduct);
+
+                    Assert.Equal(2, sumOfLinesByNameClass[1].OrderedQuantity);
+                    Assert.Equal("Desk", sumOfLinesByNameClass[1].NameOfProduct);
+                }
             }
         }
 
