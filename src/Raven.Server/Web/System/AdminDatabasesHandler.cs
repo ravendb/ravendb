@@ -8,7 +8,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
-using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -184,18 +183,6 @@ namespace Raven.Server.Web.System
                     });
                 }
                 writer.WriteEndArray();
-            }
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/rootMetrics", "GET")]
-        public Task GetRootStats()
-        {
-            JsonOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, Server.Metrics.CreateMetricsStatsJsonValue());
             }
             return Task.CompletedTask;
         }
