@@ -107,28 +107,27 @@ CREATE TABLE [dbo].[Orders]
                 {
                     try
                     {
-                        string path;
-                        if (Platform.RunningOnPosix)
-                            path = @"/tmp/sqlReplicationPassword.txt";
-                        else
-                            path = @"P:\Build\SqlReplicationPassword.txt";
-
-                        var readAllLines = File.ReadAllLines(path);
-                        return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
+                        local = @"Data Source=(localdb)\v11.0;Integrated Security=SSPI;Connection Timeout=1";
+                        using (var con = new SqlConnection(local))
+                        {
+                            con.Open();
+                        }
+                        return local;
                     }
-
                     catch
                     {
-
                         try
                         {
-                            local = @"Data Source=(localdb)\v11.0;Integrated Security=SSPI;Connection Timeout=1";
-                            using (var con = new SqlConnection(local))
-                            {
-                                con.Open();
-                            }
-                            return local;
+                            string path;
+                            if (Platform.RunningOnPosix)
+                                path = @"/tmp/sqlReplicationPassword.txt";
+                            else
+                                path = @"P:\Build\SqlReplicationPassword.txt";
+
+                            var readAllLines = File.ReadAllLines(path);
+                            return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
                         }
+
                         catch (Exception e)
                         {
                             throw new InvalidOperationException("Use a valid connection", e);
