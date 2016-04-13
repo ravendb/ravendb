@@ -68,23 +68,10 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    var startTime = SystemTime.UtcNow;
-                    var spRepTime = new Stopwatch();
-                    spRepTime.Start();
-                    int countOfReplicatedItems;
-                    DoWork(out countOfReplicatedItems);
-                    spRepTime.Stop();
+                    DoWork();
 
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Finished sql replication for '{Name}'.");
-
-                    MetricsCountersManager.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
-                    MetricsCountersManager.UpdateReplicationPerformance(new SqlReplicationPerformanceStats
-                    {
-                        BatchSize = countOfReplicatedItems,
-                        Duration = spRepTime.Elapsed,
-                        Started = startTime
-                    });
                 }
                 catch (OutOfMemoryException oome)
                 {
@@ -139,9 +126,17 @@ namespace Raven.Server.Documents.SqlReplication
             _database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        private void DoWork(out int countOfReplicatedItems)
+        private void DoWork()
         {
-            countOfReplicatedItems = 0;
+            if (Configuration.Disabled)
+                return;
+            if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > SystemTime.UtcNow)
+                return;
+
+            int countOfReplicatedItems = 0;
+            var startTime = SystemTime.UtcNow;
+            var spRepTime = new Stopwatch();
+            spRepTime.Start();
 
             try
             {
@@ -169,6 +164,15 @@ namespace Raven.Server.Documents.SqlReplication
             }
             finally
             {
+                spRepTime.Stop();
+                MetricsCountersManager.SqlReplicationBatchSizeMeter.Mark(countOfReplicatedItems);
+                MetricsCountersManager.UpdateReplicationPerformance(new SqlReplicationPerformanceStats
+                {
+                    BatchSize = countOfReplicatedItems,
+                    Duration = spRepTime.Elapsed,
+                    Started = startTime
+                });
+
                 var afterReplicationCompleted = _database.SqlReplicationLoader.AfterReplicationCompleted;
                 afterReplicationCompleted?.Invoke(Statistics);
             }

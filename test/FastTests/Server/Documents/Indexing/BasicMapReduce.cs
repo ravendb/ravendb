@@ -7,21 +7,21 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide.Context;
-using Raven.Tests.Core;
+
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
-    public class BasicMapReduce : RavenTestBase
+    public class BasicMapReduce : RavenLowLevelTestBase
     {
         //TODO: Create base class for indexing tests with methods like
-        //TODO: LowLevel_CreateDocumentDatabase
+        //TODO: CreateDocumentDatabase
         [Fact]
         public async Task CanUseSimpleReduction()
         {
-            using (var db = LowLevel_CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase())
             using (var mri = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 2, "Poland");
@@ -67,7 +67,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public async Task MultipleReduceKeys()
         {
-            using (var db = LowLevel_CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase())
             using (var mri = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 100, "Poland", "Israel", "USA");
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public async Task CanDelete()
         {
-            using (var db = LowLevel_CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 10, "Poland");
@@ -149,7 +149,7 @@ namespace FastTests.Server.Documents.Indexing
         public void IndexLoadsEtagOfLastMapResultOnInitialize()
         {
             var path = NewDataPath();
-            using (var db = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var db = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var id = db.IndexStore.CreateIndex(GetUsersCountByLocationIndexDefinition());
 
@@ -164,7 +164,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(9, index._lastMapResultEtag);
             }
 
-            using (var db = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var db = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 Index index = null;
                 Assert.True(SpinWait.SpinUntil(() => (index = db.IndexStore.GetIndex(1)) != null, TimeSpan.FromSeconds(15)));

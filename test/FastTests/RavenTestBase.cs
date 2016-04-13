@@ -15,15 +15,12 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
-using Sparrow.Collections;
-using Xunit;
 
-namespace Raven.Tests.Core
+using Sparrow.Collections;
+
+namespace FastTests
 {
     public class RavenTestBase : IDisposable
     {
@@ -37,7 +34,6 @@ namespace Raven.Tests.Core
         private static readonly object ServerLocker = new object();
         private static readonly object AvailableServerPortsLocker = new object();
         private RavenServer _localServer;
-        private static int _pathCount;
 
         public void DoNotReuseServer() => _doNotReuseServer = true;
         private bool _doNotReuseServer;
@@ -45,7 +41,6 @@ namespace Raven.Tests.Core
         private const int MaxParallelServer = 79;
         private static readonly List<int> _usedServerPorts = new List<int>();
         private static List<int> _availableServerPorts;
-
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
@@ -223,13 +218,10 @@ namespace Raven.Tests.Core
 
         protected string NewDataPath([CallerMemberName]string prefix = null, bool forceCreateDir = false)
         {
-            prefix = prefix?.Replace("<", "").Replace(">", "");
+            var path = RavenTestHelper.NewDataPath(prefix, NonReusedServerPort, forceCreateDir);
 
-            var newDataDir = Path.GetFullPath($".\\Databases\\{prefix ?? "TestDatabase_" + NonReusedServerPort}-{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff")}-{Interlocked.Increment(ref _pathCount)}");
-            if (forceCreateDir && Directory.Exists(newDataDir) == false)
-                Directory.CreateDirectory(newDataDir);
-            PathsToDelete.Add(newDataDir);
-            return newDataDir;
+            PathsToDelete.Add(path);
+            return path;
         }
 
         public void Dispose()
@@ -278,92 +270,9 @@ namespace Raven.Tests.Core
             GC.Collect(2);
             GC.WaitForPendingFinalizers();
 
-            var pathsToDelete = PathsToDelete.ToArray();
-            foreach (var pathToDelete in pathsToDelete)
-            {
-                PathsToDelete.TryRemove(pathToDelete);
-
-                exceptionAggregator.Execute(() => ClearDatabaseDirectory(pathToDelete));
-
-                if (File.Exists(pathToDelete))
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        throw new IOException(string.Format("We tried to delete the '{0}' directory, but failed because it is a file.\r\n{1}", pathToDelete, WhoIsLocking.ThisFile(pathToDelete)));
-                    });
-                }
-                else if (Directory.Exists(pathToDelete))
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        string filePath;
-                        try
-                        {
-                            filePath = Directory.GetFiles(pathToDelete, "*", SearchOption.AllDirectories).FirstOrDefault() ?? pathToDelete;
-                        }
-                        catch (Exception)
-                        {
-                            filePath = pathToDelete;
-                        }
-
-                        throw new IOException(string.Format("We tried to delete the '{0}' directory.\r\n{1}", pathToDelete, WhoIsLocking.ThisFile(filePath)));
-                    });
-                }
-            }
+            RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
 
             exceptionAggregator.ThrowIfNeeded();
         }
-
-        private void ClearDatabaseDirectory(string dataDir)
-        {
-            var isRetry = false;
-
-            while (true)
-            {
-                try
-                {
-                    IOExtensions.DeleteDirectory(dataDir);
-                    break;
-                }
-                catch (IOException)
-                {
-                    if (isRetry)
-                        throw;
-
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    isRetry = true;
-
-                    Thread.Sleep(2500);
-                }
-            }
-        }
-
-        protected static void LowLevel_WaitForIndexMap(Index index, long etag)
-        {
-            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
-            Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
-        }
-
-        protected DocumentDatabase LowLevel_CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null)
-        {
-            var name = caller ?? Guid.NewGuid().ToString("N");
-
-            if (string.IsNullOrEmpty(dataDirectory) == false)
-                PathsToDelete.Add(dataDirectory);
-            else
-                dataDirectory = NewDataPath(name);
-
-            var configuration = new RavenConfiguration();
-            configuration.Initialize();
-            configuration.Core.RunInMemory = runInMemory;
-            configuration.Core.DataDirectory = dataDirectory;
-
-            var documentDatabase = new DocumentDatabase(name, configuration, new MetricsScheduler());
-            documentDatabase.Initialize();
-
-            return documentDatabase;
-        }
-
     }
 }

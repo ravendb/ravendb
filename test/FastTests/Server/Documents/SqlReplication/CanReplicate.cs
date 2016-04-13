@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -79,7 +80,7 @@ CREATE TABLE [dbo].[Orders]
             }
         }
 
-        private static Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
+        private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
         {
             var local = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=1";
             try
@@ -92,7 +93,42 @@ CREATE TABLE [dbo].[Orders]
             }
             catch (Exception)
             {
-                return @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=1";
+                try
+                {
+                    local = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=1";
+                    using (var con = new SqlConnection(local))
+                    {
+                        con.Open();
+                    }
+                    return local;
+                }
+                catch
+                {
+                    try
+                    {
+                        var readAllLines = File.ReadAllLines(@"P:\Build\SqlReplicationPassword.txt");
+                        return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
+                    }
+
+                    catch
+                    {
+
+                        try
+                        {
+                            local = @"Data Source=(localdb)\v11.0;Integrated Security=SSPI;Connection Timeout=1";
+                            using (var con = new SqlConnection(local))
+                            {
+                                con.Open();
+                            }
+                            return local;
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Use a valid connection", e);
+                        }
+
+                    }
+                }
             }
         });
 
@@ -518,7 +554,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact(Skip = "Fitzchak, fix ME!")]
+        [Fact(Skip = "Waiting for RavenDB-4398: Internal log")]
         public async Task WillLog()
         {
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
@@ -531,7 +567,7 @@ replicateToOrders(orderData);");
                 var database = await GetDatabase(store.DefaultDatabase);
                 database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
                 {
-                    if (statistics.SuccessCount != 0)
+                    if (statistics.LastReplicatedEtag > 0)
                         eventSlim.Set();
                 };
 

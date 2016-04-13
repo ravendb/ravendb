@@ -10,11 +10,11 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Exceptions;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Tests.Core;
+
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -22,12 +22,12 @@ using Constants = Raven.Abstractions.Data.Constants;
 
 namespace FastTests.Server.Documents.Indexing
 {
-    public class BasicIndexing : RavenTestBase
+    public class BasicIndexing : RavenLowLevelTestBase
     {
         [Fact]
         public async Task CheckDispose()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
@@ -73,7 +73,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanDispose()
         {
-            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false))
+            using (var database = CreateDocumentDatabase(runInMemory: false))
             {
                 Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
@@ -94,7 +94,7 @@ namespace FastTests.Server.Documents.Indexing
         public void CanPersist()
         {
             var path = NewDataPath();
-            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var name1 = new IndexField
                 {
@@ -118,10 +118,8 @@ namespace FastTests.Server.Documents.Indexing
                 index2.SetPriority(IndexingPriority.Disabled);
             }
 
-            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                database.IndexStore._openIndexesTask.Wait();
-
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
@@ -155,11 +153,11 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanDelete()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
                 CanDelete(database);
 
             var path = NewDataPath();
-            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
                 CanDelete(database);
         }
 
@@ -204,11 +202,11 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanReset()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
                 CanReset(database);
 
             var path = NewDataPath();
-            using (var database = LowLevel_CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
                 CanReset(database);
         }
 
@@ -262,7 +260,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void SimpleIndexing()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
@@ -417,7 +415,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void WriteErrors()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(
                     1,
@@ -449,7 +447,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void Errors()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(
                     1,
@@ -490,7 +488,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 var index0Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Job", Highlighted = false, Storage = FieldStorage.No } }));
                 var index0 = database.IndexStore.GetIndex(index0Id);
@@ -567,7 +565,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void IndexCreationOptions()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
@@ -591,7 +589,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void LockMode()
         {
-            using (var database = LowLevel_CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase())
             {
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
@@ -606,6 +604,43 @@ namespace FastTests.Server.Documents.Indexing
 
                 index1.SetLock(IndexLockMode.LockedError);
                 Assert.Throws<InvalidOperationException>(() => database.IndexStore.CreateIndex(definition2));
+            }
+        }
+
+        [Fact]
+        public void IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert()
+        {
+            var path = NewDataPath();
+            string indexStoragePath;
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var name1 = new IndexField
+                {
+                    Name = "Name1",
+                    Highlighted = true,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.String
+                };
+
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {name1})));
+
+                indexStoragePath = database.Configuration.Indexing.IndexStoragePath;
+            }
+
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.one"));
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "1", "headers.two"));
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var index = database
+                    .IndexStore
+                    .GetIndex(1);
+
+                Assert.IsType<FaultyInMemoryIndex>(index);
+                Assert.Equal(IndexingPriority.Error, index.Priority);
+
+                // TODO arek: verify that alert was created as well
             }
         }
 
