@@ -75,10 +75,11 @@ namespace Raven.Server.Documents
 
         private void InitializeInternal()
         {
-            IndexStore.Initialize();
+            var indexStoreTask = IndexStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
             DocumentTombstoneCleaner.Initialize();
-            IndexStore.OpenIndexesTask.Wait(DatabaseShutdown);
+
+            indexStoreTask.Wait(DatabaseShutdown);
         }
 
         public void Dispose()

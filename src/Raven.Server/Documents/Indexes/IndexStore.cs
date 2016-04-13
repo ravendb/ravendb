@@ -33,22 +33,20 @@ namespace Raven.Server.Documents.Indexes
         private string _path;
         private bool _run = true;
 
-        internal Task OpenIndexesTask;
-
         public IndexStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
         }
 
-        public void Initialize()
+        public Task InitializeAsync()
         {
             if (_initialized)
-                throw new InvalidOperationException();
+                throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
             lock (_locker)
             {
                 if (_initialized)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
@@ -61,9 +59,9 @@ namespace Raven.Server.Documents.Indexes
                         Directory.CreateDirectory(_path);
                 }
 
-                OpenIndexesTask = Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
-
                 _initialized = true;
+
+                return Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
             }
         }
 
