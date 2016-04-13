@@ -221,7 +221,7 @@ namespace Raven.Abstractions.Data
         //File System
         public static class FileSystem
         {
-            public const string Prefix = "Raven/FileSystems/";
+            public const string Prefix = "fs/";
 
             public const string UrlPrefix = "fs";
 
@@ -232,7 +232,7 @@ namespace Raven.Abstractions.Data
         //Counters
         public static class Counter
         {
-            public const string Prefix = "Raven/Counters/";
+            public const string Prefix = "cs/";
 
             public const string UrlPrefix = "cs";
         }
@@ -240,7 +240,7 @@ namespace Raven.Abstractions.Data
         //Time Series
         public static class TimeSeries
         {
-            public const string Prefix = "Raven/TimeSeries/";
+            public const string Prefix = "ts/";
 
             public const string UrlPrefix = "ts";
         }
