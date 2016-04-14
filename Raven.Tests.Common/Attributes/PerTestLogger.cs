@@ -45,9 +45,6 @@ namespace Raven.Tests.Common.Attributes
             {
                 try
                 {
-                    // dispose file target to avoid race condition in LogManager.Configuration
-                    var fileTarget = LogManager.Configuration.AllTargets.OfType<FileTarget>().First();
-                    fileTarget.Dispose();
                     LogManager.Configuration = _savedConfiguration;
                 }
                 finally
@@ -68,12 +65,15 @@ namespace Raven.Tests.Common.Attributes
                 Name = "DynamicFile"
             };
 
-            // we avoid async logging here to avoid situation in which we delete log file after passed test 
-            // and file will be recreated by nlog.
 
-            newConfig.AddTarget(fileTarget);
+            var asyncTarget = new AsyncTargetWrapper(fileTarget)
+            {
+                Name = "DynamicAsync"
+            };
 
-            newConfig.LoggingRules.Add(new LoggingRule("Raven.*", LogLevel.Debug, fileTarget));
+            newConfig.AddTarget(asyncTarget);
+
+            newConfig.LoggingRules.Add(new LoggingRule("Raven.*", LogLevel.Debug, asyncTarget));
 
             return newConfig;
         }
