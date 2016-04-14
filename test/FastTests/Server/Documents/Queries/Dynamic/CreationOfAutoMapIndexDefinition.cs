@@ -7,9 +7,9 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 
-namespace FastTests.Server.Documents.Queries
+namespace FastTests.Server.Documents.Queries.Dynamic
 {
-    public class CreationOfAutoIndexDefinition
+    public class CreationOfAutoMapIndexDefinition
     {
         private DynamicQueryMapping _sut;
 

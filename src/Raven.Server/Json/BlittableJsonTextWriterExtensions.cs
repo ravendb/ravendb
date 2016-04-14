@@ -161,24 +161,6 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(query.GroupByFields)));
-            writer.WriteStartArray();
-            if (query.GroupByFields != null)
-            {
-                isFirstInternal = true;
-                foreach (var field in query.GroupByFields)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteString(context.GetLazyString(field));
-                }
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
             writer.WritePropertyName(context.GetLazyString(nameof(query.HighlightedFields)));
             writer.WriteStartArray();
             if (query.HighlightedFields != null)

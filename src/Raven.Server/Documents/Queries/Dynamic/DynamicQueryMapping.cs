@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public DynamicQueryMappingItem[] MapFields { get; private set; } = new DynamicQueryMappingItem[0];
 
-        public string[] GroupByFields { get; private set; } = new string[0];
+        public DynamicMapReduceField[] MapReduceFields { get; private set; } = new DynamicMapReduceField[0];
 
         public string[] HighlightedFields { get; private set; }
 
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public IndexDefinitionBase CreateAutoIndexDefinition()
         {
-            if (GroupByFields.Length == 0)
+            if (MapFields.Length > 0)
             {
                 return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
                     new IndexField
@@ -42,23 +43,37 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         Highlighted = HighlightedFields.Any(x => field.Name.Equals(x))
                     }).ToArray());
             }
-            else
-            {
-                return new AutoMapReduceIndexDefinition(new [] { ForCollection }, MapFields.Select(field => 
-                    new IndexField
-                    {
-                        Name = field.Name,
-                        Storage = FieldStorage.Yes,
-                        MapReduceOperation = field.MapReduceOperation
-                    }).ToArray(),
 
-                    GroupByFields.Select(field => 
-                    new IndexField
+            if (MapReduceFields.Length > 0)
+            {
+                var map = new List<IndexField>();
+                var groupBy = new List<IndexField>();
+
+                foreach (var field in MapReduceFields)
+                {
+                    if (field.IsGroupBy)
                     {
-                        Name = field,
-                        Storage = FieldStorage.Yes,
-                    }).ToArray());
+                        groupBy.Add(new IndexField
+                        {
+                            Name = field.Name,
+                            Storage = FieldStorage.Yes
+                        });
+                    }
+                    else
+                    {
+                        map.Add(new IndexField
+                        {
+                            Name = field.Name,
+                            Storage = FieldStorage.Yes,
+                            MapReduceOperation = field.OperationType
+                        });
+                    }
+                }
+
+                return new AutoMapReduceIndexDefinition(new [] { ForCollection }, map.ToArray(), groupBy.ToArray());
             }
+
+            throw new InvalidOperationException("Neither map nor map-reduce fields are defined");
         }
 
         public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
@@ -109,9 +124,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 
             };
 
-            IEnumerable<DynamicQueryMappingItem> dynamicMappingItems;
-
-            if (query.GroupByFields == null)
+            if (query.DynamicMapReduceFields == null)
             {
                 // auto map query
 
@@ -140,13 +153,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
                 }
 
-                dynamicMappingItems = fields.Select(x => new DynamicQueryMappingItem
+                dynamicQueryMapping.MapFields = fields.Select(x => new DynamicQueryMappingItem
                 {
                     //From = x.Item1,
                     //To = IndexField.ReplaceInvalidCharactersInFieldName(x.Item2),
                     //QueryFrom = EscapeParentheses(x.Item2),
                     Name = x.Item1.EndsWith("_Range") ? x.Item1.Substring(0, x.Item1.Length - "_Range".Length) : x.Item1
-                });
+                }).OrderByDescending(x => x.Name.Length).ToArray();
 
                 dynamicQueryMapping.SortDescriptors = GetSortInfo(query.SortedFields,
                     fields.Where(x => x.Item1.EndsWith("_Range")).Select(x => x.Item1).Distinct().ToArray());
@@ -157,27 +170,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 // dynamic map-reduce query
                 // TODO arek: sorted fields
-
-                dynamicQueryMapping.GroupByFields = query.GroupByFields;
-
-                dynamicMappingItems = query.FieldsToFetch.Select(x =>
-                {
-                    var fieldInfo = x.Split('/');
-
-                    if (fieldInfo.Length != 2)
-                        throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {x}");
-
-                    FieldMapReduceOperation operation;
-
-                    if (Enum.TryParse(fieldInfo[1], out operation) == false)
-                        throw new InvalidOperationException($"Could not parse map-reduce field operation: {fieldInfo[1] ?? "empty"}");
-
-                    return new DynamicQueryMappingItem
-                    {
-                        Name = fieldInfo[0],
-                        MapReduceOperation = operation
-                    };
-                });
+                dynamicQueryMapping.MapReduceFields = query.DynamicMapReduceFields.OrderByDescending(x => x.Name).ToArray();
             }
 
             foreach (var dynamicSortInfo in dynamicQueryMapping.SortDescriptors)
@@ -185,8 +178,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 dynamicSortInfo.Field = IndexField.ReplaceInvalidCharactersInFieldName(dynamicSortInfo.Field);
             }
 
-            dynamicQueryMapping.MapFields = dynamicMappingItems.OrderByDescending(x => x.Name.Length).ToArray();
-            
             return dynamicQueryMapping;
         }
 

@@ -1,15 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Microsoft.Extensions.Primitives;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -131,8 +133,9 @@ namespace Raven.Server.Documents.Handlers
                         case "sort":
                             result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
                             break;
-                        case "groupBy":
-                            result.GroupByFields = item.Value;
+                        case "mapReduce":
+                            result.DynamicMapReduceFields = ParseDynamicMapReduceFields(item.Value); ;
+
                             break;
                             // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
                             // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
@@ -153,6 +156,32 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return result;
+        }
+
+        private static DynamicMapReduceField[] ParseDynamicMapReduceFields(StringValues item)
+        {
+            var mapReduceFields = new DynamicMapReduceField[item.Count];
+
+            for (int i = 0; i < item.Count; i++)
+            {
+                var mapReduceField = item[i].Split('-');
+
+                if (mapReduceField.Length != 3)
+                    throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {item[i]}");
+
+                FieldMapReduceOperation operation;
+
+                if (Enum.TryParse(mapReduceField[1], out operation) == false)
+                    throw new InvalidOperationException($"Could not parse map-reduce field operation: {mapReduceField[2]}");
+
+                mapReduceFields[i] = new DynamicMapReduceField
+                {
+                    Name = mapReduceField[0],
+                    OperationType = operation,
+                    IsGroupBy = bool.Parse(mapReduceField[2]),
+                };
+            }
+            return mapReduceFields;
         }
     }
 }

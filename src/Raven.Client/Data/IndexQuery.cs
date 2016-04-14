@@ -92,11 +92,6 @@ namespace Raven.Client.Data
         internal DynamicMapReduceField[] DynamicMapReduceFields { get; set; }
 
         /// <summary>
-        /// Array containing only GroupBy fields of a dynamic map-reduce query
-        /// </summary>
-        internal string[] GroupByFields { get; set; }
-
-        /// <summary>
         /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
         /// </summary>
         public bool WaitForNonStaleResultsAsOfNow { get; set; }
@@ -261,14 +256,12 @@ namespace Raven.Client.Data
             {
                 foreach (var field in DynamicMapReduceFields)
                 {
-                    if (field.IsGroupBy)
-                        path.Append("&groupBy=").Append(Uri.EscapeDataString(field.Name));
-                    else
-                    {
-                        path.Append("&fetch=").Append(Uri.EscapeDataString(field.Name));
-                        path.Append("/");
-                        path.Append(field.OperationType);
-                    }
+                    path.Append("&mapReduce=")
+                        .Append(Uri.EscapeDataString(field.Name))
+                        .Append("-")
+                        .Append(field.OperationType)
+                        .Append("-")
+                        .Append(field.IsGroupBy);
                 }
             }
 
