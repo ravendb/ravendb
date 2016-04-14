@@ -42,6 +42,7 @@ namespace Raven.Client.Linq
         private int subClauseDepth;
         private string resultsTransformer;
         private readonly Dictionary<string, RavenJToken> transformerParameters;
+        private MemberExpression groupByElementSelector = null;
 
         private LinqPathProvider linqPathProvider;
         /// <summary>
@@ -1153,7 +1154,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     var operand = ((UnaryExpression)expression.Arguments[1]).Operand;
 
                     if (documentQuery.IsDynamicMapReduce)
-                        VisitSelectAfterGroupBy(operand, null);
+                    {
+                        VisitSelectAfterGroupBy(operand, groupByElementSelector);
+                        groupByElementSelector = null;
+                    }
                     else
                         VisitSelect(operand);
                     break;
@@ -1281,23 +1285,29 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (documentQuery.IndexQueried.StartsWith("dynamic/") == false)
                         throw new NotSupportedException("GroupBy method is only supported in dynamic map-reduce queries");
 
+                    if (expression.Arguments.Count == 5) // GroupBy(x => keySelector, x => elementSelector, x => resultSelecor, IEqualityComparer)
+                        throw new NotSupportedException("Dynamic map-reduce queries does not support a custom equality comparer");
+
                     VisitExpression(expression.Arguments[0]);
                     VisitGroupBy(((UnaryExpression) expression.Arguments[1]).Operand);
 
-                    if (expression.Arguments.Count == 4)
+                    if (expression.Arguments.Count >= 3)
                     {
-                        // GroupBy(x => keySelector, x => elementSelector, x => resultSelector)
-
                         var lambdaExpression = ((UnaryExpression)expression.Arguments[2]).Operand as LambdaExpression;
 
                         if (lambdaExpression == null)
-                            throw new NotSupportedException($"Expected lambda expression as a element selector in GroupBy statement");
+                            throw new NotSupportedException("Expected lambda expression as a element selector in GroupBy statement");
 
                         var lambdaBody = lambdaExpression.Body;
 
                         var elementSelector = lambdaBody as MemberExpression;
 
-                        VisitSelectAfterGroupBy(((UnaryExpression)expression.Arguments[3]).Operand, elementSelector);
+                        if (expression.Arguments.Count == 3) // GroupBy(x => keySelector, x => elementSelector)
+                            groupByElementSelector = elementSelector;
+                        else if (expression.Arguments.Count == 4) // GroupBy(x => keySelector, x => elementSelector, x => resultSelector)
+                            VisitSelectAfterGroupBy(((UnaryExpression)expression.Arguments[3]).Operand, elementSelector);
+                        else
+                            throw new NotSupportedException($"Not supported syntax of GroupBy. Number of arguments: {expression.Arguments.Count}");
                     }
 
                     break;
@@ -1556,7 +1566,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
             else
             {
                 renamedField = GetSelectPath(memberInfo);
-                mapReduceField = GetSelectPath(linqPathProvider.GetMemberExpression(mapReduceOperationCall.Arguments[1]));
+
+                var lambdaExpression = mapReduceOperationCall.Arguments[1] as LambdaExpression;
+
+                if (lambdaExpression == null)
+                    throw new NotSupportedException("Expected lambda expression in Select statement of a dynamic map-reduce query");
+
+                var member = lambdaExpression.Body as MemberExpression;
+
+                if (member == null)
+                    member = elementSelectorPath;
+
+                mapReduceField = GetSelectPath(member);
             }
 
             FieldsToFetch.Add(mapReduceField);

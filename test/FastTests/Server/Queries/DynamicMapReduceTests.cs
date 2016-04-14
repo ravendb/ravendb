@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Tests.Core.Utils.Entities;
@@ -157,6 +158,7 @@ namespace FastTests.Server.Queries
                     Assert.Equal("Desk", sumOfLinesByNameClass[1].NameOfProduct);
                 }
 
+                // different GroupBy syntax
                 using (var session = store.OpenSession())
                 {
                     var sumOfLinesByNameClass =
@@ -190,6 +192,61 @@ namespace FastTests.Server.Queries
 
                     Assert.Equal(2, sumOfLinesByName[0].OrderedQuantity);
                     Assert.Equal("Desk", sumOfLinesByName[0].NameOfProduct);
+                }
+
+                // different GroupBy syntax
+                using (var session = store.OpenSession())
+                {
+                    var sumOfLinesByName =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity)
+                            .Select((group, i) => new
+                            {
+                                Name = group.Key,
+                                OrderedQuantity = group.Sum(x => x)
+                            })
+                            .Where(x => x.Name == "Chair")
+                            .ToList();
+
+                    Assert.Equal(1, sumOfLinesByName.Count);
+
+                    Assert.Equal(4, sumOfLinesByName[0].OrderedQuantity);
+                    Assert.Equal("Chair", sumOfLinesByName[0].Name);
+
+                    var sumOfLinesByNameClass =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity)
+                            .Select((group, i) => new OrderLineReduceResult
+                            {
+                                NameOfProduct = group.Key,
+                                OrderedQuantity = group.Sum(x => x)
+                            })
+                            .Where(x => x.OrderedQuantity == 2)
+                            .ToList();
+
+                    Assert.Equal(1, sumOfLinesByNameClass.Count);
+
+                    Assert.Equal(2, sumOfLinesByNameClass[0].OrderedQuantity);
+                    Assert.Equal("Desk", sumOfLinesByNameClass[0].NameOfProduct);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Group_by_does_not_support_custom_equality_comparer()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<NotSupportedException>(() =>
+                    {
+                        session.Query<Address>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.City, x => 1,
+                            (key, g) => new
+                            {
+                                City = key,
+                                Count = g.Count()
+                            }, StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+                    });
                 }
             }
         }
