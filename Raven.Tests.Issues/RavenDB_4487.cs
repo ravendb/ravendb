@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Net.Http;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Xunit;
@@ -18,7 +19,7 @@ namespace Raven.Tests.Issues
             using (var store = NewRemoteDocumentStore())
             {
 
-                using (var request = store.DatabaseCommands.CreateRequest("/debug/routes", "GET"))
+                using (var request = store.DatabaseCommands.CreateRequest("/debug/routes", HttpMethod.Get))
                 {
                     var response = request.ReadResponseJson();
                     var jObject = response as RavenJObject;
