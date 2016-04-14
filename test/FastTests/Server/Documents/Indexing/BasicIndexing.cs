@@ -473,7 +473,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     for (int i = 0; i < IndexStorage.MaxNumberOfKeptErrors; i++)
                     {
-                        var now = SystemTime.UtcNow;
+                        var now = SystemTime.UtcNow.AddMinutes(1);
                         stats.Errors[0].Timestamp = now;
                         stats.Errors[1].Timestamp = now;
                         index._indexStorage.UpdateStats(now, stats);

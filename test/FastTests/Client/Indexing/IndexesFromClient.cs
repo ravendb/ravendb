@@ -18,7 +18,7 @@ using Xunit;
 
 namespace FastTests.Client.Indexing
 {
-    public class BasicIndexing : RavenTestBase
+    public class IndexesFromClient : RavenTestBase
     {
         [Fact]
         public async Task CanReset()
