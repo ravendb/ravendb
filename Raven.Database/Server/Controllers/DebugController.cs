@@ -851,6 +851,13 @@ namespace Raven.Database.Server.Controllers
                 foreach (var httpRoute in inner)
                 {
                     var key = httpRoute.RouteTemplate;
+
+                    if (key == string.Empty)
+                    {
+                        // ignore RavenRoot url to avoid issues with empty key in routes dictionary
+                        continue;
+                    }
+
                     bool forDatabase = false;
                     if (key.StartsWith("databases/{databaseName}/"))
                     {

@@ -127,7 +127,8 @@ namespace Raven.Tests.FileSystem.Migration
                     }
 
                     // should synchronize new files too
-                    Assert.True(SpinWait.SpinUntil(() => destination.GetStatisticsAsync().Result.FileCount == 30, TimeSpan.FromMinutes(1)));
+                    // we are using browse async instead of stats to wait for db schema update and avoid exceptions during test disposal
+                    Assert.True(SpinWait.SpinUntil(() => destination.Storage.Commands.BrowseAsync().Result.Length == 30, TimeSpan.FromMinutes(1)));
                 }
             }
         }
