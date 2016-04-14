@@ -3,11 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Queries
+namespace FastTests.Server.Documents.Queries.Dynamic
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class DynamicQueriesEnumsNestedFieldsAndCollections : RavenTestBase

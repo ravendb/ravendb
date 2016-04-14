@@ -5,7 +5,7 @@ using FastTests.Server.Basic.Entities;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Queries
+namespace FastTests.Server.Documents.Queries.Dynamic
 {
     public class DynamicMapReduceTests : RavenTestBase
     {

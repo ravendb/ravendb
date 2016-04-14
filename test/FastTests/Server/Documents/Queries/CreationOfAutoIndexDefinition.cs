@@ -5,10 +5,9 @@ using Raven.Client.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
-
 using Xunit;
 
-namespace FastTests.Server.Queries
+namespace FastTests.Server.Documents.Queries
 {
     public class CreationOfAutoIndexDefinition
     {
