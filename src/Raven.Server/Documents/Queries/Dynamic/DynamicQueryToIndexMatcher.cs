@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Queries.Sort;
 
 namespace Raven.Server.Documents.Queries.Dynamic
@@ -62,12 +63,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 });
             }
 
-            var autoIndexes = _indexStore.GetAutoMapIndexDefinitionForCollection(query.ForCollection); // let us work with AutoIndexes only for now
+            var definitions = _indexStore.GetIndexDefinitionsForCollection(query.ForCollection,
+                query.IsMapReduce ? IndexType.AutoMapReduce : IndexType.AutoMap); // let us work with auto indexes only for now
 
-            if (autoIndexes.Count == 0)
+            if (definitions.Count == 0)
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
 
-            var results = autoIndexes.Select(definition => ConsiderUsageOfAutoIndex(query, definition, explain))
+            var results = definitions.Select(definition => ConsiderUsageOfAutoIndex(query, definition, explain))
             .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
                     .GroupBy(x => x.MatchType)
                     .ToDictionary(x => x.Key, x => x.ToArray());
@@ -97,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, AutoMapIndexDefinition definition, ExplainDelegate explain)
+        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, IndexDefinitionBase definition, ExplainDelegate explain)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;
@@ -197,11 +199,61 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 explain(indexName, () => $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match");
             }
 
+            if (currentBestState != DynamicQueryMatchType.Failure && query.IsMapReduce)
+            {
+                if (AssertMapReduceSpecificFields(query, (AutoMapReduceIndexDefinition)definition, ref currentBestState, explain) == false)
+                {
+                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                }
+            }
+
             return new DynamicQueryMatchResult(indexName, currentBestState)
             {
                 LastMappedEtag = index.GetLastMappedEtagFor(collection),
-                NumberOfMappedFields = definition.CountOfMapFields
+                NumberOfMappedFields = definition.MapFields.Count
             };
+        }
+
+        private bool AssertMapReduceSpecificFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, ref DynamicQueryMatchType currentBestState, ExplainDelegate explain)
+        {
+            var indexName = definition.Name;
+
+            foreach (var mapField in query.MapFields)
+            {
+                if (definition.ContainsField(mapField.Name) == false)
+                {
+                    explain(indexName, () =>
+                    {
+                        var missingFields = query.MapFields.Where(x => definition.ContainsField(x.Name) == false);
+
+                        return $"The following fields are missing: {string.Join(", ", missingFields)}";
+                    });
+
+                    return false;
+                }
+
+                var field = definition.GetField(mapField.Name);
+
+                if (field.MapReduceOperation != mapField.MapReduceOperation)
+                {
+                    explain(indexName, () => $"The following field {field.Name} has {field.MapReduceOperation} aggregate operation defined, while query expected {mapField.MapReduceOperation}");
+
+                    return false;
+                }
+            }
+
+            if (query.GroupByFields.All(definition.ContainsGroupByField) == false)
+            {
+                explain(indexName, () =>
+                {
+                    var missingFields = query.GroupByFields.Where(x => definition.ContainsGroupByField(x) == false);
+                    return $"The following group by fields are missing: {string.Join(", ", missingFields)}";
+                });
+
+                return false;
+            }
+            
+            return true;
         }
     }
 }

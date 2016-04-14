@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var map = DynamicQueryMapping.Create(collection, query);
 
-            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.MapReduceFields.Length == 0)
+            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.GroupByFields.Length == 0)
             {
                 // we optimize for empty queries without sorting options
                 var result = new DocumentQueryResult

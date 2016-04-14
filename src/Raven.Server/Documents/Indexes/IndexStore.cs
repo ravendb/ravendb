@@ -394,12 +394,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public List<AutoMapIndexDefinition> GetAutoMapIndexDefinitionForCollection(string collection)
+        public List<IndexDefinitionBase> GetIndexDefinitionsForCollection(string collection, IndexType type)
         {
             return _indexes
                 .GetForCollection(collection)
-                .Where(x => x.Type == IndexType.AutoMap)
-                .Select(x => (AutoMapIndexDefinition)x.Definition)
+                .Where(x => x.Type == type)
+                .Select(x => x.Definition)
                 .ToList();
         }
 

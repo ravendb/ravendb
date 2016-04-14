@@ -20,8 +20,6 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
 
-        public int CountOfMapFields => MapFields.Count;
-
         protected override void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
@@ -83,9 +81,6 @@ namespace Raven.Server.Documents.Indexes.Auto
                 return true;
 
             if (string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return false;
-
-            if (CountOfMapFields != otherDefinition.CountOfMapFields)
                 return false;
 
             if (Collections.SequenceEqual(otherDefinition.Collections) == false)

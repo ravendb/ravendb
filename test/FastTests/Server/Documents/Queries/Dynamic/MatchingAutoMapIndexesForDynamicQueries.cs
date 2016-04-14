@@ -11,12 +11,12 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic
 {
-    public class MatchingAutoIndexesForDynamicQueries : RavenLowLevelTestBase
+    public class MatchingAutoMapIndexesForDynamicQueries : RavenLowLevelTestBase
     {
         private readonly DocumentDatabase _documentDatabase;
         private readonly DynamicQueryToIndexMatcher _sut;
 
-        public MatchingAutoIndexesForDynamicQueries()
+        public MatchingAutoMapIndexesForDynamicQueries()
         {
             _documentDatabase = CreateDocumentDatabase();
 

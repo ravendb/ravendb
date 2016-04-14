@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
 
@@ -14,6 +15,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             : base(IndexNameFinder.FindMapReduceIndexName(collections, mapFields, groupByFields), collections, IndexLockMode.Unlock, mapFields)
         {
             GroupByFields = groupByFields;
+        }
+
+        public bool ContainsGroupByField(string name)
+        {
+            return GroupByFields.Any(x => x.Name == name);
         }
 
         protected override void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer)
