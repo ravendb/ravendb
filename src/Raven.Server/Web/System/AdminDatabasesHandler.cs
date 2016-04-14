@@ -8,7 +8,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
-using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -22,14 +21,15 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases/$", "GET", "/admin/databases/{databaseName:string}")]
         public Task Get()
         {
+            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+            if (string.IsNullOrWhiteSpace(name))
+                throw new InvalidOperationException("Database name was not provided");
+
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
 
-                var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-                if (string.IsNullOrWhiteSpace(name))
-                    throw new InvalidOperationException("Database name was not provided");
                 var dbId = Constants.Database.Prefix + name;
                 var dbDoc = ServerStore.Read(context, dbId);
                 if (dbDoc == null)
@@ -44,8 +44,9 @@ namespace Raven.Server.Web.System
                 // TODO: Implement etags
 
                 context.Write(ResponseBodyStream(), dbDoc);
-                return Task.CompletedTask;
             }
+
+            return Task.CompletedTask;
         }
 
         private void UnprotectSecuredSettingsOfDatabaseDocument(BlittableJsonReaderObject obj)
@@ -126,22 +127,35 @@ namespace Raven.Server.Web.System
         public Task Delete()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var isHardDelete = GetBoolValueQueryString("isHardDelete", false);
+            var isHardDelete = GetBoolValueQueryString("isHardDelete");
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
                 if (configuration == null)
                 {
                     HttpContext.Response.StatusCode = 404;
-                    return HttpContext.Response.WriteAsync("Database wasn't found");
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["name"] = name,
+                        ["deleted"] = false,
+                        ["reason"] = "database not found",
+                    });
+                    return Task.CompletedTask;
                 }
 
                 DeleteDatabase(name, context, isHardDelete, configuration);
-                HttpContext.Response.StatusCode = 204; // No Content
-                return Task.CompletedTask;
+                HttpContext.Response.StatusCode = 200;
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["name"] = name,
+                    ["deleted"] = true,
+                });
             }
+
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
@@ -184,18 +198,6 @@ namespace Raven.Server.Web.System
                     });
                 }
                 writer.WriteEndArray();
-            }
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/rootMetrics", "GET")]
-        public Task GetRootStats()
-        {
-            JsonOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, Server.Metrics.CreateMetricsStatsJsonValue());
             }
             return Task.CompletedTask;
         }
