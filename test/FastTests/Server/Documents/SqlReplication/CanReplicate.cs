@@ -159,7 +159,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task SimpleTransformation()
         {
             using (var store = await GetDocumentStore())
@@ -207,7 +207,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task NullPropagation()
         {
             using (var store = await GetDocumentStore())
@@ -260,7 +260,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task NullPropagation_WithExplicitNull()
         {
             using (var store = await GetDocumentStore())
@@ -314,7 +314,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task ReplicateMultipleBatches()
         {
             using (var store = await GetDocumentStore())
@@ -354,7 +354,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task RavenDB_3341()
         {
             using (var store = await GetDocumentStore())
@@ -414,7 +414,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task CanUpdateToBeNoItemsInChildTable()
         {
             using (var store = await GetDocumentStore())
@@ -462,7 +462,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task CanDelete()
         {
             using (var store = await GetDocumentStore())
@@ -505,7 +505,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [NonLinuxFact]
         public async Task RavenDB_3172()
         {
             using (var store = await GetDocumentStore())
@@ -560,7 +560,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [Fact(Skip = "Waiting for RavenDB-4398: Internal log")]
+        [NonLinuxFact(Skip = "Waiting for RavenDB-4398: Internal log")]
         public async Task WillLog()
         {
             LogManager.RegisterTarget<DatabaseMemoryTarget>();
