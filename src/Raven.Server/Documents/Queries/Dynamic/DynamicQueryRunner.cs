@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private readonly IndexStore _indexStore;
         private readonly DocumentsOperationContext _context;
         private readonly DocumentsStorage _documents;
-        private OperationCancelToken _token;
+        private readonly OperationCancelToken _token;
 
         public DynamicQueryRunner(IndexStore indexStore, DocumentsStorage documents, DocumentsOperationContext context, OperationCancelToken token)
         {
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 foreach (var document in _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize))
                 {
-                    _token.Cancel.ThrowIfCancellationRequested();
+                    _token.Token.ThrowIfCancellationRequested();
 
                     result.Results.Add(document);
                 }

@@ -8,7 +8,7 @@ using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Queries.Handlers
+namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class QueriesDebugHandler : DatabaseRequestHandler
     {

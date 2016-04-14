@@ -12,7 +12,6 @@ using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -262,7 +261,7 @@ namespace Raven.Server.Documents.Handlers
                     context.Transaction.Commit();
                 }
 
-                Debug.Assert((patchResult.PatchResult == PatchResult.Patched) == (isTestOnly == false));
+                Debug.Assert(patchResult.PatchResult == PatchResult.Patched == isTestOnly == false);
                 var result = new DynamicJsonValue
                 {
                     ["Patched"] = isTestOnly == false,

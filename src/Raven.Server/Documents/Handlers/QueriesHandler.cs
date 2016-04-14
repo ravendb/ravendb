@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Queries.Handlers
+namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {

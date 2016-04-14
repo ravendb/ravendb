@@ -15,15 +15,20 @@ namespace Raven.Server.ServerWide
             _cts = new CancellationTokenSource(cancelAfter);
             _linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, resourceShutdown);
 
-            Cancel = _linkedCts.Token;
+            Token = _linkedCts.Token;
         }
 
         private OperationCancelToken(CancellationToken token)
         {
-            Cancel = token;
+            Token = token;
         }
 
-        public readonly CancellationToken Cancel;
+        public readonly CancellationToken Token;
+
+        public void Cancel()
+        {
+            _linkedCts.Cancel();
+        }
 
         public void Dispose()
         {

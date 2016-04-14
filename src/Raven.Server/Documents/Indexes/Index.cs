@@ -727,7 +727,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             var totalResults = new Reference<int>();
 
-                            result.Results = reader.Query(query, token.Cancel, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
+                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
                             result.TotalResults = totalResults.Value;
                         }
 
