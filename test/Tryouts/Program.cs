@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.BulkInsert;
+using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.RawData;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -29,9 +30,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new SmallDataSection())
+                using (var x = new BasicIndexing())
                 {
-                    x.CanAllocateEnoughToFillEntireSection();
+                    x.Errors();
                 }
             }
         }
