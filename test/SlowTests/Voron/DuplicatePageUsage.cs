@@ -36,7 +36,7 @@ namespace SlowTests.Voron
                     {
                         var assembly = typeof(DuplicatePageUsage).GetTypeInfo().Assembly;
                         fixed (byte* buffer = new byte[1024])
-                        using (var fs = assembly.GetManifestResourceStream("SlowTests.Voron.Data.places.txt"))
+                        using (var fs = assembly.GetManifestResourceStream("SlowTests.Data.places.txt"))
                         using (var reader = new StreamReader(fs))
                         {
                             string readLine;
