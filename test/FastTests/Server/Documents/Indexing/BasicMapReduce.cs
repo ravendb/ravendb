@@ -18,8 +18,6 @@ namespace FastTests.Server.Documents.Indexing
 {
     public class BasicMapReduce : RavenLowLevelTestBase
     {
-        //TODO: Create base class for indexing tests with methods like
-        //TODO: CreateDocumentDatabase
         [Fact]
         public async Task CanUseSimpleReduction()
         {

@@ -70,6 +70,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
                 }
 
+                if (map.Count == 0)
+                    throw new InvalidOperationException("Invalid dynamic map-reduce query mapping. There is no aggregation specified.");
+
+                if (groupBy.Count == 0)
+                    throw new InvalidOperationException("Invalid dynamic map-reduce query mapping. There is no group by field specified.");
+
                 return new AutoMapReduceIndexDefinition(new [] { ForCollection }, map.ToArray(), groupBy.ToArray());
             }
 
