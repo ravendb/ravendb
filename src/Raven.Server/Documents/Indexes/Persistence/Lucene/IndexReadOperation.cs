@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 
+using Lucene.Net.Index;
 using Lucene.Net.Search;
 
 using Raven.Abstractions.Data;
@@ -178,6 +179,36 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 return new SortField(x.Field, (int)sortOptions, x.Descending);
             }).ToArray());
+        }
+
+        public HashSet<string> Terms(string field, string fromValue, int pageSize)
+        {
+            var results = new HashSet<string>();
+            using (var termEnum = _searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty)))
+            {
+                if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
+                {
+                    while (termEnum.Term == null || fromValue.Equals(termEnum.Term.Text))
+                    {
+                        if (termEnum.Next() == false)
+                            return results;
+                    }
+                }
+                while (termEnum.Term == null ||
+                    field.Equals(termEnum.Term.Field))
+                {
+                    if (termEnum.Term != null)
+                        results.Add(termEnum.Term.Text);
+
+                    if (results.Count >= pageSize)
+                        break;
+
+                    if (termEnum.Next() == false)
+                        break;
+                }
+            }
+
+            return results;
         }
 
         public override void Dispose()

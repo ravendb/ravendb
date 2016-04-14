@@ -39,7 +39,6 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

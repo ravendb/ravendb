@@ -141,7 +141,7 @@ namespace Raven.Client.Connection
 
         public static string Terms(this string url, string index, string field, string fromValue, int pageSize)
         {
-            return $"{url}/terms/{index}?field={field}&fromValue={fromValue}&pageSize={pageSize}";
+            return $"{url}/indexes/terms?name={index}&field={field}&fromValue={fromValue}&pageSize={pageSize}";
         }
 
         public static string Doc(this string url, string key)

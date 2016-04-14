@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
+
 using Raven.Client.Data;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
@@ -47,6 +47,19 @@ namespace Raven.Server.Documents.Queries
             }
 
             return result;
+        }
+
+        public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
+        {
+            var index = _indexStore.GetIndex(indexName);
+            if (index == null)
+                throw new InvalidOperationException("There is not index with name: " + indexName);
+
+            var etag = index.GetIndexEtag();
+            if (etag == existingResultEtag)
+                return new TermsQueryResult { NotModified = true };
+
+            return index.GetTerms(field, fromValue, pageSize, context, token);
         }
     }
 }

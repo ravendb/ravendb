@@ -1,17 +1,16 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
-using Raven.Server.Utils;
-using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
@@ -326,7 +325,7 @@ namespace FastTests.Client.Indexing
                 {
                     var serverField = serverDefinition.Fields[key];
                     var field = definition.Fields[key];
-                    
+
                     Assert.Equal(serverField.Indexing, field.Indexing);
                     Assert.Equal(serverField.Analyzer, field.Analyzer);
                     Assert.Equal(serverField.Sort, field.Sort);
@@ -339,6 +338,43 @@ namespace FastTests.Client.Indexing
                 var definitions = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 128).ConfigureAwait(false);
                 Assert.Equal(1, definitions.Length);
                 Assert.Equal(index.Name, definitions[0].Name);
+            }
+        }
+
+        [Fact]
+        public async Task GetTerms()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
+
+                var terms = await store
+                    .AsyncDatabaseCommands
+                    .GetTermsAsync(indexName, "Name", null, 128)
+                    .ConfigureAwait(false);
+
+                Assert.Equal(2, terms.Length);
+                Assert.True(terms.Any(x => string.Equals(x, "Fitzchak", StringComparison.OrdinalIgnoreCase)));
+                Assert.True(terms.Any(x => string.Equals(x, "Arek", StringComparison.OrdinalIgnoreCase)));
             }
         }
     }

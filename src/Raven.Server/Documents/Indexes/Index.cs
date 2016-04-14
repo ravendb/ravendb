@@ -675,7 +675,7 @@ namespace Raven.Server.Documents.Indexes
                 SetPriority(IndexingPriority.Normal);
 
             MarkQueried(SystemTime.UtcNow);
-            
+
             TransactionOperationContext indexContext;
 
             using (MarkQueryAsRunning(query, token))
@@ -734,6 +734,27 @@ namespace Raven.Server.Documents.Indexes
                         return result;
                     }
                 }
+            }
+        }
+
+        public TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (var tx = indexContext.OpenReadTransaction())
+            {
+                var result = new TermsQueryResult
+                {
+                    IndexName = Name,
+                    ResultEtag = CalculateIndexEtag(IsStale(documentsContext, indexContext), documentsContext, indexContext)
+                };
+
+                using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                {
+                    result.Terms = reader.Terms(field, fromValue, pageSize);
+                }
+
+                return result;
             }
         }
 
