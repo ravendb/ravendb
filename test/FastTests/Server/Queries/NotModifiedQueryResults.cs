@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

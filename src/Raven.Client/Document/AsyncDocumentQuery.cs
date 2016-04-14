@@ -12,6 +12,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data;
 using Raven.Client.Document.Async;
 using Raven.Client.Document.Batches;
 using Raven.Client.Listeners;

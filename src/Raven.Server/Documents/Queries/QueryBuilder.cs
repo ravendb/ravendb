@@ -10,6 +10,7 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Database.Indexing;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parse;

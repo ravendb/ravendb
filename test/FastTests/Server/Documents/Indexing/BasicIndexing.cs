@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Exceptions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
@@ -41,7 +43,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.Throws<ObjectDisposedException>(() => index.Start());
 
-                var ex = await Record.ExceptionAsync(() => index.Query(new IndexQuery(), null, CancellationToken.None));
+                var ex = await Record.ExceptionAsync(() => index.Query(new IndexQuery(), null, OperationCancelToken.None));
                 Assert.IsType<ObjectDisposedException>(ex);
 
                 index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
@@ -507,9 +509,9 @@ namespace FastTests.Server.Documents.Indexing
                 var index2 = database.IndexStore.GetIndex(index2Id);
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                 {
-                    await index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    await index1.Query(new IndexQuery(), context, OperationCancelToken.None); // last querying time
                     context.Reset();
-                    await index2.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    await index2.Query(new IndexQuery(), context, OperationCancelToken.None); // last querying time
                 }
 
                 Assert.Equal(IndexingPriority.Normal, index1.Priority);
@@ -527,7 +529,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), database))
                 {
-                    await index1.Query(new IndexQuery(), context, CancellationToken.None); // last querying time
+                    await index1.Query(new IndexQuery(), context, OperationCancelToken.None); // last querying time
                 }
 
                 database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle

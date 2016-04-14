@@ -28,6 +28,7 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -1855,7 +1856,7 @@ If you really want to do in memory filtering on the data returned from the query
                     HighlighterPreTags = highlighterPreTags.ToArray(),
                     HighlighterPostTags = highlighterPostTags.ToArray(),
                     HighlighterKeyName = highlighterKeyName,
-                    ResultsTransformer = resultsTransformer,
+                    Transformer = resultsTransformer,
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     TransformerParameters = transformerParameters,
                     DisableCaching = disableCaching,
@@ -1887,7 +1888,7 @@ If you really want to do in memory filtering on the data returned from the query
                 HighlighterPreTags = highlighterPreTags.ToArray(),
                 HighlighterPostTags = highlighterPostTags.ToArray(),
                 HighlighterKeyName = highlighterKeyName,
-                ResultsTransformer = resultsTransformer,
+                Transformer = resultsTransformer,
                 TransformerParameters = transformerParameters,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 DisableCaching = disableCaching,

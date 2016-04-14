@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data;
 using Raven.Client.Shard;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;

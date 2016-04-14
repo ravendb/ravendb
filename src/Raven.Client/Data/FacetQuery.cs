@@ -6,6 +6,8 @@
 
 using System.Collections.Generic;
 
+using Raven.Client.Data;
+
 namespace Raven.Abstractions.Data
 {
     public class FacetQuery

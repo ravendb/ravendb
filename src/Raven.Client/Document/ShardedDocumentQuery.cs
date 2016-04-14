@@ -18,6 +18,7 @@ using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Data;
 
 namespace Raven.Client.Document
 {

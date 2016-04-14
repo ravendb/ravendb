@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Data;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.Queries.Handlers
 
                 var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
                 
-                var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token.Cancel).ConfigureAwait(false);
+                var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
 
                 if (result.NotModified)
                 {

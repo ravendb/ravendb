@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Data;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Dynamic
@@ -16,9 +16,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private readonly IndexStore _indexStore;
         private readonly DocumentsOperationContext _context;
         private readonly DocumentsStorage _documents;
-        private CancellationToken _token;
+        private OperationCancelToken _token;
 
-        public DynamicQueryRunner(IndexStore indexStore, DocumentsStorage documents, DocumentsOperationContext context, CancellationToken token)
+        public DynamicQueryRunner(IndexStore indexStore, DocumentsStorage documents, DocumentsOperationContext context, OperationCancelToken token)
         {
             _indexStore = indexStore;
             _context = context;
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 foreach (var document in _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize))
                 {
-                    _token.ThrowIfCancellationRequested();
+                    _token.Cancel.ThrowIfCancellationRequested();
 
                     result.Results.Add(document);
                 }
