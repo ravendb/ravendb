@@ -1,4 +1,4 @@
-<div class="messageBox licensing-status" tabindex="-1" id="licenceSupportModal">
+<div class="messageBox licensing-status" tabindex="-1" id="licenseSupportModal">
     <div class="modal-header">
         <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
             <i class="fa fa-times"></i>
@@ -14,21 +14,21 @@
                         <div class="roundborder dev-only">
                             <i class="fa fa-wrench"></i>
                         </div>
-                        <h3>LICENCE</h3>
+                        <h3>LICENSE</h3>
                         <h4>Development only</h4>
                     </div>
                     <div data-bind="visible: isNonExpiredCommercial">
                         <div class="roundborder commercial">
                             <i class="fa fa-file-text-o"></i>
                         </div>
-                        <h3>LICENCE</h3>
+                        <h3>LICENSE</h3>
                         <h4 data-bind="text: licenseStatusText"></h4>
                     </div>
                     <div data-bind="visible: isExpired">
                         <div class="roundborder expired">
                             <i class="fa fa-hourglass-half"></i>
                         </div>
-                        <h3>LICENCE</h3>
+                        <h3>LICENSE</h3>
                         <h4 data-bind="text: licenseStatusText"></h4>
                     </div>
                     <div data-bind="visible: licenseExpiresAt" class="expire-date">EXPIRES: <span data-bind="text: licenseExpiresAt"></span></div>
@@ -69,7 +69,7 @@
                             <i class="fa fa-question-circle"></i>
                         </div>
                         <h3>SUPPORT</h3>
-                        <h4>Licence not found</h4>
+                        <h4>License not found</h4>
                     </div>
                     <div data-bind="visible: supportExpiresAt" class="expire-date">EXPIRES: <span data-bind="text: supportExpiresAt"></span></div>
                 </div>
@@ -89,12 +89,12 @@
                         </p>
                     </div>
                 </div>
-                <div class="licence-table" data-bind="visible: !isDevelopmentOnly">
+                <div class="license-table" data-bind="visible: !isDevelopmentOnly">
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" class="alternate-align">
                         <tbody>
                             <tr>
                                 <td>RAM</td>
-                                <td><strong><span data-bind="html: attrRam"></span> GB</strong></td>
+                                <td><strong><span data-bind="html: attrRam"></span></strong></td>
                             </tr>
                             <tr>
                                 <td>CPU cores</td>

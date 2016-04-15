@@ -1,6 +1,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import moment = require("moment");
+import genUtils = require("common/generalUtils");
 
 type attributeItem = {
     displayName: string;
@@ -41,7 +42,8 @@ class licensingStatus extends dialogViewModelBase {
         this.isPartialSupport = supportCoverage.Status === 'PartialSupport';
         this.isCommunitySupport = !this.isProfessionalSupport && !this.isProductionSupport && !this.isPartialSupport;
 
-        this.attrRam = this.prepareHtmlForAttribute(licenseStatus.Attributes.maxRamUtilization);
+        var rawFormatted = licenseStatus.Attributes.maxRamUtilization === "unlimited" ? "unlimited" : genUtils.formatBytesToSize(parseInt(licenseStatus.Attributes.maxRamUtilization));
+        this.attrRam = this.prepareHtmlForAttribute(rawFormatted);
         this.attrCpus = this.prepareHtmlForAttribute(licenseStatus.Attributes.maxParallelism);
 
         this.licenseExpiresAt = licenseStatus.Attributes.updatesExpiration;

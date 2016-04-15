@@ -8672,6 +8672,7 @@ a.global_help_link:focus {
 }
 .fa-infinity {
   font-family: inherit;
+  line-height: 14px;
 }
 .fa-infinity:before {
   content: '\221E';
@@ -8699,48 +8700,48 @@ a.global_help_link:focus {
 .border-danger .icon-xl .fa.text-danger {
   color: #e66258;
 }
-#licenceSupportModal {
+#licenseSupportModal {
   width: 840px !important;
 }
-#licenceSupportModal .path {
+#licenseSupportModal .path {
   word-break: break-word;
   font-size: 15px;
   color: #555555;
   font-weight: bold;
 }
-#licenceSupportModal .expire-date {
+#licenseSupportModal .expire-date {
   font-size: 11px;
   color: #999999;
 }
-#licenceSupportModal .licence-table {
+#licenseSupportModal .license-table {
   overflow-y: auto;
   max-height: 420px;
 }
-#licenceSupportModal .licence-table table td {
+#licenseSupportModal .license-table table td {
   width: 50%;
 }
-#licenceSupportModal .bg-gray {
+#licenseSupportModal .bg-gray {
   background-color: #eeeeee;
   overflow: hidden;
 }
-#licenceSupportModal .padding {
+#licenseSupportModal .padding {
   padding: 20px;
 }
-#licenceSupportModal .roundborder {
+#licenseSupportModal .roundborder {
   display: inline-block;
   width: 100px;
   height: 100px;
   position: relative;
 }
 @media (min-height: 900px) {
-  #licenceSupportModal .roundborder {
+  #licenseSupportModal .roundborder {
     margin-top: 30px;
     width: 150px;
     height: 150px;
   }
 }
-#licenceSupportModal .roundborder:after,
-#licenceSupportModal .roundborder:before {
+#licenseSupportModal .roundborder:after,
+#licenseSupportModal .roundborder:before {
   content: '';
   display: block;
   position: absolute;
@@ -8754,7 +8755,7 @@ a.global_help_link:focus {
   -ms-transform: rotate(45deg);
   transform: rotate(45deg);
 }
-#licenceSupportModal .roundborder:before {
+#licenseSupportModal .roundborder:before {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -8767,38 +8768,38 @@ a.global_help_link:focus {
   -ms-transform: translateX(-50%) translateY(-50%);
   transform: translateX(-50%) translateY(-50%);
 }
-#licenceSupportModal .roundborder.commercial:after {
+#licenseSupportModal .roundborder.commercial:after {
   border-color: #38B44A;
 }
-#licenceSupportModal .roundborder.expired:after {
+#licenseSupportModal .roundborder.expired:after {
   border-color: #f36523;
 }
-#licenceSupportModal .roundborder.no-support .fa,
-#licenceSupportModal .roundborder.dev-only .fa {
+#licenseSupportModal .roundborder.no-support .fa,
+#licenseSupportModal .roundborder.dev-only .fa {
   color: #DF382C;
 }
-#licenceSupportModal .roundborder.no-support:after,
-#licenceSupportModal .roundborder.dev-only:after {
+#licenseSupportModal .roundborder.no-support:after,
+#licenseSupportModal .roundborder.dev-only:after {
   border-color: #eeeeee;
 }
-#licenceSupportModal .roundborder.professional-support:before {
+#licenseSupportModal .roundborder.professional-support:before {
   border: solid 8px #eeeeee;
 }
-#licenceSupportModal .roundborder.professional-support:after {
+#licenseSupportModal .roundborder.professional-support:after {
   border-color: #38B44A;
 }
-#licenceSupportModal .roundborder.production-support:before {
+#licenseSupportModal .roundborder.production-support:before {
   border: solid 8px #38B44A;
 }
-#licenceSupportModal .roundborder.production-support:after {
+#licenseSupportModal .roundborder.production-support:after {
   border-color: #38B44A;
 }
-#licenceSupportModal .roundborder.partial-support:after {
+#licenseSupportModal .roundborder.partial-support:after {
   border-color: #38B44A;
   border-left-style: dotted;
   border-bottom-style: dotted;
 }
-#licenceSupportModal .roundborder .fa {
+#licenseSupportModal .roundborder .fa {
   color: #555555;
   font-size: 50px;
   position: absolute;
@@ -8811,45 +8812,45 @@ a.global_help_link:focus {
   transform: translateX(-50%) translateY(-50%);
 }
 @media (min-height: 900px) {
-  #licenceSupportModal .roundborder .fa {
+  #licenseSupportModal .roundborder .fa {
     font-size: 70px;
   }
 }
 @media (min-height: 900px) {
-  #licenceSupportModal .bg-gray {
+  #licenseSupportModal .bg-gray {
     margin-top: 30px;
   }
 }
-#licenceSupportModal .bg-gray .fa {
+#licenseSupportModal .bg-gray .fa {
   font-size: 18px;
 }
-#licenceSupportModal .bg-gray th {
+#licenseSupportModal .bg-gray th {
   color: #772953;
 }
-#licenceSupportModal .bg-gray th h4 {
+#licenseSupportModal .bg-gray th h4 {
   color: #f36523;
 }
-#licenceSupportModal .bg-gray .support-table td + td,
-#licenceSupportModal .bg-gray .support-table th + th {
+#licenseSupportModal .bg-gray .support-table td + td,
+#licenseSupportModal .bg-gray .support-table th + th {
   border-left: 1px solid #dddddd;
 }
-#licenceSupportModal .bg-gray .support-table td,
-#licenceSupportModal .bg-gray .support-table th {
+#licenseSupportModal .bg-gray .support-table td,
+#licenseSupportModal .bg-gray .support-table th {
   text-align: center;
 }
-#licenceSupportModal .bg-gray .support-table .fa {
+#licenseSupportModal .bg-gray .support-table .fa {
   display: block;
   margin: 10px;
   font-size: 22px;
   color: #bbbbbb;
   line-height: 12px;
 }
-#licenceSupportModal .bg-gray .support-table .text-muted {
+#licenseSupportModal .bg-gray .support-table .text-muted {
   color: #a2a2a2;
   display: block;
 }
-#licenceSupportModal .bg-gray td,
-#licenceSupportModal .bg-gray th {
+#licenseSupportModal .bg-gray td,
+#licenseSupportModal .bg-gray th {
   vertical-align: top;
   padding: 7px 0;
   border-bottom: 1px solid #dddddd;
@@ -8857,28 +8858,28 @@ a.global_help_link:focus {
   padding-left: 10px;
   padding-right: 10px;
 }
-#licenceSupportModal .bg-gray tr:last-of-type td {
+#licenseSupportModal .bg-gray tr:last-of-type td {
   border-bottom: none;
 }
-#licenceSupportModal .bg-gray tr:first-of-type .active {
+#licenseSupportModal .bg-gray tr:first-of-type .active {
   border-top: 2px solid #d5d5d5;
 }
-#licenceSupportModal .bg-gray .active {
+#licenseSupportModal .bg-gray .active {
   background-color: #e9e9e9;
 }
-#licenceSupportModal table.alternate-align td:nth-of-type(2n-1) {
+#licenseSupportModal table.alternate-align td:nth-of-type(2n-1) {
   text-align: right;
 }
-#licenceSupportModal .modal-body h3 {
+#licenseSupportModal .modal-body h3 {
   color: #555555;
 }
-#licenceSupportModal .modal-body h4 {
+#licenseSupportModal .modal-body h4 {
   color: #555555;
 }
-#licenceSupportModal .fa-times {
+#licenseSupportModal .fa-times {
   color: #DF382C;
 }
-#licenceSupportModal .fa-check {
+#licenseSupportModal .fa-check {
   color: #38B44A;
 }
 #shellFooter button {
