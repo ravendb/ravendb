@@ -60,8 +60,6 @@ class licensingStatus extends dialogViewModelBase {
             { displayName: "FIPS Compliance", value: licenseStatus.Attributes.fips },
             { displayName: "Quotas", value: licenseStatus.Attributes.quotas },
             { displayName: "Global Configuration", value: licenseStatus.Attributes.globalConfiguration },
-            { displayName: "Counters", value: licenseStatus.Attributes.counters },
-            { displayName: "Time Series", value: licenseStatus.Attributes.timeSeries },
             { displayName: "Authorization", value: licenseStatus.Attributes.authorization },
             { displayName: "Document Expiration", value: licenseStatus.Attributes.documentExpiration },
             { displayName: "Versioning", value: licenseStatus.Attributes.versioning },

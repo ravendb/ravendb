@@ -5,8 +5,10 @@
                 <h2 class="page-header text-info">
                     <i class="fa fa-database fa-5x"></i>
                     <br />
-                    <br />
-                    No databases, file systems, counter storages or time series are available. <br />
+                    <br/>
+                    <span data-bind="visible: has40Features()">No databases, file systems, counter storages or time series are available.</span>
+                    <span data-bind="visible: !has40Features()">No databases or file systems are available.</span>
+                     <br />
                     <small data-bind="visible: isGlobalAdmin() || canNavigateToAdminSettings()">
                         <span data-bind="visible: isGlobalAdmin">
                             Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or 

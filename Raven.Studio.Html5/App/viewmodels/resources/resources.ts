@@ -67,6 +67,8 @@ class resources extends viewModelBase {
         { value: timeSeries.type, name: "Show time series" }
     ];
 
+    has40Features = ko.computed(() => shell.has40Features());
+
     constructor() {
         super();
 

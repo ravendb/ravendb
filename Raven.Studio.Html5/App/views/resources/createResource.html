@@ -12,10 +12,9 @@
                 <div class="text-center">
                     <div class="btn-group" data-toggle="buttons">
                         <!--ko foreach: resourceTypes-->
-                        <label class="btn" data-bind="attr: { title: $data.title, disabled: $data.experimental }, css: { 'btn-primary': $data.resourceType === $parent.checkedResource(), 'btn-default': $data.resourceType !== $parent.checkedResource() }">
+                        <label class="btn" data-bind="attr: { title: $data.title }, css: { 'btn-primary': $data.resourceType === $parent.checkedResource(), 'btn-default': $data.resourceType !== $parent.checkedResource() }">
                             <input type="radio" name="radio" data-bind="checkedValue: $data.resourceType, bsChecked: $parent.checkedResource">
                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i data-bind="attr: { class: $data.iconName }">&nbsp;&nbsp;&nbsp;</i><br/>
-                            <span class="experimental" data-bind="visible: $data.experimental">experimental</span>
                         </label>
                         <!-- /ko -->
                     </div>
