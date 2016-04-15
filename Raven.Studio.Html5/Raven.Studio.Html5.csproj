@@ -158,7 +158,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\sourceSynchronizationInformation.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\topology.ts" />
-    <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldRangeFilter.ts" />
@@ -1168,7 +1167,6 @@
     <TypeScriptCompile Include="App\viewmodels\manage\backup.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\cluster.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\compact.ts" />
-    <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\editNodeConnectionInfoDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\globalConfig\globalConfig.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\globalConfig\globalConfigCustomFunctions.ts" />
@@ -1188,13 +1186,11 @@
     <TypeScriptCompile Include="App\viewmodels\manage\trafficWatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\watchTrafficConfigDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\windowsAuth.ts" />
-    <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResource.ts" />
-    <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\databaseSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\deleteResourceConfirm.ts" />
@@ -1368,6 +1364,17 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <TypeScriptJSXEmit>None</TypeScriptJSXEmit>
+    <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
+    <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
+    <TypeScriptOutFile />
+    <TypeScriptOutDir />
+    <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
+    <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
+    <TypeScriptMapRoot />
+    <TypeScriptSourceRoot />
+  </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>
