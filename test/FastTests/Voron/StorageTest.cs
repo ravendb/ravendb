@@ -9,7 +9,7 @@ using Voron.Impl;
 
 namespace FastTests.Voron
 {
-    public abstract class StorageTest : IDisposable
+    public abstract class StorageTest : LinuxRaceConditionWorkAround, IDisposable
     {
         private StorageEnvironment _storageEnvironment;
         protected StorageEnvironmentOptions _options;
