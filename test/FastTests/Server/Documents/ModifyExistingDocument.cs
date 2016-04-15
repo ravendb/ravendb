@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Json.Linq;
@@ -23,7 +24,7 @@ namespace FastTests.Server.Documents
                         RavenJObject.Parse("{\"Email\":\"support@hibernatingrhinos.com\"}"),
                         RavenJObject.Parse("{\"Raven-Entity-Name\":\"UserAddresses\"}"));
                 });
-                Assert.Contains("InvalidOperationException: Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported.\n"
+                Assert.Contains("InvalidOperationException: Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported." +Environment.NewLine
                                 + "Delete the document and recreate the document users/1.", exception.Message);
             }
         }
