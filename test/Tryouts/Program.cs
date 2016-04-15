@@ -27,13 +27,9 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            using (var x = new BasicIndexing())
             {
-                Console.WriteLine(i);
-                using (var x = new BasicIndexing())
-                {
-                    x.Errors();
-                }
+                x.Errors2();
             }
         }
 
