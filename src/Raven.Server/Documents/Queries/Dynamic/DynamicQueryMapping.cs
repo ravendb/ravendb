@@ -65,6 +65,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
         {
+            if (IsMapReduce)
+                throw new NotSupportedException("TODO arek");
+
             var extendedMapFields = new List<DynamicQueryMappingItem>(MapFields);
 
             foreach (var field in definitionOfExistingIndex.MapFields.Values)

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (currentBestState != DynamicQueryMatchType.Failure && query.IsMapReduce)
             {
-                if (AssertMapReduceSpecificFields(query, (AutoMapReduceIndexDefinition)definition, ref currentBestState, explain) == false)
+                if (AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explain) == false)
                 {
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             };
         }
 
-        private bool AssertMapReduceSpecificFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, ref DynamicQueryMatchType currentBestState, ExplainDelegate explain)
+        private bool AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState, ExplainDelegate explain)
         {
             var indexName = definition.Name;
 
@@ -222,32 +222,37 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.ContainsField(mapField.Name) == false)
                 {
-                    explain(indexName, () =>
-                    {
-                        var missingFields = query.MapFields.Where(x => definition.ContainsField(x.Name) == false);
-
-                        return $"The following fields are missing: {string.Join(", ", missingFields)}";
-                    });
-
-                    return false;
+                    Debug.Assert(currentBestState == DynamicQueryMatchType.Partial);
+                    continue;
                 }
 
                 var field = definition.GetField(mapField.Name);
 
                 if (field.MapReduceOperation != mapField.MapReduceOperation)
                 {
-                    explain(indexName, () => $"The following field {field.Name} has {field.MapReduceOperation} aggregate operation defined, while query expected {mapField.MapReduceOperation}");
+                    explain(indexName, () => $"The following field {field.Name} has {field.MapReduceOperation} operation defined, while query required {mapField.MapReduceOperation}");
 
                     return false;
                 }
             }
-
+            
             if (query.GroupByFields.All(definition.ContainsGroupByField) == false)
             {
                 explain(indexName, () =>
                 {
                     var missingFields = query.GroupByFields.Where(x => definition.ContainsGroupByField(x) == false);
                     return $"The following group by fields are missing: {string.Join(", ", missingFields)}";
+                });
+
+                return false;
+            }
+
+            if (query.GroupByFields.Length != definition.GroupByFields.Length)
+            {
+                explain(indexName, () =>
+                {
+                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Contains(x.Name) == false);
+                    return $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}";
                 });
 
                 return false;
