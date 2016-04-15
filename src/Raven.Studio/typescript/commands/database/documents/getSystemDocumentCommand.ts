@@ -11,7 +11,7 @@ class getSystemDocumentCommand extends commandBase {
 
         var deferred = $.Deferred();
 
-        var url = "/document?id=" + this.id;
+        var url = "/docs?id=" + this.id;
         var docQuery = this.query(url, null, null);
         docQuery.done((dto: databaseDocumentDto) => deferred.resolve(dto));
         docQuery.fail(response => deferred.reject(response));

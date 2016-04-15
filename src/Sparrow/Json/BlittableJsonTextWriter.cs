@@ -29,7 +29,7 @@ namespace Sparrow.Json
 
         public int Position => _pos;
 
-        public void WriteToOrdered(BlittableJsonReaderObject obj)
+        public void WriteObjectOrdered(BlittableJsonReaderObject obj)
         {
             WriteStartObject();
             var props = obj.GetPropertiesByInsertionOrder();
@@ -49,7 +49,7 @@ namespace Sparrow.Json
             WriteEndObject();
         }
 
-        public void WriteTo(BlittableJsonReaderObject obj)
+        public void WriteObject(BlittableJsonReaderObject obj)
         {
             WriteStartObject();
             for (int i = 0; i < obj.Count; i++)
@@ -97,9 +97,9 @@ namespace Sparrow.Json
                 case BlittableJsonToken.StartObject:
                     var blittableJsonReaderObject = ((BlittableJsonReaderObject)val);
                     if (originalPropertyOrder)
-                        WriteToOrdered(blittableJsonReaderObject);
+                        WriteObjectOrdered(blittableJsonReaderObject);
                     else
-                        WriteTo(blittableJsonReaderObject);
+                        WriteObject(blittableJsonReaderObject);
                     break;
                 case BlittableJsonToken.String:
                     WriteString((LazyStringValue)val);

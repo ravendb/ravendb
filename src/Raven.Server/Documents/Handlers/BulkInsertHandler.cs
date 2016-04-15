@@ -149,22 +149,22 @@ namespace Raven.Server.Documents.Handlers
                 var task = Task.Factory.StartNew(InsertDocuments);
                 try
                 {
-                    const string bulkInsertDocumentDebugTag = "bulk/insert/document";
-                    using (var stream = context.GetStream(bulkInsertDocumentDebugTag))
+                    const string BulkInsertDocumentDebugTag = "bulk/insert/document";
+                    using (var stream = context.GetStream(BulkInsertDocumentDebugTag))
                     {
                         var current = _freeBuffers.Take();
-                    int count = 0;
-                    var sp = Stopwatch.StartNew();
+                        int count = 0;
+                        var sp = Stopwatch.StartNew();
                         while (true)
-                    {
-                        var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                        {
+                            var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
                                 continue;
 
                             count++;
                             if (current.Used + stream.SizeInBytes > current.Buffer.SizeInBytes)
-                        {
+                            {
                                 try
                                 {
                                     _fullBuffers.Add(current);
@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     context.ReturnMemory(current.Buffer);
                                     current.Buffer = context.GetMemory(Bits.NextPowerOf2(stream.SizeInBytes));
-                            }
+                                }
                                 current.Used = 0;
                             }
                             stream.CopyTo(current.Buffer.Address + current.Used);
@@ -191,18 +191,18 @@ namespace Raven.Server.Documents.Handlers
                         try
                         {
                             _fullBuffers.Add(current);
-                    }
+                        }
                         catch (Exception)
                         {
                             // error in the insert, we'll get it when we await on the insert task
                         }
                         _fullBuffers.CompleteAdding();
-                    await task;
-                    var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
+                        await task;
+                        var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
                         if (Log.IsDebugEnabled)
-                    Log.Debug(msg);
-                    await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg, CancellationToken.None);
-                }
+                            Log.Debug(msg);
+                        await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg, CancellationToken.None);
+                    }
                 }
                 catch (Exception e)
                 {

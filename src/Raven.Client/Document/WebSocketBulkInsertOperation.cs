@@ -30,7 +30,7 @@ namespace Raven.Client.Document
         private UnmanagedBuffersPool _unmanagedBuffersPool;
         private JsonOperationContext _jsonOperationContext;
         private readonly BlockingCollection<MemoryStream> _documents = new BlockingCollection<MemoryStream>();
-        private readonly BlockingCollection<MemoryStream> _buffers = 
+        private readonly BlockingCollection<MemoryStream> _buffers =
             // we use a stack based back end to ensure that we always use the active buffers
             new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
         private readonly Task _writeToServerTask;
@@ -81,10 +81,10 @@ namespace Raven.Client.Document
 
         private async Task<int> WriteToServer()
         {
-            const string debugTag = "bulk/insert/document";
+            const string DebugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
             var buffer = _jsonOperationContext.GetManagedBuffer();
-            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
+            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, DebugTag))
             {
                 while (_documents.IsCompleted == false)
                 {
@@ -100,7 +100,7 @@ namespace Raven.Client.Document
                         break;
                     }
                     using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, DebugTag,
                         jsonParser, jsonParserState))
                     {
 
@@ -119,7 +119,7 @@ namespace Raven.Client.Document
                         builder.FinalizeDocument();
                         _networkBufferWriter.Write(builder.SizeInBytes); //TODO: variable length int?
                         builder.CopyTo(_networkBuffer);
-                        
+
                     }
 
                     if (_networkBuffer.Length > 32 * 1024)

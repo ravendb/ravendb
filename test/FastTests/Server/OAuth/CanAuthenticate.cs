@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Abstractions.Connection;
+using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.OAuth;
 using Raven.Server.Config.Attributes;
@@ -109,7 +110,8 @@ namespace FastTests.Server.OAuth
                 // Should get PreconditionFailed on Get without token
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
                 var client = new HttpClient();
-                var result = await client.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
+
+                var result = await client.GetAsync(store.Url.ForDatabase(store.DefaultDatabase).Doc("test/1"));
                 Assert.Equal(HttpStatusCode.PreconditionFailed, result.StatusCode);
 
                 // Should throw on DoOAuthRequestAsync with unknown apiKey
@@ -133,7 +135,7 @@ namespace FastTests.Server.OAuth
                 // Verify successfull get with valid token
                 var authenticatedClient = new HttpClient();
                 oauth(authenticatedClient);
-                result = await authenticatedClient.GetAsync($"{store.Url}/databases/{store.DefaultDatabase}/document?id=test/1");
+                result = await authenticatedClient.GetAsync(store.Url.ForDatabase(store.DefaultDatabase).Doc("test/1"));
                 Assert.Equal(HttpStatusCode.OK, result.StatusCode);
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
             }

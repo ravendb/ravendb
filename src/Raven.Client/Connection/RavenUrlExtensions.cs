@@ -146,7 +146,7 @@ namespace Raven.Client.Connection
 
         public static string Doc(this string url, string key)
         {
-            return $"{url}/document?id={key}";
+            return $"{url}/docs?id={key}";
         }
 
         public static string Docs(this string url, int start, int pageSize)

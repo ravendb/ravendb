@@ -61,7 +61,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         {
 
                             var memoryStream = new MemoryStream();
-                            context.WriteOrdered(memoryStream, writer);
+                            context.Write(memoryStream, writer);
                             var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
                             JObject.Parse(s); // can parse the output

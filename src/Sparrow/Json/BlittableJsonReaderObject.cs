@@ -25,7 +25,7 @@ namespace Sparrow.Json
         public override string ToString()
         {
             var memoryStream = new MemoryStream();
-            _context.WriteOrdered(memoryStream, this);
+            _context.Write(memoryStream, this);
             memoryStream.Position = 0;
             return new StreamReader(memoryStream).ReadToEnd();
         }

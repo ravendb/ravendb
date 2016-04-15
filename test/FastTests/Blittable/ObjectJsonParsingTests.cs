@@ -96,7 +96,7 @@ namespace FastTests.Blittable
                 using (var writer = ctx.ReadObject(doc, "foo"))
                 {
                     var memoryStream = new MemoryStream();
-                    ctx.WriteOrdered(memoryStream, writer);
+                    ctx.Write(memoryStream, writer);
                     var actual = Encoding.UTF8.GetString(memoryStream.ToArray());
                     Assert.Equal(expected, actual);
                 }
