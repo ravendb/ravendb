@@ -706,18 +706,6 @@ namespace Raven.Client.Connection.Async
             });
         }
 
-        private async Task<JsonDocument> ResolveConflict(string httpResponse, long? etag, OperationMetadata operationMetadata, string key, CancellationToken token)
-        {
-            var conflicts = new StringReader(httpResponse);
-            var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
-            var result =
-                await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, etag, token).ConfigureAwait(false);
-            if (result != null)
-                throw result;
-            var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, false, token).ConfigureAwait(false);
-            return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
-        }
-
         public Task<LoadResult> GetAsync(string[] keys, string[] includes, string transformer = null,
                                               Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default(CancellationToken))
         {

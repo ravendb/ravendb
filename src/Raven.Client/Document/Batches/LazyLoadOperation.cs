@@ -32,7 +32,7 @@ namespace Raven.Client.Document.Batches
             string id)
         {
             this.loadOperation = loadOperation;
-            ids = new[] {id};
+            ids = new[] { id };
         }
 
         public GetRequest CreateRequest()
@@ -48,7 +48,7 @@ namespace Raven.Client.Document.Batches
             return new GetRequest
             {
                 Url = "/docs",
-                Query = query 
+                Query = query
             };
         }
 
@@ -72,7 +72,7 @@ namespace Raven.Client.Document.Batches
             var finalResult = new LoadResult
             {
                 Includes = new List<RavenJObject>(),
-                Results = new List<RavenJObject>(Enumerable.Range(0, capacity).Select(x => (RavenJObject) null))
+                Results = new List<RavenJObject>(Enumerable.Range(0, capacity).Select(x => (RavenJObject)null))
             };
 
 
@@ -106,7 +106,7 @@ namespace Raven.Client.Document.Batches
             var multiLoadResult = new LoadResult
             {
                 Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-                Results = result.Value<RavenJArray>("Results").Select(x=>x as RavenJObject).ToList()
+                Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
             };
             HandleResponse(multiLoadResult);
         }
