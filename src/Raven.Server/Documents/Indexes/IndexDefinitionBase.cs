@@ -65,7 +65,61 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected abstract void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer);
+        private void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        {
+            writer.WriteStartObject();
+
+            var collection = Collections.First();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(Collections)));
+            writer.WriteStartArray();
+            writer.WriteString(context.GetLazyString(collection));
+            writer.WriteEndArray();
+            writer.WriteComma();
+            writer.WritePropertyName(context.GetLazyString(nameof(LockMode)));
+            writer.WriteInteger((int)LockMode);
+            writer.WriteComma();
+
+            PersisFields(context, writer);
+
+            writer.WriteEndObject();
+        }
+
+        protected abstract void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer);
+
+        protected void PersistMapFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        {
+            writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var field in MapFields.Values)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(field.Name)));
+                writer.WriteString(context.GetLazyString(field.Name));
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(field.Highlighted)));
+                writer.WriteBool(field.Highlighted);
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(field.SortOption)));
+                writer.WriteInteger((int)(field.SortOption ?? SortOptions.None));
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(field.MapReduceOperation)));
+                writer.WriteInteger((int)(field.MapReduceOperation));
+
+                writer.WriteEndObject();
+
+                first = false;
+            }
+            writer.WriteEndArray();
+        }
 
         public IndexDefinition ConvertToIndexDefinition(Index index)
         {

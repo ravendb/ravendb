@@ -633,6 +633,27 @@ namespace Voron.Data.Tables
             }
         }
 
+        public TableValueReader SeekLastByPrimaryKey()
+        {
+            var pk = _schema.Key;
+            if ((pk.Type & TableIndexType.Compact) != 0)
+            {
+                // This is a PrefixTree index.
+                throw new NotImplementedException();
+            }
+            else
+            {
+                var tree = GetTree(pk);
+                using (var it = tree.Iterate())
+                {
+                    if (it.Seek(Slice.AfterAllKeys) == false)
+                        return null;
+
+                    return GetTableValueReader(it);
+                }
+            }
+        }
+
         public IEnumerable<TableValueReader> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
         {
             var fst = GetFixedSizeTree(index);

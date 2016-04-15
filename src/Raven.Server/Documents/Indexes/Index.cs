@@ -14,6 +14,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -115,6 +116,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     case IndexType.AutoMap:
                         return AutoMapIndex.Open(indexId, environment, documentDatabase);
+                    case IndexType.AutoMapReduce:
+                        return AutoMapReduceIndex.Open(indexId, environment, documentDatabase);
                     default:
                         throw new NotImplementedException();
                 }

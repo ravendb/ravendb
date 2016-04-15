@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -145,7 +147,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact(Skip = "TODO arek")]
+        [Fact]
         public void IndexLoadsEtagOfLastMapResultOnInitialize()
         {
             var path = NewDataPath();
@@ -166,10 +168,93 @@ namespace FastTests.Server.Documents.Indexing
 
             using (var db = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
-                Index index = null;
-                Assert.True(SpinWait.SpinUntil(() => (index = db.IndexStore.GetIndex(1)) != null, TimeSpan.FromSeconds(15)));
+                var index = db.IndexStore.GetIndex(1);
 
                 Assert.Equal(9, ((AutoMapReduceIndex) index)._lastMapResultEtag);
+            }
+        }
+
+        [Fact]
+        public void DefinitionOfAutoMapReduceIndexIsPersisted()
+        {
+            var path = NewDataPath();
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var count = new IndexField
+                {
+                    Name = "Count",
+                    Highlighted = true,
+                    Storage = FieldStorage.Yes,
+                    SortOption = SortOptions.NumericDefault,
+                    MapReduceOperation = FieldMapReduceOperation.Count
+                };
+
+                var location = new IndexField
+                {
+                    Name = "Location",
+                    Highlighted = true,
+                    Storage = FieldStorage.Yes,
+                    SortOption = SortOptions.String,
+                };
+
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(new [] { "Users" }, new[] { count }, new[] { location })));
+
+                var sum = new IndexField
+                {
+                    Name = "Sum",
+                    Highlighted = false,
+                    Storage = FieldStorage.Yes,
+                    SortOption = SortOptions.NumericDefault,
+                    MapReduceOperation = FieldMapReduceOperation.Sum
+                };
+
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(new[] { "Users" }, new[] { count, sum }, new[] { location })));
+
+                var index2 = database.IndexStore.GetIndex(2);
+                index2.SetLock(IndexLockMode.LockedError);
+                index2.SetPriority(IndexingPriority.Disabled);
+            }
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            {
+                var indexes = database
+                    .IndexStore
+                    .GetIndexesForCollection("Users")
+                    .OrderBy(x => x.IndexId)
+                    .ToList();
+
+                Assert.Equal(2, indexes.Count);
+
+                Assert.Equal(1, indexes[0].IndexId);
+                Assert.Equal(1, indexes[0].Definition.Collections.Length);
+                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(1, indexes[0].Definition.MapFields.Count);
+                Assert.Equal("Count", indexes[0].Definition.MapFields["Count"].Name);
+                Assert.Equal(SortOptions.NumericDefault, indexes[0].Definition.MapFields["Count"].SortOption);
+                Assert.True(indexes[0].Definition.MapFields["Count"].Highlighted);
+                Assert.Equal(FieldMapReduceOperation.Count, indexes[0].Definition.MapFields["Count"].MapReduceOperation);
+
+                var definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
+
+                Assert.NotNull(definition);
+
+                Assert.Equal(1, definition.GroupByFields.Length);
+                Assert.Equal("Location", definition.GroupByFields[0].Name);
+                Assert.Equal(SortOptions.String, definition.GroupByFields[0].SortOption);
+
+                Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
+                Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
+
+                // TODO arek finish this test
+                //Assert.Equal(2, indexes[1].IndexId);
+                //Assert.Equal(1, indexes[1].Definition.Collections.Length);
+                //Assert.Equal("Users", indexes[1].Definition.Collections[0]);
+                //Assert.Equal(1, indexes[1].Definition.MapFields.Count);
+                //Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
+                //Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Name2"].SortOption);
+                //Assert.False(indexes[1].Definition.MapFields["Name2"].Highlighted);
+                //Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
+                //Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
             }
         }
 

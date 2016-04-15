@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
         }
 
-        protected override void Persist(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
