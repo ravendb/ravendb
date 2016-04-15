@@ -33,22 +33,20 @@ namespace Raven.Server.Documents.Indexes
         private string _path;
         private bool _run = true;
 
-        internal Task OpenIndexesTask;
-
         public IndexStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
         }
 
-        public void Initialize()
+        public Task InitializeAsync()
         {
             if (_initialized)
-                throw new InvalidOperationException();
+                throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
             lock (_locker)
             {
                 if (_initialized)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
@@ -61,9 +59,9 @@ namespace Raven.Server.Documents.Indexes
                         Directory.CreateDirectory(_path);
                 }
 
-                OpenIndexesTask = Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
-
                 _initialized = true;
+
+                return Task.Factory.StartNew(OpenIndexes, TaskCreationOptions.LongRunning);
             }
         }
 
@@ -359,7 +357,6 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_locker)
             {
-
                 foreach (var indexDirectory in new DirectoryInfo(_path).GetDirectories())
                 {
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
@@ -368,6 +365,11 @@ namespace Raven.Server.Documents.Indexes
                     int indexId;
                     if (int.TryParse(indexDirectory.Name, out indexId) == false)
                         continue;
+
+                    List<Exception> exceptions = null;
+                    if (_documentDatabase.Configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened)
+                        exceptions = new List<Exception>();
+
                     try
                     {
                         var index = Index.Open(indexId, _documentDatabase);
@@ -375,26 +377,29 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch (Exception e)
                     {
-                        // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
-                        var fakeIndex = new FaultyInMemoryIndex(indexId);
+                        exceptions?.Add(e);
 
-                        Log.ErrorException(
-                            $"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}",
-                            e);
+                        // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
+                        var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadName(indexDirectory));
+
+                        Log.ErrorException($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
                         // TODO arek: add alert
 
                         _indexes.Add(fakeIndex);
                     }
+
+                    if (exceptions != null && exceptions.Count > 0)
+                        throw new AggregateException("Could not load some of the indexes", exceptions);
                 }
             }
         }
 
-        public List<AutoMapIndexDefinition> GetAutoMapIndexDefinitionForCollection(string collection)
+        public List<IndexDefinitionBase> GetIndexDefinitionsForCollection(string collection, IndexType type)
         {
             return _indexes
                 .GetForCollection(collection)
-                .Where(x => x.Type == IndexType.AutoMap)
-                .Select(x => (AutoMapIndexDefinition)x.Definition)
+                .Where(x => x.Type == type)
+                .Select(x => x.Definition)
                 .ToList();
         }
 

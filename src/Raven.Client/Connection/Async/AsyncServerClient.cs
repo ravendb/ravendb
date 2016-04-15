@@ -15,7 +15,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Changes;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
@@ -561,7 +560,7 @@ namespace Raven.Client.Connection.Async
             if (key != null)
                 key = Uri.EscapeDataString(key);
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/document?id=" + key, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url), etag: etag).AddOperationHeaders(OperationsHeaders)))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(key), method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url), etag: etag).AddOperationHeaders(OperationsHeaders)))
             {
                 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
@@ -707,18 +706,6 @@ namespace Raven.Client.Connection.Async
             });
         }
 
-        private async Task<JsonDocument> ResolveConflict(string httpResponse, long? etag, OperationMetadata operationMetadata, string key, CancellationToken token)
-        {
-            var conflicts = new StringReader(httpResponse);
-            var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
-            var result =
-                await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, etag, token).ConfigureAwait(false);
-            if (result != null)
-                throw result;
-            var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, false, token).ConfigureAwait(false);
-            return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
-        }
-
         public Task<LoadResult> GetAsync(string[] keys, string[] includes, string transformer = null,
                                               Dictionary<string, RavenJToken> transformerParameters = null, bool metadataOnly = false, CancellationToken token = default(CancellationToken))
         {
@@ -728,7 +715,7 @@ namespace Raven.Client.Connection.Async
         private async Task<LoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
                                                            Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default(CancellationToken))
         {
-            var path = operationMetadata.Url + "/document?";
+            var path = operationMetadata.Url + "/docs?";
             if (metadataOnly)
                 path += "&metadata-only=true";
             if (includes != null && includes.Length > 0)
@@ -1987,7 +1974,7 @@ namespace Raven.Client.Connection.Async
 
         public string UrlFor(string documentKey)
         {
-            return Url + "/document?id=" + documentKey;
+            return Url.Doc(documentKey);
         }
 
         public WebSocketBulkInsertOperation GetBulkInsertOperation(CancellationTokenSource cts = default(CancellationTokenSource))
@@ -1997,7 +1984,7 @@ namespace Raven.Client.Connection.Async
 
         private async Task<JsonDocumentMetadata> DirectHeadAsync(OperationMetadata operationMetadata, string key, CancellationToken token = default(CancellationToken))
         {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/document?id=" + key, HttpMethod.Head, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(key), HttpMethod.Head, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
                 try
                 {

@@ -14,6 +14,9 @@ namespace Raven.Server.Documents.Indexes
         public static string FindMapReduceIndexName(string[] collections, IReadOnlyCollection<IndexField> fields,
             IReadOnlyCollection<IndexField> groupBy)
         {
+            if (groupBy == null)
+                throw new ArgumentNullException(nameof(groupBy));
+
             var reducedByFields = string.Join("And", groupBy.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
             return $"{FindName(collections, fields)}ReducedBy{reducedByFields}";

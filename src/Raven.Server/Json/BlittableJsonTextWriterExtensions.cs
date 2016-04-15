@@ -1,14 +1,286 @@
-﻿using Raven.Abstractions.Extensions;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
-using Raven.Server.ServerWide.Context;
+using Raven.Imports.Newtonsoft.Json;
+
 using Sparrow.Json;
 
 namespace Raven.Server.Json
 {
     public static class BlittableJsonTextWriterExtensions
     {
+        public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQuery query)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)));
+            writer.WriteBool(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.CutoffEtag)));
+            if (query.CutoffEtag.HasValue)
+                writer.WriteInteger(query.CutoffEtag.Value);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.DebugOptionGetIndexEntries)));
+            writer.WriteBool(query.DebugOptionGetIndexEntries);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.DefaultField)));
+            if (query.DefaultField != null)
+                writer.WriteString(context.GetLazyString(query.DefaultField));
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.DefaultOperator)));
+            writer.WriteString(context.GetLazyString(query.DefaultOperator.ToString()));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.DisableCaching)));
+            writer.WriteBool(query.DisableCaching);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.ExplainScores)));
+            writer.WriteBool(query.ExplainScores);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlighterKeyName)));
+            if (query.HighlighterKeyName != null)
+                writer.WriteString(context.GetLazyString(query.HighlighterKeyName));
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.IsDistinct)));
+            writer.WriteBool(query.IsDistinct);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.PageSize)));
+            writer.WriteInteger(query.PageSize);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.PageSizeSet)));
+            writer.WriteBool(query.PageSizeSet);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.Query)));
+            if (query.Query != null)
+                writer.WriteString(context.GetLazyString(query.Query));
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.Transformer)));
+            if (query.Transformer != null)
+                writer.WriteString(context.GetLazyString(query.Transformer));
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.ShowTimings)));
+            writer.WriteBool(query.ShowTimings);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.SkipDuplicateChecking)));
+            writer.WriteBool(query.SkipDuplicateChecking);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.Start)));
+            writer.WriteInteger(query.Start);
+            writer.WriteComma();
+
+            //writer.WritePropertyName(context.GetLazyString(nameof(query.TotalSize)));
+            //writer.WriteInteger(query.TotalSize.Value);
+            //writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.WaitForNonStaleResults)));
+            writer.WriteBool(query.WaitForNonStaleResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.WaitForNonStaleResultsAsOfNow)));
+            writer.WriteBool(query.WaitForNonStaleResultsAsOfNow);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.WaitForNonStaleResultsTimeout)));
+            if (query.WaitForNonStaleResultsTimeout.HasValue)
+                writer.WriteString(context.GetLazyString(query.WaitForNonStaleResultsTimeout.Value.ToString()));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.DynamicMapReduceFields)));
+            writer.WriteStartArray();
+            var isFirstInternal = true;
+            foreach (var field in query.DynamicMapReduceFields)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(field.Name)));
+                writer.WriteString(context.GetLazyString(field.Name));
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(field.IsGroupBy)));
+                writer.WriteBool(field.IsGroupBy);
+                writer.WriteComma();
+
+                writer.WritePropertyName(context.GetLazyString(nameof(field.OperationType)));
+                writer.WriteString(context.GetLazyString(field.OperationType.ToString()));
+                writer.WriteComma();
+
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.FieldsToFetch)));
+            if (query.FieldsToFetch != null)
+            {
+                writer.WriteStartArray();
+
+                isFirstInternal = true;
+                foreach (var field in query.FieldsToFetch)
+                {
+                    if (isFirstInternal == false) writer.WriteComma();
+
+                    isFirstInternal = false;
+
+                    writer.WriteString(context.GetLazyString(field));
+                }
+
+                writer.WriteEndArray();
+            }
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlightedFields)));
+            writer.WriteStartArray();
+            if (query.HighlightedFields != null)
+            {
+                isFirstInternal = true;
+                foreach (var field in query.HighlightedFields)
+                {
+                    if (isFirstInternal == false)
+                        writer.WriteComma();
+
+                    isFirstInternal = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.Field)));
+                    writer.WriteString(context.GetLazyString(field.Field));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.FragmentCount)));
+                    writer.WriteInteger(field.FragmentCount);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.FragmentLength)));
+                    writer.WriteInteger(field.FragmentLength);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.FragmentsField)));
+                    writer.WriteString(context.GetLazyString(field.FragmentsField));
+
+                    writer.WriteEndObject();
+                }
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlighterPostTags)));
+            writer.WriteStartArray();
+            if (query.HighlighterPostTags != null)
+            {
+                isFirstInternal = true;
+                foreach (var tag in query.HighlighterPostTags)
+                {
+                    if (isFirstInternal == false)
+                        writer.WriteComma();
+
+                    isFirstInternal = false;
+
+                    writer.WriteString(context.GetLazyString(tag));
+                }
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.HighlighterPreTags)));
+            writer.WriteStartArray();
+            if (query.HighlighterPreTags != null)
+            {
+                isFirstInternal = true;
+                foreach (var tag in query.HighlighterPreTags)
+                {
+                    if (isFirstInternal == false)
+                        writer.WriteComma();
+
+                    isFirstInternal = false;
+
+                    writer.WriteString(context.GetLazyString(tag));
+                }
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.SortedFields)));
+            writer.WriteStartArray();
+            if (query.SortedFields != null)
+            {
+                isFirstInternal = true;
+                foreach (var field in query.SortedFields)
+                {
+                    if (isFirstInternal == false)
+                        writer.WriteComma();
+
+                    isFirstInternal = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.Field)));
+                    writer.WriteString(context.GetLazyString(field.Field));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(field.Descending)));
+                    writer.WriteBool(field.Descending);
+                    writer.WriteComma();
+
+                    writer.WriteEndObject();
+                }
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(query.TransformerParameters)));
+            writer.WriteStartObject();
+            if (query.TransformerParameters != null)
+            {
+                isFirstInternal = true;
+                foreach (var kvp in query.TransformerParameters)
+                {
+                    if (isFirstInternal == false)
+                        writer.WriteComma();
+
+                    isFirstInternal = false;
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(kvp.Key)));
+                    writer.WriteString(context.GetLazyString(kvp.Value.ToString(Formatting.Indented)));
+                }
+            }
+            writer.WriteEndObject();
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteDatabaseStatistics(this BlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
         {
             writer.WriteStartObject();

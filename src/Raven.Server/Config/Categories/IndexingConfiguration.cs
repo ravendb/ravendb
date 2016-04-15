@@ -91,5 +91,10 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs")]
         public TimeSetting TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle { get; set; }
+
+        [Description("Indicates if we should throw an exception if any index could not be opened")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/Indexing/ThrowIfAnyIndexCouldNotBeOpened")]
+        public bool ThrowIfAnyIndexCouldNotBeOpened { get; set; }
     }
 }

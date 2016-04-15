@@ -28,6 +28,7 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -885,13 +886,13 @@ namespace Raven.Client.Document
         public void AddMapReduceField(DynamicMapReduceField field)
         {
             isMapReduce = true;
-
-            field.Name = EnsureValidFieldName(new WhereParams
-            {
-                FieldName = field.Name
-            });
             
             dynamicMapReduceFields = dynamicMapReduceFields.Concat(new [] { field }).ToArray();
+        }
+
+        public DynamicMapReduceField[] GetGroupByFields()
+        {
+            return dynamicMapReduceFields.Where(x => x.IsGroupBy).ToArray();
         }
 
         IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
@@ -1208,8 +1209,21 @@ If you really want to do in memory filtering on the data returned from the query
 
         private string EnsureValidFieldName(WhereParams whereParams)
         {
-            if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath || isMapReduce)
+            if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath)
                 return whereParams.FieldName;
+
+            if (isMapReduce)
+            {
+                if (IsDynamicMapReduce)
+                {
+                    var renamedField = dynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == whereParams.FieldName);
+
+                    if (renamedField != null)
+                        return whereParams.FieldName = renamedField.Name;
+                }
+
+                return whereParams.FieldName;
+            }
 
             foreach (var rootType in rootTypes)
             {
@@ -1842,7 +1856,7 @@ If you really want to do in memory filtering on the data returned from the query
                     HighlighterPreTags = highlighterPreTags.ToArray(),
                     HighlighterPostTags = highlighterPostTags.ToArray(),
                     HighlighterKeyName = highlighterKeyName,
-                    ResultsTransformer = resultsTransformer,
+                    Transformer = resultsTransformer,
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     TransformerParameters = transformerParameters,
                     DisableCaching = disableCaching,
@@ -1874,7 +1888,7 @@ If you really want to do in memory filtering on the data returned from the query
                 HighlighterPreTags = highlighterPreTags.ToArray(),
                 HighlighterPostTags = highlighterPostTags.ToArray(),
                 HighlighterKeyName = highlighterKeyName,
-                ResultsTransformer = resultsTransformer,
+                Transformer = resultsTransformer,
                 TransformerParameters = transformerParameters,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 DisableCaching = disableCaching,

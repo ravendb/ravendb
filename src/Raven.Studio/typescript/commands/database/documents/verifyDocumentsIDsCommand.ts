@@ -42,7 +42,7 @@ class verifyDocumentsIDsCommand extends commandBase {
         } 
 
         if (this.docIDs.length > 0) {
-            var postResult = this.post("/queries?metadata-only=true", JSON.stringify(this.docIDs), this.db);
+            var postResult = this.post("/docs?metadata-only=true", JSON.stringify(this.docIDs), this.db);
             postResult.fail(xhr => verifyResult.fail(xhr));
             postResult.done((queryResult: queryResultDto) => {
                 if (!!queryResult && !!queryResult.Results) {

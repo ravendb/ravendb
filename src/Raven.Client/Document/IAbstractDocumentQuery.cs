@@ -380,5 +380,7 @@ namespace Raven.Client.Document
         /// Adds a dynamic query field to the query
         /// </summary>
         void AddMapReduceField(DynamicMapReduceField field);
+
+        DynamicMapReduceField[] GetGroupByFields();
     }
 }

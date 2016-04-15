@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -13,6 +14,14 @@ namespace Raven.Abstractions.Data
             {
                 action(item);
             }
+        }
+
+        public static bool ContentEquals<TValue>(IEnumerable<TValue> x, IEnumerable<TValue> y)
+        {
+            if (x == null || y == null)
+                return x == null && y == null;
+
+            return x.SequenceEqual(y);
         }
 
         public static IEnumerable<T> EmptyIfNull<T>(this IEnumerable<T> self)

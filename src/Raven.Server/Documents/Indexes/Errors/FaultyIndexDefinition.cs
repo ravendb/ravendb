@@ -3,6 +3,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
 
+using Sparrow.Json;
+
 namespace Raven.Server.Documents.Indexes.Errors
 {
     public class FaultyIndexDefinition : IndexDefinitionBase
@@ -12,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
         }
 
-        public override void Persist(TransactionOperationContext context)
+        protected override void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }

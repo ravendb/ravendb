@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-            _mapResultsSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef()
+            _mapResultsSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef
             {
                 Name = "DocumentKeys",
                 Count = 1,
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 IsGlobal = true
             });
 
-            _mapResultsSchema.DefineFixedSizeIndex("ReduceKeyHashes", new TableSchema.FixedSizeSchemaIndexDef()
+            _mapResultsSchema.DefineFixedSizeIndex("ReduceKeyHashes", new TableSchema.FixedSizeSchemaIndexDef
             {
                 IsGlobal = true,
                 Name = "ReduceKeyHashes",
@@ -65,12 +66,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public static AutoMapReduceIndex Open(int indexId, StorageEnvironment environment,
             DocumentDatabase documentDatabase)
         {
-            throw new NotImplementedException();
-            //var definition = AutoMapIndexDefinition.Load(environment);
-            //var instance = new AutoMapReduceIndex(indexId, definition);
-            //instance.Initialize(environment, documentDatabase);
+            var definition = AutoMapReduceIndexDefinition.Load(environment);
+            var instance = new AutoMapReduceIndex(indexId, definition);
+            instance.Initialize(environment, documentDatabase);
 
-            //return instance;
+            return instance;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return result;
         }
 
-        protected override void LoadValues()
+        protected override unsafe void LoadValues()
         {
             base.LoadValues();
 
@@ -248,14 +248,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (tree == null)
                     return;
 
-                throw new NotImplementedException("TODO arek - load last etag");
+                var table = GetMapEntriesTable(tx.InnerTransaction);
+                
+                if (table.NumberOfEntries == 0)
+                    return;
 
-                using (var it = tree.Iterate())
-                {
-                    var seek = it.Seek(Slice.AfterAllKeys);
+                var tvr = table.SeekLastByPrimaryKey();
 
-                    var currentKey = it.CurrentKey;
-                }
+                int _;
+                var ptr = tvr.Read(0, out _);
+                _lastMapResultEtag = IPAddress.NetworkToHostOrder(*(long*)ptr);
             }
         }
     }

@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
+
+using Raven.Client.Data;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQuery query, StringValues includes, long? existingResultEtag, CancellationToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQuery query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
         {
             DocumentQueryResult result;
 
@@ -46,6 +47,19 @@ namespace Raven.Server.Documents.Queries
             }
 
             return result;
+        }
+
+        public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
+        {
+            var index = _indexStore.GetIndex(indexName);
+            if (index == null)
+                throw new InvalidOperationException("There is not index with name: " + indexName);
+
+            var etag = index.GetIndexEtag();
+            if (etag == existingResultEtag)
+                return new TermsQueryResult { NotModified = true };
+
+            return index.GetTerms(field, fromValue, pageSize, context, token);
         }
     }
 }

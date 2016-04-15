@@ -30,7 +30,7 @@ class deleteLocalPeriodicExportSetupCommand extends commandBase {
     }
 
     private deleteSetup(): JQueryPromise<any> {
-        var url = "/document?id=Raven/Backup/Periodic/Setup";
+        var url = "/docs?id=Raven/Backup/Periodic/Setup";
         return this.del(url, null, this.db);
     }
 }

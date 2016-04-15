@@ -4,11 +4,13 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -389,6 +391,53 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/terms", "GET")]
+        public Task Terms()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var fields = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
+            var fromValue = GetStringQueryString("fromValue", required: false);
+
+            DocumentsOperationContext context;
+            using (var token = CreateTimeLimitedOperationToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var existingResultEtag = GetLongFromHeaders("If-None-Match");
+
+                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
+
+                var result = runner.ExecuteGetTermsQuery(names[0], fields[0], fromValue, existingResultEtag, GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
+
+                if (result.NotModified)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return Task.CompletedTask;
+                }
+
+                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartArray();
+                    var isFirst = true;
+                    foreach (var term in result.Terms)
+                    {
+                        if (isFirst == false)
+                            writer.WriteComma();
+
+                        isFirst = false;
+
+                        writer.WriteString(context.GetLazyString(term));
+                    }
+
+                    writer.WriteEndArray();
+                }
+
+                return Task.CompletedTask;
+            }
         }
     }
 }

@@ -158,6 +158,7 @@ namespace FastTests
 
             var doc = MultiDatabase.CreateDatabaseDocument(name);
             doc.Settings["Raven/DataDir"] = path;
+            doc.Settings["Raven/Indexing/ThrowIfAnyIndexCouldNotBeOpened"] = "true";
             modifyDatabaseDocument?.Invoke(doc);
 
             TransactionOperationContext context;

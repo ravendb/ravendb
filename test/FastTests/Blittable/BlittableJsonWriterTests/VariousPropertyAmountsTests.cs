@@ -68,7 +68,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 var ms = new MemoryStream();
-                blittableContext.WriteOrdered(ms, employee);
+                blittableContext.Write(ms, employee);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
             }

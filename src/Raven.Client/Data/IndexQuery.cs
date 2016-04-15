@@ -3,17 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
+using System.Linq;
 using System.Text;
+
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// All the information required to query a Raven index
@@ -27,8 +29,6 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public IndexQuery()
         {
-            TotalSize = new Reference<int>();
-            SkippedResults = new Reference<int>();
             pageSize = 128;
         }
 
@@ -48,11 +48,6 @@ namespace Raven.Abstractions.Data
         public string Query { get; set; }
 
         /// <summary>
-        /// For internal use only.
-        /// </summary>
-        public Reference<int> TotalSize { get; private set; }
-
-        /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
@@ -67,7 +62,10 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public int PageSize
         {
-            get { return pageSize; }
+            get
+            {
+                return pageSize;
+            }
             set
             {
                 pageSize = value;
@@ -94,15 +92,10 @@ namespace Raven.Abstractions.Data
         internal DynamicMapReduceField[] DynamicMapReduceFields { get; set; }
 
         /// <summary>
-        /// Array containing only GroupBy fields of a dynamic map-reduce query
-        /// </summary>
-        internal string[] GroupByFields { get; set; }
-
-        /// <summary>
         /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
         /// </summary>
         public bool WaitForNonStaleResultsAsOfNow { get; set; }
-        
+
         /// <summary>
         /// CAUTION. Used by IDocumentSession ONLY. It will have NO effect if used with IDatabaseCommands or IAsyncDatabaseCommands.
         /// </summary>
@@ -148,11 +141,6 @@ namespace Raven.Abstractions.Data
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
         /// <summary>
-        /// For internal use only.
-        /// </summary>
-        public Reference<int> SkippedResults { get; set; }
-
-        /// <summary>
         /// Whatever we should get the raw index entries.
         /// </summary>
         public bool DebugOptionGetIndexEntries { get; set; }
@@ -173,14 +161,14 @@ namespace Raven.Abstractions.Data
         public string[] HighlighterPostTags { get; set; }
 
         /// <summary>
-        /// Highligter key name.
+        /// Highlighter key name.
         /// </summary>
         public string HighlighterKeyName { get; set; }
 
         /// <summary>
         /// Name of transformer to use on query results.
         /// </summary>
-        public string ResultsTransformer { get; set; }
+        public string Transformer { get; set; }
 
         /// <summary>
         /// Whatever we should disable caching of query results
@@ -247,12 +235,12 @@ namespace Raven.Abstractions.Data
 
             if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
                 path.Append("&pageSize=").Append(PageSize);
-            
+
 
             if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
                 path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
 
-            if(IsDistinct)
+            if (IsDistinct)
                 path.Append("&distinct=true");
 
             if (ShowTimings)
@@ -268,23 +256,21 @@ namespace Raven.Abstractions.Data
             {
                 foreach (var field in DynamicMapReduceFields)
                 {
-                    if (field.IsGroupBy)
-                        path.Append("&groupBy=").Append(Uri.EscapeDataString(field.Name));
-                    else
-                    {
-                        path.Append("&fetch=").Append(Uri.EscapeDataString(field.Name));
-                        path.Append("/");
-                        path.Append(field.OperationType);
-                    }
+                    path.Append("&mapReduce=")
+                        .Append(Uri.EscapeDataString(field.Name))
+                        .Append("-")
+                        .Append(field.OperationType)
+                        .Append("-")
+                        .Append(field.IsGroupBy);
                 }
             }
 
             SortedFields.ApplyIfNotNull(
                 field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
-            if (string.IsNullOrEmpty(ResultsTransformer) == false)
+            if (string.IsNullOrEmpty(Transformer) == false)
             {
-                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
+                path.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(Transformer));
             }
 
             if (TransformerParameters != null)
@@ -311,15 +297,15 @@ namespace Raven.Abstractions.Data
             }
 
             HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
-            HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
-            HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
+            HighlighterPreTags.ApplyIfNotNull(tag => path.Append("&preTags=").Append(tag));
+            HighlighterPostTags.ApplyIfNotNull(tag => path.Append("&postTags=").Append(tag));
 
             if (string.IsNullOrEmpty(HighlighterKeyName) == false)
             {
                 path.AppendFormat("&highlighterKeyName={0}", Uri.EscapeDataString(HighlighterKeyName));
             }
 
-            if(DebugOptionGetIndexEntries)
+            if (DebugOptionGetIndexEntries)
                 path.Append("&debug=entries");
 
             if (ExplainScores)
@@ -333,7 +319,7 @@ namespace Raven.Abstractions.Data
                 path.Append("&query=");
                 path.Append(EscapingHelper.EscapeLongDataString(Query));
             }
-            
+
             if (string.IsNullOrEmpty(DefaultField) == false)
             {
                 path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
@@ -370,29 +356,27 @@ namespace Raven.Abstractions.Data
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return PageSizeSet.Equals(other.PageSizeSet) && 
-                   String.Equals(Query, other.Query) && 
-                   Equals(TotalSize, other.TotalSize) && 
-                   Equals(TransformerParameters, other.TransformerParameters) && 
-                   Start == other.Start && 
-                   Equals(IsDistinct, other.IsDistinct) && 
-                   Equals(FieldsToFetch, other.FieldsToFetch) && 
-                   Equals(SortedFields, other.SortedFields) &&
-                   WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout && 
+            return PageSizeSet.Equals(other.PageSizeSet) &&
+                   string.Equals(Query, other.Query) &&
+                   DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters) &&
+                   Start == other.Start &&
+                   Equals(IsDistinct, other.IsDistinct) &&
+                   EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
+                   EnumerableExtension.ContentEquals(SortedFields, other.SortedFields) &&
+                   WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
                    WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
                    WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-                   Equals(CutoffEtag, other.CutoffEtag) && 
-                   String.Equals(DefaultField, other.DefaultField) && 
-                   DefaultOperator == other.DefaultOperator && 
-                   Equals(SkippedResults, other.SkippedResults) && 
-                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
-                   Equals(HighlightedFields, other.HighlightedFields) && 
-                   Equals(HighlighterPreTags, other.HighlighterPreTags) && 
-                   Equals(HighlighterPostTags, other.HighlighterPostTags) &&
-                   Equals(HighlighterKeyName, other.HighlighterKeyName) && 
-                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
+                   Equals(CutoffEtag, other.CutoffEtag) &&
+                   string.Equals(DefaultField, other.DefaultField) &&
+                   DefaultOperator == other.DefaultOperator &&
+                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) &&
+                   EnumerableExtension.ContentEquals(HighlightedFields, other.HighlightedFields) &&
+                   EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
+                   EnumerableExtension.ContentEquals(HighlighterPostTags, other.HighlighterPostTags) &&
+                   Equals(HighlighterKeyName, other.HighlighterKeyName) &&
+                   string.Equals(Transformer, other.Transformer) &&
                    ShowTimings == other.ShowTimings &&
-                   DisableCaching.Equals(other.DisableCaching) && 
+                   DisableCaching.Equals(other.DisableCaching) &&
                    SkipDuplicateChecking == other.SkipDuplicateChecking;
         }
 
@@ -409,7 +393,6 @@ namespace Raven.Abstractions.Data
             {
                 var hashCode = PageSizeSet.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
@@ -420,13 +403,12 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)DefaultOperator;
-                hashCode = (hashCode * 397) ^ (SkippedResults != null ? SkippedResults.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
                 hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlighterKeyName != null ? HighlighterKeyName.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Transformer != null ? Transformer.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();

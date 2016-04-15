@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Spatial;
 
 namespace Raven.Client

@@ -11,6 +11,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 
 namespace Raven.Database.Indexing

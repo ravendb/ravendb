@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
@@ -21,61 +20,9 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
 
-        public int CountOfMapFields => MapFields.Count;
-        
-        public override void Persist(TransactionOperationContext context)
+        protected override void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
-            var tree = context.Transaction.InnerTransaction.CreateTree("Definition");
-            using (var stream = new MemoryStream())
-            using (var writer = new BlittableJsonTextWriter(context, stream))
-            {
-                writer.WriteStartObject();
-
-                var collection = Collections.First();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(Collections)));
-                writer.WriteStartArray();
-                writer.WriteString(context.GetLazyString(collection));
-                writer.WriteEndArray();
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyString(nameof(LockMode)));
-                writer.WriteInteger((int)LockMode);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyString(nameof(MapFields)));
-                writer.WriteStartArray();
-                var first = true;
-                foreach (var field in MapFields.Values)
-                {
-                    if (first == false)
-                        writer.WriteComma();
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.Name)));
-                    writer.WriteString(context.GetLazyString(field.Name));
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.Highlighted)));
-                    writer.WriteBool(field.Highlighted);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(field.SortOption)));
-                    writer.WriteInteger((int)(field.SortOption ?? SortOptions.None));
-
-                    writer.WriteEndObject();
-
-                    first = false;
-                }
-                writer.WriteEndArray();
-
-                writer.WriteEndObject();
-
-                writer.Flush();
-
-                stream.Position = 0;
-                tree.Add(DefinitionSlice, stream.ToArray());
-            }
+            PersistMapFields(context, writer);
         }
 
         protected override void FillIndexDefinition(IndexDefinition indexDefinition)
@@ -94,9 +41,6 @@ namespace Raven.Server.Documents.Indexes.Auto
                 return true;
 
             if (string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return false;
-
-            if (CountOfMapFields != otherDefinition.CountOfMapFields)
                 return false;
 
             if (Collections.SequenceEqual(otherDefinition.Collections) == false)

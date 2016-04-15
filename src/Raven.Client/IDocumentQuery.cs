@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;

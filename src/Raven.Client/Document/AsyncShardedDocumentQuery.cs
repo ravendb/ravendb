@@ -16,6 +16,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Shard;
 
 namespace Raven.Client.Document

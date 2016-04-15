@@ -12,25 +12,19 @@ using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/document", "HEAD", "/databases/{databaseName:string}/document?id={documentId:string}")]
+        [RavenAction("/databases/*/docs", "HEAD", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public Task Head()
         {
-            var ids = HttpContext.Request.Query["id"];
-            if (ids.Count != 1)
-                throw new ArgumentException("Query string value 'id' must appear exactly once");
-            if (string.IsNullOrWhiteSpace(ids[0]))
-                throw new ArgumentException("Query string value 'id' must have a non empty value");
+            var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -46,25 +40,31 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/document", "GET", "/databases/{databaseName:string}/document?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
-        public async Task Get()
+        [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
+        public Task Get()
         {
+            var ids = HttpContext.Request.Query["id"];
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-                await GetDocumentsById(context, GetStringValuesQueryString("id"));
+                if (ids.Count > 0)
+                    GetDocumentsById(context, ids);
+                else
+                    GetDocuments(context);
+
+                return Task.CompletedTask;
             }
         }
 
-        [RavenAction("/databases/*/document", "POST", "/databases/{databaseName:string}/document body{documentsIds:string[]}")]
+        [RavenAction("/databases/*/docs", "POST", "/databases/{databaseName:string}/docs body{documentsIds:string[]}")]
         public async Task PostGet()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var array = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "queries",
-                    BlittableJsonDocumentBuilder.UsageMode.None);
+                var array = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "docs", BlittableJsonDocumentBuilder.UsageMode.None);
 
                 var ids = new string[array.Length];
                 for (int i = 0; i < array.Length; i++)
@@ -73,11 +73,46 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 context.OpenReadTransaction();
-                await GetDocumentsById(context, new StringValues(ids));
+                GetDocumentsById(context, new StringValues(ids));
             }
         }
 
-        private Task GetDocumentsById(DocumentsOperationContext context, StringValues ids)
+        private void GetDocuments(DocumentsOperationContext context)
+        {
+            // everything here operates on all docs
+            var actualEtag = ComputeAllDocumentsEtag(context);
+
+            if (GetLongFromHeaders("If-None-Match") == actualEtag)
+            {
+                HttpContext.Response.StatusCode = 304;
+                return;
+            }
+            HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+
+            IEnumerable<Document> documents;
+            if (HttpContext.Request.Query.ContainsKey("etag"))
+            {
+                documents = Database.DocumentsStorage.GetDocumentsAfter(context,
+                    GetLongQueryString("etag"), GetStart(), GetPageSize());
+            }
+            else if (HttpContext.Request.Query.ContainsKey("startsWith"))
+            {
+                documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
+                    HttpContext.Request.Query["startsWith"],
+                    HttpContext.Request.Query["matches"],
+                    HttpContext.Request.Query["excludes"],
+                    GetStart(),
+                    GetPageSize()
+                    );
+            }
+            else // recent docs
+            {
+                documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
+            }
+            WriteDocuments(context, documents);
+        }
+
+        private void GetDocumentsById(DocumentsOperationContext context, StringValues ids)
         {
             /* TODO: Call AddRequestTraceInfo
             AddRequestTraceInfo(sb =>
@@ -102,7 +137,7 @@ namespace Raven.Server.Documents.Handlers
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
             {
                 HttpContext.Response.StatusCode = 304;
-                return Task.CompletedTask;
+                return;
             }
 
             //TODO: Transformers
@@ -124,8 +159,6 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         private unsafe long ComputeEtagsFor(List<Document> documents)
@@ -157,24 +190,28 @@ namespace Raven.Server.Documents.Handlers
             return (long)Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
-        [RavenAction("/databases/*/document", "DELETE", "/databases/{databaseName:string}/document?id={documentId:string}")]
+        private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)
+        {
+            var buffer = stackalloc long[2];
+
+            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
+            buffer[1] = Database.DocumentsStorage.GetNumberOfDocuments(context);
+
+            return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
+        }
+
+        [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public Task Delete()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var ids = HttpContext.Request.Query["id"];
-                if (ids.Count == 0)
-                    throw new ArgumentException("The 'id' query string parameter is mandatory");
-
-                var id = ids[0];
-                if (string.IsNullOrWhiteSpace(id))
-                    throw new ArgumentException("The 'id' query string parameter must have a non empty value");
+                var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
                 var etag = GetLongFromHeaders("If-Match");
 
                 context.OpenWriteTransaction();
-                Database.DocumentsStorage.Delete(context, id, etag);
+                Database.DocumentsStorage.Delete(context, ids[0], etag);
                 context.Transaction.Commit();
 
                 HttpContext.Response.StatusCode = 204; // NoContent
@@ -183,21 +220,15 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/document", "PUT", "/databases/{databaseName:string}/document?id={documentId:string}")]
+        [RavenAction("/databases/*/docs", "PUT", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public async Task Put()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var ids = HttpContext.Request.Query["id"];
-                if (ids.Count == 0)
-                    throw new ArgumentException("The 'id' query string parameter is mandatory");
+                var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-                var id = ids[0];
-                if (string.IsNullOrWhiteSpace(id))
-                    throw new ArgumentException("The 'id' query string parameter must have a non empty value");
-
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id);
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), ids[0]);
 
                 var etag = GetLongFromHeaders("If-Match");
 
@@ -205,36 +236,33 @@ namespace Raven.Server.Documents.Handlers
                 using (context.OpenWriteTransaction())
                 {
                     Database.Metrics.DocPutsPerSecond.Mark();
-                    putResult = Database.DocumentsStorage.Put(context, id, etag, doc);
+                    putResult = Database.DocumentsStorage.Put(context, ids[0], etag, doc);
                     context.Transaction.Commit();
                     // we want to release the transaction before we write to the network
                 }
 
                 HttpContext.Response.StatusCode = 201;
 
-                var reply = new DynamicJsonValue
-                {
-                    ["Key"] = putResult.Key,
-                    ["Etag"] = putResult.ETag
-                };
-
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, reply);
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString("Key"));
+                    writer.WriteString(context.GetLazyString(putResult.Key));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("Etag"));
+                    writer.WriteInteger(putResult.ETag.Value);
+
+                    writer.WriteEndObject();
                 }
             }
         }
 
-        [RavenAction("/databases/*/document", "PATCH", "/databases/{databaseName:string}/document?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
+        [RavenAction("/databases/*/docs", "PATCH", "/databases/{databaseName:string}/docs?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
         public Task Patch()
         {
-            var ids = HttpContext.Request.Query["id"];
-            if (ids.Count == 0)
-                throw new ArgumentException("The 'id' query string parameter is mandatory");
-
-            var documentId = ids[0];
-            if (string.IsNullOrWhiteSpace(documentId))
-                throw new ArgumentException("The 'id' query string parameter must have a non empty value");
+            var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("ids");
 
             var etag = GetLongFromHeaders("If-Match");
             var isTestOnly = GetBoolValueQueryString("test", false);
@@ -258,26 +286,33 @@ namespace Raven.Server.Documents.Handlers
                 PatchResultData patchResult;
                 using (context.OpenWriteTransaction())
                 {
-                    patchResult = Database.Patch.Apply(context, documentId, etag, patch, patchIfMissing, isTestOnly);
+                    patchResult = Database.Patch.Apply(context, ids[0], etag, patch, patchIfMissing, isTestOnly);
                     context.Transaction.Commit();
                 }
 
-                Debug.Assert((patchResult.PatchResult == PatchResult.Patched) == (isTestOnly == false));
-                var result = new DynamicJsonValue
-                {
-                    ["Patched"] = isTestOnly == false,
-                    ["Debug"] = patchResult.ModifiedDocument,
-                };
-                if (isTestOnly)
-                {
-                    result["Document"] = patchResult.OriginalDocument;
-                }
+                Debug.Assert(patchResult.PatchResult == PatchResult.Patched == isTestOnly == false);
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, result);
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString("Patched"));
+                    writer.WriteBool(isTestOnly == false);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("Debug"));
+                    writer.WriteObject(patchResult.ModifiedDocument);
+
+                    if (isTestOnly)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName(context.GetLazyString("Document"));
+                        writer.WriteObject(patchResult.OriginalDocument);
+                    }
+
+                    writer.WriteEndObject();
                 }
             }
-
 
             return Task.CompletedTask;
         }

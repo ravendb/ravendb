@@ -30,7 +30,7 @@ namespace FastTests
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
         }
 
-        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null)
+        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<RavenConfiguration> modifyConfiguration = null)
         {
             var name = caller ?? Guid.NewGuid().ToString("N");
 
@@ -41,8 +41,11 @@ namespace FastTests
 
             var configuration = new RavenConfiguration();
             configuration.Initialize();
+            configuration.Indexing.ThrowIfAnyIndexCouldNotBeOpened = true;
             configuration.Core.RunInMemory = runInMemory;
             configuration.Core.DataDirectory = dataDirectory;
+
+            modifyConfiguration?.Invoke(configuration);
 
             var documentDatabase = new DocumentDatabase(name, configuration, _metricsScheduler);
             documentDatabase.Initialize();
@@ -79,7 +82,7 @@ namespace FastTests
             });
 
             RavenTestHelper.DeletePaths(_pathsToDelete, exceptionAggregator);
-            if(alreadyHasException == false)
+            if (alreadyHasException == false)
                 exceptionAggregator.ThrowIfNeeded();
         }
     }

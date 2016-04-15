@@ -12,6 +12,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
+using Raven.Client.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
@@ -909,7 +910,7 @@ namespace Raven.Client.Document
         {
             var orderByfields = propertySelectors.Select(expression => MakeFieldSortDescending(GetMemberQueryPathForOrderBy(expression))).ToArray();
             OrderByDescending(orderByfields);
-            
+
             return this;
         }
 

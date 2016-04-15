@@ -6,6 +6,7 @@
 using System;
 using System.Globalization;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 
 namespace Raven.Abstractions.Data
 {
@@ -72,7 +73,7 @@ namespace Raven.Abstractions.Data
             HighlighterPreTags = query.HighlighterPreTags;
             HighlighterPostTags = query.HighlighterPostTags;
             HighlighterKeyName = query.HighlighterKeyName;
-            ResultsTransformer = query.ResultsTransformer;
+            Transformer = query.Transformer;
             TransformerParameters = query.TransformerParameters;
             ExplainScores = query.ExplainScores;
             IsDistinct = query.IsDistinct;

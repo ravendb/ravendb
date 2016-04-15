@@ -1,23 +1,22 @@
 ﻿using System;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
-
 using Xunit;
 
-namespace FastTests.Server.Queries.Dynamic
+namespace FastTests.Server.Documents.Queries.Dynamic
 {
-    public class MatchingAutoIndexesForDynamicQueries : RavenLowLevelTestBase
+    public class MatchingAutoMapIndexesForDynamicQueries : RavenLowLevelTestBase
     {
         private readonly DocumentDatabase _documentDatabase;
         private readonly DynamicQueryToIndexMatcher _sut;
 
-        public MatchingAutoIndexesForDynamicQueries()
+        public MatchingAutoMapIndexesForDynamicQueries()
         {
             _documentDatabase = CreateDocumentDatabase();
 

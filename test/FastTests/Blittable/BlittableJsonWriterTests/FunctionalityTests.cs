@@ -39,7 +39,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
                 Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
                 var ms = new MemoryStream();
-                blittableContext.WriteOrdered(ms, employee);
+                blittableContext.Write(ms, employee);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
@@ -153,7 +153,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
                 Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
                 var ms = new MemoryStream();
-                blittableContext.WriteOrdered(ms, doc);
+                blittableContext.Write(ms, doc);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
@@ -199,7 +199,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();
-                ctx.WriteOrdered(ms, r);
+                ctx.Write(ms, r);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
             }

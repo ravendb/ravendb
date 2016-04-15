@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes
                 tx.InnerTransaction.CreateTree(Schema.EtagsMapTree);
                 tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
 
-                _index.Definition.Persist(context);
+                _index.Definition.Persist(context, _environment.Options);
 
                 tx.Commit();
             }
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     _index.Definition.LockMode = mode;
-                    _index.Definition.Persist(context);
+                    _index.Definition.Persist(context, _environment.Options);
 
                     tx.Commit();
                 }

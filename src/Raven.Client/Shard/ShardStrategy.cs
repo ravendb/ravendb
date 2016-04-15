@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util.Encryptors;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Sparrow;
 

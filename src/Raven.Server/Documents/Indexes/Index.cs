@@ -14,6 +14,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -24,6 +25,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 
@@ -79,7 +81,12 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _indexingInProgress;
 
         internal IndexStorage _indexStorage;
+
         private IIndexingWork[] _indexWorkers;
+
+        public readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
+
+        private int _numberOfQueries;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -109,6 +116,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     case IndexType.AutoMap:
                         return AutoMapIndex.Open(indexId, environment, documentDatabase);
+                    case IndexType.AutoMapReduce:
+                        return AutoMapReduceIndex.Open(indexId, environment, documentDatabase);
                     default:
                         throw new NotImplementedException();
                 }
@@ -660,7 +669,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.ConvertToIndexDefinition(this);
         }
 
-        public async Task<DocumentQueryResult> Query(IndexQuery query, DocumentsOperationContext documentsContext, CancellationToken token)
+        public async Task<DocumentQueryResult> Query(IndexQuery query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -670,14 +679,16 @@ namespace Raven.Server.Documents.Indexes
 
             MarkQueried(SystemTime.UtcNow);
 
-            var result = new DocumentQueryResult
-            {
-                IndexName = Name
-            };
-
             TransactionOperationContext indexContext;
+
+            using (MarkQueryAsRunning(query, token))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
+                var result = new DocumentQueryResult
+                {
+                    IndexName = Name
+                };
+
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
 
@@ -719,7 +730,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             var totalResults = new Reference<int>();
 
-                            result.Results = reader.Query(query, token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
+                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
                             result.TotalResults = totalResults.Value;
                         }
 
@@ -727,6 +738,41 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        public TermsQueryResult GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (var tx = indexContext.OpenReadTransaction())
+            {
+                var result = new TermsQueryResult
+                {
+                    IndexName = Name,
+                    ResultEtag = CalculateIndexEtag(IsStale(documentsContext, indexContext), documentsContext, indexContext)
+                };
+
+                using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                {
+                    result.Terms = reader.Terms(field, fromValue, pageSize);
+                }
+
+                return result;
+            }
+        }
+
+        private DisposableAction MarkQueryAsRunning(IndexQuery query, OperationCancelToken token)
+        {
+            var queryStartTime = DateTime.UtcNow;
+            var queryId = Interlocked.Increment(ref _numberOfQueries);
+            var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, query, queryId, token);
+
+            CurrentlyRunningQueries.Add(executingQueryInfo);
+
+            return new DisposableAction(() =>
+            {
+                CurrentlyRunningQueries.TryRemove(executingQueryInfo);
+            });
         }
 
         private static bool WillResultBeAcceptable(DocumentQueryResult result, IndexQuery query, AsyncWaitForIndexing wait)

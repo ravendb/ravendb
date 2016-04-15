@@ -6,12 +6,6 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
 {
     public class MakeStudioWorkForNowHandler : RequestHandler
     {
-        [RavenAction("/queries", "POST")]
-        public Task FakeResponseForQueriesPost()
-        {
-            return HttpContext.Response.WriteAsync("{'Results':[],'Includes':[]}");
-        }
-
         [RavenAction("/replication/topology", "GET")]
         [RavenAction("/databases/*/replication/topology", "GET")]
         public Task FakeResponseForReplicationTopology()

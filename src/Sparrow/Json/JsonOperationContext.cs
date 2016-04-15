@@ -522,17 +522,10 @@ namespace Sparrow.Json
         {
             using (var writer = new BlittableJsonTextWriter(this, stream))
             {
-                writer.WriteToOrdered(json);
+                writer.WriteObjectOrdered(json);
             }
         }
 
-        public void WriteOrdered(Stream stream, BlittableJsonReaderObject json)
-        {
-            using (var writer = new BlittableJsonTextWriter(this, stream))
-            {
-                writer.WriteToOrdered(json);
-            }
-        }
         public void Write(BlittableJsonTextWriter writer, BlittableJsonReaderObject json)
         {
             WriteInternal(writer, json);
