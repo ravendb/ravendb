@@ -44,6 +44,31 @@
                         </div>
                     </div>
                 </div>
+                <div data-bind="visible: replicationsSetup().showCustomRequestTimeThreshold">
+                    <div class="form-group" data-bind="with: replicationsSetup">
+                        <label class="col-sm-2 control-label">Request Time Threshold</label>
+                        <div class="col-sm-10">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="visible: !hasCustomRequestTimeThreshold()">Default</span>
+                                    <span data-bind="visible: hasCustomRequestTimeThreshold">Custom</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, false)">Default</a></li>
+                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, true)">Custom</a></li>
+                                </ul>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <div class="form-group" data-bind="visible: replicationsSetup().hasCustomRequestTimeThreshold">
+                        <label class="col-sm-2 control-label">Custom Request Time Threshold (ms)</label>
+                        <div class="col-sm-9">
+                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeThreshold, valueUpdate: 'afterkeydown'" />
+                        </div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="conflictResolutionSelector" class="col-sm-2 control-label">Conflict resolution</label>
                     <div class="col-sm-10">
@@ -111,7 +136,7 @@
                                         <div class="form-group">
                                             <label class="col-sm-4 control-label">Database</label>
                                             <div class="col-sm-6">
-                                                <input required type="text" class="form-control" title="The name of the database on the destination server to replicate to" disabled="disabled" value="{databaseName}"/>
+                                                <input required type="text" class="form-control" title="The name of the database on the destination server to replicate to" disabled="disabled" value="{databaseName}" />
                                             </div>
                                             <div class="col-sm-1">
                                                 <span class="dbNameHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
@@ -173,14 +198,15 @@
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Client Visible Url</label>
                                                 <div class="col-sm-7">
-                                                    <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'afterkeydown'" />
+                                                    <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'afterkeydown'"/>
                                                 </div>
                                             </div>
-                                            <div class="form-group" style="margin-left:10px">
-                                                <input type="checkbox" role="checkbox" data-bind="checked: skipIndexReplication"/>
-                                                <a href="#" data-bind="click: toggleSkipIndexReplication" style="text-decoration: none;">Skip Index Replication</a>
+                                            <div class="form-group">
+                                                <label class="col-sm-4 control-label">Skip Index Replication</label>
+                                                <div class="col-sm-7">
+                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplication" />
+                                                </div>
                                             </div>
-
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Failover</label>
                                                 <div class="col-sm-7">
@@ -221,20 +247,12 @@
                     </div>
                 </div>
             </div>
-        </div>        
+        </div>
         <div class="panel panel-default">
             <div class="panel-heading">
-                <input type="checkbox" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
+                <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
                 <span style="margin-left: 5px;">
-                    <a href="#" data-bind="click: toggleSkipIndexReplicationForAll" style="text-decoration: none;">Skip index replication for all destinations</a>
-                </span>
-            </div>
-            <div class="panel-heading">
-                <button type="submit" data-bind="click:sendReplicateAllCommand, enable: !isSetupSaveEnabled()" class="btn btn-primary" title="Replicate Indexes To All Destinations">
-                    <i class="fa fa-send"></i>
-                </button>
-                <span style="margin-left: 5px;">
-                    Replicate all indexes and transformers to configured destinations
+                    Skip index replication for all destinations
                 </span>
             </div>
         </div>
