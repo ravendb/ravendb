@@ -135,6 +135,64 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             Assert.Contains("no aggregation", ex.Message);
         }
 
+        [Fact]
+        public void Extends_mapping_based_on_existing_definition_if_group_by_fields_match()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "Location:A*",
+                DynamicMapReduceFields = new []
+                {
+                    new DynamicMapReduceField
+                    {
+                        Name = "Count",
+                        OperationType = FieldMapReduceOperation.Count
+                    },
+                    new DynamicMapReduceField
+                    {
+                        Name = "Location",
+                        IsGroupBy = true
+                    }
+                }
+            });
+
+            var existingDefinition = _sut.CreateAutoIndexDefinition();
+
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "Location:A*",
+                DynamicMapReduceFields = new[]
+                {
+                    new DynamicMapReduceField
+                    {
+                        Name = "Count",
+                        OperationType = FieldMapReduceOperation.Count
+                    },
+                    new DynamicMapReduceField
+                    {
+                        Name = "Age",
+                        OperationType = FieldMapReduceOperation.Sum
+                    },
+                    new DynamicMapReduceField
+                    {
+                        Name = "Location",
+                        IsGroupBy = true
+                    }
+                }
+            });
+
+            _sut.ExtendMappingBasedOn(existingDefinition);
+
+            var definition = (AutoMapReduceIndexDefinition)_sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("Count"));
+            Assert.True(definition.ContainsField("Age"));
+            Assert.True(definition.ContainsGroupByField("Location"));
+            Assert.Equal("Auto/Users/ByAgeAndCountReducedByLocation", definition.Name);
+        }
+
         private void create_dynamic_map_reduce_mapping_for_users_collection(string query, DynamicMapReduceField[] mapReduceFields)
         {
             _sut = DynamicQueryMapping.Create("Users", new IndexQuery

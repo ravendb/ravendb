@@ -65,44 +65,33 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
         {
-            if (IsMapReduce)
-                throw new NotSupportedException("TODO arek");
-
             var extendedMapFields = new List<DynamicQueryMappingItem>(MapFields);
-
-            foreach (var field in definitionOfExistingIndex.MapFields.Values)
-            {
-                if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-
-                extendedMapFields.Add(new DynamicQueryMappingItem()
-                {
-                    Name = field.Name
-                });
-            }
-
-            MapFields = extendedMapFields.ToArray();
-
             var extendedSortDescriptors = new List<DynamicSortInfo>(SortDescriptors);
 
-            // TODO iterate once?
             foreach (var field in definitionOfExistingIndex.MapFields.Values)
             {
-                if (field.SortOption == null)
-                    continue;
-
-                if (extendedSortDescriptors.Any(x => x.Field.Equals(field.Name, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-
-                extendedSortDescriptors.Add(new DynamicSortInfo()
+                if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false)
                 {
-                    Field = field.Name,
-                    FieldType = field.SortOption.Value
-                });
+                    extendedMapFields.Add(new DynamicQueryMappingItem
+                    {
+                        Name = field.Name,
+                        MapReduceOperation = field.MapReduceOperation
+                    });
+                }
+
+                if (extendedSortDescriptors.Any(x => x.Field.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false && field.SortOption != null)
+                {
+                    extendedSortDescriptors.Add(new DynamicSortInfo()
+                    {
+                        Field = field.Name,
+                        FieldType = field.SortOption.Value
+                    });
+                }
             }
 
             //TODO arek - HighlightedFields
 
+            MapFields = extendedMapFields.ToArray();
             SortDescriptors = extendedSortDescriptors.ToArray();
         }
 

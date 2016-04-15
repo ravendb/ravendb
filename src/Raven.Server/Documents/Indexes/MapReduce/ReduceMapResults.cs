@@ -166,9 +166,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private BlittableJsonReaderObject AggregateBatchResults(long modifiedPage, Table table, TransactionOperationContext indexContext)
         {
-            var sum = 0;
-
-            var aggregatedResult = new Dictionary<string, object>();
+            var aggregatedResult = new Dictionary<string, PropertyResult>();
 
             foreach (var obj in _aggregationBatch)
             {
@@ -187,9 +185,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 if (obj.TryGet(propertyName, out cur) == false)
                                     throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
 
-                                sum += cur;
-                                aggregatedResult[propertyName] = sum;
-
+                                PropertyResult aggregate;
+                                if (aggregatedResult.TryGetValue(propertyName, out aggregate) == false)
+                                {
+                                    aggregatedResult[propertyName] = new PropertyResult
+                                    {
+                                        ResultValue = cur,
+                                        SumValue = cur
+                                    };
+                                }
+                                else
+                                {
+                                    aggregate.ResultValue = aggregate.SumValue += cur;
+                                }
                                 break;
                             //case FieldMapReduceOperation.None:
                             default:
@@ -198,7 +206,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     else if (obj.TryGet(propertyName, out stringValue))
                     {
-                        aggregatedResult[propertyName] = stringValue;
+                        if (aggregatedResult.ContainsKey(propertyName) == false)
+                        {
+                            aggregatedResult[propertyName] = new PropertyResult
+                            {
+                                ResultValue = stringValue
+                            };
+                        }
                     }
                 }
             }
@@ -209,7 +223,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             foreach (var aggregate in aggregatedResult)
             {
-                djv[aggregate.Key] = aggregate.Value;
+                djv[aggregate.Key] = aggregate.Value.ResultValue;
             }
 
             var resultObj = indexContext.ReadObject(djv, "map/reduce");
@@ -221,6 +235,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 });
 
             return resultObj;
+        }
+
+        private class PropertyResult
+        {
+            public object ResultValue;
+
+            public long SumValue = 0;
         }
     }
 }

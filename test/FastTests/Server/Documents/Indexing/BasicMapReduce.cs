@@ -173,6 +173,89 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
+        [Fact]
+        public async Task MultipleAggregationFunctionsCanBeUsed()
+        {
+            using (var db = CreateDocumentDatabase())
+            using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            {
+                new IndexField
+                {
+                    Name = "Count",
+                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Storage = FieldStorage.Yes
+                },
+                new IndexField
+                {
+                    Name = "TotalCount",
+                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Storage = FieldStorage.Yes
+                },
+                new IndexField
+                {
+                    Name = "Age",
+                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Storage = FieldStorage.Yes
+                }
+            }, new[]
+            {
+                new IndexField
+                {
+                    Name = "Location",
+                    Storage = FieldStorage.Yes
+                },
+            }), db))
+            {
+                CreateUsers(db, 2, "Poland");
+
+                mri.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await mri.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    Assert.Equal(1, queryResult.Results.Count);
+                    var result = queryResult.Results[0].Data;
+
+                    string location;
+                    Assert.True(result.TryGet("Location", out location));
+                    Assert.Equal("Poland", location);
+
+                    var count = result["Count"] as LazyDoubleValue;
+
+                    Assert.NotNull(count);
+                    Assert.Equal("2.0", count.Inner.ToString());
+
+                    var totalCount = result["TotalCount"] as LazyDoubleValue;
+
+                    Assert.NotNull(totalCount);
+                    Assert.Equal("2.0", totalCount.Inner.ToString());
+
+                    var age = result["Age"] as LazyDoubleValue;
+
+                    Assert.NotNull(age);
+                    Assert.Equal("41.0", age.Inner.ToString());
+                }
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await mri.Query(new IndexQuery()
+                    {
+                        Query = "Count_Range:[Lx2 TO Lx10]"
+                    }, context, OperationCancelToken.None);
+
+                    Assert.Equal(1, queryResult.Results.Count);
+
+                    queryResult = await mri.Query(new IndexQuery()
+                    {
+                        Query = "Count_Range:[Lx10 TO NULL]"
+                    }, context, OperationCancelToken.None);
+
+                    Assert.Equal(0, queryResult.Results.Count);
+                }
+            }
+        }
+
         private static void CreateUsers(DocumentDatabase db, int numberOfUsers, params string[] locations)
         {
             using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -185,6 +268,7 @@ namespace FastTests.Server.Documents.Indexing
                         {
                             ["Name"] = $"User-{i}",
                             ["Location"] = locations[i % locations.Length],
+                            ["Age"] = 20 + i,
                             [Constants.Metadata] = new DynamicJsonValue
                             {
                                 [Constants.RavenEntityName] = "Users"
