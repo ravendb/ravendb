@@ -90,6 +90,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     Assert.Equal(2, addressesTotalCount[0].TotalCount);
                     Assert.Equal("Torun", addressesTotalCount[0].City);
                 }
+
+                var indexDefinitions = store.DatabaseCommands.GetIndexes(0, 10);
+
+                Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
+                Assert.Equal("Auto/Addresses/ByCountReducedByCity", indexDefinitions[0].Name);
             }
         }
 
@@ -227,6 +232,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     Assert.Equal(2, sumOfLinesByNameClass[0].OrderedQuantity);
                     Assert.Equal("Desk", sumOfLinesByNameClass[0].NameOfProduct);
                 }
+
+                var indexDefinitions = store.DatabaseCommands.GetIndexes(0, 10);
+
+                Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
+                Assert.Equal("Auto/OrderLines/ByQuantityReducedByProductName", indexDefinitions[0].Name);
             }
         }
 

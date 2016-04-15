@@ -1580,6 +1580,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 mapReduceField = GetSelectPath(member);
             }
 
+            if (mapReduceOperation == FieldMapReduceOperation.Count && mapReduceField != "Count")
+            {
+                if (renamedField == null)
+                    renamedField = mapReduceField;
+
+                mapReduceField = "Count";
+            }
+
             FieldsToFetch.Add(mapReduceField);
 
             var dynamicMapReduceField = new DynamicMapReduceField
