@@ -231,7 +231,7 @@ class shell extends viewModelBase {
             return shell.resources();
         });
 
-        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.0." + v.BuildVersion));
+        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.5." + v.BuildVersion));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.

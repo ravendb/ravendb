@@ -13,7 +13,7 @@ import router = require("plugins/router");
 class commandBase {
 
     // TODO: better place for this?
-    static ravenClientVersion = '3.0.0.0';
+    static ravenClientVersion = '3.5.0.0';
     static splashTimerHandle = 0;
     static alertTimeout = 0;
     static loadingCounter = 0;
