@@ -25,6 +25,8 @@ import indexLockAllConfirm = require("viewmodels/database/indexes/indexLockAllCo
 
 class indexes extends viewModelBase {
 
+    resetsInProgress = d3.set();
+
     indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index>; groupHidden: KnockoutObservable<boolean> }>();
     queryUrl = ko.observable<string>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
@@ -266,8 +268,10 @@ class indexes extends viewModelBase {
     }
 
     processIndexEvent(e: indexChangeNotificationDto) {
-        if (e.Type == "IndexRemoved") {
-            this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
+        if (e.Type === "IndexRemoved") {
+            if (!this.resetsInProgress.has(e.Name)) {
+                this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
+            }
         } else {
             if (this.indexMutex) {
                 this.indexMutex = false;
@@ -342,6 +346,7 @@ class indexes extends viewModelBase {
 
     deleteIndex(i: index) {
         this.promptDeleteIndexes([i]);
+        this.resetsInProgress.remove(i.name);
     }
 
     deleteIndexGroup(i: { entityName: string; indexes: KnockoutObservableArray<index> }) {
@@ -380,8 +385,20 @@ class indexes extends viewModelBase {
         }
     }
 
+
     resetIndex(indexToReset: index) {
         var resetIndexVm = new resetIndexConfirm(indexToReset.name, this.activeDatabase());
+
+        // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
+        // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
+        // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
+        // if resolved. 
+        this.resetsInProgress.add(indexToReset.name);
+
+        setTimeout(() => {
+            this.resetsInProgress.remove(indexToReset.name);
+        }, 30000);
+        
         app.showDialog(resetIndexVm);
     }
     
