@@ -40,8 +40,11 @@
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
             <h3>
-                <a href="#resources">
+                <a href="#resources" data-bind="visible: has40Features()">
                     Databases, File Systems, Counter Storages and Time Series
+                </a>
+                <a href="#resources" data-bind="visible: !has40Features()">
+                    Databases and File Systems
                 </a>
             </h3>
         </li>
