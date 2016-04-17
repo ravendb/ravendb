@@ -63,6 +63,7 @@ import recentErrors = require("viewmodels/common/recentErrors");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import latestBuildReminder = require("viewmodels/common/latestBuildReminder");
 import recentQueriesStorage = require("common/recentQueriesStorage");
+import getHotSpareInformation = require("commands/licensing/GetHotSpareInformation");
 
 class shell extends viewModelBase {
     private router = router;
@@ -387,16 +388,45 @@ class shell extends viewModelBase {
         viewLocator.locateView("views/common/recentErrors");
     }
 
+    static fetchStudioConfig() {
+        var hotSpareTask = new getHotSpareInformation().execute();
+        var configTask = new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase()).execute();
+
+        $.when(hotSpareTask, configTask).done((hotSpareResult, doc: documentClass) => {
+            var hotSpare = <HotSpareDto>hotSpareResult[0];
+
+            appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
+            if (hotSpare.ActivationMode === "Activated") {
+                // override environment colors with hot spare
+                this.activateHotSpareEnviroment();
+            } else {
+                var envColor = doc["EnvironmentColor"];
+                if (envColor != null) {
+                    var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
+                    shell.selectedEnvironmentColorStatic(color);
+                    shell.originalEnviromentColor(color);
+                }
+            }
+        });
+    }
+
     private fecthStudioConfigForDatabase(db: database) {
-        new getStudioConfig(db)
-            .execute()
-            .done((doc: documentClass) => {
+        var hotSpareTask = new getHotSpareInformation().execute();
+        var configTask = new getStudioConfig(db).execute();
+
+        $.when(hotSpareTask, configTask).done((hotSpareResult, docResult) => {
+            var hotSpare = hotSpareResult[0];
+            var doc = <documentClass>docResult[0];
+            if (hotSpare.ActivationMode === "Activated") {
+                // override environment colors with hot spare
+                shell.activateHotSpareEnviroment();
+            } else {
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
                     shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
                 }
-            })
-            .fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor()));
+            }
+        }).fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor()));
     }
 
     private activateDatabase(db: database) {
@@ -606,7 +636,7 @@ class shell extends viewModelBase {
 
     private reloadDataAfterReconnection(rs: resource) {
         if (rs.name === "<system>") {
-            this.fetchStudioConfig();
+            shell.fetchStudioConfig();
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
@@ -664,7 +694,7 @@ class shell extends viewModelBase {
             this.globalChangesApi.watchDocsStartingWith("Raven/FileSystems/", (e) => this.changesApiFiredForResource(e, shell.fileSystems, this.activeFilesystem, TenantType.FileSystem)),
             this.globalChangesApi.watchDocsStartingWith("Raven/Counters/", (e) => this.changesApiFiredForResource(e, shell.counterStorages, this.activeCounterStorage, TenantType.CounterStorage)),
             this.globalChangesApi.watchDocsStartingWith("Raven/TimeSeries/", (e) => this.changesApiFiredForResource(e, shell.timeSeries, this.activeTimeSeries, TenantType.TimeSeries)),
-            this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => this.fetchStudioConfig()),
+            this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),
             this.globalChangesApi.watchDocsStartingWith("Raven/Alerts", () => this.fetchSystemDatabaseAlerts())
         ];
     }
@@ -778,7 +808,7 @@ class shell extends viewModelBase {
             .fail(result => this.handleRavenConnectionFailure(result))
             .done((results: database[]) => {
                 this.databasesLoaded(results);
-                this.fetchStudioConfig();
+                shell.fetchStudioConfig();
                 this.fetchClusterTopology();
                 this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
@@ -893,18 +923,10 @@ class shell extends viewModelBase {
         this.navigate(appUrl.forResources());
     }
 
-    fetchStudioConfig() {
-        new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, this.systemDatabase)
-            .execute()
-            .done((doc: documentClass) => {
-                appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
-                var envColor = doc["EnvironmentColor"];
-                if (envColor != null) {
-                    var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
-                    shell.selectedEnvironmentColorStatic(color);
-                    shell.originalEnviromentColor(color);
-                }
-            });
+    private static activateHotSpareEnviroment() {
+        var color = new environmentColor("Hot Spare", "#FF8585");
+        shell.selectedEnvironmentColorStatic(color);
+        shell.originalEnviromentColor(color);
     }
 
     private handleRavenConnectionFailure(result) {
