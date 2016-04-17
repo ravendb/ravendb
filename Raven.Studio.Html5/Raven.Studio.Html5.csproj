@@ -59,7 +59,6 @@
     <TypeScriptCompile Include="App\commands\timeSeries\getTypesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getPointsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\getCounterStorageStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
@@ -926,7 +925,6 @@
     <TypeScriptCompile Include="App\commands\resources\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\saveDatabaseSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
-    <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />
     <TypeScriptCompile Include="App\common\autoCompleterSupport.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\autoCompleteBindingHandler.ts" />
@@ -1032,7 +1030,6 @@
     <TypeScriptCompile Include="App\models\resources\database.ts" />
     <TypeScriptCompile Include="App\models\resources\databaseAccess.ts" />
     <TypeScriptCompile Include="App\models\resources\databaseStatistics.ts" />
-    <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
     <TypeScriptCompile Include="App\models\resources\resource.ts" />
     <TypeScriptCompile Include="App\models\resources\serverSmugglingItem.ts" />
     <TypeScriptCompile Include="App\models\timeSeries\timeSeriesStatisticsDto.ts" />
