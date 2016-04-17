@@ -112,11 +112,12 @@ namespace Voron.Data.BTrees
                         int high = numberOfEntries - 1;
                         int position = 0;
 
+                        ushort* offsets = KeysOffsets;
                         while (low <= high)
                         {
                             position = (low + high) >> 1;
 
-                            var node = (TreeNodeHeader*)(Base + KeysOffsets[position]);
+                            var node = (TreeNodeHeader*)(Base + offsets[position]);
 
                             SetNodeKey(node, ref pageKey);
 
@@ -206,9 +207,10 @@ namespace Voron.Data.BTrees
         {
             Debug.Assert(index >= 0 || index < NumberOfEntries);
 
+            ushort* offsets = KeysOffsets;
             for (int i = index + 1; i < NumberOfEntries; i++)
             {
-                KeysOffsets[i - 1] = KeysOffsets[i];
+                offsets[i - 1] = offsets[i];
             }
 
             Lower -= (ushort)Constants.NodeOffsetSize;
@@ -264,9 +266,10 @@ namespace Voron.Data.BTrees
                 throw new InvalidOperationException(string.Format("The page is full and cannot add an entry, this is probably a bug. Key: {0}, data length: {1}, size left: {2}", key, len, SizeLeft));
 
             // move higher pointers up one slot
+            ushort* offsets = KeysOffsets;
             for (int i = NumberOfEntries; i > index; i--)
             {
-                KeysOffsets[i] = KeysOffsets[i - 1];
+                offsets[i] = offsets[i - 1];
             }
 
             var nodeSize = TreeSizeOf.NodeEntry(PageMaxSpace, key, len);
@@ -444,6 +447,7 @@ namespace Voron.Data.BTrees
 
                 Upper = (ushort)PageSize;
 
+                ushort* offsets = KeysOffsets;
                 for (int i = 0; i < numberOfEntries; i++)
                 {
                     var node = tempPage.GetNode(i);
@@ -451,7 +455,7 @@ namespace Voron.Data.BTrees
                     size += size & 1;
                     Memory.Copy(Base + Upper - size, (byte*)node, size);
                     Upper -= (ushort)size;
-                    KeysOffsets[i] = Upper;
+                    offsets[i] = Upper;
                 }
             }
         }
