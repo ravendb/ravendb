@@ -382,12 +382,12 @@ namespace Raven.Database.Indexing
                                 }
                                 catch (AggregateException e)
                                 {
-                                    var anyOperationsCanceled = e
+                                    var allOperationsCanceled = e
                                         .InnerExceptions
                                         .OfType<OperationCanceledException>()
-                                        .Any();
+                                        .All();
 
-                                    if (anyOperationsCanceled == false)
+                                    if (allOperationsCanceled == false)
                                         throw;
 
                                     operationCanceled = true;
@@ -422,12 +422,12 @@ namespace Raven.Database.Indexing
                     }
                     catch (AggregateException e)
                     {
-                        var anyOperationsCanceled = e
+                        var allOperationsCanceled = e
                             .InnerExceptions
                             .OfType<OperationCanceledException>()
-                            .Any();
+                            .All();
 
-                        if (anyOperationsCanceled == false)
+                        if (allOperationsCanceled == false)
                         {
                             var message = string.Format("Unexpected AggregateException happened during execution of indexing batch...this is not supposed to happen. Reason: {0}", e);
                             Log.Error(message, e);
