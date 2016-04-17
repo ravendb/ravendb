@@ -151,12 +151,18 @@ namespace Voron.Platform.Win32
             Debug.Assert(PagerState.Files != null && PagerState.Files.Any());
 
             var allocationInfo = RemapViewOfFileAtAddress(allocationSize, (ulong)_totalAllocationSize, PagerState.MapBase + _totalAllocationSize);
-
             if (allocationInfo == null)
                 return false;
 
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
+
+            // We are asking to allocate pages. It is a good idea that they should be already in memory to only cause a single page fault (as they are continuous).
+            Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
+            entry.VirtualAddress = allocationInfo.BaseAddress;
+            entry.NumberOfBytes = (IntPtr)allocationInfo.Size;
+
+            Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(), (UIntPtr)1, &entry, 0);
 
             return true;
         }
