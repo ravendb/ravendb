@@ -384,8 +384,7 @@ namespace Raven.Database.Indexing
                                 {
                                     var allOperationsCanceled = e
                                         .InnerExceptions
-                                        .OfType<OperationCanceledException>()
-                                        .All();
+                                        .All(x => x is OperationCanceledException);
 
                                     if (allOperationsCanceled == false)
                                         throw;
@@ -424,8 +423,7 @@ namespace Raven.Database.Indexing
                     {
                         var allOperationsCanceled = e
                             .InnerExceptions
-                            .OfType<OperationCanceledException>()
-                            .All();
+                            .All(x => x is OperationCanceledException);
 
                         if (allOperationsCanceled == false)
                         {
