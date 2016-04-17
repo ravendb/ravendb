@@ -272,7 +272,7 @@ interface licenseStatusDto {
         fips: string;
         counters: string;
         timeSeries: string;
-        globalConfiguration: string;
+        globalConfigurations: string;
         documentExpiration: string;
         replication: string;
         versioning: string;
@@ -286,7 +286,7 @@ interface licenseStatusDto {
         ravenfs: string;
         counterStorage: string;
         monitoring: string;
-        cluster: string;
+        clustering: string;
         hotSpare: string;
         updatesExpiration: string;
     }

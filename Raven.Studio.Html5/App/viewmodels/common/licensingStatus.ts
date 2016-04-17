@@ -61,11 +61,11 @@ class licensingStatus extends dialogViewModelBase {
             { displayName: "Compression", value: licenseStatus.Attributes.compression },
             { displayName: "FIPS Compliance", value: licenseStatus.Attributes.fips },
             { displayName: "Quotas", value: licenseStatus.Attributes.quotas },
-            { displayName: "Global Configuration", value: licenseStatus.Attributes.globalConfiguration },
+            { displayName: "Global Configuration", value: licenseStatus.Attributes.globalConfigurations },
             { displayName: "Authorization", value: licenseStatus.Attributes.authorization },
             { displayName: "Document Expiration", value: licenseStatus.Attributes.documentExpiration },
             { displayName: "Versioning", value: licenseStatus.Attributes.versioning },
-            { displayName: "Cluster", value: licenseStatus.Attributes.cluster },
+            { displayName: "Cluster", value: licenseStatus.Attributes.clustering },
             { displayName: "Monitoring", value: licenseStatus.Attributes.monitoring },
             { displayName: "Hot Spare", value: licenseStatus.Attributes.hotSpare },
             { displayName: "Allow Windows Clustering", value: licenseStatus.Attributes.allowWindowsClustering }
