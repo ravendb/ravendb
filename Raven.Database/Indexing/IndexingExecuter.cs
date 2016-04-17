@@ -364,22 +364,22 @@ namespace Raven.Database.Indexing
             var completedGroups = 0;
 
             if (GenerateIndexingGroupsByEtagRanges(indexes, out usedPrefetchers, out groupedIndexes))
-                            {
-                                return;
-                            }
+            {
+                return;
+            }
 
 
             foreach (var indexToWorkOn in indexes)
-                        {
+            {
                 indexToWorkOn.Index.IsMapIndexingInProgress = true;
-                        }
+            }
 
-            var indexingAutoTunerContext = ((IndexBatchSizeAutoTuner)autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(
+            var indexingAutoTunerContext = ((IndexBatchSizeAutoTuner) autoTuner).ConsiderLimitingNumberOfItemsToProcessForThisBatch(
                 groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument)),
                 groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce)));
             indexes.ForEach(x => x.Index.CurrentNumberOfItemsToIndexInSingleBatch = autoTuner.NumberOfItemsToProcessInSingleBatch);
             using (indexingAutoTunerContext)
-                        {
+            {
                 var indexBatchOperations = new ConcurrentDictionary<IndexingBatchOperation, object>();
 
                 var operationWasCancelled = GenerateIndexingBatchesAndPrefetchDocuments(groupedIndexes, indexBatchOperations);
@@ -387,24 +387,24 @@ namespace Raven.Database.Indexing
                 var executionStopwatch = Stopwatch.StartNew();
 
                 foreach (var indexingGroup in groupedIndexes)
-                        {
+                {
                     indexingGroup.IndexingGroupProcessingFinished += x =>
-                            {
-                            if (!operationWasCancelled)
-                            {
-                                ReleasePrefethersAndUpdateStatistics(x, executionStopwatch.Elapsed);
-                            }
-
-                            if (Interlocked.Increment(ref completedGroups) == groupedIndexes.Count)
-                            {
-                                RemoveUnusedPrefetchers(usedPrefetchers);
+                    {
+                        if (!operationWasCancelled)
+                        {
+                            ReleasePrefethersAndUpdateStatistics(x, executionStopwatch.Elapsed);
                         }
-                        };
-                    }
+
+                        if (Interlocked.Increment(ref completedGroups) == groupedIndexes.Count)
+                        {
+                            RemoveUnusedPrefetchers(usedPrefetchers);
+                        }
+                    };
+                }
 
                 if (!operationWasCancelled)
                     operationWasCancelled = PerformIndexingOnIndexBatches(indexBatchOperations);
-        }
+            }
         }
 
         private void SetPrefetcherForIndexingGroup(IndexingGroup groupIndex, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
@@ -568,6 +568,18 @@ namespace Raven.Database.Indexing
                         Log.ErrorException("Failed to index because of data corruption. ", e);
                         indexingGroup.Indexes.ForEach(index =>
                             context.AddError(index.IndexId, index.Index.PublicName, null, e, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+                    }
+                    catch (Exception e)
+                    {
+                        //this is a precaution, no exception should happen at this point
+                        var message = string.Format("Unexpected exception happened during execution of indexing... This is not supposed to happen. Reason: {0}", e);
+                        Log.Error(message, e);
+                        indexingGroup.Indexes.ForEach(index =>
+                            context.AddError(index.IndexId, index.Index.PublicName, null, e, message));
+
+                        //rethrow because we do not want to interrupt the existing exception flow
+                        // ReSharper disable once ThrowingSystemException
+                        throw;
                     }
                     finally
                     {
