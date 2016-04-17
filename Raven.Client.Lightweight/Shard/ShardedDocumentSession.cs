@@ -124,12 +124,20 @@ namespace Raven.Client.Shard
 
         public T Load<T>(string id)
         {
+            if (IsDeleted(id))
+                return default(T);
+
             object existingEntity;
             if (entitiesByKey.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
             }
-
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
+            }
             IncrementRequestCount();
             var shardRequestData = new ShardRequestData
             {
@@ -329,19 +337,17 @@ namespace Raven.Client.Shard
 
         public T[] LoadInternal<T>(string[] ids)
         {
-            return LoadInternal<T>(ids, new KeyValuePair<string, Type>[0]);
+            return LoadInternal<T>(ids, null);
         }
 
         public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             var results = new T[ids.Length];
-            var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null);
+            var includePaths = includes != null && includes.Length > 0 ? includes.Select(x => x.Key).ToArray() : null;
+            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null).ToList();
 
-            if (!idsToLoad.Any())
-                return results;
-
-            IncrementRequestCount();
+            if (idsToLoad.Count>0)
+                IncrementRequestCount();
 
             foreach (var shard in idsToLoad)
             {
@@ -889,8 +895,9 @@ namespace Raven.Client.Shard
                             exclude: exclude, transformer: transformer,
                             transformerParameters: configuration.TransformerParameters,
                             skipAfter: skipAfter));
+            var queryOperation = new QueryOperation(this, "Load/StartingWith", null, null, false, TimeSpan.Zero, null, null, false);
 
-            return results.SelectMany(x => x).Select(TrackEntity<TResult>)
+            return results.SelectMany(x => x).Select(x=>queryOperation.Deserialize<TResult>(x.ToJson()))
                           .ToArray();
         }
 
@@ -953,12 +960,12 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }

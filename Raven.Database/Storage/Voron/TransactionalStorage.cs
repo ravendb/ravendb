@@ -80,7 +80,8 @@ namespace Raven.Storage.Voron
 
             RecoverFromFailedCompact(configuration.DataDirectory);
 
-            documentCacher = new DocumentCacher(configuration);
+            documentCacher = CreateDocumentCacher(configuration);
+
             exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(
                 configuration.Storage.Voron.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
@@ -217,11 +218,12 @@ namespace Raven.Storage.Voron
         {
             if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
             {
-                if (current.Value != null) // check again, just to be sure
+                var storageActionsAccessor = current.Value;
+                if (storageActionsAccessor != null) // check again, just to be sure
                 {
-                    current.Value.IsNested = true;
-                    action(current.Value);
-                    current.Value.IsNested = false;
+                    storageActionsAccessor.IsNested = true;
+                    action(storageActionsAccessor);
+                    storageActionsAccessor.IsNested = false;
                     return;
                 }
             }
@@ -403,16 +405,16 @@ namespace Raven.Storage.Voron
             return options;
         }
 
-        public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
-            DatabaseDocument documentDatabase)
+        public Task StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
+            DatabaseDocument documentDatabase, ResourceBackupState state, CancellationToken cancellationToken)
         {
             if (tableStorage == null) 
                 throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
             
             var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
-                backupDestinationDirectory, tableStorage.Environment, incrementalBackup, documentDatabase);
+                backupDestinationDirectory, tableStorage.Environment, incrementalBackup, documentDatabase, state, cancellationToken);
 
-            Task.Factory.StartNew(() =>
+            return Task.Factory.StartNew(() =>
             {
                 using(backupOperation)
                     backupOperation.Execute();
@@ -612,7 +614,7 @@ namespace Raven.Storage.Voron
         public void ClearCaches()
         {
             var oldDocumentCacher = documentCacher;
-            documentCacher = new DocumentCacher(configuration);
+            documentCacher = CreateDocumentCacher(configuration);
             oldDocumentCacher.Dispose();
         }
 
@@ -765,6 +767,14 @@ namespace Raven.Storage.Voron
             Log.Info(message);
             Console.Write(message);
             Console.WriteLine();
+        }
+
+        private IDocumentCacher CreateDocumentCacher(InMemoryRavenConfiguration configuration)
+        {
+            if (configuration.CacheDocumentsInMemory == false)
+                return new NullDocumentCacher();
+
+            return new DocumentCacher(configuration);
         }
     }
 }

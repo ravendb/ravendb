@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ICSharpCode.NRefactory.CSharp;
-using NLog.LayoutRenderers;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -126,7 +126,7 @@ namespace Raven.Database.Indexing.IndexMerging
                 }
 
                 indexData.OriginalMap = IndexPrettyPrinter.TryFormat(indexData.OriginalMap);
-               
+
                 Expression map = parser.ParseExpression(indexData.OriginalMap);
                 var visitor = new IndexVisitor(indexData);
                 map.AcceptVisitor(visitor);
@@ -323,8 +323,8 @@ namespace Raven.Database.Indexing.IndexMerging
                 if (y.SelectExpressions.TryGetValue(pair.Key, out expressionValue) == false)
                     continue;
                 // for the same key, they have to be the same
-                string ySelectExpr = expressionValue.ToString();
-                string xSelectExpr = pair.Value.ToString();
+                string ySelectExpr = ExtractValueFromExpression(expressionValue);
+                string xSelectExpr = ExtractValueFromExpression(pair.Value);
                 if (xSelectExpr != ySelectExpr)
                 {
                     return false;
@@ -345,8 +345,8 @@ namespace Raven.Database.Indexing.IndexMerging
                     return false;
 
                 // for the same key, they have to be the same
-                string ySelectExpr = expressionValue.ToString();
-                string xSelectExpr = pair.Value.ToString();
+                string ySelectExpr = ExtractValueFromExpression(expressionValue);
+                string xSelectExpr = ExtractValueFromExpression(pair.Value);
                 if (xSelectExpr != ySelectExpr)
                 {
                     return false;
@@ -495,6 +495,49 @@ namespace Raven.Database.Indexing.IndexMerging
             }
             resultingIndexMerge.Unmergables = originalIndexes.Unmergables;
             return resultingIndexMerge;
+        }
+
+        private static string ExtractValueFromExpression(Expression expression)
+        {
+            if (expression == null)
+                return null;
+
+            var memberExpression = expression as MemberReferenceExpression;
+            if (memberExpression == null)
+                return expression.ToString();
+
+            var identifier = ExtractIdentifierFromExpression(memberExpression);
+            var value = expression.ToString();
+
+            if (identifier != null)
+            {
+                var parts = value.Split('.');
+                if (parts[0] == identifier)
+                    return value.Substring(identifier.Length + 1);
+            }
+
+            return value;
+        }
+
+        private static string ExtractIdentifierFromExpression(Expression expression)
+        {
+            AstNode node = expression.FirstChild;
+            while (node != null)
+            {
+                if (node.FirstChild == null)
+                    break;
+
+                node = node.FirstChild;
+            }
+
+            if (node == null)
+                return null;
+
+            var identifier = node as Identifier;
+            if (identifier != null)
+                return identifier.Name;
+
+            return null;
         }
 
         public IndexMergeResults ProposeIndexMergeSuggestions()

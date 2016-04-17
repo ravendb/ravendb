@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -45,6 +45,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>618</NoWarn>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -136,8 +137,8 @@
       <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NLog, Version=4.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.3.0-rc3\lib\net45\NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
@@ -246,6 +247,7 @@
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\Caching\CachingOfPostQueries.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
+    <Compile Include="Bugs\ExcludesWebServerHttpHeadersWhenDeserializing.cs" />
     <Compile Include="Bugs\CanDeserializeWhenWeHaveLastModifiedTwiceInMetadata.cs" />
     <Compile Include="Bugs\CannotChangeId.cs" />
     <Compile Include="Bugs\CanUseLuceneCodecDirectory.cs" />
@@ -649,6 +651,7 @@
     <Compile Include="Shard\Async\ShardedDeleteByIndexAsync.cs" />
     <Compile Include="Shard\ShardedDeleteByIndex.cs" />
     <Compile Include="Smuggler\SmugglerBetweenFromEmbeddedTests_RavenDB_3318.cs" />
+    <Compile Include="Shard\ShardedSessionInclude.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
     <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
@@ -814,6 +817,7 @@
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Spatial\WktConverterTests.cs" />
     <Compile Include="Spatial\WktSanitizerTests.cs" />
+    <Compile Include="Storage\BackupRestoreCancelation.cs" />
     <Compile Include="Storage\Batches.cs" />
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
     <Compile Include="Storage\DocRefsDump.cs" />
@@ -827,7 +831,7 @@
     <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />
     <Compile Include="Storage\Voron\ListStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
-    <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
+    <Compile Include="Storage\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Suggestions\LegacySuggestionsHandling.cs" />
     <Compile Include="Subscriptions\SubscriptionsBasic.cs" />

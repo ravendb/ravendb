@@ -28,6 +28,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -150,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Auth\Authentication.cs" />
+    <Compile Include="Auth\WindowsAuthenticationUserInfo.cs" />
     <Compile Include="BulkInsert\ChunkedBulkInsert.cs" />
     <Compile Include="Bundles\MoreLikeThis.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />

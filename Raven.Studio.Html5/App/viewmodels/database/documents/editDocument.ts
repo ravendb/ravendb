@@ -99,7 +99,9 @@ class editDocument extends viewModelBase {
 
         this.metadata.subscribe((meta: documentMetadata) => this.metadataChanged(meta));
         this.editedDocId = ko.computed(() => this.metadata() ? this.metadata().id : '');
-        this.editedDocId.subscribe((docId: string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
+        this.editedDocId.subscribe((docId: string) =>
+            ko.postbox.publish("SetRawJSONUrl", docId ? appUrl.forDocumentRawData(this.activeDatabase(), docId) : "")
+        );
 
         // When we programmatically change the document text or meta text, push it into the editor.
         this.isEditingMetadata.subscribe(()=> {
@@ -525,7 +527,7 @@ class editDocument extends viewModelBase {
         } else {
             try {
                 var updatedDto;
-                if (this.isNewLineFriendlyMode() === true) {
+                if (this.isNewLineFriendlyMode()) {
                     updatedDto = JSON.parse(this.escapeNewlinesAndTabsInTextFields(this.documentText()));
                 } else {
                     updatedDto = JSON.parse(this.documentText());
@@ -613,7 +615,7 @@ class editDocument extends viewModelBase {
     }
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = '';
+        target['@etag'] = '00000000-0000-0000-0000-000000000000';
         target['Raven-Entity-Name'] = !target['Raven-Entity-Name'] ? document.getEntityNameFromId(id) : target['Raven-Entity-Name'];
         target['@id'] = id;
     }
@@ -720,7 +722,11 @@ class editDocument extends viewModelBase {
                         nextIndex = 0;
                     }
 
-                    this.pageToItem(nextIndex, newTotalResultCount);
+                    if (newTotalResultCount > 0) {
+                        this.pageToItem(nextIndex, newTotalResultCount);
+                    } else {
+                        router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
+                    }
                 }
             });
             app.showDialog(viewModel, editDocument.editDocSelector);

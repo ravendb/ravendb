@@ -261,6 +261,7 @@ interface licenseStatusDto {
     Error: boolean;
     Details?:string;
     IsCommercial: boolean;
+    LicensePath: string;
     ValidCommercialLicenseSeen: boolean;
     Attributes: {
         periodicBackup: string;
@@ -268,6 +269,10 @@ interface licenseStatusDto {
         compression: string;
         quotas: string;
         authorization: string;
+        fips: string;
+        counters: string;
+        timeSeries: string;
+        globalConfiguration: string;
         documentExpiration: string;
         replication: string;
         versioning: string;
@@ -280,9 +285,16 @@ interface licenseStatusDto {
         maxParallelism: string;
         ravenfs: string;
         counterStorage: string;
-        timeSeries: string;
+        monitoring: string;
+        cluster: string;
         hotSpare: string;
+        updatesExpiration: string;
     }
+}
+
+interface supportCoverageDto {
+    Status: string;
+    EndsAt: string;
 }
 
 interface HotSpareDto {
@@ -459,6 +471,11 @@ interface indexResultsDto<T extends metadataAwareDto> {
     TotalResults: number;
 }
 
+interface documentPreviewDto {
+   Results: documentDto[];
+   TotalResults: number;
+}
+
 interface indexQueryResultsDto extends indexResultsDto<documentDto> {
     Error?: string;
 }
@@ -521,6 +538,7 @@ interface replicationsDto {
 
 interface replicationClientConfigurationDto {
     FailoverBehavior?: string;
+    RequestTimeThresholdInMilliseconds: number;
 }
 
 interface environmentColorDto {
@@ -611,6 +629,10 @@ interface storedQueryDto {
     Hash: number;
 }
 
+interface storedPatchDto extends patchDto {
+    Hash: number;
+}
+
 interface indexDataDto {
     name: string;
     hasReduce: boolean;
@@ -625,6 +647,8 @@ interface bulkDocumentDto {
     Etag?: string; // Often is null on sending to server, non-null when returning from server.
     PatchResult?: any;
     Deleted?: any;
+    DebugMode?: boolean;
+    Patch?: any;
 }
 
 interface databaseDocumentSaveDto {
@@ -640,6 +664,7 @@ interface backupRequestDto {
 interface backupStatusDto {
     Started: string;
     Completed?: string;
+    Success?: string;
     IsRunning: boolean;
     Messages: backupMessageDto[];
 }
@@ -705,7 +730,7 @@ interface sqlReplicationDto extends documentDto {
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     QuoteTables?: boolean;
-    PerformTableQuatation?: boolean; //obsolate
+    PerformTableQuatation?: boolean; //obsolete
 }
 
 interface commandData {
@@ -1010,6 +1035,15 @@ interface taskMetadataDto {
     Type: string;
 }
 
+interface taskMetadataSummaryDto {
+    Type: string;
+    IndexId: number;
+    IndexName: string;
+    Count: number;
+    MinDate: string;
+    MaxDate: string;
+}
+
 interface requestTracingDto {
     Uri: string;
     Method: string;
@@ -1213,11 +1247,17 @@ interface operationIdDto {
 interface operationStatusDto {
     Completed: boolean;
     Faulted: boolean;
-    State: any;
+    Canceled: boolean;
+    State: operationStateDto;
 }
 
-interface bulkOperationStatusDto extends operationStatusDto{
-    State: documentStateDto[];
+interface operationStateDto {
+    Error?: string;
+    Progress?: string;
+}
+
+interface bulkOperationStatusDto extends operationStatusDto {
+    OperationProgress: bulkOperationProgress;
 }
 
 interface documentStateDto {
@@ -1225,8 +1265,12 @@ interface documentStateDto {
     Deleted: boolean;
 }
 
-interface importOperationStatusDto extends operationStatusDto{
-    LastProgress: string;
+interface bulkOperationProgress {
+    TotalEntries: number;
+    ProcessedEntries: number;
+}
+
+interface importOperationStatusDto extends operationStatusDto {
     ExceptionDetails: string;
 }
 
@@ -1294,10 +1338,13 @@ interface countersReplicationTopologyConnectionDto {
 
 interface runningTaskDto {
     Id: number;
-    TaskStatus: string;
+    Status: operationStateDto;
     Exception: string;
-    ExceptionText: string;
-    Payload: string;
+    Killable: boolean;
+    Completed: boolean;
+    Faulted: boolean;
+    Canceled: boolean;
+    Description: string;
     TaskType: string;
     StartTime: string;
 }

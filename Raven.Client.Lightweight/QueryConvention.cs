@@ -67,6 +67,9 @@ namespace Raven.Client
 
             if (configuration.FailoverBehavior.HasValue)
                 FailoverBehavior = configuration.FailoverBehavior.Value;
+
+            if (configuration.RequestTimeThresholdInMilliseconds.HasValue)
+                RequestTimeThresholdInMilliseconds = configuration.RequestTimeThresholdInMilliseconds.Value;
         }
     }
 }

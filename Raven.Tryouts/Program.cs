@@ -1,6 +1,12 @@
 using System;
+using System.Diagnostics;
 
 #if !DNXCORE50
+using Raven.SlowTests.RavenThreadPool;
+using Raven.Tests.Core;
+using Raven.Tests.Core.Commands;
+using Raven.Tests.Issues;
+using Raven.Tests.MailingList;
 using Raven.Tests.FileSystem.ClientApi;
 #endif
 
@@ -11,15 +17,23 @@ namespace Raven.Tryouts
         public static void Main(string[] args)
         {
 #if !DNXCORE50
-            for (int i = 0; i < 100; i++)
+
+            try
             {
-                using (var test = new FileSessionListenersTests())
+                for (int i = 0; i < 1000; i++)
                 {
-                    Console.WriteLine(i);
-
-                    test.ConflictListeners_RemoteVersion().Wait();
-
+                    if(i%50==0)
+                        Console.WriteLine("i = " + i);
+                    using (var test = new ParallelCalculation())
+                    {
+                        test.ThrottlingTest();
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+
+                Debugger.Break();
             }
 #endif
         }

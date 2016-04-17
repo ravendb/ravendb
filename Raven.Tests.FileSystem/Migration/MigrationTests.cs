@@ -60,11 +60,11 @@ namespace Raven.Tests.FileSystem.Migration
             await ValidateSource(source);
             await ValidateDestination(destination);
 
-            await source.Admin.StartBackup(string.Format("source-{0}-{1}", build, storage), null, false, source.FileSystemName);
-            WaitForBackup(source, true);
+            var opId1 = await source.Admin.StartBackup(string.Format("source-{0}-{1}", build, storage), null, false, source.FileSystemName);
+            await WaitForOperationAsync(source.UrlFor(), opId1);
 
-            await destination.Admin.StartBackup(string.Format("destination-{0}-{1}", build, storage), null, false, destination.FileSystemName);
-            WaitForBackup(destination, true);
+            var opId2 = await destination.Admin.StartBackup(string.Format("destination-{0}-{1}", build, storage), null, false, destination.FileSystemName);
+            await WaitForOperationAsync(destination.UrlFor(), opId2);
         }
 
         [Theory]
@@ -95,7 +95,7 @@ namespace Raven.Tests.FileSystem.Migration
                         FilesystemLocation = NewDataPath("source-data")
                     });
 
-                    await WaitForRestoreAsync(store.Url, opId);
+                    await WaitForOperationAsync(store.Url, opId);
 
 
                     opId= await store.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
@@ -105,7 +105,7 @@ namespace Raven.Tests.FileSystem.Migration
                         FilesystemLocation = NewDataPath("destination-data")
                     });
 
-                    await WaitForRestoreAsync(store.Url, opId);
+                    await WaitForOperationAsync(store.Url, opId);
 
                     var source = store.AsyncFilesCommands.ForFileSystem("source");
                     var destination = store.AsyncFilesCommands.ForFileSystem("destination");
@@ -127,7 +127,8 @@ namespace Raven.Tests.FileSystem.Migration
                     }
 
                     // should synchronize new files too
-                    Assert.True(SpinWait.SpinUntil(() => destination.GetStatisticsAsync().Result.FileCount == 30, TimeSpan.FromMinutes(1)));
+                    // we are using browse async instead of stats to wait for db schema update and avoid exceptions during test disposal
+                    Assert.True(SpinWait.SpinUntil(() => destination.Storage.Commands.BrowseAsync().Result.Length == 30, TimeSpan.FromMinutes(1)));
                 }
             }
         }

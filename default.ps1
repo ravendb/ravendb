@@ -11,7 +11,7 @@ properties {
     $base_dir  = resolve-path .
     $lib_dir = "$base_dir\SharedLibs"
     $packages_dir = "$base_dir\packages"
-    $build_dir = "$base_dir\build"
+    $build_dir = "$base_dir\artifacts"
     $sln_file_name = "zzz_RavenDB_Release.sln"
     $sln_file = "$base_dir\$sln_file_name"
     $version = "3.5"
@@ -32,6 +32,8 @@ properties {
     $dnx = "$dnxRuntimeDir\dnx.exe"
     
     $nuget = "$base_dir\.nuget\NuGet.exe"
+    
+    $global:is_pull_request = $FALSE
 }
 
 task default -depends Test, DoReleasePart1
@@ -54,12 +56,14 @@ task NuGet {
 task Init -depends Verify40, Clean, NuGet {
 
     $commit = Get-Git-Commit
+    if( $env:buildlabel -ne 13){
     (Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
-        Foreach-Object { $_ -replace ".13", ".$($env:buildlabel)" } |
+            Foreach-Object { $_ -replace "\.13\.", ".$($env:buildlabel)." } |
+            Foreach-Object { $_ -replace "{build-label}", "$($env:buildlabel)" } |
         Foreach-Object { $_ -replace "{commit}", $commit } |
         Foreach-Object { $_ -replace "{stable}", $global:uploadMode } |
         Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
-    
+    }
     New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
     New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 }
@@ -139,22 +143,27 @@ task FullStorageTest {
 
 task Test -depends TestDnx {
 
-    $test_prjs = @( `
-        "$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.Tests.dll", `
-        "$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
-        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
-        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
-        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
-        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
-        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
-        "$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll", `
-        "$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll", `
-        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
-        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
-        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
-        "$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
-        
+    $test_prjs = New-Object System.Collections.ArrayList
+
+    [void]$test_prjs.Add("$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.Tests.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll");
+    
+    if ($global:is_pull_request -eq $FALSE) {
+        [void]$test_prjs.Add("$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll");
+    }
+    
+    [void]$test_prjs.Add("$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll");
+    [void]$test_prjs.Add("$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll");
+    [void]$test_prjs.Add("$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll");
+
     Write-Host $test_prjs
     
     $xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -230,9 +239,11 @@ task Stable {
 
 task RunTests -depends Test
 
+task PullRequest {
+    $global:is_pull_request = $TRUE
+}
+
 task RunAllTests -depends FullStorageTest,RunTests,StressTest
-
-
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null
@@ -245,6 +256,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Backup -Type directory | Out-Null
     New-Item $build_dir\Output\Migration -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\Traffic -Type directory | Out-Null
+    New-Item $build_dir\Output\Diag\ApiToken -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
     New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
@@ -277,6 +289,12 @@ task CopyMigration {
 task CopyRavenTraffic {
     Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Traffic
     Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Traffic
+}
+
+task CopyRavenApiToken {
+    Copy-Item $base_dir\Tools\Raven.ApiToken\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\ApiToken
+    Copy-Item $base_dir\Tools\Raven.ApiToken\bin\$global:configuration\Raven.ApiToken.??? $build_dir\Output\Diag\ApiToken
+    Copy-Item $base_dir\Tools\Raven.ApiToken\token_test.ps1 $build_dir\Output\Diag\ApiToken
 }
 
 task CopyStorageExporter {
@@ -458,6 +476,7 @@ task DoReleasePart1 -depends Compile, `
     SignServer, `
     CopyRootFiles, `
     CopyRavenTraffic, `
+    CopyRavenApiToken, `
     CopyStorageExporter, `
     ZipOutput { 
     

@@ -24,6 +24,40 @@ class globalConfigReplications extends viewModelBase {
 
     activated = ko.observable<boolean>(false);
 
+    skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
+
+    skipIndexReplicationForAll = ko.observable<boolean>();
+
+    private skipIndexReplicationForAllSubscription: KnockoutSubscription;
+
+    private refereshSkipIndexReplicationForAllDestinations() {
+        if (this.skipIndexReplicationForAllSubscription != null)
+            this.skipIndexReplicationForAllSubscription.dispose();
+
+        var newStatus = this.getIndexReplicationStatusForAllDestinations();
+        this.skipIndexReplicationForAll(newStatus === 'all');
+
+        this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
+    }
+
+    private getIndexReplicationStatusForAllDestinations(): string {
+        var countOfSkipIndexReplication: number = 0;
+        ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
+            if (dest.skipIndexReplication() === true) {
+                countOfSkipIndexReplication++;
+            }
+        });
+
+        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
+            return 'all';
+
+        // ReSharper disable once ConditionIsAlwaysConst
+        if (countOfSkipIndexReplication === 0)
+            return 'none';
+
+        return 'mixed';
+    }
+
     readFromAllAllowWriteToSecondaries = ko.computed(() => {
         var behaviour = this.replicationsSetup().clientFailoverBehaviour();
         if (behaviour == null) {
@@ -45,7 +79,9 @@ class globalConfigReplications extends viewModelBase {
     }
 
     attached() {
+        super.attached();
         this.bindPopover();
+        this.refereshSkipIndexReplicationForAllDestinations();
     }
 
     bindPopover() {
@@ -62,7 +98,7 @@ class globalConfigReplications extends viewModelBase {
         
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour]);
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.replicationsSetup().requestTimeThreshold, this.replicationsSetup().hasCustomRequestTimeThreshold]);
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
         var combinedFlag = ko.computed(() => {
@@ -95,6 +131,7 @@ class globalConfigReplications extends viewModelBase {
                     d.hasLocal(true);
                     d.hasGlobal(false);
                 });
+                ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
                 this.activated(true);
             })
             .always(() => deferred.resolve({ can: true }));
@@ -103,6 +140,7 @@ class globalConfigReplications extends viewModelBase {
 
     createNewDestination() {
         this.replicationsSetup().destinations.unshift(replicationDestination.empty("{databaseName}"));
+        this.refereshSkipIndexReplicationForAllDestinations();
         this.bindPopover();
     }
 
@@ -144,6 +182,12 @@ class globalConfigReplications extends viewModelBase {
                 }
             }
         }
+    }
+
+    toggleIndexReplication(skipReplicationValue: boolean) {
+        this.replicationsSetup().destinations().forEach(dest => {
+            dest.skipIndexReplication(skipReplicationValue);
+        });
     }
 
     private prepareAndSaveReplicationSetup(source: string) {
@@ -191,6 +235,7 @@ class globalConfigReplications extends viewModelBase {
         this.replicationConfigDirtyFlag().reset();
         this.replicationsSetupDirtyFlag().reset();
     }
+
 }
 
 export = globalConfigReplications; 

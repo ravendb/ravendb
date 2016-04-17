@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
@@ -63,7 +64,7 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -109,7 +110,7 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -144,7 +145,7 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -194,7 +195,7 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();

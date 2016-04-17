@@ -20,7 +20,7 @@ namespace Raven.Database.Backup
             TotalBytesWritten = 0;
         }
 
-        public void UpdateProgress(long bytesWritten, Action<string, string, BackupStatus.BackupMessageSeverity> notifier)
+        public void UpdateProgress(long bytesWritten, Action<string, Exception, BackupStatus.BackupMessageSeverity> notifier)
         {
             TotalBytesWritten += bytesWritten;
             int percentage = (int)(((double)TotalBytesWritten / (double)TotalBytes) * 100.0);

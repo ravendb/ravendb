@@ -65,15 +65,15 @@ class synchronizationDestination {
         }
     }
 
-    static empty(): synchronizationDestination {
+    static empty(fileSystemName: string): synchronizationDestination {
         return new synchronizationDestination({
-            ServerUrl: null,
+            ServerUrl: location.protocol + "//" + location.host,
             Username: null,
             Password: null,
             Domain: null,
             ApiKey: null,
-            FileSystem: null,
-            Enabled: false,
+            FileSystem: fileSystemName,
+            Enabled: false
         });
     }
 

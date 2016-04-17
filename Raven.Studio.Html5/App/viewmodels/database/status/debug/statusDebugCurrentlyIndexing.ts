@@ -1,27 +1,20 @@
 import getStatusDebugCurrentlyIndexingCommand = require("commands/database/debug/getStatusDebugCurrentlyIndexingCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 
 class statusDebugCurrentlyIndexing extends viewModelBase {
     data = ko.observable<statusDebugCurrentlyIndexingDto>();
-    autoRefresh = ko.observable<boolean>(true);
+
+    constructor() {
+        super();
+        autoRefreshBindingHandler.install();
+    }
 
     activate(args) {
         super.activate(args);
         this.updateHelpLink('JHZ574');
         this.activeDatabase.subscribe(() => this.fetchCurrentlyIndexing());
         return this.fetchCurrentlyIndexing();
-    }
-
-    modelPolling() {
-        if (this.autoRefresh()) {
-            return this.fetchCurrentlyIndexing();
-        }
-        return $.Deferred().resolve();
-    }
-
-    toggleAutoRefresh() {
-        this.autoRefresh(!this.autoRefresh());
-        $("#refresh-btn").blur();
     }
 
     fetchCurrentlyIndexing(): JQueryPromise<statusDebugCurrentlyIndexingDto> {

@@ -22,6 +22,7 @@ using Raven.Client.Connection.Request;
 using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
+using Raven.Abstractions.Replication;
 using Raven.Client.Document.Async;
 using Raven.Client.Metrics;
 using Raven.Client.Util;
@@ -408,13 +409,20 @@ namespace Raven.Client.Document
 
 #if !(MONO || DNXCORE50)
                 RecoverPendingTransactions();
-#endif
-
+#endif                
                 if (ensureDatabaseExists &&
                     string.IsNullOrEmpty(DefaultDatabase) == false &&
-                    DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway
+                    DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway                    
                 {
-                    DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+                    //If we have indication that the database is part of a replication cluster we don't want to create it,
+                    //the reason for this is that we want the client to failover to a diffrent database.
+                    var serverHash = ServerHash.GetServerHash(DatabaseCommands.Url);
+                    var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+                    var replicationDocument = document?.DataAsJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
+                    if (replicationDocument == null)
+                    {
+                        DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, true);
+                    }                    
                 }
             }
             catch (Exception)

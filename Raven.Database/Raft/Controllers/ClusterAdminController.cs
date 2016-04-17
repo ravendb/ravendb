@@ -135,6 +135,8 @@ namespace Raven.Database.Raft.Controllers
                 var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
                 switch (canJoinResult)
                 {
+                    case CanJoinResult.IsNonEmpty:
+                        return GetMessageWithString("Can't join node to cluster. Node is not empty", HttpStatusCode.BadRequest);
                     case CanJoinResult.InAnotherCluster:
                         return GetMessageWithString("Can't join node to cluster. Node is in different cluster", HttpStatusCode.BadRequest);
                     case CanJoinResult.AlreadyJoined:
@@ -177,6 +179,16 @@ namespace Raven.Database.Raft.Controllers
 
             if (topology.AllNodes.Any())
                 return GetMessageWithStringAsTask("Can't join node to cluster. Node is in different cluster", HttpStatusCode.NotAcceptable);
+
+            var nextStart = 0;
+            var hasAnyDatabase = SystemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, 1, SystemDatabase.WorkContext.CancellationToken, ref nextStart)
+                .Length > 0;
+
+            if (hasAnyDatabase)
+            {
+                return GetMessageWithStringAsTask("Can't join node to cluster. Node is not empty", HttpStatusCode.Conflict);
+            }
 
             return GetEmptyMessageAsTask(HttpStatusCode.Accepted);
         }

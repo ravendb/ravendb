@@ -96,6 +96,8 @@ namespace Raven.Database.FileSystem
 
                 conflictArtifactManager = new ConflictArtifactManager(storage, search);
 
+                TimerManager = new ResourceTimerManager();
+
                 Tasks = new TaskActions(this, Log);
                 Files = new FileActions(this, Log);
                 Synchronizations = new SynchronizationActions(this, Log);
@@ -123,6 +125,8 @@ namespace Raven.Database.FileSystem
         public FileActions Files { get; private set; }
 
         public SynchronizationActions Synchronizations { get; private set; }
+
+        public ResourceTimerManager TimerManager { get; private set; }
 
         public void Initialize()
         {
@@ -430,6 +434,12 @@ namespace Raven.Database.FileSystem
 
             if (Tasks != null)
                 Tasks.Dispose(exceptionAggregator);
+
+            if (TimerManager != null)
+                exceptionAggregator.Execute(TimerManager.Dispose);
+
+            if (Files != null)
+                exceptionAggregator.Execute(Files.Dispose);
 
             exceptionAggregator.ThrowIfNeeded();
         }

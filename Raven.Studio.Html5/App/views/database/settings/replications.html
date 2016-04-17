@@ -68,6 +68,45 @@
                         </div>
                     </div>
                 </div>
+
+                <div data-bind="if: showRequestTimeoutRow()">
+                    <div class="form-group" data-bind="with: replicationsSetup">
+                        <label class="col-sm-2 control-label">Request Time Threshold</label>
+                        <div class="col-sm-5">
+                            <div class="btn-group" data-bind="visible: showCustomRequestTimeThreshold()">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
+                                    <span data-bind="visible: !hasCustomRequestTimeThreshold()">Default</span>
+                                    <span data-bind="visible: hasCustomRequestTimeThreshold">Custom</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" role="menu">
+                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, false)">Default</a></li>
+                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, true)">Custom</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed' ">
+                            <div class="btn-group">
+                                <button type="button" disabled="disabled" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="visible: !$root.globalClientRequestTimeThreshold()">Default</span>
+                                    <span data-bind="visible: $root.globalClientRequestTimeThreshold()">Custom</span>
+                                    <span class="caret"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="if: showCustomRequestTimeoutRow()">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Custom Request Time Threshold (ms)</label>
+                        <div class="col-sm-5">
+                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeThreshold, visible: replicationsSetup().hasCustomRequestTimeThreshold,  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false"/>
+                        </div>
+                        <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientRequestTimeThreshold()">
+                            <input disabled="disabled" type="number" class="form-control" data-bind="value: $root.globalClientRequestTimeThreshold()" />
+                        </div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="conflictResolutionSelector" class="col-sm-2 control-label">Conflict resolution</label>
                     <div class="col-sm-5">
@@ -337,6 +376,14 @@
                 <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
                 <span style="margin-left: 5px;">
                     Skip index replication for all destinations
+                </span>
+            </div>
+            <div class="panel-heading">
+                <button type="submit" data-bind="click:sendResolveAllConflictsCommand" class="btn btn-primary" title="Resolve all existing conflict acording to the current conflict resolution">
+                    <i class="fa fa-send"></i>
+                </button>
+                <span style="margin-left: 5px;">
+                    Resolve all existing conflict acording to the current conflict resolution
                 </span>
             </div>
             <div class="panel-heading">

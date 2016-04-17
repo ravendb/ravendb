@@ -435,6 +435,7 @@ namespace Rachis.Behaviors
                     _log.Error("failed to dequeue pending commands (this should never happen)");
                     break; // should never happen
                 }
+                Engine.EngineStatistics.ReportCommitIndex(result.AssignedIndex);
                 result.Complete();
             }
         }
@@ -527,6 +528,7 @@ namespace Rachis.Behaviors
         public void AppendCommand(Command command)
         {
             var index = Engine.PersistentState.AppendToLeaderLog(command);
+            Engine.EngineStatistics.ReportIndexAppend(index);
             _matchIndexes[Engine.Name] = index;
             _nextIndexes[Engine.Name] = index + 1;
             _lastContact[Engine.Name] = DateTime.UtcNow;

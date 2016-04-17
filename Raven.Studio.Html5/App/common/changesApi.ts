@@ -26,6 +26,7 @@ class changesApi {
     private readyStateOpen = 1;
     private isDisposing = false;
 
+    private disposed: boolean = false;
     private isCleanClose: boolean = false;
     private normalClosureCode = 1000;
     private normalClosureMessage = "CLOSE_NORMAL";
@@ -82,6 +83,11 @@ class changesApi {
     }
 
     private connect(action: Function, recoveringFromWebsocketFailure: boolean = false) {
+        if (this.disposed) {
+            if (!!this.connectToChangesApiTask)
+                this.connectToChangesApiTask.resolve();
+            return;
+        }
         if (!recoveringFromWebsocketFailure) {
             this.connectToChangesApiTask = $.Deferred();
         }
@@ -587,8 +593,8 @@ class changesApi {
     
     dispose() {
         this.isDisposing = true;
-
-        this.connectToChangesApiTask.always(() => {
+        this.disposed = true;
+        this.connectToChangesApiTask.done(() => {
             var isCloseNeeded: boolean;
 
             if (this.webSocket && this.webSocket.readyState === this.readyStateOpen){

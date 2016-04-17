@@ -86,7 +86,12 @@ namespace Raven.Storage.Esent
         public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
         {
             configuration.Container.SatisfyImportsOnce(this);
-            documentCacher = new DocumentCacher(configuration);
+
+            if (configuration.CacheDocumentsInMemory == false)
+                documentCacher = new NullDocumentCacher();
+            else
+                documentCacher = new DocumentCacher(configuration);    
+            
             database = configuration.DataDirectory;
             this.configuration = configuration;
             this.onCommit = onCommit;
@@ -204,13 +209,14 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase)
+        public Task StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase, ResourceBackupState state, CancellationToken cancellationToken)
         {
             if (new InstanceParameters(instance).Recovery == false)
                 throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
-            var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
-            Task.Factory.StartNew(backupOperation.Execute);
+            var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase, state, cancellationToken);
+            return Task.Factory
+                .StartNew(backupOperation.Execute);
         }
 
         public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output)
@@ -758,11 +764,12 @@ namespace Raven.Storage.Esent
 
             if (disposerLock.IsReadLockHeld && batchNestingAllowed) // we are currently in a nested Batch call and allow to nest batches
             {
-                if (current.Value != null) // check again, just to be sure
+                var storageActionsAccessor = current.Value;
+                if (storageActionsAccessor != null) // check again, just to be sure
                 {
-                    current.Value.IsNested = true;
-                    action(current.Value);
-                    current.Value.IsNested = false;
+                    storageActionsAccessor.IsNested = true;
+                    action(storageActionsAccessor);
+                    storageActionsAccessor.IsNested = false;
                     return;
                 }
             }

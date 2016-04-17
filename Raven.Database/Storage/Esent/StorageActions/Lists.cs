@@ -122,6 +122,45 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
+        public List<ListsInfo> GetListsStatsVerySlowly()
+        {
+            Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");
+            Api.MoveBeforeFirst(Session, Lists);
+            string currentName = null;
+            List<ListsInfo> res = new List<ListsInfo>();
+            ListsInfo currentListsInfo = null;
+            while (Api.TryMoveNext(Session, Lists))
+            {
+                //Since i iterate on an index that starts with name i now that a specific list item comes sequentially
+                var name = Api.RetrieveColumnAsString(Session, Lists, tableColumnsCache.ListsColumns["name"],
+                                                     Encoding.Unicode);
+                if (currentName != name)
+                {
+                    if (currentListsInfo != null)
+                    {
+                        res.Add(currentListsInfo);
+                        currentListsInfo.AverageListItemSizeOnDiskInBytes = currentListsInfo.SizeOnDiskInBytes / currentListsInfo.Count;
+                    }
+                    currentListsInfo = new ListsInfo { Name = name };
+                }
+                currentName = name;
+                var sizeOnDisk = Api.RetrieveColumnSize(session, Lists, tableColumnsCache.ListsColumns["data"]);
+                currentListsInfo.Count++;
+                if (sizeOnDisk.HasValue)
+                {
+                    currentListsInfo.SizeOnDiskInBytes += sizeOnDisk.Value;
+                    if (sizeOnDisk.Value > currentListsInfo.MaxListItemSizeOnDiskInBytes)
+                        currentListsInfo.MaxListItemSizeOnDiskInBytes = sizeOnDisk.Value;
+                    if (currentListsInfo.MinListItemSizeOnDiskInBytes == 0 || sizeOnDisk.Value < currentListsInfo.MinListItemSizeOnDiskInBytes)
+                        currentListsInfo.MinListItemSizeOnDiskInBytes = sizeOnDisk.Value;
+                }
+            }
+            res.Add(currentListsInfo);
+            currentListsInfo.AverageListItemSizeOnDiskInBytes = currentListsInfo.SizeOnDiskInBytes / currentListsInfo.Count;
+            res.Sort((a, b) => b.SizeOnDiskInBytes.CompareTo(a.SizeOnDiskInBytes));
+            return res;
+        }
+
         public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
         {
             Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");

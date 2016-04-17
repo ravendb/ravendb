@@ -111,6 +111,14 @@ class dialogViewModelBase {
             }
         });
     }
+
+    protected alignBoxVertically() {
+        var messageBoxHeight = parseInt($(".messageBox").css('height'), 10);
+        
+        // find element to alter margin-top - it should be outer html element in dialog view
+        // we can find this by looking for element with data-view inside modalHost container. 
+        $(".modalHost [data-view]").css('margin-top', Math.floor(-1 * messageBoxHeight / 2) + 'px');
+    }
 }
 
 export = dialogViewModelBase;

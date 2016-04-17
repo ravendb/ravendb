@@ -19,6 +19,28 @@
             <button class="btn btn-default" title="Save the current patch" data-bind="click: savePatch, enable: (patchDocument().script())"><i class="fa fa-save"></i> Save</button>
             <button class="btn btn-default" title="Load a saved patch" data-bind="click: loadPatch"><i class="fa fa-arrow-up"></i> Load</button>
         </div>
+
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: recentPatches().length > 0">
+                Recent Patches <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu" data-bind="foreach: recentPatches">
+                <li>
+                    <a href="#" data-bind="click: $root.useRecentPatch.bind($root, $data)">
+                        <span data-bind="text: PatchOnOption"></span>
+                        <span data-bind="visible: SelectedItem">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: SelectedItem"></span>
+                        </span>
+                        <span data-bind="visible: Query">
+                            <span class="text-muted">|</span>
+                            <span data-bind="text: Query"></span>
+                        </span>
+                    </a>
+                </li>   
+            </ul>
+        </div>
+
         <div class="btn-group" data-bind="visible: (!!patchDocument()) && patchDocument().isDocumentPatch()">
             <button class="btn btn-default" title="Execute Patch (Alt+P)" accesskey="P" data-bind="click: executePatchOnSingle, enable: isExecuteAllowed">
                 <i class="fa fa-play"></i> Patch
@@ -36,57 +58,60 @@
     <br />
     <div class="form-horizontal">
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isDocumentPatch()">
-            <div class="row">
-                <label for="documentToPatch" class="col-md-2 control-label">Document to Patch:</label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-6" data-bind="with: patchDocument">
-                            <input id="documentToPatch" accesskey="I" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }" />
-                        </div>
+            <label for="documentToPatch" class="col-md-2 control-label">Document to Patch:</label>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6" data-bind="with: patchDocument">
+                        <input id="documentToPatch" accesskey="I" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }" />
                     </div>
                 </div>
             </div>
         </div>
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isCollectionPatch()">
-            <div class="row">
-                <label for="collectionToPatch" class="col-md-2 control-label">Collection to Patch:</label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group" data-bind="with: patchDocument">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="text: selectedItem"></span>
-                                    <span class="caret" data-bind="visible: $root.collections().length > 1"></span>
-                                </button>
-                                <ul id="collectionToPatch" class="dropdown-menu" role="menu">
-                                    <!-- ko foreach: $root.collectionToSelect -->
-                                    <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
-                                    <!-- /ko -->
-                                </ul>
-                            </div>
+            <label for="collectionToPatch" class="col-md-2 control-label">Collection to Patch:</label>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="btn-group" data-bind="with: patchDocument">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: selectedItem"></span>
+                                <span class="caret" data-bind="visible: $root.collections().length > 1"></span>
+                            </button>
+                            <ul id="collectionToPatch" class="dropdown-menu" role="menu">
+                                <!-- ko foreach: $root.collectionToSelect -->
+                                <li data-bind="click: $root.setSelectedCollection.bind($root, $data)"><a href="#" data-bind="text: $data.name"></a></li>
+                                <!-- /ko -->
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
-            <div class="row">
-                <label for="indexToPatch" class="col-md-2 control-label">Index to Patch:</label>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group" data-bind="with: patchDocument">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="text: selectedItem"></span>
-                                    <span class="caret" data-bind="visible: $root.indexNames().length > 1"></span>
-                                </button>
-                                <ul id="indexToPatch" class="dropdown-menu" role="menu">
-                                    <!-- ko foreach: $root.indexNamesToSelect -->
-                                    <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
-                                    <!-- /ko -->
-                                </ul>
-                            </div>
+            <label for="indexToPatch" class="col-md-2 control-label">Index to Patch:</label>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="btn-group" data-bind="with: patchDocument">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                <span data-bind="text: selectedItem"></span>
+                                <span class="caret" data-bind="visible: $root.indexNames().length > 1"></span>
+                            </button>
+                            <ul id="indexToPatch" class="dropdown-menu" role="menu">
+                                <!-- ko foreach: $root.indexNamesToSelect -->
+                                <li data-bind="click: $root.useIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                                <!-- /ko -->
+                            </ul>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-md-12">
+                <div class="progress" data-bind="css: { active: isPatchingInProgress() }, visible: showPatchingProgress() && (!!patchDocument()) && (patchDocument().isDocumentPatch() == false)">
+                    <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-bind="style: {width: patchingProgressPercentage}, aria-valuenow: patchingProgress">
+                        <span data-bind="text: patchingProgressText"/>
                     </div>
                 </div>
             </div>
@@ -166,16 +191,14 @@
                 </div>
             </div>
         </div>
-        <div id="matchingDocumentsContainer" class="form-group" data-bind="visible: ((!!patchDocument()) && (patchDocument().isIndexPatch() || patchDocument().isCollectionPatch()))">
+        <div id="matchingDocumentsContainer" class="form-group" data-bind="if: showDocumentsPreview">
             <div class="col-md-12">
                 <div>
                     <label>Matching Documents</label>
                 </div>
-                <div>
-                    <div id="matchingDocumentsGrid" style="width: 100%; height: 300px;" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, dynamicHeightBottomMargin: -30, dynamicHeightTargetSelector: '#beforeAfterContainer', selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid', maxHeight: '300px' }"></div>
+                <div id="matchingDocumentsGrid" style="width: 100%; height: 300px" data-bind="widget: { kind: 'virtualTable', itemsSource: currentCollectionPagedItems, dynamicHeightBottomMargin: 0, dynamicHeightTargetSelector: '#beforeAfterContainer', selectedIndices: selectedDocumentIndices, gridSelector: '#matchingDocumentsGrid' }"></div>
                 </div>
             </div>
-        </div>
         <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">
             <div class="col-md-6">
                 <div>

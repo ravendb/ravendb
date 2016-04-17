@@ -178,15 +178,6 @@ class selectColumns extends dialogViewModelBase {
         }
     }
 
-    private alignBoxVertically() {
-        var messageBoxHeight = parseInt($(".messageBox").css('height'), 10);
-        var windowHeight = $(window).height();
-        var messageBoxMarginTop = parseInt($(".messageBox").css('margin-top'), 10);
-        var newTopPercent = Math.floor(((windowHeight - messageBoxHeight) / 2 - messageBoxMarginTop) / windowHeight * 100);
-        var newTopPercentString = newTopPercent.toString() + '%';
-        $(".modalHost").css('top', newTopPercentString);
-    }
-
     saveAsDefault() {
         if ((<any>this.form[0]).checkValidity() === true) {
             if (this.customColumns.customMode()) {

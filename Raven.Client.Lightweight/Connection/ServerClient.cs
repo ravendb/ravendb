@@ -239,6 +239,13 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, definition, false));
         }
 
+        public string PutIndex(string name, IndexDefinition definition, out Operation precomputeBatchOperation)
+        {
+            var result = AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsyncWithOperation(name, definition, false));
+            precomputeBatchOperation = result.Item2;
+            return result.Item1;
+        }
+
         public string[] PutIndexes(IndexToAdd[] indexesToAdd)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(indexesToAdd));
@@ -307,10 +314,10 @@ namespace Raven.Client.Connection
             return new AsyncEnumerableWrapper<RavenJObject>(streamQueryAsync);
         }
 
-        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null)
+        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
-            return new AsyncEnumerableWrapper<RavenJObject>(
-                asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter).Result);
+            var streamDocsAsync = AsyncHelpers.RunSync(() => asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter, transformer, transformerParameters));
+            return new AsyncEnumerableWrapper<RavenJObject>(streamDocsAsync);
         }
 
         public void DeleteIndex(string name)

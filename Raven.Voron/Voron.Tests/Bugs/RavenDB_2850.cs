@@ -49,7 +49,7 @@ namespace Voron.Tests.Bugs
                 size += AbstractPager.PageSize;
             }
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 48; i++)
             {
                 using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {

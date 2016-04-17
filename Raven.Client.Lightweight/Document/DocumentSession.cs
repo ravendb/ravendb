@@ -675,14 +675,14 @@ namespace Raven.Client.Document
             }
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: null);
+            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: null, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter);
+            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters);
         }
 
         public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
@@ -709,10 +709,10 @@ namespace Raven.Client.Document
             return DatabaseCommands.GetMultiFacets(facetQueries);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation, string skipAfter)
+        private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters)
         {
             IncrementRequestCount();
-            using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter))
+            using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter, transformer, transformerParameters))
             {
                 while (enumerator.MoveNext())
                 {
@@ -1042,11 +1042,13 @@ namespace Raven.Client.Document
                 configure(configuration);
             }
 
+            var queryOperation = new QueryOperation(this, "Load/StartingWith", null, null, false, TimeSpan.Zero, null, null, false);
+
             return
                 DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude,
                                             pagingInformation: pagingInformation, transformer: transformer, transformerParameters: configuration.TransformerParameters,
                                             skipAfter: skipAfter)
-                                .Select(TrackEntity<TResult>)
+                                .Select(document => queryOperation.Deserialize<TResult>(document.ToJson()))
                                 .ToArray();
         }
 

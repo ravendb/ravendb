@@ -124,7 +124,7 @@ namespace Raven.Database.TimeSeries.Controllers
                 HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
 
             var sp = Stopwatch.StartNew();
-            var status = new BatchStatus {IsTimedOut = false};
+            var status = new BatchStatus();
             var timeoutTokenSource = new CancellationTokenSource();
             var timeSeriesChanges = 0;
             
@@ -160,6 +160,7 @@ namespace Raven.Database.TimeSeries.Controllers
                             });
                         }
                     }
+                    status.MarkCompleted();
                 }
                 catch (OperationCanceledException)
                 {
@@ -171,8 +172,7 @@ namespace Raven.Database.TimeSeries.Controllers
                         Message = "Operation cancelled, likely because of a batch timeout"
                     });
                     
-                    status.IsTimedOut = true;
-                    status.Faulted = true;
+                    status.MarkCanceled("Operation cancelled, likely because of a batch timeout");
                     throw;
                 }
                 catch (Exception e)
@@ -185,13 +185,11 @@ namespace Raven.Database.TimeSeries.Controllers
                         Message = errorMessage
                     });
 
-                    status.Faulted = true;
-                    status.State = RavenJObject.FromObject(new {Error = errorMessage});
+                    status.MarkFaulted(errorMessage);
                     throw;
                 }
                 finally
                 {
-                    status.Completed = true;
                     status.TimeSeries = timeSeriesChanges;
                 }
             }, timeoutTokenSource.Token);
@@ -204,7 +202,7 @@ namespace Raven.Database.TimeSeries.Controllers
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.TimeSeriesBatchOperation,
-                Payload = operationId.ToString()
+                Description = operationId.ToString()
             }, out id, timeoutTokenSource);
 
             task.Wait(timeoutTokenSource.Token);
@@ -271,16 +269,9 @@ namespace Raven.Database.TimeSeries.Controllers
             }
         }
 
-        private class BatchStatus : IOperationState
+        private class BatchStatus : OperationStateBase
         {
             public int TimeSeries { get; set; }
-            public bool Completed { get; set; }
-
-            public bool Faulted { get; set; }
-
-            public RavenJToken State { get; set; }
-
-            public bool IsTimedOut { get; set; }
         }
 
         [RavenRoute("ts/{timeSeriesName}/delete-key/{type}")]

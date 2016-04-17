@@ -25,6 +25,8 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -91,6 +93,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
+      <Link>Properties\TestAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\LandlordBug.cs" />
     <Compile Include="Bugs\ManyDocumentWithMapReduce.cs" />
@@ -101,6 +106,7 @@
     <Compile Include="Bundles\Replication\Async\ReadStriping.cs" />
     <Compile Include="Bundles\Replication\Bugs\AddingAndDeletingRemote.cs" />
     <Compile Include="Bundles\Replication\ReadStriping.cs" />
+    <Compile Include="CanTakeDumpUsingMiniDumper.cs" />
     <Compile Include="DiskIO\DiskIOTest.cs" />
     <Compile Include="Faceted\FacetPaging.cs" />
     <Compile Include="IncrementalBackupTest.cs" />

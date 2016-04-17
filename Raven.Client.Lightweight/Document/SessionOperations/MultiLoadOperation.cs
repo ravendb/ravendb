@@ -59,8 +59,7 @@ namespace Raven.Client.Document.SessionOperations
 
             return sessionOperations.AllowNonAuthoritativeInformation == false &&
                     results.Where(x => x != null).Any(x => x.NonAuthoritativeInformation ?? false) &&
-                    sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout
-                ;
+                    sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout;
         }
 
         public T[] Complete<T>()
@@ -98,34 +97,77 @@ namespace Raven.Client.Document.SessionOperations
             return finalResults;
         }
 
-        private T ApplyTrackingIfNeeded<T>(JsonDocument document)
-        {
-            if (document != null)
-                return sessionOperations.TrackEntity<T>(document);
-
-            return default(T);
-        }
-
         private T[] ReturnResultsById<T>()
         {
             var finalResults = new T[ids.Length];
-            var dic = new Dictionary<string, int>(ids.Length, StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, FinalResultPositionById>(ids.Length, StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < ids.Length; i++)
             {
                 if (ids[i] == null)
                     continue;
-                dic[ids[i]] = i;
+
+                FinalResultPositionById position;
+                if (dic.TryGetValue(ids[i], out position) == false)
+                {
+                    dic[ids[i]] = new FinalResultPositionById
+                    {
+                        SingleReturn = i
+                    };
+                }
+                else
+                {
+                    if (position.SingleReturn != null)
+                    {
+                        position.MultipleReturns = new List<int>(2)
+                        {
+                            position.SingleReturn.Value
+                        };
+
+                        position.SingleReturn = null;
+                    }
+
+                    position.MultipleReturns.Add(i);
+                }  
             }
+
             foreach (var jsonDocument in results)
             {
                 if (jsonDocument == null)
                     continue;
+
                 var id = jsonDocument.Metadata.Value<string>("@id");
-                int value;
-                if (dic.TryGetValue(id, out value))
-                    finalResults[value] = sessionOperations.TrackEntity<T>(jsonDocument);
+
+                if (id == null)
+                    continue;
+
+                FinalResultPositionById position;
+
+                if (dic.TryGetValue(id, out position))
+                {
+                    if (position.SingleReturn != null)
+                    {
+                        finalResults[position.SingleReturn.Value] = sessionOperations.TrackEntity<T>(jsonDocument);
+                    }
+                    else if (position.MultipleReturns != null)
+                    {
+                        T trackedEntity = sessionOperations.TrackEntity<T>(jsonDocument);
+
+                        foreach (var pos in position.MultipleReturns)
+                        {
+                            finalResults[pos] = trackedEntity;
+                        }
+                    }
+                }
             }
+
             return finalResults;
+        }
+
+        private class FinalResultPositionById
+        {
+            public int? SingleReturn;
+
+            public List<int> MultipleReturns;
         }
     }
 }

@@ -33,10 +33,6 @@ namespace Raven.Abstractions.Smuggler
 
         LastEtagsInfo FetchCurrentMaxEtags();
 
-        Etag FetchLastDocDeleteEtag();
-
-        Etag FetchLastAttachmentsDeleteEtag();
-
         [Obsolete("Use RavenFS instead.")]
         Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords);
 
@@ -53,7 +49,7 @@ namespace Raven.Abstractions.Smuggler
 
         Task<RavenJArray> GetTransformers(int start);
 
-        Task<string> GetVersion(RavenConnectionStringOptions server);
+        Task<BuildNumber> GetVersion(RavenConnectionStringOptions server);
 
         void PurgeTombstones(OperationState result);
 
@@ -76,10 +72,12 @@ namespace Raven.Abstractions.Smuggler
 
         void Configure(SmugglerDatabaseOptions options);
 
-        Task<List<KeyValuePair<string, long>>> GetIdentities();
-
         Task SeedIdentityFor(string identityName, long identityValue);
 
+        Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state);
+
         string GetIdentifier();
+
+        Task<List<KeyValuePair<string, long>>> GetIdentities();
     }
 }

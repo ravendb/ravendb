@@ -21,7 +21,7 @@ namespace Raven.Database.Bundles.Replication.Plugins
                                         out RavenJObject documentToSave)
         {
             var remoteDocLastModified = metadata.Value<DateTime>(Constants.LastModified);
-            var existingDocLastModified = existingDoc.LastModified;
+            var existingDocLastModified = existingDoc.LastModified??existingDoc.Metadata.Value<DateTime>(Constants.LastModified);
 
             if (remoteDocLastModified > existingDocLastModified)
             {

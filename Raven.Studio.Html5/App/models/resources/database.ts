@@ -8,6 +8,7 @@ class database extends resource {
     rejectClientsMode = ko.observable<boolean>(false);
     clusterWide = ko.observable<boolean>(false);
     recentQueriesLocalStorageName: string;
+    recentPatchesLocalStorageName: string;
     mergedIndexLocalStoragePrefix: string;
     static type = "database";
     iconName: KnockoutComputed<string>;
@@ -34,6 +35,7 @@ class database extends resource {
             return true;
         });
         this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + name;
+        this.recentPatchesLocalStorageName = "ravenDB-recentPatches." + name;
         this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + name;
     }
 

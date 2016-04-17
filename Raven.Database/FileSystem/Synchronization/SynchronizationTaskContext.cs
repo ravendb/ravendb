@@ -5,14 +5,14 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading;
-using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
     public class SynchronizationTaskContext : IDisposable
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
@@ -63,7 +63,8 @@ namespace Raven.Database.FileSystem.Synchronization
                     return true;
                 }
 
-                Log.Debug("No work was found, workerWorkCounter: {0}, will wait for additional work", workerWorkCounter);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("No work was found, workerWorkCounter: {0}, will wait for additional work", workerWorkCounter);
                 var forWork = Monitor.Wait(waitForWork, timeout);
 
                 return forWork;

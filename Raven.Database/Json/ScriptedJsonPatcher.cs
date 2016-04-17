@@ -47,6 +47,7 @@ namespace Raven.Database.Json
 
         private int totalScriptSteps;
         private readonly DocumentDatabase database;
+        private const int MaxRecursionDepth = 128;
 
         public ScriptedJsonPatcher(DocumentDatabase database = null)
         {
@@ -132,7 +133,7 @@ namespace Raven.Database.Json
                 jintEngine.ResetStatementsCount();
 
                 OutputLog(jintEngine);
-                var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script;
+                var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script + Environment.NewLine;
                 var error = errorEx as JavaScriptException;
                 if (error != null)
                     errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
@@ -146,6 +147,10 @@ namespace Raven.Database.Json
                 var targetEx = errorEx as TargetInvocationException;
                 if (targetEx != null && targetEx.InnerException != null)
                     throw new InvalidOperationException(errorMsg, targetEx.InnerException);
+
+                var recursionEx = errorEx as RecursionDepthOverflowException;
+                if (recursionEx != null)
+                    errorMsg += Environment.NewLine + "Max recursion depth is limited to: " + MaxRecursionDepth;
 
                 throw new InvalidOperationException(errorMsg, errorEx);
             }
@@ -229,7 +234,7 @@ namespace Raven.Database.Json
 #else
                 cfg.AllowDebuggerStatement(false);
 #endif
-                cfg.LimitRecursion(1024);
+                cfg.LimitRecursion(MaxRecursionDepth);
                 cfg.NullPropagation();
                 cfg.MaxStatements(int.MaxValue); // allow lodash to load
             });

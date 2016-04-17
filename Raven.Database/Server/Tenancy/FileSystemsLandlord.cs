@@ -276,10 +276,11 @@ namespace Raven.Database.Server.Tenancy
                     var fileSystems =
                         systemDatabase.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, 0,
                             numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
-                    if (fileSystems.Count >= numberOfAllowedFileSystems)
+                    if (fileSystems.Count > numberOfAllowedFileSystems)
                         throw new InvalidOperationException(
                             "You have reached the maximum number of file systems that you can have according to your license: " +
                             numberOfAllowedFileSystems + Environment.NewLine +
+                            "But we detect: " + fileSystems.Count + " file systems" + Environment.NewLine +
                             "You can either upgrade your RavenDB license or delete a file system from the server");
                 }
             }

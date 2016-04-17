@@ -59,11 +59,11 @@ namespace Raven.Tests.Storage
 
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
-            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -114,19 +114,19 @@ namespace Raven.Tests.Storage
 
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             Thread.Sleep(TimeSpan.FromSeconds(1));
 
             db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
-            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             Thread.Sleep(TimeSpan.FromSeconds(1));
 
             db.Documents.Put("michael", null, RavenJObject.Parse("{'email':'michael.yarichuk@ayende.com'}"), new RavenJObject(), null);
-            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -192,7 +192,7 @@ namespace Raven.Tests.Storage
         
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            Assert.Throws<InvalidOperationException>(() => db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
+            Assert.Throws<InvalidOperationException>(() => db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState()));
         }
     }
 }

@@ -85,6 +85,7 @@ namespace Raven.Abstractions.Data
 
         /// <summary>
         /// The duration of actually executing the query server side
+        /// -1 is returned in case the query results retrieved from cache
         /// </summary>
         public long DurationMilliseconds { get; set; }
 

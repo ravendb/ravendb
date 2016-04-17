@@ -53,7 +53,7 @@ namespace Raven.Tests.Storage
         {
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -81,7 +81,7 @@ namespace Raven.Tests.Storage
         {
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -123,7 +123,7 @@ namespace Raven.Tests.Storage
             } while (queryResult.IsStale);
             Assert.Equal(1, queryResult.Results.Count);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -163,7 +163,7 @@ namespace Raven.Tests.Storage
             Assert.Equal(1, queryResult.Results.Count);
 
             File.WriteAllText("raven.db.test.backup.txt", "Sabotage!");
-            db.Maintenance.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument());
+            db.Maintenance.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, false);
 
             var condition = GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error;
@@ -200,7 +200,7 @@ namespace Raven.Tests.Storage
                 }
             });
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
             runInserts = false;
 

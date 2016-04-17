@@ -64,6 +64,9 @@ namespace Raven.Tests.FileSystem
                         session.RegisterUpload(i + ".file", CreateUniformFileStream(10));
 
                     await session.SaveChangesAsync();
+
+                    var tenthFile = await session.LoadFileAsync("9.file");
+                    fromEtag = tenthFile.Etag;
                 }
 
                 int count = 0;
@@ -78,7 +81,7 @@ namespace Raven.Tests.FileSystem
                         }
                     }
                 }
-                Assert.Equal(50, count);
+                Assert.Equal(10, count);
             }
         }
     }

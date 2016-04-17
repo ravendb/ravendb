@@ -60,7 +60,7 @@ class windowsAuth extends viewModelBase {
 
     addUserSettings() {
         var newAuthData = windowsAuthData.empty();
-        windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredUsers);
+        windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredUsers, windowsAuthSetup.ModeUser);
         this.setup().requiredUsers.push(newAuthData);
     }
 
@@ -70,7 +70,7 @@ class windowsAuth extends viewModelBase {
 
     addGroupSettings() {
         var newAuthData = windowsAuthData.empty();
-        windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredGroups);
+        windowsAuthSetup.subscribeToObservableName(newAuthData, this.setup().requiredGroups, windowsAuthSetup.ModeGroup);
         this.setup().requiredGroups.push(newAuthData);
     }
 

@@ -56,14 +56,15 @@ namespace Raven.Database.Server.Controllers
                 pageSize = int.MaxValue;
 
             var skipAfter = GetQueryStringValue("skipAfter");
+            var transformer = GetQueryStringValue("transformer");
+            var transformerParameters = ExtractTransformerParameters();
 
-            
             var headers = CurrentOperationContext.Headers.Value;
             var user = CurrentOperationContext.User.Value;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new PushStreamContent((stream, content, transportContext) =>
-                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter, headers, user))
+                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter, transformer, transformerParameters, headers, user))
                 {
                     Headers =
                     {
@@ -73,7 +74,7 @@ namespace Raven.Database.Server.Controllers
             };
         }
 
-        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, 
+        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters,
             Lazy<NameValueCollection> headers, IPrincipal user)
         {
             var old = CurrentOperationContext.Headers.Value;
@@ -113,17 +114,17 @@ namespace Raven.Database.Server.Controllers
                     // we may be sending a LOT of documents to the user, and most 
                     // of them aren't going to be relevant for other ops, so we are going to skip
                     // the cache for that, to avoid filling it up very quickly
-                    using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                    using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
                     {
                         if (string.IsNullOrEmpty(startsWith))
                         {
-                            Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
+                            Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc => { addDocument(doc); return true; }, transformer, transformerParameters);
                         }
                         else
                         {
                             var nextPageStartInternal = nextPageStart;
 
-                            Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
+                            Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, transformer, transformerParameters, skipAfter);
 
                             nextPageStart = nextPageStartInternal;
                         }
@@ -345,7 +346,7 @@ namespace Raven.Database.Server.Controllers
                 // we may be sending a LOT of documents to the user, and most 
                 // of them aren't going to be relevant for other ops, so we are going to skip
                 // the cache for that, to avoid filling it up very quickly
-                using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
                 {
                     outputContentTypeSetter(writer.ContentType);
 
@@ -384,7 +385,7 @@ namespace Raven.Database.Server.Controllers
         private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
         {
             var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
-            return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
+            return useExcelFormat ? (IOutputWriter)new ExcelOutputWriter(stream, GetQueryStringValues(req, "column")) : new JsonOutputWriter(stream);
         }
 
         private static Boolean IsCsvDownloadRequest(HttpRequestMessage req)
@@ -408,12 +409,14 @@ namespace Raven.Database.Server.Controllers
             private const string CsvContentType = "text/csv";
 
             private readonly Stream stream;
+            private readonly string[] customColumns;
             private StreamWriter writer;
             private bool doIncludeId;
 
-            public ExcelOutputWriter(Stream stream)
+            public ExcelOutputWriter(Stream stream, string[] customColumns = null)
             {
                 this.stream = stream;
+                this.customColumns = customColumns;
             }
 
             public string ContentType
@@ -503,6 +506,15 @@ namespace Raven.Database.Server.Controllers
                     includeNestedProperties: true,
                     includeMetadata: false,
                     excludeParentPropertyNames: true).ToList();
+
+                if (customColumns != null && customColumns.Length > 0)
+                {
+                    // since user defined custom CSV columns filter list generated using GetPropertiesFromJObject
+                    // we interate over customColumns instead of properties to maintain columns order requested by user
+                    properties = customColumns
+                        .SelectMany(c => properties.Where(p => p.StartsWith(c)))
+                        .ToList();
+                }
 
                 RavenJToken token;
                 if (result.TryGetValue("@metadata", out token))

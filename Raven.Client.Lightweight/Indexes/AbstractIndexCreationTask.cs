@@ -252,6 +252,15 @@ namespace Raven.Client.Indexes
                 if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
                     return;
 
+                switch (serverDef.LockMode)
+                {
+                    //Nothing to do we just ignore this index
+                    case IndexLockMode.LockedIgnore:
+                        return;
+                    case IndexLockMode.LockedError:
+                        throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to: LockedError", serverDef.IndexId));
+                }
+
                 UpdateSideBySideIndex(databaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, replaceIndexName, indexDefinition, documentConvention);
             }
             else
@@ -430,6 +439,15 @@ namespace Raven.Client.Indexes
             {
                 if (CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
                     return;
+
+                switch (serverDef.LockMode)
+                {
+                    //Nothing to do we just ignore this index
+                    case IndexLockMode.LockedIgnore:
+                        return;
+                    case IndexLockMode.LockedError:
+                        throw new InvalidOperationException(string.Format("Can't replace locked index {0} its lock mode is set to: LockedError", serverDef.IndexId));
+                }
 
                 await UpdateSideBySideIndexAsync(asyncDatabaseCommands, minimumEtagBeforeReplace, replaceTimeUtc, token, replaceIndexName, indexDefinition, documentConvention).ConfigureAwait(false);
             }

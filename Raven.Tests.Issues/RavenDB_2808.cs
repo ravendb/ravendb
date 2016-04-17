@@ -52,9 +52,7 @@ namespace Raven.Tests.Issues
                         }),
                         new RavenJObject());
 
-                commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1");
-
-                WaitForBackup(commands, true);
+                commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1").WaitForCompletion();
 
                 var operation = commands
                     .GlobalAdmin

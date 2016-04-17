@@ -143,7 +143,7 @@ namespace Raven.Tests.Issues
                                 x => x.CDate > todayDate.AddDays(DayOfWeek.Sunday - DateTime.Now.DayOfWeek), // THIS WEEK
                                 x => x.CDate > todayDate.AddDays(DayOfWeek.Sunday - DateTime.Now.DayOfWeek - 7) && x.CDate < todayDate.AddDays(DayOfWeek.Sunday - DateTime.Now.DayOfWeek), // LAST WEEK
                                 x => x.CDate > new DateTime(todayDate.Year, todayDate.Month, 1), // THIS MONTH
-                                x => x.CDate > new DateTime(todayDate.Year, todayDate.Month - 1, 1) && x.CDate < new DateTime(todayDate.Year, todayDate.Month, 1), // LAST MONTH
+                                x => x.CDate > new DateTime(todayDate.Year, todayDate.Month, 1).AddMonths(-1) && x.CDate < new DateTime(todayDate.Year, todayDate.Month, 1), // LAST MONTH
                                 x => x.CDate > new DateTime(todayDate.Year, 1, 1), // THIS YEAR
                                 x => x.CDate > new DateTime(todayDate.Year - 1, 1, 1) && x.CDate < new DateTime(todayDate.Year, 1, 1), // LAST YEAR
                                 x => x.CDate < new DateTime(todayDate.Year - 1, 1, 1), // OLDER

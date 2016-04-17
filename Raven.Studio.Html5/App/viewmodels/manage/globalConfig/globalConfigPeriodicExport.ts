@@ -47,6 +47,7 @@ class globalConfigPeriodicExport extends viewModelBase {
     }
 
     attached() {
+        super.attached();
         this.bindPopover();
         this.bindHintWatchers();
     }

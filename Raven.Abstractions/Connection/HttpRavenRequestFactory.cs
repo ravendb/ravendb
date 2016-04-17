@@ -57,7 +57,7 @@ namespace Raven.Abstractions.Connection
             else
             {
                 var basicAuthenticator = new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
-                var securedAuthenticator = new SecuredAuthenticator();
+                var securedAuthenticator = new SecuredAuthenticator(autoRefreshToken: false);
 
                 basicAuthenticator.ConfigureRequest(this, webRequestEventArgs);
                 securedAuthenticator.ConfigureRequest(this, webRequestEventArgs);
@@ -97,7 +97,7 @@ namespace Raven.Abstractions.Connection
                         return new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
                     }
 
-                    return new SecuredAuthenticator();
+                    return new SecuredAuthenticator(autoRefreshToken: false);
                 });
 
             return authenticator.DoOAuthRequest(oauthSource, options.ApiKey);

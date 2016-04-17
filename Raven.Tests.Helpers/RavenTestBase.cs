@@ -29,6 +29,7 @@ using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
@@ -107,12 +108,12 @@ namespace Raven.Tests.Helpers
         {
             var messages = GetAsyncVoidMethods(assembly)
                 .Select(method =>
-                    String.Format("'{0}.{1}' is an async Task method.",
+                    String.Format("'{0}.{1}' is an async void method.",
                         method.DeclaringType.FullName,
                         method.Name))
                 .ToList();
             if (messages.Any())
-                throw new InvalidConstraintException("async Task methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
+                throw new InvalidConstraintException("async void methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
         }
 
         ~RavenTestBase()
@@ -553,7 +554,9 @@ namespace Raven.Tests.Helpers
                 ? TimeSpan.FromMinutes(5)
                 : TimeSpan.FromSeconds(20));
 
-            var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
+            var spinUntil = SpinWait.SpinUntil(() => 
+                databaseCommands.GetStatistics().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0, 
+                timeout.Value);
             if (spinUntil)
             {
                 return;
@@ -661,11 +664,6 @@ namespace Raven.Tests.Helpers
         protected void WaitForBackup(DocumentDatabase db, bool checkError)
         {
             WaitForBackup(key => db.Documents.Get(key, null), checkError);
-        }
-
-        protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
-        {
-            WaitForBackup(commands.Get, checkError);
         }
 
         private void WaitForBackup(Func<string, JsonDocument> getDocument, bool checkError)
@@ -1160,6 +1158,13 @@ namespace Raven.Tests.Helpers
             NewRemoteDocumentStore(ravenDbServer: server);
 
             return server;
+        }
+
+        protected IDisposable WithCustomDatabaseSettings(Action<DatabaseDocument> settingConfigurator)
+        {
+            MultiDatabase.ConfigureDatabaseDocument = settingConfigurator;
+
+            return new DisposableAction(() => MultiDatabase.ConfigureDatabaseDocument = null);
         }
 
     }

@@ -1,7 +1,6 @@
 import pagedList = require("common/pagedList");
-import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
+import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import getSystemDocumentsCommand = require("commands/database/documents/getSystemDocumentsCommand");
-import getAllDocumentsCommand = require("commands/database/documents/getAllDocumentsCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/resources/database");
 import cssGenerator = require("common/cssGenerator");
@@ -12,6 +11,7 @@ class collection implements ICollectionBase {
     documentsCountWithThousandsSeparator = ko.computed(() => this.documentCount().toLocaleString());
     isAllDocuments = false;
     isSystemDocuments = false;
+    bindings = ko.observable<string[]>();
 
     public collectionName : string;
     private documentsList: pagedList;
@@ -33,6 +33,9 @@ class collection implements ICollectionBase {
         ko.postbox.publish("ActivateCollection", this);
     }
 
+    prettyLabel(text: string) {
+        return text.replace(/__/g, '/');
+    }
     getDocuments(): pagedList {
         if (!this.documentsList) {
             this.documentsList = this.createPagedList();
@@ -57,9 +60,9 @@ class collection implements ICollectionBase {
             // System documents don't follow the normal paging rules. See getSystemDocumentsCommand.execute() for more info.
             return new getSystemDocumentsCommand(this.ownerDatabase, skip, take, this.documentCount()).execute();
         } if (this.isAllDocuments) {
-            return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
+            return new getDocumentsPreviewCommand(this.ownerDatabase, skip, take, undefined, this.bindings()).execute();
         } else {
-            return new getDocumentsByEntityNameCommand(this, skip, take).execute();
+            return new getDocumentsPreviewCommand(this.ownerDatabase, skip, take, this.name, this.bindings()).execute();
         }
     }
 

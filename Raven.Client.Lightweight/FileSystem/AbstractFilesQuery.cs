@@ -69,6 +69,7 @@ namespace Raven.Client.FileSystem
             private set;
         }
 
+        protected bool pageSizeSet = false;
         protected int pageSize = 1024;
         protected int start = 0;
 
@@ -543,11 +544,19 @@ namespace Raven.Client.FileSystem
                 case "totalsize": term = "size"; break;
                 case "lastmodified": term = "modified"; break;
                 case "creationdate": term = "created"; break;
-                case "etag": term = "etag"; break;
-                case "path": term = "directory"; break;                
+                case "etag":
+                {
+                    prefix = string.Empty;
+                    term = Constants.MetadataEtagField;
+
+                    break;
+                }
+                case "fullpath": term = "key"; break;
                 case "extension": throw new NotSupportedException("Query over Extension is not supported yet, use Name instead.");
                 case "humanetotalsize": throw new NotSupportedException("Query over HumaneTotalSize is not supported, use TotalSize instead.");
                 case "originalmetadata": throw new NotSupportedException("Query over OriginalMetadata is not supported, use current Metadata instead.");
+                case "istombstone": throw new NotSupportedException("Query over IsTombstone is not supported.");
+                case "uploadedsize": throw new NotSupportedException("Query over UploadedSize is not supported, use current TotalSize instead.");
                 default: prefix = string.Empty; break;
             }
 
@@ -766,6 +775,7 @@ namespace Raven.Client.FileSystem
         public void Take(int count)
         {
             pageSize = count;
+            pageSizeSet = true;
         }
 
         /// <summary>

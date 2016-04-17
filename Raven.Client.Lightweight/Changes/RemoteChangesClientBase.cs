@@ -127,14 +127,16 @@ namespace Raven.Client.Changes
                 ConnectionStatusChanged(this, EventArgs.Empty);
 
                 if (disposed)
+                {
+                    logger.Warn("Failed to connect to {0} with id {1}, probably shutting down...", url, id);
                     throw;
-
-                bool timeout;
-                if (HttpConnectionHelper.IsServerDown(e, out timeout) == false)
+                }
+                HttpStatusCode code;
+                if (HttpConnectionHelper.IsHttpStatus(e,out code, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.Unauthorized, HttpStatusCode.ServiceUnavailable))
+                {
+                    logger.Error("Failed to connect to {0} with id {1}, server returned with an error code:{2}", url, id, code);
                     throw;
-
-                if (HttpConnectionHelper.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.ServiceUnavailable))
-                    throw;
+                }
 
                 logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
                 retry = true;

@@ -4,8 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Backup;
 
 namespace Raven.Storage.Esent.Backup
@@ -15,22 +18,41 @@ namespace Raven.Storage.Esent.Backup
         private readonly JET_INSTANCE instance;
         private readonly string destination;
         private readonly BackupGrbit backupOptions;
-        public event Action<string, string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
+        private readonly CancellationToken token;
+        public event Action<string, Exception, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
-        public EsentBackup(JET_INSTANCE instance, string destination, BackupGrbit backupOptions)
+        public EsentBackup(JET_INSTANCE instance, string destination, BackupGrbit backupOptions, CancellationToken token)
         {
             this.instance = instance;
             this.destination = destination;
             this.backupOptions = backupOptions;
+            this.token = token;
         }
 
         public void Execute()
         {
             // TODO work out if we can get a % done from this, at the moment in only seems to give "Begin" and "End" messages
-            Api.JetBackupInstance(instance, destination,
-                                  backupOptions,
-                                  StatusCallback);
+            var task = Task.Factory.StartNew(() => Api.JetBackupInstance(instance, destination, backupOptions, StatusCallback), TaskCreationOptions.LongRunning);
 
+            while (!task.IsCompleted)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    Api.JetStopBackupInstance(instance);
+                }
+
+                Thread.Sleep(250);
+            }
+
+            if (task.Exception != null)
+            {
+                var ex = task.Exception.ExtractSingleInnerException();
+                if (ex is EsentBackupAbortByServerException)
+                {
+                    throw new OperationCanceledException(ex.Message);
+                }
+                throw ex;
+            }
         }
 
         private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)

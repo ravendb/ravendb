@@ -1,12 +1,12 @@
 import document = require("models/database/documents/document");
-import abstractQueryResult = require("models/database/query/abstractQueryResult");
 
-class collectionInfo extends abstractQueryResult {
+class collectionInfo {
     results: Array<document>;
+    totalResults: number;
 
-    constructor(dto: collectionInfoDto) {
-        super(dto);
+    constructor(dto: documentPreviewDto) {
         this.results = dto.Results.map(d => new document(d));
+        this.totalResults = dto.TotalResults;
     }
 }
 

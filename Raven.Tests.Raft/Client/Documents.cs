@@ -5,11 +5,15 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 
 using Raven.Abstractions.Cluster;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 
 using Xunit;
@@ -38,11 +42,14 @@ namespace Raven.Tests.Raft.Client
             var clusterStores = CreateRaftCluster(numberOfNodes, activeBundles: "Replication", configureStore: store => store.Conventions.ClusterBehavior = clusterBehavior);
 
             SetupClusterConfiguration(clusterStores);
-
-            clusterStores[0].DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
-            clusterStores[0].DatabaseCommands.Put("keys/2", null, new RavenJObject(), new RavenJObject());
-            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), "keys/2"));
-
+            Enumerable.Range(0,numberOfNodes).ForEach(i=> clusterStores[0].DatabaseCommands.Put($"keys/{i}", null, new RavenJObject(), new RavenJObject()));
+            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), $"keys/{numberOfNodes-1}"));
+            //Here i want to fetch the topology after a leader was elected so all stores will have latest topology.
+            clusterStores.ForEach(store =>
+            {
+                var client = ((AsyncServerClient)store.AsyncDatabaseCommands);
+                AsyncHelpers.RunSync(()=>client.RequestExecuter.UpdateReplicationInformationIfNeededAsync(client,true));
+            });
             var tasks = new List<ReplicationTask>();
             foreach (var server in servers)
             {
@@ -61,12 +68,13 @@ namespace Raven.Tests.Raft.Client
             for (int i = 0; i < clusterStores.Count; i++)
             {
                 var store = clusterStores[i];
-
-                store.DatabaseCommands.Get("keys/1");
-                store.DatabaseCommands.Get("keys/2");
+                Enumerable.Range(0, numberOfNodes).ForEach(j => store.DatabaseCommands.Get($"keys/{j}"));
             }
 
-            servers.ForEach(server => Assert.True(server.Options.RequestManager.NumberOfRequests > 0));
+            servers.ForEach(server =>
+            {
+                Assert.True(server.Options.RequestManager.NumberOfRequests >= numberOfNodes);
+            });
         }
 
         [Theory]

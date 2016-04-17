@@ -98,7 +98,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken))
+        public async Task<Operation> StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken))
         {
             using (var request = adminRequest.StartBackup(backupLocation, databaseDocument, databaseName, incremental))
             {
@@ -107,6 +107,10 @@ namespace Raven.Client.Connection.Async
                     BackupLocation = backupLocation,
                     DatabaseDocument = databaseDocument
                 })).WithCancellation(token).ConfigureAwait(false);
+
+                var jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+
+                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
             }
         }
 
@@ -122,14 +126,14 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken))
+        public Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken))
         {
             return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async operationMetadata =>
             {
                 using (var request = adminRequest.IndexingStatus(operationMetadata.Url))
                 {
-                    var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    return result.Value<string>("IndexingStatus");
+                    var result = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    return result.Deserialize<IndexingStatus>(innerAsyncServerClient.convention);
                 }
             }, token);
         }

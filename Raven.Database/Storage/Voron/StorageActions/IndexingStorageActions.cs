@@ -243,7 +243,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         public void TouchIndexEtag(int id)
         {
-            tableStorage.IndexingMetadata.Increment(writeBatch.Value, (Slice)CreateKey(id, "touches"), 1);
+            Slice key = (Slice) CreateKey(id, "touches");
+            var readResult = tableStorage.IndexingMetadata.Read(Snapshot, key, writeBatch.Value);
+            if (readResult == null)
+            {
+                // index doesn't exist
+                return;
+            }
+
+            tableStorage.IndexingMetadata.Increment(writeBatch.Value, key, 1);
         }
 
         public void UpdateIndexingStats(int id, IndexingWorkStats stats)
@@ -593,7 +601,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var readResult = tableStorage.IndexingMetadata.Read(Snapshot, (Slice)AppendToKey(key, "touches"), writeBatch.Value);
             if (readResult == null)
-                return  -1;
+                return -1;
             return readResult.Reader.ReadLittleEndianInt32();
         }
     }

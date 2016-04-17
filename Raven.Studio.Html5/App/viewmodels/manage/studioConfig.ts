@@ -8,6 +8,7 @@ import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
+import numberFormattingStorage = require("common/numberFormattingStorage");
 
 class studioConfig extends viewModelBase {
 
@@ -19,6 +20,8 @@ class studioConfig extends viewModelBase {
     mute: KnockoutComputed<boolean>;
     isForbidden = ko.observable<boolean>();
     isReadOnly: KnockoutComputed<boolean>;
+    browserFormatExample = 5050.99.toLocaleString();
+    rawFormat = ko.observable<boolean>();
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
@@ -61,6 +64,8 @@ class studioConfig extends viewModelBase {
 
         this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
         this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
+
+        this.rawFormat(numberFormattingStorage.shouldUseRaw());
     }
 
     canActivate(args): any {
@@ -101,7 +106,6 @@ class studioConfig extends viewModelBase {
 
         $("#select-color li").each((index, element) => {
             var color = this.environmentColors[index];
-            //$(element).css("color", color.textColor);
             $(element).css("backgroundColor", color.backgroundColor);
         });
     }
@@ -139,21 +143,18 @@ class studioConfig extends viewModelBase {
         serverBuildReminder.mute(upgradeSetting);
     }
 
+    setNumberFormat(raw: boolean) {
+        this.rawFormat(raw);
+        numberFormattingStorage.save(raw);
+    }
+
     saveStudioConfig(newDocument: documentClass) {
-        var deferred = $.Deferred();
-
-        require(["commands/saveDocumentCommand"], saveDocumentCommand => {
-            var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
-            saveTask
-                .done((saveResult: bulkDocumentDto[]) => {
-                    this.configDocument(newDocument);
-                    this.configDocument().__metadata['etag'] = saveResult[0].Etag;
-                    deferred.resolve();
-                })
-                .fail(() => deferred.reject());
-        });
-
-        return deferred;
+        return new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase)
+            .execute()
+            .done((saveResult: bulkDocumentDto[]) => {
+                this.configDocument(newDocument);
+                this.configDocument().__metadata['etag'] = saveResult[0].Etag;
+            });
     }
 }
 

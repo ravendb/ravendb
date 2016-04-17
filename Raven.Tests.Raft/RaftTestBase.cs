@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Connection.Request;
 using Xunit;
 
 namespace Raven.Tests.Raft
@@ -87,8 +88,6 @@ namespace Raven.Tests.Raft
             var random = new Random();
             var leader = nodes[random.Next(0, numberOfNodes - 1)];
 
-            Console.WriteLine("Leader: " + leader.Options.ClusterManager.Value.Engine.Options.SelfConnection.Uri);
-
             leader.Options.ClusterManager.Value.InitializeTopology(forceCandidateState:true);
 
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(),"Leader was not elected by himself in time");
@@ -122,6 +121,13 @@ namespace Raven.Tests.Raft
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(),"Wait for leader timedout");
 
             WaitForClusterToBecomeNonStale(nodes);
+
+            foreach (var node in nodes)
+            {
+                var url = node.SystemDatabase.ServerUrl.ForDatabase(databaseName);
+                var serverHash = ServerHash.GetServerHash(url);
+                ReplicationInformerLocalCache.ClearClusterNodesInformationLocalCache(serverHash);
+            }
 
             return nodes
                 .Select(node => NewRemoteDocumentStore(ravenDbServer: node, activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))

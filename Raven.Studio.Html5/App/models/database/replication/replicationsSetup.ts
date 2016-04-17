@@ -5,6 +5,9 @@ class replicationsSetup {
     source = ko.observable<string>();
     destinations = ko.observableArray<replicationDestination>().extend({ required: true });
     clientFailoverBehaviour = ko.observable<string>(null);
+    showCustomRequestTimeThreshold: KnockoutObservable<boolean>;
+    hasCustomRequestTimeThreshold = ko.observable<boolean>(false);
+    requestTimeThreshold = ko.observable<number>(null);
 
     constructor(dto: configurationDocumentDto<replicationsDto>) {
         this.source(dto.MergedDocument.Source);
@@ -19,9 +22,27 @@ class replicationsSetup {
             }
             return result;
         }));
-        if (dto.MergedDocument.ClientConfiguration && dto.MergedDocument.ClientConfiguration.FailoverBehavior) {
-            this.clientFailoverBehaviour(dto.MergedDocument.ClientConfiguration.FailoverBehavior);
+        var clientConfiguration = dto.MergedDocument.ClientConfiguration;
+        if (clientConfiguration) {
+            if (clientConfiguration.FailoverBehavior) {
+                this.clientFailoverBehaviour(clientConfiguration.FailoverBehavior);
+            }
+            if (clientConfiguration.RequestTimeThresholdInMilliseconds) {
+                this.hasCustomRequestTimeThreshold(true);
+                this.requestTimeThreshold(clientConfiguration.RequestTimeThresholdInMilliseconds);
+            }
         }
+        this.showCustomRequestTimeThreshold = ko.computed(() => {
+            return this.clientFailoverBehaviour() === "AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed";
+        });
+
+        this.clientFailoverBehaviour.subscribe(newValue => {
+            if (newValue !== 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed') {
+                this.hasCustomRequestTimeThreshold(false);
+                this.requestTimeThreshold(undefined);
+            }
+        });
+
     }
 
     toDto(filterLocal = true): replicationsDto {
@@ -29,18 +50,27 @@ class replicationsSetup {
             Destinations: this.destinations().filter(dest => !filterLocal || dest.hasLocal()).map(dest => dest.toDto()),
             Source: this.source()
         };
+        dto.ClientConfiguration = {
+            RequestTimeThresholdInMilliseconds: undefined,
+            FailoverBehavior: undefined
+        };
 
         if (this.clientFailoverBehaviour()) {
-            dto.ClientConfiguration = { FailoverBehavior: this.clientFailoverBehaviour() };
+            dto.ClientConfiguration.FailoverBehavior = this.clientFailoverBehaviour();
+        }
+        if (this.showCustomRequestTimeThreshold() && this.hasCustomRequestTimeThreshold()) {
+            dto.ClientConfiguration.RequestTimeThresholdInMilliseconds = this.requestTimeThreshold();
         }
 
         return dto;
     }
 
-    copyFromParent(parentClientFailover: string) {
+    copyFromParent(parentClientFailover: string, parentRequestTimeThreshold: number) {
         this.clientFailoverBehaviour(parentClientFailover);
+        this.requestTimeThreshold(parentRequestTimeThreshold);
         this.destinations(this.destinations().filter(d => d.hasGlobal()));
         this.destinations().forEach(d => d.copyFromGlobal());
+        this.hasCustomRequestTimeThreshold(!!parentRequestTimeThreshold);
     }
 
     clear() {

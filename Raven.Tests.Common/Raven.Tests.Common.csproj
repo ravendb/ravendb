@@ -24,6 +24,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -64,6 +65,10 @@
       <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.1\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.3.0-rc3\lib\net45\NLog.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -98,7 +103,10 @@
     <Compile Include="Analyzers\NGramTokenFilter.cs" />
     <Compile Include="Analyzers\NGramAnalyzer.cs" />
     <Compile Include="AssertAsync.cs" />
+    <Compile Include="Attributes\SuccessfulTestLogRemoval.cs" />
+    <Compile Include="Attributes\PerTestLogger.cs" />
     <Compile Include="Attributes\FactIfWindowsAuthenticationIsAvailable.cs" />
+    <Compile Include="Attributes\RavenServerAndMiniDumperAvailable.cs" />
     <Compile Include="Dto\Address.cs" />
     <Compile Include="Dto\Person.cs" />
     <Compile Include="Dto\PersonWithAddress.cs" />

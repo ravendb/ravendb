@@ -3,37 +3,22 @@ import killRunningTaskCommand = require("commands/operations/killRunningTaskComm
 import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
 import moment = require("moment");
 import document = require("models/database/documents/document");
+import runningTask = require("models/database/debug/runningTask");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
+
+type taskType = {
+    name: string;
+    count: number;
+}
 
 class runningTasks extends viewModelBase {
 
-    static TypeSuggestionQuery = "SuggestionQuery";
-    static TypeBulkInsert = "BulkInsert";
-    static TypeIndexBulkOperation = "IndexBulkOperation";
-    static TypeIndexDeleteOperation = "IndexDeleteOperation";
-    static TypeImportDatabase = "ImportDatabase";
-    static TypeRestoreDatabase = "RestoreDatabase";
-    static TypeRestoreFilesystem = "RestoreFilesystem";
-    static TypeCompactDatabase = "CompactDatabase";
-    static TypeCompactFilesystem = "CompactFilesystem";
-    static TypeIoTest = "IoTest";
-    static TypeNewIndexPrecomputedBatch = "NewIndexPrecomputedBatch";
-    
-    allTasks = ko.observableArray<runningTaskDto>();
+    allTasks = ko.observableArray<runningTask>();
     filterType = ko.observable<string>(null);
-    selectedTask = ko.observable<runningTaskDto>();
-    noExceptionText = ko.computed(() => !!this.selectedTask() && !!this.selectedTask().ExceptionText);
+    selectedTask = ko.observable<runningTask>();
+    noExceptionText = ko.computed(() => !!this.selectedTask() && !!this.selectedTask().exceptionText);
 
-    suggestionQueryCount: KnockoutComputed<number>;
-    bulkInsertCount: KnockoutComputed<number>;
-    indexBulkOperationCount: KnockoutComputed<number>;
-    indexDeleteOperationCount: KnockoutComputed<number>;
-    importDatabaseCount: KnockoutComputed<number>;
-    restoreDatabaseCount: KnockoutComputed<number>;
-    restoreFilesystemCount: KnockoutComputed<number>;
-    compactDatabaseCount: KnockoutComputed<number>;
-    compactFilesystemCount: KnockoutComputed<number>;
-    ioTestCount: KnockoutComputed<number>;
-    newIndexPrecomputedBatchCount: KnockoutComputed<number>;
+    taskTypes = ko.observableArray<taskType>([]);
 
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
@@ -41,30 +26,20 @@ class runningTasks extends viewModelBase {
     updateNowTimeoutHandle = 0;
     sortColumn = ko.observable<string>("logged");
     sortAsc = ko.observable<boolean>(true);
-    filteredAndSortedTasks: KnockoutComputed<Array<runningTaskDto>>;
+    filteredAndSortedTasks: KnockoutComputed<Array<runningTask>>;
     columnWidths: Array<KnockoutObservable<number>>;
 
     constructor() {
         super();
 
-        this.suggestionQueryCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeSuggestionQuery));
-        this.bulkInsertCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeBulkInsert));
-        this.indexBulkOperationCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIndexBulkOperation));
-        this.indexDeleteOperationCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIndexDeleteOperation));
-        this.importDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeImportDatabase));
-        this.restoreDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeRestoreDatabase));
-        this.restoreFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeRestoreFilesystem));
-        this.compactDatabaseCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactDatabase));
-        this.compactFilesystemCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeCompactFilesystem));
-        this.ioTestCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeIoTest));
-        this.newIndexPrecomputedBatchCount = ko.computed(() => this.allTasks().count(l => l.TaskType === runningTasks.TypeNewIndexPrecomputedBatch));
+        autoRefreshBindingHandler.install();
 
         this.searchTextThrottled = this.searchText.throttle(200);
         this.activeDatabase.subscribe(() => this.fetchTasks());
         this.updateCurrentNowTime();
 
-        this.filteredAndSortedTasks = ko.computed<Array<runningTaskDto>>(() => {
-            var tasks = this.allTasks();
+        this.filteredAndSortedTasks = ko.computed<Array<runningTask>>(() => {
+            var tasks = this.allTasks().filter(t => this.matchesFilterAndSearch(t));
             var column = this.sortColumn();
             var asc = this.sortAsc();
 
@@ -78,14 +53,29 @@ class runningTasks extends viewModelBase {
         });
     }
 
+    recalculateTaskTypes() {
+        var types: taskType[] = [];
+        var allTasks = this.allTasks();
+        allTasks.forEach(task => {
+            var type = task.taskType;
+            var existingItem = types.first(t => t.name === type);
+            if (existingItem) {
+                existingItem.count++;
+            } else {
+                types.push({ name: type, count: 1 });
+            }
+        });
+        this.taskTypes(types);
+    }
+
     activate(args) {
         super.activate(args);
         this.columnWidths = [
             ko.observable<number>(100),
-            ko.observable<number>(265),
             ko.observable<number>(300),
-            ko.observable<number>(200),
-            ko.observable<number>(360)
+            ko.observable<number>(460),
+            ko.observable<number>(265),
+            ko.observable<number>(100)
         ];
         this.registerColumnResizing();
         this.updateHelpLink('2KH22A');
@@ -114,59 +104,28 @@ class runningTasks extends viewModelBase {
     }
 
     processRunningTasksResults(results: runningTaskDto[]) {
-        var now = moment();
-        results.forEach(r => {
-            r['TimeStampText'] = this.createHumanReadableTime(r.StartTime);
-            r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r));
-            r['Killable'] = ko.computed(() => this.canKill(r));
-            r['ExceptionText'] = r.Exception ? JSON.stringify(r.Exception, null, 2) : '';
-        });
-        this.allTasks(results.reverse());
+        this.allTasks(results.reverse().map(r => new runningTask(r)));
+        this.recalculateTaskTypes();
     }
 
-    canKill(task: runningTaskDto) { 
-        var status = task.TaskStatus === "Running"
-            || task.TaskStatus === "Created"
-            || task.TaskStatus === "WaitingToRun"
-            || task.TaskStatus === "WaitingForActivation";
-        var taskType = task.TaskType != runningTasks.TypeIndexDeleteOperation
-            && task.TaskType != runningTasks.TypeSuggestionQuery
-            && task.TaskType != runningTasks.TypeRestoreDatabase
-            && task.TaskType != runningTasks.TypeRestoreFilesystem
-            && task.TaskType != runningTasks.TypeCompactDatabase
-            && task.TaskType != runningTasks.TypeCompactFilesystem;
-        return status && taskType;
-    }
-
-    matchesFilterAndSearch(task: runningTaskDto) {
+   
+    matchesFilterAndSearch(task: runningTask) {
         var searchTextThrottled = this.searchTextThrottled().toLowerCase();
         var filterType = this.filterType();
-        var matchesLogLevel = filterType === null || task.TaskType === filterType;
+        var matchesLogLevel = filterType === null || task.taskType === filterType;
         var matchesSearchText = !searchTextThrottled ||
-            (task.Payload && task.Payload.toLowerCase().indexOf(searchTextThrottled) >= 0) ||
-            (task.ExceptionText && task.ExceptionText.toLowerCase().indexOf(searchTextThrottled) >= 0);
+            (task.description && task.description.toLowerCase().indexOf(searchTextThrottled) >= 0) ||
+            (task.exceptionText && task.exceptionText.toLowerCase().indexOf(searchTextThrottled) >= 0);
 
         return matchesLogLevel && matchesSearchText;
     }
 
-    createHumanReadableTime(time: string): KnockoutComputed<string> {
-        if (time) {
-            return ko.computed(() => {
-                var dateMoment = moment(time);
-                var agoInMs = dateMoment.diff(this.now());
-                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
-            });
-        }
-
-        return ko.computed(() => time);
-    }
-
-    selectTask(task: runningTaskDto) {
+    selectTask(task: runningTask) {
         this.selectedTask(task);
     }
 
-    taskKill(task: runningTaskDto) {
-        new killRunningTaskCommand(this.activeDatabase(), task.Id).execute()
+    taskKill(task: runningTask) {
+        new killRunningTaskCommand(this.activeDatabase(), task.id).execute()
             .always(() => setTimeout(() => {
                 this.selectedTask(null);
                 this.fetchTasks();
@@ -219,48 +178,8 @@ class runningTasks extends viewModelBase {
         this.filterType(null);
     }
 
-    setFilterTypeSuggestionQuery() {
-        this.filterType(runningTasks.TypeSuggestionQuery);
-    }
-
-    setFilterTypeBulkInsert() {
-        this.filterType(runningTasks.TypeBulkInsert);
-    }
-
-    setFilterTypeIndexBulkOperation() {
-        this.filterType(runningTasks.TypeIndexBulkOperation);
-    }
-
-    setFilterTypeIndexDeleteOperation() {
-        this.filterType(runningTasks.TypeIndexDeleteOperation);
-    }
-
-    setFilterTypeImportDatabase() {
-        this.filterType(runningTasks.TypeImportDatabase);
-    }
-
-    setFilterTypeRestoreDatabase() {
-        this.filterType(runningTasks.TypeRestoreDatabase);
-    }
-
-    setFilterTypeRestoreFilesystem() {
-        this.filterType(runningTasks.TypeRestoreFilesystem);
-    }
-
-    setFilterTypeCompactDatabase() {
-        this.filterType(runningTasks.TypeCompactDatabase);
-    }
-
-    setFilterTypeCompactFilesystem() {
-        this.filterType(runningTasks.TypeCompactFilesystem);
-    }
-
-    setFilterTypeIoTest() {
-        this.filterType(runningTasks.TypeIoTest);
-    }
-
-    setFilterTypeNewIndexPrecomputedBatch() {
-        this.filterType(runningTasks.TypeNewIndexPrecomputedBatch);
+    setFilterType(value: string) {
+        this.filterType(value);
     }
 
     updateCurrentNowTime() {

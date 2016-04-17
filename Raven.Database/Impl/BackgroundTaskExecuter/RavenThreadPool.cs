@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -215,20 +216,16 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         {
             var ts = new ThreadsSummary
             {
-                ThreadsPrioritiesCounts = new Dictionary<ThreadPriority, int>(),
+                ThreadsPrioritiesCounts = new ConcurrentDictionary<ThreadPriority, int>(),
                 UnstoppableThreadsCount = _threads.Count(x => x.Unstoppable),
                 PartialMaxWait = Thread.VolatileRead(ref _partialMaxWait),
                 FreeThreadsAmount = _freedThreadsValue.Values.Count(isFree => isFree),
                 ConcurrentEventsCount = _concurrentEvents.Count,
-                ConcurrentWorkingThreadsAmount = _currentWorkingThreadsAmount
+                ConcurrentWorkingThreadsAmount = Thread.VolatileRead(ref _currentWorkingThreadsAmount)
             };
-            _threads.ForEach(x =>
+            Parallel.ForEach(_threads, threadData =>
             {
-                if (!ts.ThreadsPrioritiesCounts.Keys.Contains(x.Thread.Priority))
-                {
-                    ts.ThreadsPrioritiesCounts.Add(x.Thread.Priority, 0);
-                }
-                ts.ThreadsPrioritiesCounts[x.Thread.Priority] = ts.ThreadsPrioritiesCounts[x.Thread.Priority] + 1;
+                ts.ThreadsPrioritiesCounts.AddOrUpdate(threadData.Thread.Priority, 1, (tp, val) => val + 1);
             });
             return ts;
         }
@@ -695,7 +692,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
         public class ThreadsSummary
         {
-            public Dictionary<ThreadPriority, int> ThreadsPrioritiesCounts { get; set; }
+            public ConcurrentDictionary<ThreadPriority, int> ThreadsPrioritiesCounts { get; set; }
             public int UnstoppableThreadsCount { get; set; }
             public int PartialMaxWait { get; set; }
             public int FreeThreadsAmount { get; set; }

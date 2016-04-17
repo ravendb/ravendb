@@ -101,6 +101,12 @@ namespace Raven.Client
         void Evict<T>(T entity);
 
         /// <summary>
+        ///     Removes the specify documentId from the list of known missing ids.
+        /// </summary>
+        /// <param name="id">documentId to unregister</param>
+        void UnregisterMissing(string id);
+
+        /// <summary>
         ///     Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
         /// </summary>
         /// <param name="entity">Entity to version..</param>

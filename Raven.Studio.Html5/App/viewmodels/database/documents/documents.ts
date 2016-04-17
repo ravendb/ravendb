@@ -9,6 +9,7 @@ import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import selectColumns = require("viewmodels/common/selectColumns");
+import selectCsvColumnsDialog = require("viewmodels/common/selectCsvColumns");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 
 import collection = require("models/database/documents/collection");
@@ -25,15 +26,15 @@ import getEffectiveCustomFunctionsCommand = require("commands/database/globalCon
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 class documents extends viewModelBase {
 
     displayName = "documents";
     collections = ko.observableArray<collection>();
+    collectionsExceptAllDocs: KnockoutComputed<collection[]>;
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
-    allDocumentsCollection: collection;
+    allDocumentsCollection = ko.observable<collection>();
     collectionToSelectName: string;
     currentCollectionPagedItems = ko.observable<pagedList>();
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
@@ -45,7 +46,6 @@ class documents extends viewModelBase {
     currentCollection = ko.observable<collection>();
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
-    currentExportUrl: KnockoutComputed<string>;
     isSystemDocumentsCollection: KnockoutComputed<boolean>;
     isRegularCollection: KnockoutComputed<boolean>;
 
@@ -57,7 +57,6 @@ class documents extends viewModelBase {
 
     lastCollectionCountUpdate = ko.observable<string>();
     alerts = ko.observable<alert[]>([]);
-    token = ko.observable<singleAuthToken>();
     static gridSelector = "#documentsGrid";
     static isInitialized = ko.observable<boolean>(false);
     isInitialized = documents.isInitialized;
@@ -107,15 +106,6 @@ class documents extends viewModelBase {
             return !!collection && !collection.isAllDocuments && !collection.isSystemDocuments;
         });
 
-        this.updateAuthToken();
-        this.currentExportUrl = ko.computed(() => {
-            var collection: collection = this.selectedCollection();
-            if (this.isRegularCollection()) {
-                return appUrl.forExportCollectionCsv(collection, collection.ownerDatabase) + (!!this.token() ? "&singleUseAuthToken=" + this.token().Token : "");
-            }
-            return null;
-        });
-
         this.selectedDocumentsText = ko.computed(() => {
             if (!!this.selectedDocumentIndices()) {
                 var documentsText = "document";
@@ -125,6 +115,15 @@ class documents extends viewModelBase {
                 return documentsText;
             }
             return "";
+        });
+        
+        this.collectionsExceptAllDocs = ko.computed(() => {
+            var allDocs = this.allDocumentsCollection();
+            if (!allDocs) {
+                return [];
+    }
+            var collections = this.collections();
+            return collections.filter(x => x !== allDocs);
         });
     }
 
@@ -227,16 +226,17 @@ class documents extends viewModelBase {
         ];
     }
 
-    private updateAuthToken() {
-        new getSingleAuthTokenCommand(this.activeDatabase())
-            .execute()
-            .done(token => this.token(token));
+    exportCsv() {
+        this.exportCsvInternal();
     }
 
-    exportCsv() {
-        // schedule token update (to properly handle subseqent downloads)
-        setTimeout(() => this.updateAuthToken(), 50);
-        return true;
+    exportCsvInternal(customColumns?: string[]) {
+        if (this.isRegularCollection()) {
+            var collection: collection = this.selectedCollection();
+            var db = this.activeDatabase();
+            var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase, customColumns);
+            this.downloader.download(db, url);
+        }
     }
 
     private fetchAlerts() {
@@ -272,8 +272,8 @@ class documents extends viewModelBase {
 
     collectionsLoaded(collections: Array<collection>, db: database) {
         // Create the "All Documents" pseudo collection.
-        this.allDocumentsCollection = collection.createAllDocsCollection(db);
-        this.allDocumentsCollection.documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
+        this.allDocumentsCollection(collection.createAllDocsCollection(db));
+        this.allDocumentsCollection().documentCount = ko.computed(() => !!db.statistics() ? db.statistics().countOfDocuments() : 0);
 
         // Create the "System Documents" pseudo collection.
         var systemDocumentsCollection = collection.createSystemDocsCollection(db);
@@ -282,17 +282,17 @@ class documents extends viewModelBase {
             if (regularCollections.length === 0)
                 return 0;
             var sum = regularCollections.map((c: collection) => c.documentCount()).reduce((a, b) => a + b);
-            return this.allDocumentsCollection.documentCount() - sum;
+            return this.allDocumentsCollection().documentCount() - sum;
         });
 
         // All systems a-go. Load them into the UI and select the first one.
         var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
-        var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
+        var allCollections = [this.allDocumentsCollection()].concat(collectionsWithSysCollection);
         this.collections(allCollections);
 
         
 
-        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
+        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
         collectionToSelect.activate();
     }
 
@@ -315,8 +315,10 @@ class documents extends viewModelBase {
                 if (dto) {
                     this.currentColumnsParams().columns($.map(dto.Columns, c => new customColumnParams(c)));
                     this.currentColumnsParams().customMode(true);
+                    selected.bindings(this.currentColumnsParams().getBindings());
                 } else {
                     // use default values!
+                    selected.bindings(undefined);
                     this.currentColumnsParams().columns.removeAll();
                     this.currentColumnsParams().customMode(false);
                 }
@@ -337,7 +339,7 @@ class documents extends viewModelBase {
 
                     var selectedCollection: collection = this.selectedCollection();
                     if (collection.name === selectedCollection.name) {
-                        this.selectCollection(this.allDocumentsCollection);
+                        this.selectCollection(this.allDocumentsCollection());
                     }
                 } else {
                     this.selectNone();
@@ -360,7 +362,7 @@ class documents extends viewModelBase {
                         var docsGrid = this.getDocumentsGrid();
                         docsGrid.refreshCollectionData();
                     } else {
-                        var allDocumentsPagedList = this.allDocumentsCollection.getDocuments();
+                        var allDocumentsPagedList = this.allDocumentsCollection().getDocuments();
                         allDocumentsPagedList.invalidateCache();
                     }
                 } else {
@@ -392,7 +394,7 @@ class documents extends viewModelBase {
         //if the collection is deleted, go to the all documents collection
         var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
         if (!currentCollection || currentCollection.documentCount() === 0) {
-            this.selectCollection(this.allDocumentsCollection);
+            this.selectCollection(this.allDocumentsCollection());
         }
     }
 
@@ -428,10 +430,19 @@ class documents extends viewModelBase {
         }
     }
 
+    selectCsvColumns() {
+        var dialog = new selectCsvColumnsDialog(this.getDocumentsGrid().getColumnsNames());
+        app.showDialog(dialog);
+
+        dialog.onExit().done((cols: string[]) => {
+            this.exportCsvInternal(cols);
+        });
+    }
+
     selectColumns() {
         // Fetch column widths from virtual table
         var virtualTable = this.getDocumentsGrid();
-            var columnsNames = virtualTable.getColumnsNames();
+        var columnsNames = virtualTable.getColumnsNames();
         var vtColumns = virtualTable.columns();
         this.currentColumnsParams().columns().forEach((column: customColumnParams) => {
             for (var i = 0; i < vtColumns.length; i++) {
@@ -446,7 +457,9 @@ class documents extends viewModelBase {
         app.showDialog(selectColumnsViewModel);
         selectColumnsViewModel.onExit().done((cols) => {
             this.currentColumnsParams(cols);
+            this.currentCollection().bindings(this.currentColumnsParams().getBindings());
             var pagedList = this.currentCollection().getDocuments();
+            pagedList.invalidateCache();
             this.currentCollectionPagedItems(pagedList);
         });
     }

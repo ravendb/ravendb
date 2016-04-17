@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
@@ -131,7 +132,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                 disposerLock.ExitWriteLock();
             }
         }
-
+        private static object locker = new object();
         public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs, Action<string> putResourceMarker = null)
         {
             if(codecs == null)
@@ -142,18 +143,34 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
             try
             {
+                
                 new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
+                bool lockTaken = false;
+                //locking only the compaction didn't resolve the problem it seems this is the minimal amount of code that needs to be locked 
+                //to prevent errors from esent
+                try
+                {
+                    Monitor.TryEnter(locker, 30 * 1000, ref lockTaken);
+                    if (lockTaken == false)
+                    {
+                        throw new TimeoutException("Couldn't take FS lock for initializing a new FS (Esent bug requires us to lock the storage), we have waited for 30 seconds, aborting.");
+                    }
+                    Api.JetInit(ref instance);
 
-                Api.JetInit(ref instance);
+                    EnsureDatabaseIsCreatedAndAttachToDatabase();
+                }
+                finally
+                {
 
-                EnsureDatabaseIsCreatedAndAttachToDatabase();
-
+                    if (lockTaken)
+                        Monitor.Exit(locker);
+                }
                 SetIdFromDb();
 
-                tableColumnsCache.InitColumDictionaries(instance, database);
+                    tableColumnsCache.InitColumDictionaries(instance, database);
 
-                if (putResourceMarker != null)
-                    putResourceMarker(path);
+                    if (putResourceMarker != null)
+                        putResourceMarker(path);
             }
             catch (Exception e)
             {
@@ -310,7 +327,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
                         return false;
                 }
                 if (e.Error != JET_err.FileNotFound)
+                {
                     throw;
+                }
             }
 
             using (var session = new Session(instance))
@@ -490,13 +509,15 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
-        public void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument fileSystemDocument)
+        public Task StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, 
+            FileSystemDocument fileSystemDocument, ResourceBackupState state, CancellationToken token)
         {
             if (new InstanceParameters(instance).Recovery == false)
                 throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
-            var backupOperation = new BackupOperation(filesystem, systemDatabase.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, fileSystemDocument);
-            Task.Factory.StartNew(backupOperation.Execute);
+            var backupOperation = new BackupOperation(filesystem, systemDatabase.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, 
+                fileSystemDocument, state, token);
+            return Task.Factory.StartNew(backupOperation.Execute);
         }
 
         public void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output)

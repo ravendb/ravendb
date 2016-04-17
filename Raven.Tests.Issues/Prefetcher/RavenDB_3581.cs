@@ -418,15 +418,21 @@ namespace Raven.Tests.Issues.Prefetcher
             Assert.Equal(1, documents.Count);
             Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
 
-            prefetcher.PrefetchingBehavior.CleanupDocuments(new Etag(UuidType.Documents, 0, 512));
+            var etag = Etag.Empty;
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                etag = accessor.Documents.DocumentByKey("keys/510").Etag;
+            });
 
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
             Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
         }
 
         [Fact]
         public void CleanupDocuments2()
         {
-            var prefetcher = CreatePrefetcher();
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.DisableDocumentPreFetching = true);
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1024);
 
@@ -435,13 +441,24 @@ namespace Raven.Tests.Issues.Prefetcher
             Assert.Equal(1, documents.Count);
             Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
 
-            prefetcher.PrefetchingBehavior.CleanupDocuments(new Etag(UuidType.Documents, 0, 256));
+            var etag = Etag.Empty;
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                etag = accessor.Documents.DocumentByKey("keys/310").Etag;
+            });
 
-            Assert.Equal(256, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(200, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
 
-            prefetcher.PrefetchingBehavior.CleanupDocuments(new Etag(UuidType.Documents, 0, 384));
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                etag = accessor.Documents.DocumentByKey("keys/510").Etag;
+            });
 
-            Assert.Equal(128, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
         }
 
         [Fact]
@@ -507,14 +524,18 @@ namespace Raven.Tests.Issues.Prefetcher
             var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(prefetcher.Configuration.InitialNumberOfItemsToProcessInSingleBatch, documents.Count);
 
+            //let the future batches complete
+            Thread.Sleep(1000);
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 768;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(768, documents.Count);
 
+            Thread.Sleep(1000);
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(1024, documents.Count);
 
+            Thread.Sleep(1000);
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024 * 64;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(2048, documents.Count);

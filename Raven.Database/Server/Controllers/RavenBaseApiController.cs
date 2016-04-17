@@ -293,10 +293,15 @@ namespace Raven.Database.Server.Controllers
             return true;
         }
 
+        protected static string[] GetQueryStringValues(HttpRequestMessage req, string key)
+        {
+            var items = req.GetQueryNameValuePairs().Where(pair => pair.Key == key);
+            return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null).ToArray();
+        }
+
         protected string[] GetQueryStringValues(string key)
         {
-            var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
-            return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
+            return GetQueryStringValues(InnerRequest, key);
         }
 
         protected Etag GetEtagFromQueryString()
@@ -764,7 +769,7 @@ namespace Raven.Database.Server.Controllers
 
         protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
         {
-            AddHeader(Constants.RavenServerBuild, DocumentDatabase.BuildVersion, msg);
+            AddHeader(Constants.RavenServerBuild, DocumentDatabase.BuildVersion.ToInvariantString(), msg);
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 

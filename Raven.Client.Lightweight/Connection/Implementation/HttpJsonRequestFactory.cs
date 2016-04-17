@@ -32,6 +32,8 @@ namespace Raven.Client.Connection
         /// </summary>
         public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
 
+        public event EventHandler OnDispose = delegate { }; 
+
         /// <summary>
         /// Occurs when a json request is completed
         /// </summary>
@@ -162,7 +164,7 @@ namespace Raven.Client.Connection
 #else
                 return Volatile.Read(ref numberOfCacheResets);
 #endif
-        }
+            }
         }
 
         /// <summary>
@@ -237,7 +239,7 @@ namespace Raven.Client.Connection
 #else
                 aggressiveCacheDuration.Value = value;
 #endif
-        }
+            }
         }
 
 #if DNXCORE50
@@ -256,7 +258,7 @@ namespace Raven.Client.Connection
 #else
                 return requestTimeout.Value;
 #endif
-        }
+            }
             set
             {
 #if !DNXCORE50
@@ -280,7 +282,7 @@ namespace Raven.Client.Connection
             {
 #if !DNXCORE50
                 var value = CallContext.LogicalGetData("Raven/Client/DisableHttpCaching");
-                if (value == null) 
+                if (value == null)
                     return false;
 
                 return (bool)value;
@@ -295,7 +297,7 @@ namespace Raven.Client.Connection
 #else
                 disableHttpCaching.Value = value;
 #endif
-        }
+            }
         }
 
         /// <summary>
@@ -415,6 +417,7 @@ namespace Raven.Client.Connection
             disposed = true;
             cache.Dispose();
             httpClientCache.Dispose();
+            OnDispose(this, EventArgs.Empty);
         }
 
         internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

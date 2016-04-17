@@ -375,13 +375,14 @@ namespace Raven.Client.Document.Async
             {
                 configure(configuration);
             }
+            var queryOperation = new QueryOperation(this, "Load/StartingWith", null, null, false, TimeSpan.Zero, null, null, false);
 
             return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
                                                          pagingInformation: pagingInformation, transformer: transformer,
                                                          transformerParameters: configuration.TransformerParameters,
                                                          skipAfter: skipAfter, token: token)
                                         .ContinueWith(
-                                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList(), token);
+                                            task => (IEnumerable<TResult>) task.Result.Select(x=> queryOperation.Deserialize<TResult>(x.ToJson())).ToList(), token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
@@ -419,20 +420,20 @@ namespace Raven.Client.Document.Async
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
-                                                                     int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, CancellationToken token = default (CancellationToken))
+                                                                     int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
         {
-            return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, token: token);
+            return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
-                                   int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
+                                   int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
         {
-            return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, token: token);
+            return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
-        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken))
+        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
         {
-            var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, token: token).ConfigureAwait(false);
+            var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters, token: token).ConfigureAwait(false);
             return new DocsYieldStream<T>(this, enumerator, token);
         }
 
@@ -524,7 +525,10 @@ namespace Raven.Client.Document.Async
                 var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
                 Current = new StreamResult<T>
                 {
-                    Document = (T)parent.ConvertToEntity(typeof(T),document.Key, document.DataAsJson, document.Metadata),
+                    Document = (T)parent.ConvertToEntity(typeof(T),
+                        document.Key, 
+                        document.DataAsJson, 
+                        document.Metadata, true),
                     Etag = document.Etag,
                     Key = document.Key,
                     Metadata = document.Metadata

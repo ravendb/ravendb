@@ -29,5 +29,13 @@ namespace Raven.Client.Connection
         {
             return convention.CreateSerializer().Deserialize(new RavenJTokenReader(self), type);
         }
+
+        /// <summary>
+        /// Deserializes the specified instance <param name="self"/> to an instance of <typeparam name="T"/> using the specified <param name="convention"/>
+        /// </summary>
+        public static T Deserialize<T>(this RavenJArray self, DocumentConvention convention)
+        {
+            return (T)convention.CreateSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
+        }
     }
 }

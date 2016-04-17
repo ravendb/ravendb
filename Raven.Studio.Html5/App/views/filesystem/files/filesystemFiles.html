@@ -43,7 +43,9 @@
                 </div>
             </div>
             <span><br/></span>
-            <div id="filesTree" data-bind="tree: { selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories }" ></div>
+            <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: '#uploadQueueContainer', bottomMargin: 5}">
+                <div id="filesTree" data-bind="tree: { selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories }"></div>
+            </div>
         </div>
         <div class="col-md-10">
             <div class="btn-toolbar" role="toolbar">
@@ -72,7 +74,7 @@
             </div>
 
             <div class="files-select" data-bind="visible: hasAnyFilesSelected() && !hasAllFilesSelected() && isAnyFilesAutoSelected()">
-                <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: selectedFilesIndices().length"></strong> <span data-bind="text: selectedFilesText"></span>.
+                <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: selectedFilesIndices().length.toLocaleString()"></strong> <span data-bind="text: selectedFilesText"></span>.
                 <span class="select-link" data-bind="click: selectAll.bind($root)">
                     Select all <strong data-bind="text: filesCount"></strong> files in <span data-bind="text: selectedFolderName"></span>
                 </span>

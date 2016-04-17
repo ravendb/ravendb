@@ -21,6 +21,8 @@
     <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="App\commands\auth\verifyPrincipalCommand.ts" />
+    <TypeScriptCompile Include="App\commands\auth\getSupportCoverageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\backupCounterStorageCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersByGroupCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\deleteCountersCommand.ts" />
@@ -33,13 +35,20 @@
     <TypeScriptCompile Include="App\commands\database\cluster\initializeNewClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\documents\getDocumentsPreviewCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\index\startReducingCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\index\stopReducingCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\studio\checksufficientdiskspaceCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\subscriptions\getSubscriptionCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\fsCheckSufficientDiskSpaceCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationsByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\resources\getResourceDrives.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
-    <TypeScriptCompile Include="App\commands\auth\licenseCheckConnectivityCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getStatusDebugTasksSummaryCommand.ts" />
     <TypeScriptCompile Include="App\commands\getStudioConfig.ts" />
     <TypeScriptCompile Include="App\commands\database\index\saveIndexPriorityCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\deleteTypesCommand.ts" />
@@ -78,17 +87,24 @@
     <TypeScriptCompile Include="App\commands\saveTransformerLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\autoRefreshBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
-    <TypeScriptCompile Include="App\common\queryUtil.ts" />
+    <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
+    <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
+    <TypeScriptCompile Include="App\models\database\debug\runningTask.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
     <TypeScriptCompile Include="App\models\database\subscription\subscription.ts" />
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
+    <TypeScriptCompile Include="App\common\bindingHelpers\enableResizeBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\queryUtil.ts" />
+    <TypeScriptCompile Include="App\common\downloader.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
     <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
@@ -104,6 +120,7 @@
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
+    <TypeScriptCompile Include="App\viewmodels\common\selectCsvColumns.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseStudioConfig.ts" />
@@ -134,17 +151,27 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\tasks\subscriptionsTask.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\search\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\status\activityItems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\status\sourceSynchronizationInformation.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\topology.ts" />
-    <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldRangeFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
     <TypeScriptCompile Include="App\common\changesApi.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
     <TypeScriptCompile Include="App\common\execJs.ts" />
@@ -157,6 +184,7 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
+    <Content Include="App\commands\database\replication\resolveAllConflictsCommand.ts" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <Content Include="App\views\common\deleteDocuments.html" />
@@ -165,6 +193,7 @@
     <Content Include="App\views\common\latestBuildReminder.html" />
     <Content Include="App\views\common\licensingStatus.html" />
     <Content Include="App\views\common\recentErrors.html" />
+    <Content Include="App\views\common\selectCsvColumns.html" />
     <Content Include="App\views\common\selectColumns.html" />
     <Content Include="App\views\common\showDataDialog.html" />
     <Content Include="App\views\common\upgrade.html" />
@@ -668,9 +697,6 @@
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
-    <Content Include="Content\app.css.map">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
     <Content Include="readme-optimized-build.md" />
     <Content Include="Content\bootstrap.less" />
     <Content Include="Content\variables.less" />
@@ -679,15 +705,12 @@
     <Content Include="Scripts\jquery-ui-1.10.4.custom.min.js" />
     <Content Include="Scripts\jquery.dynatree.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
-    <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
     <TypeScriptCompile Include="App\commands\auth\getApiKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\getLicenseStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\getSingleAuthTokenCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\getWindowsAuthCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\saveApiKeysCommand.ts" />
-    <TypeScriptCompile Include="App\commands\auth\saveWindowsAuthCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\licenseCheckConnectivityCommand.ts" />
-    <TypeScriptCompile Include="App\commands\auth\saveApiKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\auth\saveWindowsAuthCommand.ts" />
     <TypeScriptCompile Include="App\commands\commandBase.ts" />
     <TypeScriptCompile Include="App\commands\database\cluster\extendRaftClusterCommand.ts" />
@@ -719,7 +742,6 @@
     <TypeScriptCompile Include="App\commands\database\debug\getStatusDebugQueriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getStatusDebugRoutesCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getStatusDebugSqlReplicationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\debug\getStatusDebugTasksCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getStatusStorageBreakdownCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getStatusStorageOnDiskCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getUserInfoCommand.ts" />
@@ -734,8 +756,6 @@
     <TypeScriptCompile Include="App\commands\database\documents\deleteDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\executeBulkDocsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\documents\getAllDocumentsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\documents\getCollectionInfoCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCountCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCustomColumnsCommand.ts" />
@@ -768,7 +788,6 @@
     <TypeScriptCompile Include="App\commands\database\globalConfig\saveGlobalSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\deleteIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\disableIndexingCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
     <TypeScriptCompile Include="App\commands\database\index\formatIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\getCSharpIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\getIndexDefinitionCommand.ts" />
@@ -783,9 +802,6 @@
     <TypeScriptCompile Include="App\commands\database\index\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\saveIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\saveIndexLockModeCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\index\startIndexingCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\index\stopIndexingCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\index\saveIndexPriorityCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\startIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\stopIndexingCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\tryRecoverCorruptedIndexes.ts" />
@@ -876,9 +892,9 @@
     <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\licensing\ActivateLicenseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\activateHotSpareCommand.ts" />
     <TypeScriptCompile Include="App\commands\licensing\GetHotSpareInformation.ts" />
-    <TypeScriptCompile Include="App\commands\licensing\TestLicenseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\licensing\testHotSpareCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\adminJsScriptCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\backupDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\maintenance\monitorCompactCommand.ts" />
@@ -909,7 +925,6 @@
     <TypeScriptCompile Include="App\commands\resources\getDatabaseStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getServerBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\saveDatabaseSettingsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\saveTransformerLockModeCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesCommand.ts" />
     <TypeScriptCompile Include="App\commands\timeSeries\getTimeSeriesStatsCommand.ts" />
     <TypeScriptCompile Include="App\common\autoCompleterSupport.ts" />
@@ -953,11 +968,6 @@
     <TypeScriptCompile Include="App\models\database\debug\alert.ts" />
     <TypeScriptCompile Include="App\models\database\debug\performanceTestRequest.ts" />
     <TypeScriptCompile Include="App\models\database\debug\performanceTestResultWrapped.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\performanceTestRequest.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\performanceTestResultWrapped.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
-    <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
     <TypeScriptCompile Include="App\models\database\documents\collection.ts" />
     <TypeScriptCompile Include="App\models\database\documents\collectionInfo.ts" />
     <TypeScriptCompile Include="App\models\database\documents\customColumnParams.ts" />
@@ -1011,7 +1021,6 @@
     <TypeScriptCompile Include="App\models\filesystem\filesystem.ts" />
     <TypeScriptCompile Include="App\models\filesystem\filesystemCollection.ts" />
     <TypeScriptCompile Include="App\models\filesystem\filesystemDto.ts" />
-    <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
     <TypeScriptCompile Include="App\models\filesystem\folder.ts" />
     <TypeScriptCompile Include="App\models\filesystem\searchResults.ts" />
     <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
@@ -1084,21 +1093,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugExplainReplication.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugPersistAutoIndex.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebug.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugChanges.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugConfig.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugCurrentlyIndexing.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugDataSubscriptions.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugDocrefs.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugExplainReplication.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugIdentities.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugIndexFields.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugMetrics.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugPersistAutoIndex.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugQueries.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugRoutes.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugSqlReplication.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugTasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugWebSocket.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexBatchSize.ts" />
@@ -1154,10 +1149,8 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldRangeFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\search\search.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\status\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\resolveConflict.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\synchronization.ts" />
@@ -1174,7 +1167,6 @@
     <TypeScriptCompile Include="App\viewmodels\manage\backup.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\cluster.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\compact.ts" />
-    <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\editNodeConnectionInfoDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\globalConfig\globalConfig.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\globalConfig\globalConfigCustomFunctions.ts" />
@@ -1194,13 +1186,11 @@
     <TypeScriptCompile Include="App\viewmodels\manage\trafficWatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\watchTrafficConfigDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\windowsAuth.ts" />
-    <TypeScriptCompile Include="App\viewmodels\resources\createCounterStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createEncryption.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createEncryptionConfirmation.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createFilesystem.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createResource.ts" />
-    <TypeScriptCompile Include="App\viewmodels\resources\createResourceBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\databaseSettingsDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\deleteResourceConfirm.ts" />
@@ -1267,6 +1257,10 @@
     <Content Include="Content\bootstrap.css.map">
       <DependentUpon>bootstrap.css</DependentUpon>
     </Content>
+    <None Include="compilerconfig.json" />
+    <None Include="compilerconfig.json.defaults">
+      <DependentUpon>compilerconfig.json</DependentUpon>
+    </None>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>
@@ -1355,6 +1349,7 @@
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
     <TypeScriptSourceMap>True</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
@@ -1369,6 +1364,17 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <TypeScriptJSXEmit>None</TypeScriptJSXEmit>
+    <TypeScriptCompileOnSaveEnabled>True</TypeScriptCompileOnSaveEnabled>
+    <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
+    <TypeScriptOutFile />
+    <TypeScriptOutDir />
+    <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
+    <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
+    <TypeScriptMapRoot />
+    <TypeScriptSourceRoot />
+  </PropertyGroup>
   <Import Project="$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(VSToolsPath)\TypeScript\Microsoft.TypeScript.targets')" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

@@ -8,7 +8,7 @@
     <div class="modal-body" data-bind="with: collection">
         <span>You're deleting </span>
         <strong data-bind="text: name"></strong>
-        <strong data-bind="visible: documentCount() > 1, text: '(' + documentCount() + ' documents)'"></strong>
+        <strong data-bind="visible: documentCount() > 1, text: '(' + documentCount().toLocaleString() + ' documents)'"></strong>
         <strong data-bind="visible: documentCount() == 1, text: '(' + documentCount() + ' document)'"></strong>
         <div 
              data-bind="visible: $root.isAllDocuments">

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Embedded;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -16,6 +17,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Storage.Esent;
 using Xunit.Extensions;
@@ -66,31 +68,6 @@ namespace Raven.Tests.Storage
             var id = doc["@metadata"].Value<string>("@id");
             Assert.False(string.IsNullOrWhiteSpace(id));
             Assert.DoesNotThrow(() => new Guid(id));
-        }
-
-        [Fact]
-        public void CanAddAndRemoveMultipleTasks_InSingleTx()
-        {
-            db.TransactionalStorage.Batch(actions =>
-            {
-                for (int i = 0; i < 3; i++)
-                {
-                    actions.Tasks.AddTask(new RemoveFromIndexTask
-                    {
-                        Index = 100,
-                        Keys = { "tasks/" + i },
-                    }, SystemTime.UtcNow);
-                }
-            });
-
-            db.TransactionalStorage.Batch(actions => actions.Tasks.GetMergedTask<RemoveFromIndexTask>());
-
-
-            db.TransactionalStorage.Batch(actions =>
-            {
-                var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
-                Assert.False(isIndexStale);
-            });
         }
 
         [Fact]

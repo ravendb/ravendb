@@ -1,4 +1,4 @@
-<div class="documents-page no-outline" tabindex="0">
+<div id="documents-pane" class="documents-page no-outline" tabindex="0" data-bind="enableResize: true">
     <!-- ko if: alerts().length > 0 -->
         <!-- ko foreach: alerts -->
     <div class="alert alert-dismissable" role="alert" data-bind="css: { 'alert-warning': alertLevel === 'Warning', 'alert-danger': alertLevel === 'Error' }">
@@ -8,13 +8,24 @@
         <!-- /ko -->
     <!-- /ko -->
 
-    <div id="documents-page-container" class="col-md-2" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0; position: relative">
-        <ul class="nav nav-pills nav-stacked document-collections has-show-all-items" data-bind="foreach: { data: collections, afterAdd: showCollectionElement, beforeRemove: hideCollectionElement }">
+    <div id="documents-page-container" class="col-md-2 col-resizable-target">
+        
+        <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
+            <li class="all-docs-collection" data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
+                <a href="javascript:void(0)">
+                    <div class="collection-name">
+                        <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
+                        <span class="collection-text pull-left collection-name-part" data-bind="text: prettyLabel(name), attr: {title: name}"></span>
+                    </div>
+                </a>
+            </li>
+        </ul>
+        <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collectionsExceptAllDocs, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="padding-left: 0;">
             <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                 <a href="javascript:void(0)">
                     <div class="collection-name">
                         <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                        <span class="collection-text pull-left collection-name-part" data-bind=" text: name, attr: {title: name}"></span>
+                        <span class="collection-text pull-left collection-name-part" data-bind=" text: prettyLabel(name), attr: {title: name}"></span>
                         <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
                     </div>
                 </a>
@@ -22,7 +33,7 @@
         </ul>
         <div class="collection-resize"></div>
     </div>
-    <div class="col-md-10" id="documents-page-right-container">
+    <div class="col-md-10 col-resizable-affected" id="documents-page-right-container">
         <div class="btn-toolbar" role="toolbar">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group">
@@ -46,9 +57,16 @@
                 </button>
             </div>
             <div class="btn-group">
-                <a href="#" target="_blank" data-bind="attr: { href: currentExportUrl }, visible: isRegularCollection, click: exportCsv" class="btn btn-default" title="Export CSV" download>
+                <button data-bind="visible: isRegularCollection, click: exportCsv" class="btn btn-default" title="Export CSV">
                     <i class="fa fa-file-excel-o"></i>
-                </a>
+                </button>
+                <button type="button" data-bind="visible: isRegularCollection" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" data-bind="click: selectCsvColumns">Choose columns and export CSV...</a></li>
+                </ul>
             </div>
             <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
                 <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc, enable: selectedDocumentIndices().length == 1" title="Edit selected document (F2)">
@@ -72,17 +90,18 @@
                 </button>
             </div>
             <div class="btn-group">
-                <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled"><i class="fa fa-spinner fa-spin fa-2x"></i></div>
+                <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled"><i class="fa fa-spinner fa-spin fa-2x"></i>
             </div>
         </div>
+        </div>
         <div class="documents-select" data-bind="with: selectedCollection, visible: !isSystemDocumentsCollection() && hasAnyDocumentsSelected() && !hasAllDocumentsSelected() && isAnyDocumentsAutoSelected()">
-            <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> <span data-bind="text: $root.selectedDocumentsText"></span>.
+            <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: $root.selectedDocumentIndices().length.toLocaleString()"></strong> <span data-bind="text: $root.selectedDocumentsText"></span>.
             <span class="select-link" data-bind="click: $root.selectAll.bind($root)">
-                Select all <strong data-bind="text: documentCount"></strong> documents in <span data-bind="text: name"></span>
+                Select all <strong data-bind="text: documentCount().toLocaleString()"></strong> documents in <span data-bind="text: name"></span>
             </span>
         </div>
         <div class="documents-select" data-bind="with: selectedCollection, visible: !isSystemDocumentsCollection() && hasAllDocumentsSelected() && isAllDocumentsAutoSelected()">
-            You have selected <strong data-bind="text: $root.selectedDocumentIndices().length"></strong> <span data-bind="text: $root.selectedDocumentsText"></span> in
+            You have selected <strong data-bind="text: $root.selectedDocumentIndices().length.toLocaleString()"></strong> <span data-bind="text: $root.selectedDocumentsText"></span> in
             <span data-bind="text: name"></span>.
             <span class="select-link" data-bind="click: $root.selectNone.bind($root)">
                 Clear selection

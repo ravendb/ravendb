@@ -225,7 +225,7 @@ namespace Raven.Client.Document
         public int MaxLengthOfQueryUsingGetUrl { get; set; }
 
         /// <summary>
-        /// Whatever to allow queries on document id.
+        /// Whether to allow queries on document id.
         /// By default, queries on id are disabled, because it is far more efficient
         /// to do a Load() than a Query() if you already know the id.
         /// This is NOT recommended and provided for backward compatibility purposes only.
@@ -440,7 +440,7 @@ namespace Raven.Client.Document
         public bool UseParallelMultiGet { get; set; }
 
         /// <summary>
-        /// Whatever or not RavenDB should in the aggressive cache mode use Changes API to track
+        /// Whether or not RavenDB should in the aggressive cache mode use Changes API to track
         /// changes and rebuild the cache. This will make that outdated data will be revalidated
         /// to make the cache more updated, however it is still possible to get a state result because of the time
         /// needed to receive the notification and forcing to check for cached data.
@@ -448,7 +448,7 @@ namespace Raven.Client.Document
         public bool ShouldAggressiveCacheTrackChanges { get; set; }
 
         /// <summary>
-        /// Whatever or not RavenDB should in the aggressive cache mode should force the aggressive cache
+        /// Whether or not RavenDB should in the aggressive cache mode should force the aggressive cache
         /// to check with the server after we called SaveChanges() on a non empty data set.
         /// This will make any outdated data revalidated, and will work nicely as long as you have just a 
         /// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
@@ -647,7 +647,7 @@ namespace Raven.Client.Document
         public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
 
         ///<summary>
-        /// Whatever or not RavenDB will automatically enlist in distributed transactions
+        /// Whether or not RavenDB will automatically enlist in distributed transactions
         ///</summary>
         public bool EnlistInDistributedTransactions { get; set; }
 
@@ -686,7 +686,7 @@ namespace Raven.Client.Document
         public IndexAndTransformerReplicationMode IndexAndTransformerReplicationMode { get; set; }
 
         /// <summary>
-        /// Controls whatever properties on the object that weren't de-serialized to object properties 
+        /// Controls whether properties on the object that weren't de-serialized to object properties 
         /// will be preserved when saving the document again. If false, those properties will be removed
         /// when the document will be saved.
         /// </summary>
@@ -891,6 +891,8 @@ namespace Raven.Client.Document
         /// <summary>
         ///  After updating a documents, will only accept queries which already indexed the updated value.
         /// </summary>
+        [Obsolete("Beware of AlwaysWaitForNonStaleResultsAsOfLastWrite overuse. " +
+                  "See: http://ravendb.net/docs/article-page/3.5/csharp/client-api/configuration/conventions/querying#defaultqueryingconsistency")]
         AlwaysWaitForNonStaleResultsAsOfLastWrite,
         /// <summary>
         /// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead

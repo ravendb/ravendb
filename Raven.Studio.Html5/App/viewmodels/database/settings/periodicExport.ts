@@ -27,6 +27,7 @@ class periodicExport extends viewModelBase {
     }
 
     attached() {
+        super.attached();
         var content = "Could not decrypt the access settings, if you are running on IIS, make sure that load user profile is set to true. " +
             "Alternatively this can happen when the server was started using different account than when the settings were created.<br />" +
             "Reenter your settings and click save.";

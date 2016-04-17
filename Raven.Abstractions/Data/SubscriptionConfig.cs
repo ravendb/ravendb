@@ -13,6 +13,7 @@ namespace Raven.Abstractions.Data
         public SubscriptionCriteria Criteria { get; set; }
         public Etag AckEtag { get; set; }
         public DateTime TimeOfSendingLastBatch { get; set; }
+        public DateTime TimeOfLastAcknowledgment { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
     }
 }

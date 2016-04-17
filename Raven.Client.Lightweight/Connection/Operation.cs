@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -32,6 +32,7 @@ namespace Raven.Client.Connection
         {
         }
 
+        public Action<BulkOperationProgress> OnProgressChanged;
 
         public virtual async Task<RavenJToken> WaitForCompletionAsync()
         {
@@ -46,14 +47,38 @@ namespace Raven.Client.Connection
                 if (status == null)
                     return null;
 
+                var onProgress = OnProgressChanged;
+
+                if (onProgress != null)
+                {
+                    var progressToken = status.Value<RavenJToken>("OperationProgress");
+
+                    if (progressToken != null && progressToken.Equals(RavenJValue.Null) == false)
+                    {
+                        onProgress(new BulkOperationProgress
+                        {
+                            TotalEntries = progressToken.Value<int>("TotalEntries"),
+                            ProcessedEntries = progressToken.Value<int>("ProcessedEntries")
+                        });
+                    }
+                }
+
                 if (status.Value<bool>("Completed"))
                 {
                     var faulted = status.Value<bool>("Faulted");
                     if (faulted)
                     {
-                        var error = status.Value<RavenJObject>("State");
+                        var error = status.Value<RavenJToken>("State");
                         var errorMessage = error.Value<string>("Error");
                         throw new InvalidOperationException("Operation failed: " + errorMessage);
+                    }
+
+                    var canceled = status.Value<bool>("Canceled");
+                    if (canceled)
+                    {
+                        var error = status.Value<RavenJToken>("State");
+                        var errorMessage = error.Value<string>("Error");
+                        throw new InvalidOperationException("Operation canceled: " + errorMessage);
                     }
 
                     return status.Value<RavenJToken>("State");

@@ -74,7 +74,6 @@ namespace Raven.Database.Server.Controllers
             var sp = Stopwatch.StartNew();
 
             var status = new BulkInsertStatus();
-            status.IsTimedOut = false;
 
             var documents = 0;
             var mre = new ManualResetEventSlim(false);
@@ -92,12 +91,16 @@ namespace Raven.Database.Server.Controllers
                 {
                     CurrentOperationContext.User.Value = user;
                     CurrentOperationContext.Headers.Value = headers;
-                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, options, batchSize => documents += batchSize), operationId, tre.Token, timeout);
+                    currentDatabase.Documents.BulkInsert(options, YieldBatches(timeout, inputStream, mre, options, batchSize =>
+                    {
+                        documents += batchSize;
+                        status.MarkProgress($"Imported {documents} documents");
+                    }), operationId, tre.Token, timeout);
+                    status.MarkCompleted($"Imported {documents} documents");
                 }
                 catch (InvalidDataException e)
                 {
-                    status.Faulted = true;
-                    status.State = RavenJObject.FromObject(new { Error = "Could not understand json.", InnerError = e.SimplifyException().Message });
+                    status.MarkFaulted("Could not understand json:" + e.SimplifyException().Message);
                     status.IsSerializationError = true;
                     error = e;
                 }
@@ -105,27 +108,23 @@ namespace Raven.Database.Server.Controllers
                 {
                     // happens on timeout
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
-                    status.IsTimedOut = true;
-                    status.Faulted = true;
+                    status.MarkCanceled("Operation cancelled, likely because of a batch timeout");
                 }
                 catch (OperationVetoedException e)
                 {
-                    status.Faulted = true;
+                    status.MarkFaulted();
                     error = e;
                 }
                 catch (Exception e)
                 {
-                    status.Faulted = true;
-                    status.State = RavenJObject.FromObject(new { Error = e.SimplifyException().Message });
+                    status.MarkFaulted(e.SimplifyException().Message);
                     error = e;
                 }
                 finally
                 {
-                    status.Completed = true;
                     status.Documents = documents;
                     CurrentOperationContext.User.Value = null;
                     CurrentOperationContext.Headers.Value = null;
-
                     timeout.Dispose();
                 }
             }, tre.Token);
@@ -135,7 +134,7 @@ namespace Raven.Database.Server.Controllers
                                                  {
                                                      StartTime = SystemTime.UtcNow,
                                                      TaskType = TaskActions.PendingTaskType.BulkInsert,
-                                                     Payload = operationId.ToString()
+                                                     Description = operationId.ToString()
                                                  }, out id, tre);
 
             await task.ConfigureAwait(false);
@@ -149,7 +148,7 @@ namespace Raven.Database.Server.Controllers
                     Error = error.ToString()
                 }, httpStatusCode);
             }
-            if (status.IsTimedOut)
+            if (status.Canceled)
                 throw new TimeoutException("Bulk insert operation did not receive new data longer than configured threshold");
 
             sp.Stop();
@@ -325,16 +324,9 @@ namespace Raven.Database.Server.Controllers
             };
         }
 
-        public class BulkInsertStatus : IOperationState
+        public class BulkInsertStatus : OperationStateBase
         {
             public int Documents { get; set; }
-            public bool Completed { get; set; }
-
-            public bool Faulted { get; set; }
-
-            public RavenJToken State { get; set; } 
-
-            public bool IsTimedOut { get; set; }
 
             public bool IsSerializationError { get; set; }
         }

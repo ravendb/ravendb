@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-
+using Raven.Abstractions.Data;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
@@ -24,7 +24,7 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             var status = FileSystem.Tasks.GetTaskState(id);
-            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+            return GetOperationStatusMessage(status);
         }
 
         [HttpGet]
@@ -41,7 +41,7 @@ namespace Raven.Database.FileSystem.Controllers
                 }, HttpStatusCode.BadRequest);
             }
             var status = FileSystem.Tasks.KillTask(id);
-            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+            return GetOperationStatusMessage(status);
         }
 
         [HttpGet]
@@ -49,6 +49,24 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage CurrentOperations()
         {
             return GetMessageWithObject(FileSystem.Tasks.GetAll());
+        }
+
+        private HttpResponseMessage GetOperationStatusMessage(IOperationState status)
+        {
+            if (status == null)
+            {
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+            }
+
+
+            if (status.State != null)
+            {
+                lock (status.State)
+                {
+                    return GetMessageWithObject(status);
+                }
+            }
+            return GetMessageWithObject(status);
         }
     }
 };

@@ -1,50 +1,233 @@
-<div class="messageBox licensing-status" tabindex="-1">
+<div class="messageBox licensing-status" tabindex="-1" id="licenseSupportModal">
     <div class="modal-header">
         <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
             <i class="fa fa-times"></i>
         </button>
-        <h4 class="modal-title">Licensing Status</h4>
+        <h4 class="modal-title">Licensing &amp; Support status</h4>
     </div>
     <div class="modal-body">
-        <label data-bind="text: licenseStatus.Message, css: { 'license-error': licenseStatus.Error }"></label>
-        <!-- ko with: licenseStatus.Details -->
-        <div class="panel-group" id="detailsAccordion">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <a data-toggle="collapse" data-parent="#detailsAccordion" href="#collapseDetails">
-                        <h3 class="panel-title">
-                            Details
-                        </h3>
-                    </a>
-                </div>
-                <div id="collapseDetails" class="panel-collapse collapse">
-                    <div class="panel-body">
-                        <div class="form-group">
-                            <div class="col-lg-12">
-                                <p class="form-control-static" data-bind="text: $data"></p>
-                            </div>
+
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="text-center">
+                    <div data-bind="visible: isDevelopmentOnly">
+                        <div class="roundborder dev-only">
+                            <i class="fa fa-wrench"></i>
                         </div>
+                        <h3>LICENSE</h3>
+                        <h4>Development only</h4>
                     </div>
+                    <div data-bind="visible: isNonExpiredCommercial">
+                        <div class="roundborder commercial">
+                            <i class="fa fa-file-text-o"></i>
+                        </div>
+                        <h3>LICENSE</h3>
+                        <h4 data-bind="text: licenseStatusText"></h4>
+                    </div>
+                    <div data-bind="visible: isExpired">
+                        <div class="roundborder expired">
+                            <i class="fa fa-hourglass-half"></i>
+                        </div>
+                        <h3>LICENSE</h3>
+                        <h4 data-bind="text: licenseStatusText"></h4>
+                    </div>
+                    <div data-bind="visible: licenseExpiresAt" class="expire-date">EXPIRES: <span data-bind="text: licenseExpiresAt"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="text-center">
+                    <div data-bind="visible: supportStatus === 'NoSupport'">
+                        <div class="roundborder no-support">
+                            <i class="fa fa-times"></i>
+                        </div>
+                        <h3>SUPPORT</h3>
+                        <h4>No support</h4>
+                    </div>
+                    <div data-bind="visible: supportStatus === 'ProductionSupport'">
+                        <div class="roundborder production-support">
+                            <i class="fa fa-life-ring"></i>
+                        </div>
+                        <h3>SUPPORT</h3>
+                        <h4>Production support</h4>
+                    </div>
+                    <div data-bind="visible: supportStatus === 'ProfessionalSupport'">
+                        <div class="roundborder professional-support">
+                            <i class="fa fa-life-ring"></i>
+                        </div>
+                        <h3>SUPPORT</h3>
+                        <h4>Professional support</h4>
+                    </div>
+                    <div data-bind="visible: supportStatus === 'PartialSupport'">
+                        <div class="roundborder partial-support">
+                            <i class="fa fa-life-ring"></i>
+                        </div>
+                        <h3>SUPPORT</h3>
+                        <h4>Partial support</h4>
+                    </div>
+                    <div data-bind="visible: supportStatus === 'LicenseNotFound'">
+                        <div class="roundborder">
+                            <i class="fa fa-question-circle"></i>
+                        </div>
+                        <h3>SUPPORT</h3>
+                        <h4>License not found</h4>
+                    </div>
+                    <div data-bind="visible: supportExpiresAt" class="expire-date">EXPIRES: <span data-bind="text: supportExpiresAt"></span></div>
                 </div>
             </div>
         </div>
-        <!-- /ko -->
-        <!-- ko if: licenseStatus.IsCommercial -->
-        <div data-bind="text: 'Version: ' + licenseStatus.Attributes.version"></div>
-        <div data-bind="text: 'Bundles: ' + bundleString + '.'"></div>
-        <div data-bind="text: 'RavenFS: ' + licenseStatus.Attributes.ravenfs"></div>
-        <div data-bind="text: 'FIPS compatible: ' + licenseStatus.Attributes.fips"></div>
-        <div data-bind="text: 'Authorization: ' + licenseStatus.Attributes.authorization"></div>
-        <div data-bind="text: 'Max Ram Utilization: ' + licenseStatus.Attributes.maxRamUtilization"></div>
-        <div data-bind="text: 'Max Parallelism: ' + licenseStatus.Attributes.maxParallelism"></div>
-        <div data-bind="text: 'Max Size in MB: ' + licenseStatus.Attributes.maxSizeInMb"></div>
-        <div data-bind="text: 'Windows Clustering Allowed: ' + licenseStatus.Attributes.allowWindowsClustering"></div>
-        <div data-bind="text: 'OEM: ' + licenseStatus.Attributes.OEM"></div>
-        <div data-bind="text: 'Number of Databases: ' + licenseStatus.Attributes.numberOfDatabases"></div>
-        <div data-bind="text: 'Updates Expiration: ' + licenseStatus.Attributes.updatesExpiration"></div>
-        <!-- /ko -->
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bind="click: ok">OK</button>
+    <div class="bg-gray padding">
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="text-center" data-bind="visible: isDevelopmentOnly">
+                    <div class="border-danger padding">
+                        <div class="icon-xl"><i class="fa fa-exclamation-triangle"></i></div>
+                        <h3 class="text-danger">We couldn't find a license at <span class="path" data-bind="text: licensePath"></span></h3>
+                        <p class="text-muted">
+                            Only Open Source / Development work is permitted<br />
+                            AGPL license restrictions apply
+                        </p>
+                    </div>
+                </div>
+                <div class="license-table" data-bind="visible: !isDevelopmentOnly">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" class="alternate-align">
+                        <tbody>
+                            <tr>
+                                <td>RAM</td>
+                                <td><strong><span data-bind="html: attrRam"></span></strong></td>
+                            </tr>
+                            <tr>
+                                <td>CPU cores</td>
+                                <td><strong>Up to <strong data-bind="html: attrCpus"></strong></strong></td>
+                            </tr>
+                            <!-- ko foreach: attributes -->
+                            <tr>
+                                <td data-bind="text: displayName"></td>
+                                <td data-bind="html: value"></td>
+                            </tr>
+                            <!-- /ko -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="col-sm-6">
+
+                <div class="padding border-danger text-center" data-bind="visible: isPartialSupport">
+
+                    <div class="icon-xl"><i class="fa fa-server"></i> <i class="fa fa-server"></i> <i class="fa fa-server text-danger"></i></div>
+                    <h3 class="text-danger">We have detected that you own more server than support licenses</h3>
+                    <p class="text-muted">Please contact support to resolve this issue.</p>
+                    <a href="http://ravendb.net/contact" target="_blank" class="btn btn-primary btn-sm">CONTACT</a>
+                </div>
+
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isCommunitySupport">
+                    <tbody>
+                        <tr>
+                            <td class="active"><span class="text-muted">CURRENT</span></td>
+                            <td colspan="2"></td>
+                        </tr>
+                        <tr>
+                            <th scope="col" class="active" width="33.3%">
+                                <h4>Community</h4>
+                                Essential support to get started
+                            </th>
+                            <th scope="col" width="33.3%">
+                                <h4>Professional</h4>
+                                Priority support for professional projects
+                            </th>
+                            <th scope="col">
+                                <h4>Production</h4>
+                                Top-tier support for enterprise and mission-critical projects
+                            </th>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-group"></i> Support via our comunity forum</td>
+                            <td colspan="2"><i class="fa fa-users"></i> Access to RavenDB core developers</td>
+                        </tr>
+                        <tr>
+                            <td class="active"></td>
+                            <td colspan="2"><i class="fa fa-phone"></i> Email & Phone support</td>
+                        </tr>
+                        <tr>
+                            <td class="active"></td>
+                            <td>
+                                <i class="fa fa-clock-o"></i>Next day SLA<br>
+                                <small class="text-muted">Sun-Thu | 8:00-18:00 GMT+2</small>
+                            </td>
+                            <td><i class="fa fa-clock-o"></i>2 hour SLA <small class="text-muted">We're there for you 24/7</small></td>
+                        </tr>
+                        <tr>
+                            <td class="active"><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block">ACCESS</a></td>
+                            <td colspan="2"><a href="http://ravendb.net/support" target="_blank" class="btn btn-primary btn-block">UPGRADE</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isProfessionalSupport">
+                    <tbody>
+                        <tr>
+                            <td class="active"><span class="text-muted">CURRENT</span></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <th scope="col" width="50%">
+                                <h4>Professional</h4>
+                                Priority support for professional projects
+                            </th>
+                            <th scope="col">
+                                <h4>Production</h4>
+                                Top-tier support for enterprise and mission-critical projects
+                            </th>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-users"></i> Access to RavenDB core developers</td>
+                            <td><i class="fa fa-users"></i> Access to RavenDB core developers</td>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-phone"></i> Email & Phone support</td>
+                            <td><i class="fa fa-phone"></i> Email & Phone support</td>
+                        </tr>
+                        <tr>
+                            <td class="active">
+                                <i class="fa fa-clock-o"></i>Next day SLA<br>
+                                <small class="text-muted">Sun-Thu | 8:00-18:00 GMT+2</small>
+                            </td>
+                            <td><i class="fa fa-clock-o"></i>2 hour SLA <small class="text-muted">We're there for you 24/7</small></td>
+                        </tr>
+                        <tr>
+                            <td class="active"><a href="http://ravendb.net/support/supportrequest" target="_blank" class="btn btn-primary btn-block">SEND TICKET</a></td>
+                            <td><a href="http://ravendb.net/support" target="_blank" class="btn btn-primary btn-block">UPGRADE</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="support-table" data-bind="visible: isProductionSupport">
+                    <tbody>
+                        <tr>
+                            <td class="active"><span class="text-muted">CURRENT</span></td>
+                        </tr>
+                        <tr>
+                            <th class="active" scope="col">
+                                <h4>Production</h4>
+                                Top-tier support for enterprise and mission-critical projects
+                            </th>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-users"></i> Access to RavenDB core developers</td>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-phone"></i> Email & Phone support</td>
+                        </tr>
+                        <tr>
+                            <td class="active"><i class="fa fa-clock-o"></i>2 hour SLA <small class="text-muted">We're there for you 24/7</small></td>
+                        </tr>
+                        <tr>
+                            <td class="active"><a href="http://ravendb.net/support/supportrequest" target="_blank" class="btn btn-primary btn-block">SEND TICKET</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>

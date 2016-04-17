@@ -2,14 +2,13 @@ import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import patchParam = require("models/database/patch/patchParam");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getCollectionsCommand = require("commands/database/documents/getCollectionsCommand");
 import collection = require("models/database/documents/collection");
-import customColumns = require("models/database/documents/customColumns");
 import document = require("models/database/documents/document");
 import pagedList = require("common/pagedList");
 import jsonUtil = require("common/jsonUtil");
+import appUrl = require("common/appUrl");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import savePatch = require('viewmodels/database/patch/savePatch');
@@ -20,12 +19,12 @@ import executePatchCommand = require("commands/database/patch/executePatchComman
 import virtualTable = require("widgets/virtualTable/viewModel");
 import evalByQueryCommand = require("commands/database/patch/evalByQueryCommand");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
+import recentPatchesStorage = require("common/recentPatchesStorage");
+
 
 class patch extends viewModelBase {
 
@@ -35,8 +34,11 @@ class patch extends viewModelBase {
     collections = ko.observableArray<collection>([]);
     collectionToSelect: KnockoutComputed<collection[]>;
 
+    recentPatches = ko.observableArray<storedPatchDto>();
+
     currentCollectionPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
+    showDocumentsPreview: KnockoutObservable<boolean>;
 
     patchDocument = ko.observable<patchDocument>();
 
@@ -60,6 +62,12 @@ class patch extends viewModelBase {
     documentKey = ko.observable<string>();
     keyOfTestedDocument: KnockoutComputed<string>;
 
+    isPatchingInProgress = ko.observable<boolean>(false);
+    showPatchingProgress = ko.observable<boolean>(false);
+    patchingProgress = ko.observable<number>(0);
+    patchingProgressPercentage: KnockoutComputed<string>;
+    patchingProgressText = ko.observable<string>();
+
     static gridSelector = "#matchingDocumentsGrid";
 
     constructor() {
@@ -69,7 +77,7 @@ class patch extends viewModelBase {
 
         // When we programmatically change the document text or meta text, push it into the editor.
         this.beforePatchDocMode.subscribe(() => {
-            if (this.beforePatchEditor) { 
+            if (this.beforePatchEditor) {
                 var text = this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
                 this.beforePatchEditor.getSession().setValue(text);
             }
@@ -124,6 +132,15 @@ class patch extends viewModelBase {
 
             return collections.filter((x: collection) => x.name !== patchDocument.selectedItem());
         });
+
+        this.showDocumentsPreview = ko.computed(() => {
+            if (!this.patchDocument()) {
+                return false;
+    }
+            var indexPath = this.patchDocument().isIndexPatch();
+            var collectionPath = this.patchDocument().isCollectionPatch();
+            return indexPath || collectionPath;
+        });
     }
 
     compositionComplete() {
@@ -140,8 +157,8 @@ class patch extends viewModelBase {
         }
     }
 
-    activate(navigationArgs) {
-        super.activate(navigationArgs);
+    activate(recentPatchHash?: string) {
+        super.activate(recentPatchHash);
         this.updateHelpLink('QGGJR5');
         this.patchDocument(patchDocument.empty());
         this.queryText.throttle(1000).subscribe(v => {
@@ -172,6 +189,16 @@ class patch extends viewModelBase {
             }
         });
 
+        this.patchingProgressPercentage = ko.computed(() => this.patchingProgress() + "%");
+
+        var db = this.activeDatabase();
+        if (!!db) {
+            this.fetchRecentPatches();
+        }
+
+        if (recentPatchHash) {
+            this.selectInitialPatch(recentPatchHash);
+        }
     }
 
     attached() {
@@ -192,11 +219,32 @@ class patch extends viewModelBase {
         var rowCreatedEvent = app.on(patch.gridSelector + 'RowsCreated').then(() => {
             rowCreatedEvent.off();
         });
+
+        var self = this;
+        $(window).bind('storage', () => {
+            self.fetchRecentPatches();
+        });
+    }
+
+    private fetchRecentPatches() {
+        this.recentPatches(recentPatchesStorage.getRecentPatches(this.activeDatabase()));
     }
 
     detached() {
         super.detached();
         aceEditorBindingHandler.detached();
+    }
+
+    selectInitialPatch(recentPatchHash: string) {
+        if (recentPatchHash.indexOf("recentpatch-") === 0) {
+            var hash = parseInt(recentPatchHash.substr("recentpatch-".length), 10);
+            var matchingPatch = this.recentPatches.first(q => q.Hash === hash);
+            if (matchingPatch) {
+                this.useRecentPatch(matchingPatch);
+            } else {
+                this.navigate(appUrl.forPatch(this.activeDatabase()));
+            }
+        }
     }
 
     loadDocumentToTest(selectedItem: string) {
@@ -219,6 +267,7 @@ class patch extends viewModelBase {
     }
 
     setSelectedPatchOnOption(patchOnOption: string) {
+        this.resetProgressBar();
         this.patchDocument().patchOnOption(patchOnOption);
         this.patchDocument().selectedItem('');
         this.clearDocumentPreview();
@@ -227,7 +276,8 @@ class patch extends viewModelBase {
                 this.fetchAllCollections();
                 break;
             case "Index":
-                this.fetchAllIndexes();
+                this.fetchAllIndexes()
+                    .done(() => this.runQuery());
                 $("#matchingDocumentsGrid").resize();
                 break;
             default:
@@ -241,7 +291,7 @@ class patch extends viewModelBase {
             .execute()
             .always(() => NProgress.done())
             .done((colls: collection[]) => {
-                var currentlySelectedCollection:collection = null;
+                var currentlySelectedCollection: collection = null;
 
                 if (this.patchDocument().selectedItem()) {
                     var selected = this.patchDocument().selectedItem();
@@ -256,12 +306,11 @@ class patch extends viewModelBase {
     }
 
     setSelectedCollection(coll: collection) {
+        this.resetProgressBar();
         this.patchDocument().selectedItem(coll.name);
         var list = coll.getDocuments();
         this.currentCollectionPagedItems(list);
         list.fetch(0, 20).always(() => $("#matchingDocumentsGrid").resize());
-        //;
-        //setTimeout(() => $("#matchingDocumentsGrid").resize(), 2000);
     }
 
     fetchAllIndexes(): JQueryPromise<any> {
@@ -276,8 +325,13 @@ class patch extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
-        this.selectedIndex(indexName);///
+        this.resetProgressBar();
+        this.selectedIndex(indexName);
         this.patchDocument().selectedItem(indexName);
+    }
+
+    useIndex(indexName: string) {
+        this.setSelectedIndex(indexName);
         this.runQuery();
     }
 
@@ -289,7 +343,8 @@ class patch extends viewModelBase {
             var database = this.activeDatabase();
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, []);
-                return command.execute();
+                return command.execute()
+                    .fail(() => recentPatchesStorage.removeIndexFromRecentPatches(database, selectedIndex));
             };
             var resultsList = new pagedList(resultsFetcher);
             this.currentCollectionPagedItems(resultsList);
@@ -311,29 +366,35 @@ class patch extends viewModelBase {
         var loadPatchViewModel: loadPatch = new loadPatch(this.activeDatabase());
         app.showDialog(loadPatchViewModel);
         loadPatchViewModel.onExit().done((patch) => {
-            var selectedItem = patch.selectedItem();
-            this.patchDocument(patch.cloneWithoutMetadata());
-            switch (this.patchDocument().patchOnOption()) {
-                case "Collection":
-                    this.fetchAllCollections().then(() => {
-                        this.setSelectedCollection(this.collections().filter(coll => (coll.name === selectedItem)).first());
-                    });
-                    break;
-                case "Index":
-                    this.fetchAllIndexes().then(() => {
-                        this.setSelectedIndex(selectedItem);
-                    });
-                    break;
-                case "Document":
-                    this.loadDocumentToTest(patch.selectedItem());
-                    break;
-            }
+           this.usePatch(patch);
         });
+    }
+
+    private usePatch(patch: patchDocument) {
+        var selectedItem = patch.selectedItem();
+        this.patchDocument(patch.cloneWithoutMetadata());
+        switch (this.patchDocument().patchOnOption()) {
+            case "Collection":
+                this.fetchAllCollections().then(() => {
+                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === selectedItem)).first());
+                });
+                break;
+            case "Index":
+                this.fetchAllIndexes().then(() => {
+                    this.setSelectedIndex(selectedItem);
+                    this.queryText(patch.query());
+                    this.runQuery();
+                });
+                break;
+            case "Document":
+                this.loadDocumentToTest(patch.selectedItem());
+                break;
+        }
     }
 
     testPatch() {
         var values = {};
-        var patchDtos = this.patchDocument().parameters().map(param => {
+        this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;
         });
@@ -357,10 +418,58 @@ class patch extends viewModelBase {
                 this.outputLog(result[0].AdditionalData["Debug"]);
             })
             .fail((result: JQueryXHR) => console.log(result.responseText));
+        this.recordPatchRun();
+    }
+
+    private updatePageUrl(hash: number) {
+        // Put the patch into the URL, so that if the user refreshes the page, he's still got this patch loaded.
+        var queryUrl = appUrl.forPatch(this.activeDatabase(), hash);
+        this.updateUrl(queryUrl);
+    }
+
+    recordPatchRun() {
+        var patchDocument = this.patchDocument();
+
+        var newPatch = <storedPatchDto>patchDocument.toDto();
+        delete newPatch["@metadata"];
+        newPatch.Hash = 0;
+
+        var stringForHash = newPatch.PatchOnOption + newPatch.SelectedItem + newPatch.Script + newPatch.Values;
+
+        if (patchDocument.patchOnOption() === "Index") {
+            newPatch.Query = this.queryText();
+            stringForHash += newPatch.Query;
+        }
+
+        newPatch.Hash = stringForHash.hashCode();
+
+        this.updatePageUrl(newPatch.Hash);
+
+        // Add this query to our recent patches list in the UI, or move it to the top of the list if it's already there.
+        var existing = this.recentPatches.first(q => q.Hash === newPatch.Hash);
+        if (existing) {
+            this.recentPatches.remove(existing);
+            this.recentPatches.unshift(existing);
+        } else {
+            this.recentPatches.unshift(newPatch);
+        }
+
+        // Limit us to 15 recent patchs
+        if (this.recentPatches().length > 15) {
+            this.recentPatches.remove(this.recentPatches()[15]);
+        }
+
+        //save the recent queries to local storage
+        recentPatchesStorage.saveRecentPatches(this.activeDatabase(), this.recentPatches());
+    }
+
+    useRecentPatch(patchToUse: storedPatchDto) {
+        var patchDoc = new patchDocument(patchToUse);
+        this.usePatch(patchDoc);
     }
 
     private updateActions(actions: { PutDocument: any[]; LoadDocument: any }) {
-        this.loadedDocuments(actions.LoadDocument || []); 
+        this.loadedDocuments(actions.LoadDocument || []);
         this.putDocuments((actions.PutDocument || []).map(doc => jsonUtil.syntaxHighlight(doc)));
     }
 
@@ -386,7 +495,7 @@ class patch extends viewModelBase {
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 index = "Raven/DocumentsByEntityName";
-                query = "Tag:" + this.patchDocument().selectedItem();
+                query = "Tag:" + queryUtil.escapeTerm(this.patchDocument().selectedItem());
                 break;
             case "Index":
                 index = this.patchDocument().selectedItem();
@@ -396,7 +505,7 @@ class patch extends viewModelBase {
 
         var values = {};
 
-        var patchDtos = this.patchDocument().parameters().map(param => {
+        this.patchDocument().parameters().map(param => {
             var dto = param.toDto();
             values[dto.Key] = dto.Value;
         });
@@ -406,7 +515,36 @@ class patch extends viewModelBase {
             Values: values
         };
 
-        new evalByQueryCommand(index, query, JSON.stringify(patch), this.activeDatabase()).execute();
+        var patchByQueryCommand = new evalByQueryCommand(index, query, JSON.stringify(patch), this.activeDatabase(), status => this.updateProgress(status));
+
+        patchByQueryCommand.execute()
+            .done(() => {
+                this.resetProgressBar();
+                this.isPatchingInProgress(true);
+                this.showPatchingProgress(true);
+            });
+
+        this.recordPatchRun();
+    }
+
+    private resetProgressBar() {
+        this.showPatchingProgress(false);     
+        this.patchingProgress(0);
+        this.patchingProgressText("");
+    }
+
+    private updateProgress(status: bulkOperationStatusDto) {
+
+        if (status.OperationProgress != null) {
+            var progressValue = Math.round(100 * (status.OperationProgress.ProcessedEntries / status.OperationProgress.TotalEntries));
+            this.patchingProgress(progressValue);
+            this.patchingProgressText(status.OperationProgress.ProcessedEntries + " / " + status.OperationProgress.TotalEntries + " (" + progressValue + "%)");
+        }
+
+        if (status.Completed) {
+            this.isPatchingInProgress(false);
+            setTimeout(() => this.showPatchingProgress(false), 2000);
+        }
     }
 
     private confirmAndExecutePatch(keys: string[]) {
@@ -443,7 +581,9 @@ class patch extends viewModelBase {
                 }
                 this.updateDocumentsList();
             })
-            .fail((result: JQueryXHR) => console.log(result.responseText))
+            .fail((result: JQueryXHR) => console.log(result.responseText));
+
+        this.recordPatchRun();
     }
 
     private updateDocumentsList() {
@@ -454,7 +594,7 @@ class patch extends viewModelBase {
                 });
                 break;
             case "Index":
-                this.setSelectedIndex(this.patchDocument().selectedItem());
+                this.useIndex(this.patchDocument().selectedItem());
                 break;
         }
     }
@@ -509,20 +649,23 @@ class patch extends viewModelBase {
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
                     .done((result: pagedResultSet) => {
-                    if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
-                        var dynamicIndexPattern: document = new document(result.items[0]);
-                        if (!!dynamicIndexPattern) {
-                            this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
+                            var dynamicIndexPattern: document = new document(result.items[0]);
+                            if (!!dynamicIndexPattern) {
+                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                            }
                         }
-                    }
-                });
+                    });
             } else {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
                     .done((result: indexDefinitionContainerDto) => {
-                    self.isTestIndex(result.Index.IsTestIndex);
-                    self.indexFields(result.Index.Fields);
-                });
+                        self.isTestIndex(result.Index.IsTestIndex);
+                        self.indexFields(result.Index.Fields);
+                    })
+                    .fail(() => {
+                        recentPatchesStorage.removeIndexFromRecentPatches(this.activeDatabase(), indexName);
+                    });
             }
         }
     }

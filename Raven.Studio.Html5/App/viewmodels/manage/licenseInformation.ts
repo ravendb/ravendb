@@ -6,6 +6,7 @@ import app = require("durandal/app");
 import license = require("models/auth/license");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 import shell = require("viewmodels/shell");
+import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 
 class licenseInformation extends viewModelBase {
 
@@ -40,16 +41,27 @@ class licenseInformation extends viewModelBase {
         });
     }
 
+    fetchSupportCoverage() {
+        return new getSupportCoverageCommand()
+            .execute()
+            .done((result: supportCoverageDto) => {
+                license.supportCoverage(result);
+            });
+    }
+
+
     forceUpdate() {
         new forceLicenseUpdate().execute()
             .always(() => {
-                this.fetchLicenseStatus()
-                    .always(() => this.showLicenseDialog());
+                $.when(this.fetchLicenseStatus(), this.fetchSupportCoverage())
+                    .always(() => {
+                        this.showLicenseDialog();
+                    });
             });
     }
 
     private showLicenseDialog() {
-        var dialog = new licensingStatus(license.licenseStatus());
+        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage());
         app.showDialog(dialog);
     }
 

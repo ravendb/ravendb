@@ -65,7 +65,6 @@ class row {
     }
 
     fillCells(rowData: documentBase) {
-        var customFunctions = this.viewModel.settings.customFunctions();
         var customColumns = this.viewModel.settings.customColumns();
         this.isInUse(true);
         var rowProperties = rowData.getDocumentPropertyNames();
@@ -74,25 +73,17 @@ class row {
             customColumns.columns().forEach((column, index) => {
                 var binding = column.binding();
                 var context = {};
-                var stringify = typeof rowData === "object" && this.getCellTemplateName(binding, rowData) !== cell.customTemplate;
 
                 $.each(rowData, (name: string, value: any) => {
-                    if (stringify) {
-                        context[name] = JSON.stringify(value, null, 4);
-                        if (context[name] && context[name].length > 250) {
-                            context[name] = context[name].substring(0, 250);
-                        }
-                    } else {
-                        context[name] = value;
-                    }
+                    context[name] = value;
                 });
 
                 for (var p in this.compiledCustomFunctions) {
                     context[p] = this.compiledCustomFunctions[p];
                 }
-
-                var cellValueGenerator = execJs.createSimpleCallableCode("return " + binding + ";", context);
-                this.addOrUpdateCellMap(binding, cellValueGenerator());
+                var cellValue = execJs.createSimpleCallableCode("return " + binding + ";", context)();
+                var callValueAsString = typeof cellValue === "object" ? JSON.stringify(cellValue, null, 4) : cellValue;
+                this.addOrUpdateCellMap(binding, callValueAsString);
             });
 
         } else {
@@ -104,8 +95,8 @@ class row {
                     cellValue = JSON.stringify(cellValue, null, 4) || "";
                 }
 
-                if (cellValue && cellValue.length > 250) {
-                    cellValue = cellValue.substring(0, 250);
+                if (cellValue && cellValue.length > 300) {
+                    cellValue = cellValue.substring(0, 300);
                 }
                 this.addOrUpdateCellMap(prop, cellValue);
             }

@@ -47,6 +47,7 @@ using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Abstractions.Threading;
 using Raven.Database.Common;
+using Raven.Database.Raft;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
 
@@ -56,7 +57,7 @@ namespace Raven.Database
     {
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-        private static string buildVersion;
+        private static int buildVersion = -1;
 
         private static string productVersion;
 
@@ -72,6 +73,8 @@ namespace Raven.Database
 
         private readonly LastCollectionEtags lastCollectionEtags;
 
+        private readonly LastMapCompletedDatesPerCollection lastMapCompletedDatesPerCollection;
+
         private readonly Prefetcher prefetcher;
 
         private readonly SequentialUuidGenerator uuidGenerator;
@@ -81,8 +84,6 @@ namespace Raven.Database
         private readonly TransportState transportState;
 
         private readonly WorkContext workContext;
-
-        private volatile bool backgroundWorkersSpun;
 
         private volatile bool indexingWorkersStoppedManually;
 
@@ -105,6 +106,7 @@ namespace Raven.Database
         {
             TimerManager = new ResourceTimerManager();
             DocumentLock = new PutSerialLock();
+            IdentityLock = new PutSerialLock();
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;
@@ -185,6 +187,8 @@ namespace Raven.Database
                     Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
+                    lastMapCompletedDatesPerCollection = new LastMapCompletedDatesPerCollection(this);
+
                     ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
                     inFlightTransactionalState = TransactionalStorage.InitializeInFlightTransactionalState(this,
@@ -263,7 +267,19 @@ namespace Raven.Database
 
         public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
-        public static string BuildVersion => buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture));
+        public static int BuildVersion
+        {
+            get
+            {
+                if (buildVersion == -1)
+                {
+                    var customAttributes = typeof(DocumentDatabase).Assembly.GetCustomAttributes(false);
+                    dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+                    buildVersion = int.Parse(versionAtt.Build);
+                }
+                return buildVersion;
+            }
+        }
 
         public static string ProductVersion
         {
@@ -274,7 +290,10 @@ namespace Raven.Database
                     return productVersion;
                 }
 
-                productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
+                var customAttributes = typeof(DocumentDatabase).Assembly.GetCustomAttributes(false);
+                dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+
+                productVersion = versionAtt.CommitHash;
                 return productVersion;
             }
         }
@@ -302,6 +321,8 @@ namespace Raven.Database
         public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
         internal PutSerialLock DocumentLock { get; private set; }
+
+        internal PutSerialLock IdentityLock { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
         public AttachmentActions Attachments { get; private set; }
@@ -368,6 +389,8 @@ namespace Raven.Database
         public IndexingExecuter IndexingExecuter => indexingExecuter;
 
         public LastCollectionEtags LastCollectionEtags => lastCollectionEtags;
+
+        public LastMapCompletedDatesPerCollection LastMapCompletedDatesPerCollection => lastMapCompletedDatesPerCollection;
 
         public MaintenanceActions Maintenance { get; private set; }
 
@@ -628,6 +651,7 @@ namespace Raven.Database
 
         public WorkContext WorkContext => workContext;
         public RequestManager RequestManager { get; set; }
+        public Reference<ClusterManager> ClusterManager { get; set; }
 
         public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
         {
@@ -996,33 +1020,16 @@ namespace Raven.Database
             if (manualStart == false && indexingWorkersStoppedManually)
                 return;
 
-            if (backgroundWorkersSpun)
-                throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-            var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
-            if (disableIndexing != null)
-            {
-                bool disableIndexingStatus;
-                var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
-                if (res && disableIndexingStatus)
-                    return; //indexing were set to disable 
-            }
+            if (IsIndexingDisabled())
+                return;
 
-            backgroundWorkersSpun = true;
             indexingWorkersStoppedManually = false;
 
             workContext.StartWork();
 
-            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
-                    {
-                        new Action(()=> indexingExecuter.Execute())
-                    });
-            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
-                    {
-                        new Action(()=>ReducingExecuter.Execute())
-                    });
+            SpinMappingWorker();
 
-            MappingThreadPool.Start();
-            ReducingThreadPool.Start();
+            SpinReduceWorker();
 
             RaiseIndexingWiringComplete();
         }
@@ -1035,7 +1042,6 @@ namespace Raven.Database
                 MappingThreadPool.Dispose();
                 MappingThreadPool = null;
             }
-            MappingThreadPool = null;
         }
 
         private void StopReducingThreadPool()
@@ -1053,13 +1059,6 @@ namespace Raven.Database
             workContext.StopWork();
             StopMappingThreadPool();
             StopReducingThreadPool();
-
-            backgroundWorkersSpun = false;
-        }
-
-        public void StartIndexingWorkers()
-        {
-            workContext.StartIndexing();
         }
 
         public void StopIndexingWorkers(bool manualStop)
@@ -1086,7 +1085,6 @@ namespace Raven.Database
                 Log.WarnException("Error while trying to stop background reducing", e);
             }
 
-            backgroundWorkersSpun = false;
             indexingWorkersStoppedManually = manualStop;
         }
 
@@ -1101,17 +1099,6 @@ namespace Raven.Database
             OnIndexingWiringComplete = null; // we can only init once, release all actions
             if (indexingWiringComplete != null)
                 indexingWiringComplete();
-        }
-
-        private static int GetBuildVersion()
-        {
-            string location = AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>();
-
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
-            if (fileVersionInfo.FilePrivatePart != 0)
-                return fileVersionInfo.FilePrivatePart;
-
-            return fileVersionInfo.FileBuildPart;
         }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands, CancellationToken token)
@@ -1267,7 +1254,7 @@ namespace Raven.Database
                     throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
                 }
 
-                if (string.IsNullOrEmpty(configuration.DefaultStorageTypeName) == false && 
+                if (string.IsNullOrEmpty(configuration.DefaultStorageTypeName) == false &&
                     configuration.DefaultStorageTypeName.Equals(storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     throw new Exception(string.Format("The database is configured to use '{0}' storage engine, but it points to '{1}' data", configuration.DefaultStorageTypeName, storageEngineTypeName));
@@ -1417,8 +1404,7 @@ namespace Raven.Database
 
                     if (freeSpaceInMb <= thresholdInMb)
                     {
-                        if (database.backgroundWorkersSpun)
-                            database.StopIndexingWorkers(false);
+                        database.StopIndexingWorkers(false);
 
                         database.AddAlert(new Alert
                         {
@@ -1441,8 +1427,7 @@ namespace Raven.Database
                             });
                         }
 
-                        if (database.backgroundWorkersSpun == false)
-                            database.SpinBackgroundWorkers(false);
+                        database.SpinBackgroundWorkers(false);
                     }
                 };
             }
@@ -1454,14 +1439,68 @@ namespace Raven.Database
             if (onOnBackupComplete != null) onOnBackupComplete(this);
         }
 
+        private void SpinMappingWorker()
+        {
+            if (IsIndexingDisabled())
+                return;
+
+            workContext.StartMapping();
+
+            if (MappingThreadPool != null)
+                return;
+
+            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
+            {
+                new Action(() => indexingExecuter.Execute())
+            });
+
+            MappingThreadPool.Start();
+        }
+
         public void SpinReduceWorker()
         {
-            throw new NotImplementedException();
+            if (IsIndexingDisabled())
+                return;
+
+            workContext.StartReducing();
+
+            if (ReducingThreadPool != null)
+                return;
+
+            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+            {
+                new Action(() => ReducingExecuter.Execute())
+            });
+
+            ReducingThreadPool.Start();
         }
 
         public void StopReduceWorkers()
         {
-            throw new NotImplementedException();
+            workContext.StopReducing();
+
+            try
+            {
+                StopReducingThreadPool();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background reducing", e);
+            }
+        }
+
+        public bool IsIndexingDisabled()
+        {
+            var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
+            if (disableIndexing != null)
+            {
+                bool disableIndexingStatus;
+                var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
+                if (res && disableIndexingStatus)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

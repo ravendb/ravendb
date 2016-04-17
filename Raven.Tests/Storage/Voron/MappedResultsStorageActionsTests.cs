@@ -3,27 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-
-using Raven.Database.Util;
+using Raven.Abstractions.Data;
+using Raven.Database.Indexing;
+using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Sparrow.Collections;
+using Xunit;
+using Xunit.Extensions;
 
-namespace Raven.Tests.Storage
+namespace Raven.Tests.Storage.Voron
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-
-    using Raven.Abstractions;
-    using Raven.Abstractions.Data;
-    using Raven.Database.Indexing;
-    using Raven.Database.Storage;
-    using Raven.Json.Linq;
-
-    using Xunit;
-    using Xunit.Extensions;
-    using Sparrow.Collections;
-
     [Trait("VoronTest", "StorageActionsTests")]
     public class MappedResultsStorageActionsTests : TransactionalStorageTestBase
     {
@@ -78,10 +71,8 @@ namespace Raven.Tests.Storage
                     {
                         var keyStats = accessor.MapReduce.GetKeysStats(303, 0, 10).ToList();
 
-                        Assert.Equal(1, keyStats.Count);
-
-                        var k1 = keyStats[0];
-                        Assert.Equal(0, k1.Count);
+                        //the reduce key counter for "reduceKey1" will be removed
+                        Assert.Equal(0, keyStats.Count);
                     });
             }
         }
@@ -132,14 +123,18 @@ namespace Raven.Tests.Storage
             {
                 storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.SingleStep));
                 storage.Batch(accessor => Assert.Equal(1, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.SingleStep));
                 storage.Batch(accessor => Assert.Equal(1, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey2", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey2", ReduceType.SingleStep));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey3", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey3", ReduceType.SingleStep));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(404, "reduceKey4", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(404, "reduceKey4", ReduceType.MultiStep));
                 storage.Batch(accessor => Assert.Equal(3, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
@@ -263,13 +258,14 @@ namespace Raven.Tests.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 5));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.None));
 
                 storage.Batch(
                     accessor =>
                     {
                         var keyStats = accessor.MapReduce.GetKeysStats(303, 0, 10).ToList();
-                        Assert.Equal(0, keyStats.Count);
+                        Assert.Equal(1, keyStats.Count);
 
                         var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).ToList();
                         Assert.Equal(1, reduceKeysAndTypes.Count);
@@ -283,7 +279,7 @@ namespace Raven.Tests.Storage
                     accessor =>
                     {
                         var keyStats = accessor.MapReduce.GetKeysStats(303, 0, 10).ToList();
-                        Assert.Equal(0, keyStats.Count);
+                        Assert.Equal(1, keyStats.Count);
 
                         var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).ToList();
                         Assert.Equal(1, reduceKeysAndTypes.Count);
@@ -299,8 +295,8 @@ namespace Raven.Tests.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.MultiStep));
                 storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 5));
+                storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.MultiStep));
 
                 storage.Batch(
                     accessor =>
@@ -347,7 +343,7 @@ namespace Raven.Tests.Storage
 
                 storage.Batch(x =>
                 {
-                    var results = x.MapReduce.GetMappedResults(303, new HashSet<string> { "reduceKey1" }, true,100, new HashSet<string>(), CancellationToken.None);
+                    var results = x.MapReduce.GetMappedResults(303, new HashSet<string> { "reduceKey1" }, true, 100, new HashSet<string>(), CancellationToken.None);
 
                     Assert.Equal(1, results.Count);
 
@@ -479,7 +475,7 @@ namespace Raven.Tests.Storage
                 storage.Batch(accessor =>
                 {
                     var removed = new Dictionary<ReduceKeyAndBucket, int>();
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -502,7 +498,7 @@ namespace Raven.Tests.Storage
                                       { new ReduceKeyAndBucket(123, "reduceKey1"), 3 }
                                   };
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -525,8 +521,8 @@ namespace Raven.Tests.Storage
                                       { new ReduceKeyAndBucket(123, "reduceKey1"), 4 }
                                   };
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(404, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(404, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -1207,16 +1203,16 @@ namespace Raven.Tests.Storage
                 storage.Batch(accessor =>
                 {
                     var results = accessor.MapReduce
-                        .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()){}, CancellationToken.None)
+                        .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()) { }, CancellationToken.None)
                         .ToList();
 
                     Assert.Equal(0, results.Count);
 
                     results = accessor.MapReduce
                         .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>())
-                                          {
-                                              Take = 10
-                                          }, CancellationToken.None)
+                        {
+                            Take = 10
+                        }, CancellationToken.None)
                         .ToList();
 
                     Assert.Equal(1, results.Count);
@@ -1610,6 +1606,7 @@ namespace Raven.Tests.Storage
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Equal(ReduceType.None, accessor.MapReduce.GetLastPerformedReduceType(303, "reduceKey1")));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.SingleStep));
                 storage.Batch(accessor => Assert.Equal(ReduceType.SingleStep, accessor.MapReduce.GetLastPerformedReduceType(303, "reduceKey1")));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.MultiStep));
@@ -1705,6 +1702,222 @@ namespace Raven.Tests.Storage
                         .ToList();
 
                     Assert.Equal(2, results.Count);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void DeleteObsoleteScheduledReductions(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor =>
+                {
+                    accessor.MapReduce.ScheduleReductions(303, 1, new ReduceKeyAndBucket(1, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 2, new ReduceKeyAndBucket(1, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 3, new ReduceKeyAndBucket(2, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(404, 1, new ReduceKeyAndBucket(1, "reduceKey3"));
+                });
+
+                storage.Batch(accessor =>
+                {
+                    var debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(3, debugResults.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(1, debugResults.Count);
+
+                    var deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 1 }, 1000);
+                    Assert.Equal(2, deleted.Count);
+                    Assert.Equal(3, deleted[303]);
+                    Assert.Equal(1, deleted[404]);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(0, debugResults.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(0, debugResults.Count);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void DeleteObsoleteScheduledReductionsAndSkipProvided(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor =>
+                {
+                    accessor.MapReduce.ScheduleReductions(303, 1, new ReduceKeyAndBucket(1, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 2, new ReduceKeyAndBucket(1, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 3, new ReduceKeyAndBucket(2, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(404, 1, new ReduceKeyAndBucket(1, "reduceKey3"));
+                });
+
+                storage.Batch(accessor =>
+                {
+                    var debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(3, debugResults.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(1, debugResults.Count);
+
+                    var deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 404 }, 1000);
+                    Assert.Equal(1, deleted.Count);
+                    Assert.Equal(3, deleted[303]);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(0, debugResults.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(1, debugResults.Count);
+
+                    deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 404 }, 1000);
+                    Assert.Equal(0, deleted.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(1, debugResults.Count);
+
+                    deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 1 }, 1000);
+                    Assert.Equal(1, deleted.Count);
+                    Assert.Equal(1, deleted[404]);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(0, debugResults.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(0, debugResults.Count);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void DeleteObsoleteScheduledReductionsAndSkipAll(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor =>
+                {
+                    accessor.MapReduce.ScheduleReductions(303, 1, new ReduceKeyAndBucket(1, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 2, new ReduceKeyAndBucket(1, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 3, new ReduceKeyAndBucket(2, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(404, 1, new ReduceKeyAndBucket(1, "reduceKey3"));
+                });
+
+                storage.Batch(accessor =>
+                {
+                    var debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(3, debugResults.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(1, debugResults.Count);
+
+                    var deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 303, 404 }, 1000);
+                    Assert.Equal(0, deleted.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(3, debugResults.Count);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(404, 0, 10)
+                        .ToList();
+                    Assert.Equal(1, debugResults.Count);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void DeleteObsoleteScheduledReductionsByQuantity(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor =>
+                {
+                    accessor.MapReduce.ScheduleReductions(303, 1, new ReduceKeyAndBucket(1, "reduceKey1"));
+                    accessor.MapReduce.ScheduleReductions(303, 2, new ReduceKeyAndBucket(1, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 3, new ReduceKeyAndBucket(2, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 4, new ReduceKeyAndBucket(2, "reduceKey2"));
+                    accessor.MapReduce.ScheduleReductions(303, 5, new ReduceKeyAndBucket(1, "reduceKey3"));
+                    accessor.MapReduce.ScheduleReductions(303, 6, new ReduceKeyAndBucket(1, "reduceKey3"));
+                });
+
+                storage.Batch(accessor =>
+                {
+                    var debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(6, debugResults.Count);
+
+                    var deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 1 }, 2);
+                    Assert.Equal(1, deleted.Count);
+                    Assert.Equal(2, deleted[303]);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(4, debugResults.Count);
+
+                    deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 1 }, 1);
+                    Assert.Equal(1, deleted.Count);
+                    Assert.Equal(1, deleted[303]);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(3, debugResults.Count);
+
+                    deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 1 }, 2);
+                    Assert.Equal(1, deleted.Count);
+                    Assert.Equal(2, deleted[303]);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(1, debugResults.Count);
+
+                    deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 1 }, 10);
+                    Assert.Equal(1, deleted.Count);
+                    Assert.Equal(1, deleted[303]);
+
+                    debugResults = accessor.MapReduce
+                        .GetScheduledReductionForDebug(303, 0, 10)
+                        .ToList();
+                    Assert.Equal(0, debugResults.Count);
+
+                    deleted = accessor.MapReduce.DeleteObsoleteScheduledReductions(new List<int> { 1 }, 10);
+                    Assert.Equal(0, deleted.Count);
                 });
             }
         }

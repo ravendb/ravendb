@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
-using Raven.Database.Server;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Tasks;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
@@ -59,17 +54,8 @@ namespace Raven.Database.Indexing
                         if (foundWork && onlyFoundIdleWork == false)
                             isIdle = false;
 
-                        int runs = 32;
-
-                        // we want to drain all of the pending tasks before the next run
-                        // but we don't want to halt indexing completely
-                        while (context.RunIndexing && runs-- > 0)
-                        {
-                            if (ExecuteTasks() == false)
-                                break;
-                            foundWork = true;
-                        }
-
+                        var foundTasksWork = ExecuteTasks();
+                        foundWork = foundWork || foundTasksWork;
                     }
                     catch (OutOfMemoryException oome)
                     {
@@ -108,7 +94,7 @@ namespace Raven.Database.Indexing
                             autoTuner.HandleOutOfMemory();
                         }
                     }
-                    if (foundWork == false && context.RunIndexing)
+                    if (foundWork == false && ShouldRun)
                     {
                         isIdle = context.WaitForWork(context.Configuration.TimeToWaitBeforeRunningIdleIndexes, ref workCounter, () =>
                         {
@@ -129,7 +115,16 @@ namespace Raven.Database.Indexing
                             {
                                 Log.WarnException("Could not cleanup prefetchers properly", e);
                             }
-                            
+
+                            try
+                            {
+                                CleanupScheduledReductions();
+                            }
+                            catch (Exception e)
+                            {
+                                Log.WarnException("Could not cleanup scheduled reductions properly", e);
+                            }
+
                         }, name);
                     }
                     else // notify the tasks executer that it has work to do
@@ -144,10 +139,14 @@ namespace Raven.Database.Indexing
 
         public abstract bool ShouldRun { get; }
 
-        protected virtual void CleanupPrefetchers()
+        protected virtual bool ExecuteTasks()
         {
-            
+            return false;
         }
+
+        protected virtual void CleanupPrefetchers() { }
+
+        protected virtual void CleanupScheduledReductions() { }
 
         protected virtual void Dispose() { }
 
@@ -165,40 +164,6 @@ namespace Raven.Database.Indexing
             RavenGC.CollectGarbage(GC.MaxGeneration);
             autoTuner.HandleOutOfMemory();
         }
-
-        private bool ExecuteTasks()
-        {
-            bool foundWork = false;
-            transactionalStorage.Batch(actions =>
-            {
-                DatabaseTask task = GetApplicableTask(actions);
-                if (task == null)
-                    return;
-
-                context.UpdateFoundWork();
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug("Executing task: {0}", task);
-
-                foundWork = true;
-
-                context.CancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    task.Execute(context);
-                }
-                catch (Exception e)
-                {
-                    Log.WarnException(
-                        string.Format("Task {0} has failed and was deleted without completing any work", task),
-                        e);
-                }
-            });
-            return foundWork;
-        }
-
-        protected abstract DatabaseTask GetApplicableTask(IStorageActionsAccessor actions);
 
         private void FlushIndexes()
         {

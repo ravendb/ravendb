@@ -20,8 +20,10 @@ using Raven.Tests.Common.Dto;
 
 namespace Raven.Tests.Issues.Prefetcher
 {
-    public abstract class PrefetcherTestBase : NoDisposalNeeded
+    public abstract class PrefetcherTestBase : IDisposable
     {
+        private readonly List<PrefetcherWithContext> createdPrefetchers = new List<PrefetcherWithContext>();
+
         protected PrefetcherWithContext CreatePrefetcher(Action<InMemoryRavenConfiguration> modifyConfiguration = null, Action<WorkContext> modifyWorkContext = null)
         {
             var configuration = new InMemoryRavenConfiguration
@@ -50,14 +52,18 @@ namespace Raven.Tests.Issues.Prefetcher
 
             var prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, autoTuner, string.Empty);
 
-            return new PrefetcherWithContext
-                   {
-                       AutoTuner = autoTuner,
-                       Configuration = configuration,
-                       PrefetchingBehavior = prefetchingBehavior,
-                       TransactionalStorage = transactionalStorage,
-                       WorkContext = workContext
-                   };
+            var prefetcherWithContext = new PrefetcherWithContext
+                                        {
+                                            AutoTuner = autoTuner,
+                                            Configuration = configuration,
+                                            PrefetchingBehavior = prefetchingBehavior,
+                                            TransactionalStorage = transactionalStorage,
+                                            WorkContext = workContext
+                                        };
+
+            createdPrefetchers.Add(prefetcherWithContext);
+
+            return prefetcherWithContext;
         }
 
         protected List<string> AddDocumentsToTransactionalStorage(TransactionalStorage transactionalStorage, int numberOfDocuments)
@@ -79,7 +85,15 @@ namespace Raven.Tests.Issues.Prefetcher
             return results;
         }
 
-        protected class PrefetcherWithContext
+        public void Dispose()
+        {
+            foreach (var prefetcherWithContext in createdPrefetchers)
+            {
+                prefetcherWithContext.Dispose();
+            }
+        }
+
+        protected class PrefetcherWithContext : IDisposable
         {
             public PrefetchingBehavior PrefetchingBehavior { get; set; }
 
@@ -90,6 +104,13 @@ namespace Raven.Tests.Issues.Prefetcher
             public IndexBatchSizeAutoTuner AutoTuner { get; set; }
 
             public TransactionalStorage TransactionalStorage { get; set; }
+
+            public void Dispose()
+            {
+                WorkContext.Dispose();
+                PrefetchingBehavior.Dispose();
+                TransactionalStorage.Dispose();
+            }
         }
     }
 }

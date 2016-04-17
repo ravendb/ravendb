@@ -60,7 +60,7 @@ namespace Raven.Database.Plugins.Builtins
                 }
                 if (!IsIncrementalBackupIsAllowed(databaseLandLord,db)) continue;
 
-                var dbStatusKey =  "Raven/BackupStatus/" +dbName;
+                var dbStatusKey =  "Raven/BackupStatus/" + dbName;
 
                 var incrementalBackupStatus = systemDatabase.Documents.Get(dbStatusKey, null);
                 if (incrementalBackupStatus == null) continue;

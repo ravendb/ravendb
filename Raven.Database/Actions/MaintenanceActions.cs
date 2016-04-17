@@ -7,7 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -51,6 +52,11 @@ namespace Raven.Database.Actions
                 throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);
             }
 
+            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, Constants.BackupFailureMarker)))
+            {
+                throw new InvalidOperationException("Backup failure marker was detected. Unable to restore from given directory.");
+            }
+
             var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
             var databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
 
@@ -76,7 +82,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        public void StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
+        public Task StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument, ResourceBackupState state, CancellationToken token = default(CancellationToken))
         {
             if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
             var document = Database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
@@ -87,6 +93,11 @@ namespace Raven.Database.Actions
                 {
                     throw new InvalidOperationException("Backup is already running");
                 }
+            }
+
+            if (File.Exists(Path.Combine(backupDestinationDirectory, Constants.BackupFailureMarker)))
+            {
+                throw new InvalidOperationException("Backup failure marker was detected. In order to proceed remove old backup files or supply different backup directory.");
             }
 
             bool enableIncrementalBackup;
@@ -109,13 +120,16 @@ namespace Raven.Database.Actions
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
             }), new RavenJObject(), null);
+
             Database.IndexStorage.FlushMapIndexes();
             Database.IndexStorage.FlushReduceIndexes();
 
             if (databaseDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
                 databaseDocument.Settings["Raven/StorageTypeName"] = TransactionalStorage.FriendlyName ?? TransactionalStorage.GetType().AssemblyQualifiedName;
 
-            TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument);
+            var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, Database.WorkContext.CancellationToken);
+            return TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument, state, linkedTokenSource.Token)
+                .ContinueWith(_ => linkedTokenSource.Dispose());
         }
 
         public void RemoveAllBefore(string listName,Etag etag)

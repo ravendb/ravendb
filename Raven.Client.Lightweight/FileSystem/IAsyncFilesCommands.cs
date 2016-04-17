@@ -89,6 +89,8 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
+
+        Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(string query, string[] sortFields = null, int start = 0, int pageSize = int.MaxValue);
         IDisposable ForceReadFromMaster();
     }
 
@@ -105,7 +107,7 @@ namespace Raven.Client.FileSystem
 
         Task EnsureFileSystemExistsAsync(string fileSystem);        
         Task<long> StartRestore(FilesystemRestoreRequest restoreRequest);
-        Task StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName);
+        Task<long> StartBackup(string backupLocation, FileSystemDocument fileSystemDocument, bool incremental, string fileSystemName);
         Task<long> StartCompact(string filesystemName);
         Task ResetIndexes(string filesystemName);
     }

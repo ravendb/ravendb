@@ -123,7 +123,7 @@ namespace Raven.Database.Counters.Controllers
                 HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
 
             var sp = Stopwatch.StartNew();
-            var status = new BatchStatus { IsTimedOut = false };
+            var status = new BatchStatus();
             var timeoutTokenSource = new CancellationTokenSource();
             var counterChanges = 0;
 
@@ -161,6 +161,7 @@ namespace Raven.Database.Counters.Controllers
                             });
                         }
                     }
+                    status.MarkCompleted(string.Format("Counters: {0}", counterChanges));
                 }
                 catch (OperationCanceledException)
                 {
@@ -172,8 +173,7 @@ namespace Raven.Database.Counters.Controllers
                         Message = "Operation cancelled, likely because of a batch timeout"
                     });
 
-                    status.IsTimedOut = true;
-                    status.Faulted = true;
+                    status.MarkCanceled("Operation cancelled, likely because of a batch timeout");
                     throw;
                 }
                 catch (Exception e)
@@ -186,13 +186,11 @@ namespace Raven.Database.Counters.Controllers
                         Message = errorMessage
                     });
 
-                    status.Faulted = true;
-                    status.State = RavenJObject.FromObject(new { Error = errorMessage });
+                    status.MarkFaulted(errorMessage);
                     throw;
                 }
                 finally
                 {
-                    status.Completed = true;
                     status.Counters = counterChanges;
                 }
             }, timeoutTokenSource.Token);
@@ -203,7 +201,7 @@ namespace Raven.Database.Counters.Controllers
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.CounterBatchOperation,
-                Payload = operationId.ToString()
+                Description = operationId.ToString()
             }, out id, timeoutTokenSource);
 
             AddRequestTraceInfo(log => 
@@ -273,16 +271,9 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        private class BatchStatus : IOperationState
+        private class BatchStatus : OperationStateBase
         {
             public int Counters { get; set; }
-            public bool Completed { get; set; }
-
-            public bool Faulted { get; set; }
-
-            public RavenJToken State { get; set; }
-
-            public bool IsTimedOut { get; set; }
         }
 
         [RavenRoute("cs/{counterStorageName}/reset")]

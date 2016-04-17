@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -42,8 +43,8 @@ namespace Raven.Tests.MailingList
                     "
                 }, new BulkOperationOptions(){ RetrieveDetails = true});
 
-                var state = (RavenJArray)op.WaitForCompletion();
-                Assert.Contains("1", state[0].Value<RavenJArray>("Debug")[0].ToString(Formatting.None));
+                var state = (RavenJObject)op.WaitForCompletion();
+                Assert.Contains("1", state.Value<RavenJArray>("Batch")[0].Value<RavenJArray>("Debug")[0].ToString(Formatting.None));
 
             }
         }
@@ -72,8 +73,8 @@ namespace Raven.Tests.MailingList
                     "
                 }, new BulkOperationOptions(){ RetrieveDetails = true});
 
-                var state = (RavenJArray)op.WaitForCompletion();
-                Assert.Contains("1", state[0].Value<RavenJArray>("Debug")[0].ToString(Formatting.None));
+                var state = (RavenJObject)op.WaitForCompletion();
+                Assert.Contains("1", state.Value<RavenJArray>("Batch")[0].Value<RavenJArray>("Debug")[0].ToString(Formatting.None));
 
             }
         }

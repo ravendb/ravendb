@@ -62,6 +62,7 @@ a(s);"
                     Assert.Equal(@"Unable to execute JavaScript: 
 var s = 1234; 
 a(s);
+
 Error: 
 oops
 Stacktrace:

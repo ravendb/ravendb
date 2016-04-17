@@ -27,7 +27,7 @@ namespace Raven.Database.Backup
 
         public const int MoveFileDelayUntilReboot = 0x4;
 
-        public event Action<string, string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
+        public event Action<string, Exception, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
         private readonly Dictionary<string, long> fileToSize = new Dictionary<string, long>();
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
@@ -54,7 +54,11 @@ namespace Raven.Database.Backup
 
         private static void EnsureDirectoryExists(string dir)
         {
-            var tempPath = Path.Combine(dir, Guid.NewGuid().ToString());
+            if (dir.Length > 248)
+                throw new ArgumentOutOfRangeException("Length of the directory exceeds 248 chars and can't be created:\n {0}", dir);
+            var tempPath = Path.Combine(dir, Guid.NewGuid().GetHashCode().ToString());
+            if (tempPath.Length > 260)
+                throw new ArgumentOutOfRangeException("Length of the fully qualified file name exceeds 260 chars and can't be created:\n {0}", tempPath);
             var retries = 5;
             while (true)
             {
@@ -86,7 +90,7 @@ namespace Raven.Database.Backup
         /// b) copy the hard links to the destination directory
         /// c) delete the temp directory
         /// </summary>
-        public void Execute(ProgressNotifier progressNotifier)
+        public void Execute(ProgressNotifier progressNotifier, CancellationToken token)
         {
             if (allowOverwrite) // clean destination folder; we want to do this as close as possible to the actual backup operation
             {
@@ -97,9 +101,11 @@ namespace Raven.Database.Backup
 
             foreach (var file in Directory.EnumerateFiles(tempPath))
             {
+                token.ThrowIfCancellationRequested();
+
                 Notify("Copying " + Path.GetFileName(file), null, BackupStatus.BackupMessageSeverity.Informational);
                 var fullName = new FileInfo(file).FullName;
-                FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName], progressNotifier);
+                FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName], progressNotifier, token);
                 Notify("Copied " + Path.GetFileName(file), null, BackupStatus.BackupMessageSeverity.Informational);
             }
 
@@ -119,7 +125,7 @@ namespace Raven.Database.Backup
             }
         }
 
-        private void FileCopy(string src, string dest, long size, ProgressNotifier notifier)
+        private void FileCopy(string src, string dest, long size, ProgressNotifier notifier, CancellationToken token)
         {
             var buffer = new byte[16 * 1024];
             using (var srcStream = File.Open(src,FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
@@ -130,6 +136,7 @@ namespace Raven.Database.Backup
                 {
                     while (true)
                     {
+                        token.ThrowIfCancellationRequested();
                         var read = srcStream.Read(buffer, 0, (int)Math.Min(buffer.Length, size));
                         notifier.UpdateProgress(read, Notify);
                         if (read == 0)

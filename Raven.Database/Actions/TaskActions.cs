@@ -16,13 +16,14 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Actions
 {
     public class TaskActions : ActionsBase
     {
         private long pendingTaskCounter;
-        private readonly ConcurrentDictionary<long, PendingTaskWithStateAndDescription> pendingTasks = new ConcurrentDictionary<long, PendingTaskWithStateAndDescription>();
+        private readonly ConcurrentDictionary<long, PendingTask> pendingTasks = new ConcurrentDictionary<long, PendingTask>();
 
         public TaskActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
             : base(database, recentTouches, uuidGenerator, log)
@@ -36,7 +37,7 @@ namespace Raven.Database.Actions
                 var task = taskAndState.Value.Task;
                 if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
                 {
-                    PendingTaskWithStateAndDescription value;
+                    PendingTask value;
                     pendingTasks.TryRemove(taskAndState.Key, out value);
                 }
                 if (task.Exception != null)
@@ -50,30 +51,30 @@ namespace Raven.Database.Actions
         {
             return pendingTasks.Select(x =>
             {
-                var ex = (x.Value.Task.IsFaulted || x.Value.Task.IsCanceled) ? x.Value.Task.Exception.ExtractSingleInnerException() : null;
-                var taskStatus = x.Value.Task.Status;
-                if (taskStatus == TaskStatus.WaitingForActivation)
-                    taskStatus = TaskStatus.Running; //aysnc task status is always WaitingForActivation
-
-                if (ex == null && x.Value.Task.IsCompleted && x.Value.State != null)
+                var task = new PendingTaskDescriptionAndStatus
                 {
-                    // alternatively try to override task status based on stored status
-                    if (x.Value.State.Faulted)
+                    Id = x.Key,
+                    TaskType = x.Value.Description.TaskType,
+                    Description = x.Value.Description.Description,
+                    StartTime = x.Value.Description.StartTime,
+                    Status = x.Value.State.State,
+                    Completed = x.Value.State.Completed,
+                    Faulted = x.Value.State.Faulted,
+                    Canceled = x.Value.State.Canceled,
+                    Exception = x.Value.State.Exception,
+                    Killable = x.Value.TokenSource != null && !x.Value.Task.IsCompleted
+                };
+
+                // create thread safe copy of status to avoid InvalidOperationException during serialization 
+                if (task.Status != null)
+                {
+                    lock (task.Status)
                     {
-                        taskStatus = TaskStatus.Faulted;
-                        ex = new Exception(x.Value.State.State.Value<string>("Error"));
+                        task.Status = task.Status.CloneToken();
                     }
                 }
-
-                return new PendingTaskDescriptionAndStatus
-                       {
-                           Id = x.Key,
-                           Payload = x.Value.Description.Payload,
-                           StartTime = x.Value.Description.StartTime,
-                           TaskStatus = taskStatus,
-                           TaskType = x.Value.Description.TaskType,
-                           Exception = ex
-                       };
+              
+                return task;
             }).ToList();
         }
 
@@ -82,7 +83,7 @@ namespace Raven.Database.Actions
             if (task.Status == TaskStatus.Created)
                 throw new ArgumentException("Task must be started before it gets added to the database.", "task");
             var localId = id = Interlocked.Increment(ref pendingTaskCounter);
-            pendingTasks.TryAdd(localId, new PendingTaskWithStateAndDescription
+            pendingTasks.TryAdd(localId, new PendingTask
             {
                 Task = task,
                 State = state,
@@ -93,14 +94,14 @@ namespace Raven.Database.Actions
 
         public void RemoveTask(long taskId)
         {
-            PendingTaskWithStateAndDescription value;
+            PendingTask value;
             pendingTasks.TryRemove(taskId, out value);
         }
 
 
-        public object KillTask(long id)
+        public IOperationState KillTask(long id)
         {
-            PendingTaskWithStateAndDescription value;
+            PendingTask value;
             if (pendingTasks.TryGetValue(id, out value))
             {
                 if (!value.Task.IsFaulted && !value.Task.IsCanceled && !value.Task.IsCompleted)
@@ -116,9 +117,9 @@ namespace Raven.Database.Actions
             return null;
         }
 
-        public object GetTaskState(long id)
+        public IOperationState GetTaskState(long id)
         {
-            PendingTaskWithStateAndDescription value;
+            PendingTask value;
             if (pendingTasks.TryGetValue(id, out value))
             {
                 return value.State;
@@ -150,7 +151,7 @@ namespace Raven.Database.Actions
             pendingTasks.Clear();
         }
 
-        public class PendingTaskWithStateAndDescription
+        public class PendingTask
         {
             public Task Task;
             public IOperationState State;
@@ -158,20 +159,25 @@ namespace Raven.Database.Actions
             public CancellationTokenSource TokenSource;
         }
 
+        /// <summary>
+        /// Used for describing task before it is even started
+        /// </summary>
         public class PendingTaskDescription
         {
-            public string Payload;
-
+            public string Description;
             public PendingTaskType TaskType;
-
             public DateTime StartTime;
         }
 
         public class PendingTaskDescriptionAndStatus : PendingTaskDescription
         {
             public long Id;
-            public TaskStatus TaskStatus;
+            public RavenJToken Status { get; set; }
             public Exception Exception;
+            public bool Killable;
+            public bool Completed { get; set; }
+            public bool Faulted { get; set; }
+            public bool Canceled { get; set; }
         }
 
         public enum PendingTaskType
@@ -183,6 +189,10 @@ namespace Raven.Database.Actions
             IndexBulkOperation,
 
             IndexDeleteOperation,
+
+            BackupDatabase,
+
+            BackupFilesystem,
 
             ImportDatabase,
 
@@ -207,6 +217,9 @@ namespace Raven.Database.Actions
             TimeSeriesBatchOperation,
 
             RecoverCorruptedIndexOperation,
+
+            ResolveConflicts
         }
     }
 }
+

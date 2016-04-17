@@ -26,6 +26,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -78,8 +79,8 @@
       <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.1\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NLog, Version=4.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.3.0-rc3\lib\net45\NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -115,6 +116,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
+      <Link>Properties\TestAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Auth\ClientOAuthAuthentication.cs" />
     <Compile Include="Auth\ClientWindowsAuth.cs" />
     <Compile Include="Auth\ClientWindowsAuth2.cs" />
@@ -154,6 +158,8 @@
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
     <Compile Include="Issues\RavenDB_3887.cs" />
+    <Compile Include="Issues\RavenDB_3904_Commands.cs" />
+    <Compile Include="Issues\RavenDB_3904_Session.cs" />
     <Compile Include="Issues\RavenDB_3920.cs" />
     <Compile Include="Issues\RavenDB_3955.cs" />
     <Compile Include="Issues\RavenDB_4059.cs" />
@@ -161,6 +167,13 @@
     <Compile Include="Issues\RavenDB_4066.cs" />
     <Compile Include="Issues\RavenDB_4069.cs" />
     <Compile Include="Issues\RavenDB_4092.cs" />
+    <Compile Include="Issues\RavenDB_4164.cs" />
+    <Compile Include="Issues\RavenDB_4206.cs" />
+    <Compile Include="Issues\RavenDB_4208.cs" />
+    <Compile Include="Issues\RavenDB_4217.cs" />
+    <Compile Include="Issues\RavenDB_4224.cs" />
+    <Compile Include="Issues\RavenDB_4219.cs" />
+    <Compile Include="Issues\RavenDB_4189.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />
     <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />

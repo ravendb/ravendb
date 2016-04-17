@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using Lextm.SharpSnmpLib;
 
+using Raven.Abstractions.Extensions;
+
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
 {
     public class ServerBuildVersion : ScalarObjectBase<OctetString>
@@ -14,7 +16,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
         public ServerBuildVersion()
             : base("1.3")
         {
-            buildVersion = new OctetString(DocumentDatabase.BuildVersion);
+            buildVersion = new OctetString(DocumentDatabase.BuildVersion.ToInvariantString());
         }
 
         protected override OctetString GetData()

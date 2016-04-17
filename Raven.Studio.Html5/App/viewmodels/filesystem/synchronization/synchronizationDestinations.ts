@@ -95,7 +95,8 @@ class synchronizationDestinations extends viewModelBase {
     }
 
     createNewDestination() {
-        this.replicationsSetup().destinations.unshift(synchronizationDestination.empty());
+        var fs = this.activeFilesystem();
+        this.replicationsSetup().destinations.unshift(synchronizationDestination.empty(fs.name));
     }
 
     removeDestination(repl: synchronizationDestination) {

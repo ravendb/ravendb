@@ -158,6 +158,8 @@ namespace Raven.Database.Raft
 
                 switch (response.StatusCode)
                 {
+                    case HttpStatusCode.Conflict:
+                        return CanJoinResult.IsNonEmpty;
                     case HttpStatusCode.NotModified:
                         return CanJoinResult.AlreadyJoined;
                     case HttpStatusCode.NotAcceptable:
@@ -280,6 +282,8 @@ namespace Raven.Database.Raft
 
                 switch (response.StatusCode)
                 {
+                    case HttpStatusCode.Conflict:
+                        return CanJoinResult.IsNonEmpty;
                     case HttpStatusCode.NotModified:
                         return CanJoinResult.AlreadyJoined;
                     case HttpStatusCode.NotAcceptable:
@@ -418,7 +422,11 @@ namespace Raven.Database.Raft
             {
                 var response = await request.ExecuteAsync().ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
+                {
+                    if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
+                        throw new UnauthorizedAccessException($"unable to reach {nodeConnectionInfo.Uri} make sure you have admin privileges on the <system> database");
                     throw new InvalidOperationException("Unable to fetch database statictics for: " + nodeConnectionInfo.Uri);
+                }
 
                 using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
                 {
@@ -461,7 +469,7 @@ namespace Raven.Database.Raft
 
         internal SecuredAuthenticator GetAuthenticator(NodeConnectionInfo info)
         {
-            return _securedAuthenticatorCache.GetOrAdd(info.Uri.AbsoluteUri, _ => new SecuredAuthenticator());
+            return _securedAuthenticatorCache.GetOrAdd(info.Uri.AbsoluteUri, _ => new SecuredAuthenticator(autoRefreshToken: false));
         }
 
         internal ReturnToQueue GetConnection(NodeConnectionInfo nodeConnection, out HttpClient result)
@@ -509,6 +517,11 @@ namespace Raven.Database.Raft
 
         AlreadyJoined,
 
-        InAnotherCluster
+        InAnotherCluster,
+
+        /// <summary>
+        /// Used when target server contains any resource
+        /// </summary>
+        IsNonEmpty
     }
 }

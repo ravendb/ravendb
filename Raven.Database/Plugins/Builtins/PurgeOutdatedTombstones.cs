@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Database.Actions;
 
 namespace Raven.Database.Plugins.Builtins
@@ -14,11 +15,12 @@ namespace Raven.Database.Plugins.Builtins
         public void Execute(DocumentDatabase database)
         {
             long id;
-            database.Tasks.AddTask(Task.Run(() => database.Maintenance.PurgeOutdatedTombstones()), null,
+            var task = Task.Run(() => database.Maintenance.PurgeOutdatedTombstones());
+            database.Tasks.AddTask(task, new TaskBasedOperationState(task), 
                                     new TaskActions.PendingTaskDescription
                                     {
                                         TaskType = TaskActions.PendingTaskType.PurgeTombstones,
-                                        Payload = "Startup Task - Purge Outdated Tombstones (if relevant)",
+                                        Description = "Startup Task - Purge Outdated Tombstones (if relevant)",
                                         StartTime = SystemTime.UtcNow
                                     }, out id);
         }

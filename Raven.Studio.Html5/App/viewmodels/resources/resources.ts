@@ -51,7 +51,7 @@ class resources extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
-    showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
+    showCreateCluster = ko.computed(() => !shell.clusterMode());
     canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     databaseType = database.type;
@@ -66,6 +66,8 @@ class resources extends viewModelBase {
         { value: counterStorage.type, name: "Show counter storages" },
         { value: timeSeries.type, name: "Show time series" }
     ];
+
+    has40Features = ko.computed(() => shell.has40Features());
 
     constructor() {
         super();
@@ -281,7 +283,7 @@ class resources extends viewModelBase {
         }
 
         if ((this.resources().length > 0) && (this.resources().contains(this.selectedResource()) === false)) {
-            this.selectResource(this.resources().first());
+            ko.postbox.publish("SelectNone");
         }
     }
 

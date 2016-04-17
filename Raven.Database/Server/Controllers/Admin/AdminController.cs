@@ -78,6 +78,13 @@ namespace Raven.Database.Server.Controllers.Admin
             return message;
         }
 
+        [HttpGet]
+        [RavenRoute("admin/cluster-statistics")]
+        public HttpResponseMessage GetClusterStatistics()
+        {
+            return GetMessageWithObject(ClusterManager.Engine.EngineStatistics);
+        }
+
         [HttpPost]
         [RavenRoute("admin/serverSmuggling")]
         public async Task<HttpResponseMessage> ServerSmuggling()
@@ -125,17 +132,13 @@ namespace Raven.Database.Server.Controllers.Admin
                     }
 
                     status.Messages.Add("Server smuggling completed successfully. Selected databases have been smuggled.");
+                    status.MarkCompleted();
                 }
                 catch (Exception e)
                 {
                     status.Messages.Add("Error: " + e.Message);
-                    status.State = RavenJObject.FromObject(new { Error = e.Message });
-                    status.Faulted = true;
+                    status.MarkFaulted(e.Message);
                     throw;
-                }
-                finally
-                {
-                    status.Completed = true;
                 }
             }, cts.Token);
 
@@ -144,7 +147,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.ServerSmuggling,
-                Payload = "Server smuggling"
+                Description = "Server smuggling"
 
             }, out id, cts);
 
@@ -154,17 +157,14 @@ namespace Raven.Database.Server.Controllers.Admin
             }, HttpStatusCode.Accepted);
         }
 
-        private class ServerSmugglingOperationState : IOperationState
+        private class ServerSmugglingOperationState : OperationStateBase
         {
             public ServerSmugglingOperationState()
             {
                 Messages = new List<string>();
             }
 
-            public bool Completed { get; set; }
-            public bool Faulted { get; set; }
             public List<string> Messages { get; private set; }
-            public RavenJToken State { get; set; }
         }
 
         private static DocumentStore CreateStore(ServerConnectionInfo connection)
@@ -216,9 +216,24 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
 
-            Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
+            var cts = new CancellationTokenSource();
+            var state = new ResourceBackupState();
 
-            return GetEmptyMessage(HttpStatusCode.Created);
+            var task = Database.Maintenance.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument, state, cts.Token);
+            task.ContinueWith(_ => cts.Dispose());
+
+            long id;
+            DatabasesLandlord.SystemDatabase.Tasks.AddTask(task, state, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.BackupDatabase,
+                Description = "Backup to: " + backupRequest.BackupLocation
+            }, out id, cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
         }
 
         protected override WindowsBuiltInRole[] AdditionalSupportedRoles
@@ -408,7 +423,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.RestoreDatabase,
-                Payload = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
+                Description = "Restoring database " + databaseName + " from " + restoreRequest.BackupLocation
             }, out id);
 
 
@@ -535,7 +550,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/license/connectivity")]
         public HttpResponseMessage CheckConnectivityToLicenseServer()
         {
-            var request = (HttpWebRequest)WebRequest.Create("http://licensing.ravendb.net/Subscriptions.svc");
+            var request = (HttpWebRequest)WebRequest.Create("https://licensing.ravendb.net/Subscriptions.svc");
             try
             {
                 request.Timeout = 5000;
@@ -633,7 +648,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.CompactDatabase,
-                Payload = "Compact database " + db,
+                Description = "Compact database " + db,
             }, out id);
 
             return GetMessageWithObject(new
@@ -660,17 +675,23 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("databases/{databaseName}/admin/indexingStatus")]
         public HttpResponseMessage IndexingStatus()
         {
-            string indexDisableStatus;
-            bool result;
-            if (bool.TryParse(Database.Configuration.Settings[Constants.IndexingDisabled], out result) && result)
+            string mappingDisableStatus;
+            string reducingDisableStatus;
+            if (Database.IsIndexingDisabled())
             {
-                indexDisableStatus = "Disabled";
+                mappingDisableStatus = reducingDisableStatus = "Disabled";
             }
             else
             {
-                indexDisableStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused";
+                mappingDisableStatus = Database.WorkContext.RunIndexing ? "Mapping" : "Paused";
+                reducingDisableStatus = Database.WorkContext.RunReducing ? "Reducing" : "Paused";
             }
-            return GetMessageWithObject(new { IndexingStatus = indexDisableStatus });
+
+            return GetMessageWithObject(new IndexingStatus
+            {
+                MappingStatus = mappingDisableStatus,
+                ReducingStatus = reducingDisableStatus
+            });
         }
 
         [HttpPost]
@@ -864,6 +885,21 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [HttpGet]
+        [RavenRoute("admin/verify-principal")]
+        public HttpResponseMessage VerifyPrincipal(string mode, string principal)
+        {
+            switch (mode)
+            {
+                case "user":
+                    return GetMessageWithObject(new {Valid = AccountVerifier.UserExists(principal) });
+                case "group":
+                    return GetMessageWithObject(new {Valid = AccountVerifier.GroupExists(principal) });
+                default:
+                    return GetMessageWithString("Unhandled mode: " + mode, HttpStatusCode.BadRequest);
+            }
+        }
+
+        [HttpGet]
         [RavenRoute("admin/tasks")]
         [RavenRoute("databases/{databaseName}/admin/tasks")]
         public HttpResponseMessage Tasks()
@@ -976,12 +1012,21 @@ namespace Raven.Database.Server.Controllers.Admin
 
                     ravenDebugDir = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
                     var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
+                    var ravenDbgHelp = Path.Combine(ravenDebugDir, "dbghelp.dll");
                     var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
 
                     Directory.CreateDirectory(ravenDebugDir);
 
-                    if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
-                    else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+                    if (Environment.Is64BitProcess)
+                    {
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x64.dbghelp.dll", ravenDbgHelp);
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
+                    }
+                    else
+                    {
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x86.dbghelp.dll", ravenDbgHelp);
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+                    }
 
                     var process = new Process
                     {
@@ -1183,10 +1228,13 @@ namespace Raven.Database.Server.Controllers.Admin
                 using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, msg =>
                 {
                     debugInfo.Add(msg);
-                    operationStatus["currentStatus"] = msg;
+                    operationStatus["Progress"] = msg;
                 }, killTaskCts.Token))
                 {
                     diskIo.TestDiskIO();
+
+                    // reset operation status after test
+                    operationStatus.Remove("Progress");
 
                     RavenJObject diskPerformanceRequestResponseDoc;
 
@@ -1227,11 +1275,11 @@ namespace Raven.Database.Server.Controllers.Admin
             }, killTaskCts.Token);
 
             long id;
-            Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task, () => operationStatus), new TaskActions.PendingTaskDescription
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.IoTest,
-                Payload = "Disk performance test"
+                Description = "Disk performance test"
             }, out id, killTaskCts);
 
             return GetMessageWithObject(new

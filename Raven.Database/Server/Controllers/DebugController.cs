@@ -19,11 +19,15 @@ using ICSharpCode.NRefactory.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
+using Raven.Database.Common;
+using Raven.Database.Config;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
+using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -681,6 +685,20 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
+        [RavenRoute("debug/sl0w-lists-breakd0wn")]
+        [RavenRoute("databases/{databaseName}/debug/sl0w-lists-breakd0wn")]
+        public HttpResponseMessage DetailedListsBreakdown()
+        {
+            List<ListsInfo> stat = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                stat = accessor.Lists.GetListsStatsVerySlowly();
+            });
+
+            return GetMessageWithObject(stat);
+        }
+
+        [HttpGet]
         [RavenRoute("debug/user-info")]
         [RavenRoute("databases/{databaseName}/debug/user-info")]
         public HttpResponseMessage UserInfo()
@@ -765,7 +783,57 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/debug/tasks")]
         public HttpResponseMessage Tasks()
         {
-            return GetMessageWithObject(DebugInfoProvider.GetTasksForDebug(Database));
+            return new HttpResponseMessage
+            {
+                Content = new PushStreamContent((stream, content, context) =>
+                {
+                    using (var writer = new StreamWriter(stream))
+                    {
+                        var tasks = DebugInfoProvider.GetTasksForDebug(Database);
+
+                        writer.WriteLine("Id,IndexId,IndexName,AddedTime,Type");
+                        foreach (var task in tasks)
+                        {
+                            writer.WriteLine("{0},{1},{2},{3},{4}", task.Id, task.IndexId, task.IndexName, task.AddedTime, task.Type);
+                        }
+                        writer.Flush();
+                        stream.Flush();
+                    }
+                })
+                {
+                    Headers =
+                    {
+                        ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                        {
+                            FileName = "tasks.csv",
+                        },
+                        ContentType = new MediaTypeHeaderValue("text/csv")
+                    }
+                }
+            };
+        }
+
+        [HttpGet]
+        [RavenRoute("debug/tasks/summary")]
+        [RavenRoute("databases/{databaseName}/debug/tasks/summary")]
+        public HttpResponseMessage TasksSummary()
+        {
+            var debugInfo = DebugInfoProvider.GetTasksForDebug(Database);
+
+            var debugSummary = debugInfo
+                .GroupBy(x => new {x.Type, x.IndexId, x.IndexName})
+                .Select(x => new
+                {
+                    Type = x.Key.Type,
+                    IndexId = x.Key.IndexId,
+                    IndexName = x.Key.IndexName,
+                    Count = x.Count(),
+                    MinDate = x.Min(item => item.AddedTime),
+                    MaxDate = x.Max(item => item.AddedTime)
+                })
+                .ToList();
+
+            return GetMessageWithObject(debugSummary);
         }
 
         [HttpGet]
@@ -783,6 +851,13 @@ namespace Raven.Database.Server.Controllers
                 foreach (var httpRoute in inner)
                 {
                     var key = httpRoute.RouteTemplate;
+
+                    if (key == string.Empty)
+                    {
+                        // ignore RavenRoot url to avoid issues with empty key in routes dictionary
+                        continue;
+                    }
+
                     bool forDatabase = false;
                     if (key.StartsWith("databases/{databaseName}/"))
                     {
@@ -882,6 +957,79 @@ namespace Raven.Database.Server.Controllers
                                             TotalCount = totalCount,
                                             Identities = identities
                                         });
+        }
+
+
+        [HttpGet]
+        [RavenRoute("debug/resource-drives")]
+        public HttpResponseMessage ResourceDrives(string name, string type)
+        {
+            ResourceType resourceType;
+            if (Enum.TryParse(type, out resourceType) == false)
+            {
+                return GetMessageWithString("Unknown resourceType:" + type, HttpStatusCode.BadRequest);
+            }
+
+            string[] drives = null;
+            InMemoryRavenConfiguration config;
+            switch (resourceType)
+            {
+                case ResourceType.Database:
+                    config = DatabasesLandlord.CreateTenantConfiguration(name);
+                    if (config == null)
+                    {
+                        return GetMessageWithString("Unable to find database named: " + name, HttpStatusCode.NotFound);
+                    }
+                    drives = FindUniqueDrives(new [] { config.IndexStoragePath, 
+                        config.Storage.Esent.JournalsStoragePath, 
+                        config.Storage.Voron.JournalsStoragePath, 
+                        config.DataDirectory });
+                    break;
+                case ResourceType.FileSystem:
+                    config = FileSystemsLandlord.CreateTenantConfiguration(name);
+                    if (config == null)
+                    {
+                        return GetMessageWithString("Unable to find filesystem named: " + name, HttpStatusCode.NotFound);
+                    }
+                    drives = FindUniqueDrives(new [] { config.FileSystem.DataDirectory,
+                        config.FileSystem.IndexStoragePath,
+                        config.Storage.Esent.JournalsStoragePath,
+                        config.Storage.Voron.JournalsStoragePath});
+                    break;
+                case ResourceType.Counter:
+                    config = CountersLandlord.CreateTenantConfiguration(name);
+                    if (config == null)
+                    {
+                        return GetMessageWithString("Unable to find counter named: " + name, HttpStatusCode.NotFound);
+                    }
+                    drives = FindUniqueDrives(new [] { config.Counter.DataDirectory,
+                        config.Storage.Esent.JournalsStoragePath,
+                        config.Storage.Voron.JournalsStoragePath,
+                        config.DataDirectory});
+                    break;
+                case ResourceType.TimeSeries:
+                    config = TimeSeriesLandlord.CreateTenantConfiguration(name);
+                    if (config == null)
+                    {
+                        return GetMessageWithString("Unable to find time series named: " + name, HttpStatusCode.NotFound);
+                    }
+                    drives = FindUniqueDrives(new [] { config.TimeSeries.DataDirectory,
+                        config.Storage.Esent.JournalsStoragePath,
+                        config.Storage.Voron.JournalsStoragePath,
+                        config.DataDirectory});
+                    break;
+            }
+
+            return GetMessageWithObject(drives);
+        }
+
+        private static string[] FindUniqueDrives(string[] paths)
+        {
+            return paths
+                .Where(path => path != null && Path.IsPathRooted(path))
+                .Select(path => Path.GetPathRoot(path).ToLowerInvariant())
+                .ToHashSet()
+                .ToArray();
         }
 
         [HttpGet]

@@ -111,7 +111,7 @@ namespace Raven.Tests.Issues
                     {
                         Strategy = strategyToReplace
                     });
-
+                    store.Changes().WaitForAllPendingSubscriptions();
                     var items = new BlockingCollection<User>();
 
                     subscription.Subscribe(items.Add);
@@ -209,16 +209,19 @@ namespace Raven.Tests.Issues
 
                     User user;
 
-                    Assert.True(items[i].TryTake(out user, waitForDocTimeout));
-                    Assert.True(items[i].TryTake(out user, waitForDocTimeout));
+                    Assert.True(items[i].TryTake(out user, waitForDocTimeout),$"Waited for {waitForDocTimeout.TotalSeconds} seconds to get notified about a user, giving up... ");
+                    Assert.True(items[i].TryTake(out user, waitForDocTimeout), $"Waited for {waitForDocTimeout.TotalSeconds} seconds to get notified about a user, giving up... ");
 
                     SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
-
+                    Assert.True(batchAcknowledged,"Wait for 5 seconds for batch to be acknoeledged, giving up...");
                     if (i > 0)
                     {
-                        Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)));
-                        Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)));
-                        Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException);
+                        Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)),
+                            "Was able to take a connection to subscription even though a new connection was opened with ForceAndKeep strategy.");
+                        Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)),
+                            "Previous connection to subscription was not closed even though a new connection was opened with ForceAndKeep strategy.");
+                        Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException,
+                            "SubscriptionConnectionException is not set to expected type, SubscriptionInUseException.");
                     }
                 }
             }

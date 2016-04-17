@@ -203,6 +203,8 @@ namespace Raven.Database.Server.WebApi
                 LastRequestTime = SystemTime.UtcNow;
                 Interlocked.Increment(ref concurrentRequests);
 
+                IncrementRequestNumberAndLog(controller, controllerContext);
+
                 RequestWebApiEventArgs args = await controller.TrySetupRequestToProperResource().ConfigureAwait(false);
                 if (args != null)
                 {
@@ -228,13 +230,12 @@ namespace Raven.Database.Server.WebApi
                             }
                             else
                             {
-                                IncreamentRequestNumberAndLog(controller, controllerContext);
+
                                 response = await action().ConfigureAwait(false);
                             }
                         }
                         else
                         {
-                            IncreamentRequestNumberAndLog(controller, controllerContext);
                             response = await action().ConfigureAwait(false);
                         }
                     }
@@ -273,12 +274,15 @@ namespace Raven.Database.Server.WebApi
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void IncreamentRequestNumberAndLog(IResourceApiController controller, HttpControllerContext controllerContext)
+        private void IncrementRequestNumberAndLog(IResourceApiController controller, HttpControllerContext controllerContext)
         {
+            if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
+                return;
+
             var curReq = Interlocked.Increment(ref reqNum);
             controllerContext.Request.Properties["requestNum"] = curReq;
 
-            if (Logger.IsDebugEnabled == true)
+            if (Logger.IsDebugEnabled)
             {
                 Logger.Debug(string.Format(CultureInfo.InvariantCulture,
                     "Receive Request #{0,4:#,0}: {1,-7} - {2} - {3}",
@@ -449,9 +453,12 @@ namespace Raven.Database.Server.WebApi
 
             MarkRequestDuration(controller, sw.ElapsedMilliseconds);
 
-            long curReq = controller.InnerRequest.Properties["requestNum"] as long? ?? 0;
+            object requestNumber;
 
-            LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, curReq);
+            if (controller.InnerRequest.Properties.TryGetValue("requestNum", out requestNumber) && requestNumber is long)
+            {
+                LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, (long)requestNumber);
+            }
 
             if (controller.IsInternalRequest == false)
             {
@@ -508,7 +515,7 @@ namespace Raven.Database.Server.WebApi
             return queue.ToArray().Reverse();
         }
 
-        private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
+        private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string resourceName, HttpResponseMessage response)
         {
             if (HasAnyHttpTraceEventTransport() == false)
                 return;
@@ -525,18 +532,19 @@ namespace Raven.Database.Server.WebApi
             }
 
             NotifyTrafficWatch(
-            new TrafficWatchNotification()
-            {
-                RequestUri = logHttpRequestStatsParams.RequestUri,
-                ElapsedMilliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-                CustomInfo = logHttpRequestStatsParams.CustomInfo,
-                HttpMethod = logHttpRequestStatsParams.HttpMethod,
-                ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
-                TenantName = NormalizeTennantName(databaseName),
-                TimeStamp = SystemTime.UtcNow,
-                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
-                QueryTimings = timingsJson
-            }
+                string.IsNullOrEmpty(resourceName) == false ? resourceName : Constants.SystemDatabase,
+                new TrafficWatchNotification()
+                {
+                    RequestUri = logHttpRequestStatsParams.RequestUri,
+                    ElapsedMilliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+                    CustomInfo = logHttpRequestStatsParams.CustomInfo,
+                    HttpMethod = logHttpRequestStatsParams.HttpMethod,
+                    ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
+                    TenantName = NormalizeTennantName(resourceName),
+                    TimeStamp = SystemTime.UtcNow,
+                    InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
+                    QueryTimings = timingsJson
+                }
             );
         }
 
@@ -584,7 +592,8 @@ namespace Raven.Database.Server.WebApi
         {
             return serverHttpTrace.Count > 0 || resourceHttpTraces.Count > 0;
         }
-        private void NotifyTrafficWatch(TrafficWatchNotification trafficWatchNotification)
+
+        private void NotifyTrafficWatch(string resourceName, TrafficWatchNotification trafficWatchNotification)
         {
             object notificationMessage = new
             {
@@ -604,7 +613,7 @@ namespace Raven.Database.Server.WebApi
             {
                 ConcurrentSet<IEventsTransport> resourceEventTransports;
 
-                if (!resourceHttpTraces.TryGetValue(trafficWatchNotification.TenantName, out resourceEventTransports) || resourceEventTransports.Count == 0)
+                if (!resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports) || resourceEventTransports.Count == 0)
                     return;
 
                 foreach (var eventTransport in resourceEventTransports)

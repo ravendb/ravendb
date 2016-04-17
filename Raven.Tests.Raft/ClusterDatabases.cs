@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -45,6 +46,21 @@ namespace Raven.Tests.Raft
                 var e = await AssertAsync.Throws<ErrorResponseException>(() => request.WriteAsync(RavenJObject.FromObject(new NodeConnectionInfo())));
 
                 Assert.Equal("To create a cluster server must not contain any databases.", e.Message);
+            }
+        }
+
+        [Fact]
+        public async Task CannotJoinNodeWithExistingDatabases()
+        {
+            using (var storeToJoin = NewRemoteDocumentStore())
+            {
+                storeToJoin.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("testDb");
+
+                var request = storeToJoin.DatabaseCommands.ForSystemDatabase().CreateRequest("/admin/cluster/canJoin?topologyId=" + Guid.NewGuid(), HttpMethod.Get);
+                var response = await request.ExecuteRawResponseAsync();
+
+                // since we have testDb on storeToJoin we answer with can't join 
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
             }
         }
 

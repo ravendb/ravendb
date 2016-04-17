@@ -2,6 +2,8 @@ import commandBase = require("commands/commandBase");
 import collectionInfo = require("models/database/documents/collectionInfo");
 import collection = require("models/database/documents/collection");
 import pagedResultSet = require("common/pagedResultSet");
+import queryUtil = require("common/queryUtil");
+
 
 class getDocumentsByEntityNameCommand extends commandBase {
 
@@ -11,7 +13,7 @@ class getDocumentsByEntityNameCommand extends commandBase {
 
     execute(): JQueryPromise<pagedResultSet> {
         var args = {
-            query: "Tag:" + this.collection.name,
+            query: "Tag:" + queryUtil.escapeTerm(this.collection.name),
             start: this.skip,
             pageSize: this.take,
             sort: "-LastModifiedTicks"

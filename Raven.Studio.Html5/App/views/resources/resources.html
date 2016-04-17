@@ -5,8 +5,10 @@
                 <h2 class="page-header text-info">
                     <i class="fa fa-database fa-5x"></i>
                     <br />
-                    <br />
-                    No databases, file systems, counter storages or time series are available. <br />
+                    <br/>
+                    <span data-bind="visible: has40Features()">No databases, file systems, counter storages or time series are available.</span>
+                    <span data-bind="visible: !has40Features()">No databases or file systems are available.</span>
+                     <br />
                     <small data-bind="visible: isGlobalAdmin() || canNavigateToAdminSettings()">
                         <span data-bind="visible: isGlobalAdmin">
                             Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or 
@@ -38,8 +40,11 @@
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
             <h3>
-                <a href="#resources">
+                <a href="#resources" data-bind="visible: has40Features()">
                     Databases, File Systems, Counter Storages and Time Series
+                </a>
+                <a href="#resources" data-bind="visible: !has40Features()">
+                    Databases and File Systems
                 </a>
             </h3>
         </li>
@@ -121,7 +126,7 @@
                 <a class="dropdown-toggle" data-toggle="dropdown">
                     <i class="fa fa-cogs fa-lg"></i>
                 </a>
-                <ul class="dropdown-menu" role="menu">
+                <ul class="dropdown-menu dropdown-menu-right" role="menu">
                     <li class="dropdown-submenu">
                         <a tabindex="-1" href="#">
                             <i class="fa fa-arrow-down"></i>

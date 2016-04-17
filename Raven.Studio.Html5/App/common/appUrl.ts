@@ -594,9 +594,15 @@ class appUrl {
         return "#databases/conflicts?" + databasePart;
     }
 
-    static forPatch(db: database): string {
+    static forPatch(db: database, hashOfRecentPatch?: number): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/patch?" + databasePart;
+
+        if (hashOfRecentPatch) {
+            var patchPath = "recentpatch-" + hashOfRecentPatch;
+            return "#databases/patch/" + encodeURIComponent(patchPath) + "?" + databasePart;
+        } else {
+            return "#databases/patch?" + databasePart;    
+        }
     }
 
     static forIndexes(db: database): string {
@@ -610,12 +616,6 @@ class appUrl {
     }
 
     static forEditIndex(indexName: string, db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
-    }
-
-    static forEditMerged(indexName: string, db: database): string {
-        return appUrl.forEditIndex(indexName, db) + "&"
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
@@ -706,11 +706,19 @@ class appUrl {
         return "#filesystems/tasks/exportFilesystem?" + filesystemPart;
     }
 
-    static forExportCollectionCsv(collection: collection, db: database): string {
+    static forExportCollectionCsv(collection: collection, db: database, customColumns?: string[]): string {
         if (collection.isAllDocuments || collection.isSystemDocuments) {
             return null;
         }
-        return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName?format=excel&download=true&query=Tag:" + encodeURIComponent(collection.name);
+        var args = {
+            format: "excel",
+            download: true,
+            query: "Tag:" + collection.name,
+            column: customColumns
+        }
+
+
+        return appUrl.forResourceQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
     }
 
     static forToggleIndexing(db: database): string {
@@ -736,10 +744,6 @@ class appUrl {
     static forCounterStorage(cs: counterStorage): string {
         var counterStoragePart = appUrl.getEncodedCounterPart(cs);
         return "#counterstorages?" + counterStoragePart;
-    }
-
-    static serverUrl(): string {
-        return window.location.protocol + "//" + window.location.host;
     }
 
     static forIndexesRawData(db: database): string {
@@ -969,16 +973,7 @@ class appUrl {
     * Gets the server URL.
     */
     static forServer() {
-        // Ported this code from old Silverlight Studio. Do we still need this?
-        if (window.location.protocol === "file:") {
-            if (window.location.search.indexOf("fiddler")) {
-                return "http://localhost.fiddler:8080";
-            } else {
-                return "http://localhost:8080";
-            }
-        }
-
-        return window.location.protocol + "//" + window.location.host;
+        return window.location.protocol + "//" + window.location.host + appUrl.baseUrl;
     }
 
     /**
@@ -1087,7 +1082,9 @@ class appUrl {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             var queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
 
-            if (instruction.fragment == "has-api-key") {
+            if (instruction.fragment === "has-api-key" || instruction.fragment.indexOf("api-key") === 0) {
+
+                // reload page to reinitialize shell and properly consume/provide OAuth token
                 location.reload();
             } else {
                 messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
@@ -1103,6 +1100,22 @@ class appUrl {
                 location.href = newLoationHref;
             }
         });
+    }
+
+    public static urlEncodeArgs(args: any): string {
+        var propNameAndValues = [];
+        for (var prop in args) {
+            var value = args[prop];
+            if (value instanceof Array) {
+                for (var i = 0; i < value.length; i++) {
+                    propNameAndValues.push(prop + "=" + encodeURIComponent(value[i]));
+                }
+            } else if (value !== undefined) {
+                propNameAndValues.push(prop + "=" + encodeURIComponent(value));
+            }
+        }
+
+        return "?" + propNameAndValues.join("&");
     }
 }
 

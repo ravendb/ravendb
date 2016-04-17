@@ -67,7 +67,8 @@ namespace Raven.Database.Raft
                 options = StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.Voron.TempPath);
             }
 
-            var transport = new HttpTransport(nodeConnectionInfo.Name, systemDatabase.WorkContext.CancellationToken);
+            var shortOperationsTimeout = TimeSpan.FromMilliseconds(1.5 * Math.Max(configuration.Cluster.ElectionTimeout, configuration.Cluster.HeartbeatTimeout));
+            var transport = new HttpTransport(nodeConnectionInfo.Name, shortOperationsTimeout, systemDatabase.WorkContext.CancellationToken);
             var stateMachine = new ClusterStateMachine(systemDatabase, databasesLandlord);
             var raftEngineOptions = new RaftEngineOptions(nodeConnectionInfo, options, transport, stateMachine)
             {

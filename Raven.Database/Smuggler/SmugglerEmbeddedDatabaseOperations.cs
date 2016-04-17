@@ -131,38 +131,6 @@ namespace Raven.Database.Smuggler
             return result;
         }
 
-        public Etag FetchLastDocDeleteEtag()
-        {
-            var result = etagEmpty;
-
-            database.TransactionalStorage.Batch(accessor =>
-            {
-                var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicExportsDocsTombstones);
-                if (lastDocumentTombstone != null)
-                    result = lastDocumentTombstone.Etag;
-            });
-
-            return result;
-        }
-
-        public Etag FetchLastAttachmentsDeleteEtag()
-        {
-            var result = etagEmpty;
-
-            database.TransactionalStorage.Batch(accessor =>
-            {
-                var attachmentTombstones =
-                    accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, etagEmpty, null, int.MaxValue)
-                            .OrderBy(x => x.Etag).ToArray();
-                if (attachmentTombstones.Any())
-                {
-                    result = attachmentTombstones.Last().Etag;
-                }
-            });
-
-            return result;
-        }
-
         public Task PutIndex(string indexName, RavenJToken index)
         {
             if (index != null)
@@ -255,9 +223,9 @@ namespace Raven.Database.Smuggler
             });
         }
 
-        public Task<string> GetVersion(RavenConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(RavenConnectionStringOptions server)
         {
-            return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+            return new CompletedTask<BuildNumber>(new BuildNumber { BuildVersion = DocumentDatabase.BuildVersion.ToString(), ProductVersion = DocumentDatabase.ProductVersion });
         }
 
         public Task<DatabaseStatistics> GetStats()
@@ -315,10 +283,21 @@ namespace Raven.Database.Smuggler
 
         public Task SeedIdentityFor(string identityName, long identityValue)
         {
-            if(identityName != null)
+            if (identityName != null)
                 database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
 
             return new CompletedTask();
+        }
+
+        public Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state)
+        {
+            var exporter = new SmugglerExporter(database, ExportOptions.Create(state, types, Options.ExportDeletions, Options.Limit));
+
+            var items = new List<RavenJObject>();
+
+            exporter.Export(items.Add, database.WorkContext.CancellationToken);
+
+            return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(items.GetEnumerator()));
         }
 
         public RavenJToken DisableVersioning(RavenJObject metadata)
@@ -354,7 +333,7 @@ namespace Raven.Database.Smuggler
         public Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)
         {
             var attachment = database.Attachments.GetStatic(attachmentInformation.Key);
-            if (attachment == null) 
+            if (attachment == null)
                 return null;
 
             var data = attachment.Data;

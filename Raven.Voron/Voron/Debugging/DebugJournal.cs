@@ -342,32 +342,47 @@ namespace Voron.Debugging
         private void InitializeDebugJournal(string journalName)
         {
             Dispose();
-            var journalFileInfo = new FileInfo(journalName + FileExtension);
-            if (journalFileInfo.Exists && journalFileInfo.Length >= 1024 * 1024 * 1024) //precaution - don't let the files grow too much
-                journalFileInfo.Delete();
 
             _journalFileStream = new FileStream(journalName + FileExtension, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             _journalWriter = new StreamWriter(_journalFileStream, Encoding.UTF8);
             WriteQueue = new ConcurrentQueue<BaseActivityEntry>();
         }
 
-        public void Load(string journalName)
+        public void Replay(int writeFrequency = 10000, Action<BaseActivityEntry> validate = null)
         {
+            Transaction currentWriteTransaction = null;
             var lineNumber = 1;
-            using (var journalReader = new StreamReader(_journalFileStream, Encoding.UTF8))
-            {
-                while (journalReader.Peek() >= 0)
-                {
-                    var csvLine = journalReader.ReadLine();
-                    if (!string.IsNullOrWhiteSpace(csvLine))
-                    {
-                        var activityEntry = BaseActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength);
-                        activityEntry.LineNumber = lineNumber;
 
-                        WriteQueue.Enqueue(activityEntry);
+            try
+            {
+                using (var journalReader = new StreamReader(_journalFileStream, Encoding.UTF8))
+                {
+                    while (journalReader.Peek() >= 0)
+                    {
+                        var csvLine = journalReader.ReadLine();
+                        if (!string.IsNullOrWhiteSpace(csvLine))
+                        {
+                            var activityEntry = BaseActivityEntry.FromCsvLine(csvLine, RecordOnlyValueLength);
+                            activityEntry.LineNumber = lineNumber;
+
+                            WriteQueue.Enqueue(activityEntry);
+                        }
+
+                        lineNumber++;
+
+                        if (lineNumber % writeFrequency == 0)
+                        {
+                            ApplyRecordedActivities(ref currentWriteTransaction, validate);
+                        }
                     }
-                    lineNumber++;
                 }
+
+                ApplyRecordedActivities(ref currentWriteTransaction, validate);
+            }
+            finally
+            {
+                if (currentWriteTransaction != null)
+                    currentWriteTransaction.Dispose();
             }
         }
 
@@ -377,7 +392,6 @@ namespace Voron.Debugging
                              {
                                  RecordOnlyValueLength = onlyValueLength
                              };
-            newJournal.Load(journalName);
 
             return newJournal;
         }
@@ -435,12 +449,11 @@ namespace Voron.Debugging
             }
         }
 
-        public void Replay(Action<BaseActivityEntry> validate = null)
+        private void ApplyRecordedActivities(ref Transaction currentWriteTransaction, Action<BaseActivityEntry> validate = null)
         {
             var wasDebugRecording = _env.IsDebugRecording;
             _env.IsDebugRecording = false;
 
-            Transaction currentWriteTransaction = null;
             var readTransactions = new Dictionary<long, Queue<Transaction>>();
 
             BaseActivityEntry activityEntry;
@@ -479,17 +492,12 @@ namespace Voron.Debugging
                 throw new InvalidOperationException("unsupported tree action type: " + activityEntry);
             }
 
-
-            if (currentWriteTransaction != null)
-            {
-                currentWriteTransaction.Dispose();
-            }
-
-
             foreach (var transactions in readTransactions.Values)
-            foreach (var t in transactions)
             {
-                t.Dispose();
+                foreach (var t in transactions)
+                {
+                    t.Dispose();
+                }
             }
 
             _env.IsDebugRecording = wasDebugRecording; //restore the state as it was
@@ -582,19 +590,21 @@ namespace Voron.Debugging
 
         private void ReplayWriteAction(WriteActivityEntry activityEntry, ref Transaction tx)
         {
+            var tree = tx.ReadTree(activityEntry.TreeName);
+
             switch (activityEntry.ActionType)
             {
                 case DebugActionType.Add:
-                    tx.ReadTree(activityEntry.TreeName).Add(activityEntry.Key, activityEntry.ValueStream);
+                    tree.Add(activityEntry.Key, activityEntry.ValueStream);
                     break;
                 case DebugActionType.Delete:
-                    tx.ReadTree(activityEntry.TreeName).Delete(activityEntry.Key);
+                    tree.Delete(activityEntry.Key);
                     break;
                 case DebugActionType.MultiAdd:
-                    tx.ReadTree(activityEntry.TreeName).MultiAdd(activityEntry.Key, new Slice(Encoding.UTF8.GetBytes(activityEntry.Value.ToString())));
+                    tree.MultiAdd(activityEntry.Key, new Slice(Encoding.UTF8.GetBytes(activityEntry.Value.ToString())));
                     break;
                 case DebugActionType.MultiDelete:
-                    tx.ReadTree(activityEntry.TreeName).MultiDelete(activityEntry.Key, new Slice(Encoding.UTF8.GetBytes(activityEntry.Value.ToString())));
+                    tree.MultiDelete(activityEntry.Key, new Slice(Encoding.UTF8.GetBytes(activityEntry.Value.ToString())));
                     break;
                 case DebugActionType.CreateTree:
                     _env.CreateTree(tx, activityEntry.TreeName);
@@ -603,10 +613,10 @@ namespace Voron.Debugging
                     var buffer = new byte[sizeof(long)];
                     activityEntry.ValueStream.Read(buffer, 0, buffer.Length);
                     var delta = EndianBitConverter.Little.ToInt64(buffer, 0);
-                    tx.ReadTree(activityEntry.TreeName).Increment(activityEntry.Key, delta);
+                    tree.Increment(activityEntry.Key, delta);
                     break;
                 case DebugActionType.AddStruct:
-                    tx.ReadTree(activityEntry.TreeName).Add(activityEntry.Key, activityEntry.ValueStream);
+                    tree.Add(activityEntry.Key, activityEntry.ValueStream);
                     break;
                 case DebugActionType.RenameTree:
                     _env.RenameTree(tx, activityEntry.TreeName, activityEntry.Key.ToString());

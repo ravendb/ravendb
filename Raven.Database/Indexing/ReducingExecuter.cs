@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -14,7 +13,6 @@ using Raven.Database.Impl.BackgroundTaskExecuter;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Sparrow.Collections;
 
@@ -118,6 +116,10 @@ namespace Raven.Database.Indexing
 
                 if (operationCanceled == false)
                 {
+                    // need to flush the changes made to the map-reduce index
+                    // before commiting the deletions of the scheduled reductions 
+                    context.IndexStorage.FlushIndex(indexToWorkOn.IndexId, onlyAddIndexError: true);
+
                     var deletingScheduledReductionsDuration = new Stopwatch();
                     var storageCommitDuration = new Stopwatch();
 
@@ -129,7 +131,7 @@ namespace Raven.Database.Indexing
                         actions.AfterStorageCommit += storageCommitDuration.Stop;
 
                         ScheduledReductionInfo latest;
-
+                        
                         using (StopwatchScope.For(deletingScheduledReductionsDuration))
                         {
                             latest = actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
@@ -137,6 +139,7 @@ namespace Raven.Database.Indexing
 
                         if (latest == null)
                             return;
+
                         actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexId, latest.Etag, latest.Timestamp);
                     });
 
@@ -170,6 +173,8 @@ namespace Raven.Database.Indexing
         private ReducingPerformanceStats MultiStepReduce(IndexToWorkOn index, List<string> keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete, CancellationToken token)
         {
             var needToMoveToMultiStep = new HashSet<string>();
+            var alreadyMultiStep = new HashSet<string>();
+
             transactionalStorage.Batch(actions =>
             {
                 foreach (var localReduceKey in keysToReduce)
@@ -180,6 +185,9 @@ namespace Raven.Database.Indexing
 
                     if (lastPerformedReduceType != ReduceType.MultiStep)
                         needToMoveToMultiStep.Add(localReduceKey);
+
+                    if (lastPerformedReduceType == ReduceType.MultiStep)
+                        alreadyMultiStep.Add(localReduceKey);
 
                     if (lastPerformedReduceType != ReduceType.SingleStep)
                         continue;
@@ -350,15 +358,13 @@ namespace Raven.Database.Indexing
                 reducePerformance.LevelStats.Add(reduceLevelStats);
             }
 
-            foreach (var reduceKey in needToMoveToMultiStep)
-            {
-                token.ThrowIfCancellationRequested();
+            // update new preformed multi step
+            UpdatePerformedReduceType(index.IndexId, needToMoveToMultiStep, ReduceType.MultiStep);
 
-                string localReduceKey = reduceKey;
-                transactionalStorage.Batch(actions =>
-                                           actions.MapReduce.UpdatePerformedReduceType(index.IndexId, localReduceKey,
-                                                                                       ReduceType.MultiStep));
-            }
+            // already multi step,
+            // if the multi step keys were already removed,
+            // the reduce types for those keys also need to be removed
+            UpdatePerformedReduceType(index.IndexId, alreadyMultiStep, ReduceType.MultiStep, skipAdd: true);
 
             return reducePerformance;
         }
@@ -367,6 +373,7 @@ namespace Raven.Database.Indexing
                                                           ConcurrentSet<object> itemsToDelete, CancellationToken token)
         {
             var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
+            var alreadySingleStepQueue = new ConcurrentQueue<HashSet<string>>();
 
             if ( Log.IsDebugEnabled )
                 Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Count, string.Join(", ", keysToReduce)));
@@ -396,6 +403,9 @@ namespace Raven.Database.Indexing
 
                     var localNeedToMoveToSingleStep = new HashSet<string>();
                     needToMoveToSingleStepQueue.Enqueue(localNeedToMoveToSingleStep);
+                    var localAlreadySingleStep = new HashSet<string>();
+                    alreadySingleStepQueue.Enqueue(localAlreadySingleStep);
+
                     var localKeys = new HashSet<string>();
                     while (enumerator.MoveNext())
                     {
@@ -431,7 +441,7 @@ namespace Raven.Database.Indexing
                         autoTuner.CurrentlyUsedBatchSizesInBytes.GetOrAdd(reducingBatchThrottlerId, scheduledItemsSum);
 
                         if (scheduledItemsCount == 0)
-                        {						    
+                        {
                             // Here we have an interesting issue. We have scheduled reductions, because GetReduceTypesPerKeys() returned them
                             // and at the same time, we don't have any at level 0. That probably means that we have them at level 1 or 2.
                             // They shouldn't be here, and indeed, we remove them just a little down from here in this function.
@@ -466,6 +476,9 @@ namespace Raven.Database.Indexing
 
                             if (lastPerformedReduceType != ReduceType.SingleStep)
                                 localNeedToMoveToSingleStep.Add(reduceKey);
+
+                            if (lastPerformedReduceType == ReduceType.SingleStep)
+                                localAlreadySingleStep.Add(reduceKey);
 
                             if (lastPerformedReduceType != ReduceType.MultiStep)
                                 continue;
@@ -546,20 +559,13 @@ namespace Raven.Database.Indexing
                     autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
                 }
 
-                var needToMoveToSingleStep = new HashSet<string>();
+                // update new preformed single step
+                UpdatePerformedSingleStep(index.IndexId, needToMoveToSingleStepQueue);
 
-                HashSet<string> set;
-                while (needToMoveToSingleStepQueue.TryDequeue(out set))
-                {
-                    needToMoveToSingleStep.UnionWith(set);
-                }
-
-                foreach (var reduceKey in needToMoveToSingleStep)
-                {
-                    string localReduceKey = reduceKey;
-                    transactionalStorage.Batch(actions =>
-                        actions.MapReduce.UpdatePerformedReduceType(index.IndexId, localReduceKey, ReduceType.SingleStep));
-                }
+                // already single step,
+                // if the multi step keys were already removed,
+                // the reduce types for those keys needs to be removed also
+                UpdatePerformedSingleStep(index.IndexId, alreadySingleStepQueue, skipAdd: true);
 
                 reduceLevelStats.Completed = SystemTime.UtcNow;
                 reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
@@ -582,6 +588,31 @@ namespace Raven.Database.Indexing
             return reducePerformanceStats;
         }
 
+        private void UpdatePerformedSingleStep(int indexId, 
+            ConcurrentQueue<HashSet<string>> queue, bool skipAdd = false)
+        {
+            HashSet<string> set;
+            var reduceKeys = new HashSet<string>();
+            while (queue.TryDequeue(out set))
+            {
+                reduceKeys.UnionWith(set);
+            }
+
+            UpdatePerformedReduceType(indexId, reduceKeys, ReduceType.SingleStep, skipAdd);
+        }
+
+        private void UpdatePerformedReduceType(int indexId, 
+            HashSet<string> reduceKeys, ReduceType reduceType, bool skipAdd = false)
+        {
+            foreach (var reduceKey in reduceKeys)
+            {
+                string localReduceKey = reduceKey;
+                transactionalStorage.Batch(actions =>
+                    actions.MapReduce.UpdatePerformedReduceType(indexId, localReduceKey,
+                        reduceType, skipAdd: skipAdd));
+            }
+        }
+
         protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
         {
             onlyFoundIdleWork.Value = false;
@@ -599,11 +630,6 @@ namespace Raven.Database.Indexing
         public override bool ShouldRun
         {
             get { return context.RunReducing; }
-        }
-
-        protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
-        {
-            return null;
         }
 
         protected override void FlushAllIndexes()
@@ -655,6 +681,25 @@ namespace Raven.Database.Indexing
         {
             var indexDefinition = context.IndexDefinitionStorage.GetIndexDefinition(indexesStat.Id);
             return indexDefinition != null && indexDefinition.IsMapReduce;
+        }
+
+        protected override void CleanupScheduledReductions()
+        {
+            transactionalStorage.Batch(actions =>
+            {
+                var mapReduceIndexIds = actions.Indexing.GetIndexesStats()
+                    .Where(IsValidIndex)
+                    .Select(x => x.Id)
+                    .ToList();
+
+                var obsoleteScheduledReductions = actions.MapReduce.DeleteObsoleteScheduledReductions(mapReduceIndexIds, 10000);
+                foreach (var indexIdWithCount in obsoleteScheduledReductions)
+                {
+                    Log.Warn(
+                        "Deleted " + indexIdWithCount.Value + " obsolete scheduled reductions of index id: " +
+                        indexIdWithCount.Key + " (probably the index was already deleted).");
+                }
+            });
         }
     }
 }

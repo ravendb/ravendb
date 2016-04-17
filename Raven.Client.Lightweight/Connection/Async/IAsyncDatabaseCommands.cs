@@ -661,8 +661,10 @@ namespace Raven.Client.Connection.Async
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
+        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
+        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
@@ -787,7 +789,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="incremental">indicates if backup is incremental</param>
         /// <param name="databaseName">name of a database that will be backed up</param>
         /// <param name="token">The cancellation token.</param>
-        Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken));
+        Task<Operation> StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Begins a restore operation.
@@ -805,7 +807,7 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         ///     Get the indexing status
         /// </summary>
-        Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
+        Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Enables indexing.

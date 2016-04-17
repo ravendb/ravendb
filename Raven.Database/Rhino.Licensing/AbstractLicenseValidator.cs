@@ -54,6 +54,7 @@ namespace Rhino.Licensing
         private readonly DiscoveryHost discoveryHost;
         private DiscoveryClient discoveryClient;
         private readonly Guid senderId = Guid.NewGuid();
+        private readonly SntpClient sntpClient;
 
         /// <summary>
         /// Fired when license data is invalidated
@@ -176,6 +177,7 @@ namespace Rhino.Licensing
             LicenseAttributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             this.publicKey = publicKey;
             discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
+            sntpClient = new SntpClient(TimeServers);
         }
 
         private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
@@ -243,17 +245,18 @@ namespace Rhino.Licensing
         /// <summary>
         /// Validates loaded license
         /// </summary>
-        public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false)
+        public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false)
         {
             LicenseAttributes.Clear();
-            if (IsLicenseValid())
+            if (IsLicenseValid(firstTime))
             {
                 onValidLicense();
 
                 if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
                     return;
 
-                nextLeaseTimer = new Timer(LeaseLicenseAgain);
+                if (nextLeaseTimer == null)
+                    nextLeaseTimer = new Timer(LeaseLicenseAgain);
                 if (!turnOffDiscoveryClient)
                 {
                     try
@@ -285,10 +288,12 @@ namespace Rhino.Licensing
             throw new LicenseNotFoundException("Could not find a valid license.");
         }
 
-        private bool IsLicenseValid()
+        private bool IsLicenseValid(bool firstTime = false)
         {
             try
             {
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug("Validating license...");
                 if (TryLoadingLicenseValuesFromValidatedXml() == false)
                 {
                     Logger.Warn("Failed validating license:\r\n{0}", License);
@@ -302,12 +307,12 @@ namespace Rhino.Licensing
 
                 bool result;
                 if (LicenseType == LicenseType.Subscription)
-                    result = ValidateLicense();
+                    result = ValidateLicense(firstTime);
                 else
                 {
                     result = SystemTime.UtcNow < ExpirationDate;
                     if (result)
-                        result = ValidateLicense();
+                        result = ValidateLicense(firstTime);
                 }
 
                 if (result && IsOemLicense()) 
@@ -324,18 +329,19 @@ namespace Rhino.Licensing
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.WarnException("Unhandled error during license validation", e);
                 return false;
             }
         }
 
-        private bool ValidateLicense()
+        private bool ValidateLicense(bool firstTime = false)
         {
             if ((ExpirationDate - SystemTime.UtcNow).TotalDays > 4)
                 return true;
 
-            if (currentlyValidatingLicense)
+            if (currentlyValidatingLicense || firstTime)
                 return IsOemLicense() || SystemTime.UtcNow < ExpirationDate;
 
             if (SubscriptionEndpoint == null)
@@ -439,8 +445,12 @@ namespace Rhino.Licensing
             if (!NetworkInterface.GetIsNetworkAvailable())
                 return;
 
-            var sntp = new SntpClient(TimeServers);
-            sntp.GetDateAsync()
+            var sntpDisable = Environment.GetEnvironmentVariable("RAVENDB_SNTP_DISABLE");
+            bool result;
+            if (bool.TryParse(sntpDisable, out result) && result)
+                return;
+
+            sntpClient.GetDateAsync()
                 .ContinueWith(task =>
                 {
                     if (task.IsFaulted)

@@ -187,6 +187,7 @@ namespace Raven.Database.Server.Tenancy
                     // if we have a very long init process, make sure that we reset the last idle time for this db.
                     LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
                     documentDatabase.RequestManager = SystemDatabase.RequestManager;
+                    documentDatabase.ClusterManager = SystemDatabase.ClusterManager;
                     return documentDatabase;
                 }).ContinueWith(task =>
                 {
@@ -322,9 +323,10 @@ namespace Raven.Database.Server.Tenancy
 
                     int nextPageStart = 0;
                     var databases = systemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, CancellationToken.None, ref nextPageStart).ToList();
-                    if (databases.Count >= numberOfAllowedDbs)
+                    if (databases.Count > numberOfAllowedDbs)
                         throw new InvalidOperationException(
                             "You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +
+                            "But we detect: " + databases.Count + " databases" + Environment.NewLine +
                             "You can either upgrade your RavenDB license or delete a database from the server");
                 }
             }

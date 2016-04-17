@@ -13,7 +13,7 @@
                 <div class="form-group">
                     <div class="row">
                         <strong class="col-sm-3">Total Results:</strong>
-                        <span class="col-sm-9" data-bind="text: TotalResults"></span>
+                        <span class="col-sm-9" data-bind="text: !!TotalResults ? TotalResults.toLocaleString() : 0"></span>
                     </div>
                     <div class="row">
                         <strong class="col-sm-3">Status</strong>

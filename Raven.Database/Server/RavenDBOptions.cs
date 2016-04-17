@@ -57,6 +57,7 @@ namespace Raven.Database.Server
                 requestManager = new RequestManager(databasesLandlord);
                 systemDatabase.RequestManager = requestManager;
                 ClusterManager = new Reference<ClusterManager>();
+                systemDatabase.ClusterManager = ClusterManager;
                 mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
                 mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 

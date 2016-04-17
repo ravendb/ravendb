@@ -96,7 +96,7 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -164,6 +164,7 @@ namespace Raven.Tests.Issues
 
                     accessor.MapReduce.IncrementReduceKeyCounter(a, "a", 2);
                     accessor.MapReduce.IncrementReduceKeyCounter(a, "b", 2);
+                    accessor.MapReduce.IncrementReduceKeyCounter(b, "b", 2);
                 });
 
                 storage.Batch(accessor =>
@@ -172,16 +173,35 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.UpdatePerformedReduceType(b, "b", ReduceType.SingleStep);
                 });
 
+                storage.Batch(accessor =>
+                {
+                    var result = accessor.MapReduce.GetLastPerformedReduceType(a, "a");
+                    Assert.Equal(ReduceType.SingleStep, result);
+
+                    result = accessor.MapReduce.GetLastPerformedReduceType(b, "b");
+                    Assert.Equal(ReduceType.SingleStep, result);
+                });
+
                 storage.Batch(accessor => accessor.Indexing.DeleteIndex(a, new CancellationToken()));
 
                 storage.Batch(accessor =>
                 {
                     var result = accessor.MapReduce.GetLastPerformedReduceType(a, "a");
-
                     Assert.Equal(ReduceType.None, result);
 
                     result = accessor.MapReduce.GetLastPerformedReduceType(b, "b");
                     Assert.Equal(ReduceType.SingleStep, result);
+                });
+
+                storage.Batch(accessor => accessor.Indexing.DeleteIndex(b, new CancellationToken()));
+
+                storage.Batch(accessor =>
+                {
+                    var result = accessor.MapReduce.GetLastPerformedReduceType(a, "a");
+                    Assert.Equal(ReduceType.None, result);
+
+                    result = accessor.MapReduce.GetLastPerformedReduceType(b, "b");
+                    Assert.Equal(ReduceType.None, result);
                 });
             }
         }
@@ -216,7 +236,14 @@ namespace Raven.Tests.Issues
                     var removed = new Dictionary<ReduceKeyAndBucket, int>();
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey, 
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>

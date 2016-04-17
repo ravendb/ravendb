@@ -8,9 +8,8 @@ using System.IO;
 
 using Microsoft.Isam.Esent.Interop;
 
-using NLog;
-
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 
@@ -20,7 +19,7 @@ namespace Raven.Database.Storage.Esent
     {
         public const int MaxSessions = 1024;
 
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         protected readonly InMemoryRavenConfiguration Configuration;
 

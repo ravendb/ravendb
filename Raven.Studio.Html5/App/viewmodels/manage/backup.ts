@@ -7,6 +7,7 @@ import counterStorage = require("models/counter/counterStorage");
 import backupDatabaseCommand = require("commands/maintenance/backupDatabaseCommand");
 import backupFilesystemCommand = require("commands/filesystem/backupFilesystemCommand");
 import backupCounterStorageCommand = require("commands/counter/backupCounterStorageCommand");
+import getResourceDrives = require("commands/resources/getResourceDrives");
 
 class resourceBackup {
     incremental = ko.observable<boolean>(false);
@@ -15,13 +16,31 @@ class resourceBackup {
     backupStatusMessages = ko.observableArray<backupMessageDto>();
     isBusy = ko.observable<boolean>(); 
     resourcesNames: KnockoutComputed<string[]>;
+    fullTypeName: KnockoutComputed<string>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
+    
+    drivesForCurrentResource = ko.observable<string[]>([]);
+    displaySameDriveWarning = ko.computed(() => {
+        var resourceDrives = this.drivesForCurrentResource();
+        var location = this.backupLocation().toLowerCase().substr(0, 3);
+        return resourceDrives.indexOf(location) !== -1;
+    }); 
 
     has40Features = ko.computed(() => shell.has40Features());
 
     constructor(private type: TenantType, private resources: KnockoutObservableArray<resource>) {
         this.resourcesNames = ko.computed(() => resources().map((rs: resource) => rs.name));
+
+        this.fullTypeName = ko.computed(() => {
+            var rs = resources();
+
+            if (rs.length > 0) {
+                return rs[0].fullTypeName;
+            }
+            return null;
+        });
+
         this.searchResults = ko.computed(() => {
             var newResourceName = this.resourceName();
             return this.resourcesNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
@@ -33,11 +52,22 @@ class resourceBackup {
             var foundRs = this.resources().first((rs: resource) => newResourceName === rs.name && rs.type === this.type);
 
             if (!foundRs && newResourceName.length > 0) {
-                var tenantType = foundRs.fullTypeName;
-                errorMessage = tenantType + " name doesn't exist!";
+                errorMessage = this.fullTypeName() + " name doesn't exist!";
             }
 
             return errorMessage;
+        });
+
+        this.resourceName.throttle(200).subscribe((resource) => {
+            var foundRs = this.resources().first((rs: resource) => resource === rs.name && rs.type === this.type);
+            if (foundRs) {
+                new getResourceDrives(foundRs.name, foundRs.type.toString()).execute()
+                    .done((drives: string[]) => {
+                        this.drivesForCurrentResource(drives);
+                    });
+            } else {
+                this.drivesForCurrentResource([]);
+            }
         });
     }
 }

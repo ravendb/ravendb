@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -25,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -170,6 +171,7 @@
     <Compile Include="Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Replication\Bugs\Vlad.cs" />
     <Compile Include="Replication\CollectionSpecific.cs" />
+    <Compile Include="Replication\ConflictResolving.cs" />
     <Compile Include="Replication\ConflictsInEmbeddableStore.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailoverBetweenTwoMultiTenantDatabases.cs" />
@@ -203,6 +205,7 @@
     <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy3.cs" />
     <Compile Include="UniqueConstraints\Bugs\TroyMapReduce.cs" />
+    <Compile Include="UniqueConstraints\Bugs\MyCustomDocumentSession.cs" />
     <Compile Include="UniqueConstraints\Bugs\ValerioBorioni.cs" />
     <Compile Include="UniqueConstraints\Bugs\viscious.cs" />
     <Compile Include="UniqueConstraints\CreateTests.cs" />

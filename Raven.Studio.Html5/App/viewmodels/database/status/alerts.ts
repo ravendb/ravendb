@@ -5,6 +5,7 @@ import moment = require("moment");
 import alert = require("models/database/debug/alert");
 import appUrl = require("common/appUrl");
 import saveAlertsCommand = require("commands/operations/saveAlertsCommand");
+import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 
 class alerts extends viewModelBase {
 
@@ -20,6 +21,8 @@ class alerts extends viewModelBase {
 
     constructor() {
         super();
+
+        autoRefreshBindingHandler.install();
 
         this.unreadAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed() === false));
         this.readAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed() === true));

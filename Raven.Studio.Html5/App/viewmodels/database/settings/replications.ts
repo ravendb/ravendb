@@ -21,6 +21,7 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import enableReplicationCommand = require("commands/database/replication/enableReplicationCommand");
 import replicationPatchScript = require("models/database/replication/replicationPatchScript");
+import ResolveAllConflictsCommand = require("commands/database/replication/resolveAllConflictsCommand");
 
 class replications extends viewModelBase {
 
@@ -30,6 +31,7 @@ class replications extends viewModelBase {
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
     globalClientFailoverBehaviour = ko.observable<string>(null);
+    globalClientRequestTimeThreshold = ko.observable<number>();
     globalReplicationConfig = ko.observable<replicationConfig>();
     collections = ko.observableArray<collection>();
 
@@ -42,8 +44,10 @@ class replications extends viewModelBase {
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
     skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
-
     skipIndexReplicationForAll = ko.observable<boolean>();
+
+    showRequestTimeoutRow: KnockoutComputed<boolean>;
+    showCustomRequestTimeoutRow: KnockoutComputed<boolean>;
 
     private skipIndexReplicationForAllSubscription: KnockoutSubscription;
 
@@ -60,7 +64,7 @@ class replications extends viewModelBase {
     private getIndexReplicationStatusForAllDestinations(): string {
         var countOfSkipIndexReplication: number = 0;
         ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
-            if (dest.skipIndexReplication() === true) {
+            if (dest.skipIndexReplication()) {
                 countOfSkipIndexReplication++;
             }
         });
@@ -99,6 +103,17 @@ class replications extends viewModelBase {
     constructor() {
         super();
         aceEditorBindingHandler.install();
+
+        this.showRequestTimeoutRow = ko.computed(() => {
+            var localSetting = this.replicationsSetup().showCustomRequestTimeThreshold();
+            var globalSetting = this.hasGlobalValues() && this.globalClientFailoverBehaviour() === "AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed";
+            return localSetting || globalSetting;
+        });
+        this.showCustomRequestTimeoutRow = ko.computed(() => {
+            var localSetting = this.replicationsSetup().hasCustomRequestTimeThreshold();
+            var globalSetting = this.hasGlobalValues() && !!this.globalClientRequestTimeThreshold();
+            return localSetting || globalSetting;
+        });
     }
 
     canActivate(args: any): JQueryPromise<any> {
@@ -188,6 +203,7 @@ class replications extends viewModelBase {
                 this.hasGlobalValues(repSetup.GlobalExists);
                 if (repSetup.GlobalDocument && repSetup.GlobalDocument.ClientConfiguration) {
                     this.globalClientFailoverBehaviour(repSetup.GlobalDocument.ClientConfiguration.FailoverBehavior);
+                    this.globalClientRequestTimeThreshold(repSetup.GlobalDocument.ClientConfiguration.RequestTimeThresholdInMilliseconds);
                 }
 
                 ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
@@ -326,6 +342,15 @@ class replications extends viewModelBase {
 
     }
 
+    sendResolveAllConflictsCommand() {
+        var db = this.activeDatabase();
+        if (db) {
+            new ResolveAllConflictsCommand(db).execute();
+        } else {
+            alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
+        }
+    }
+
     saveServerPrefixForHiLo() {
         var db = this.activeDatabase();
         if (db) {
@@ -368,7 +393,7 @@ class replications extends viewModelBase {
             this.replicationConfig().documentConflictResolution(this.globalReplicationConfig().documentConflictResolution());
         }
 
-        this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour());
+        this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour(), this.globalClientRequestTimeThreshold());
     }
 
     enableReplication() {

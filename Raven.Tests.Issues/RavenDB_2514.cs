@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
     public class RavenDB_2514 : RavenTestBase
     {
         [Fact]
-        public void CanBulkInsert()
+        public void CanKillBulkInsert()
         {
             const int bulkInsertSize = 2000;
             using (var store = NewRemoteDocumentStore())
@@ -45,7 +45,12 @@ namespace Raven.Tests.Issues
                             t => ((RavenJObject)t).Deserialize<TaskActions.PendingTaskDescriptionAndStatus>(store.Conventions)).ToList();
                         if (taskList.Count > 0)
                         {
-                            var operationId = taskList.First().Id;
+                            var bulkInsertTask = taskList.FirstOrDefault(x => x.TaskType == TaskActions.PendingTaskType.BulkInsert);
+
+                            if (bulkInsertTask == null)
+                                continue;
+                            
+                            var operationId = bulkInsertTask.Id;
                             store.JsonRequestFactory.CreateHttpJsonRequest(
                                 new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operation/kill?id=" + operationId,
                                     HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();

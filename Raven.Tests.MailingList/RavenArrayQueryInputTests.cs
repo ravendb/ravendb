@@ -25,9 +25,13 @@ namespace Raven.Tests.MailingList
             public TestTransformer()
             {
                 TransformResults = documents => from d in documents
-                                                let index = Array.IndexOf(Parameter("array").Value<string>().Split(','), d.Id)
-                                                orderby index
-                                                select d;
+                    let index = Array.IndexOf(Parameter("array").Value<string>().Split(','), d.Id)
+                    orderby index
+                    select new
+                    {
+                        Id = d.Id,
+                        Array = new[] {1, 2, 3}
+                    };
             }
         }
         [Fact]

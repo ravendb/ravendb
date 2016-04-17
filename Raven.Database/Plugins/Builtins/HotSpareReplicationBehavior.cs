@@ -221,13 +221,15 @@ namespace Raven.Database.Plugins.Builtins
             try
             {
                 var requestParam = new CreateHttpJsonRequestParams(null, "http://licensing.ravendb.net/hot-spare/activation", HttpMethod.Post, null, null, conventions);
-                var request = requestFactory.CreateHttpJsonRequest(requestParam);
-                request.WriteAsync(
-                    RavenJObject.FromObject(new ReportHotSpareUssage()
-                    {
-                        LicenseId = id,
-                        Mode = mode
-                    }));
+                using (var request = requestFactory.CreateHttpJsonRequest(requestParam))
+                {
+                    request.WriteAsync(
+                      RavenJObject.FromObject(new ReportHotSpareUssage()
+                      {
+                          LicenseId = id,
+                          Mode = mode
+                      }));
+                }
             }
             catch (Exception e)
             {

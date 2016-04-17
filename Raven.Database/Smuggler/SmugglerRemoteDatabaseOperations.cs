@@ -100,16 +100,6 @@ namespace Raven.Smuggler
             };
         }
 
-        public Etag FetchLastDocDeleteEtag()
-        {
-            return null;
-        }
-
-        public Etag FetchLastAttachmentsDeleteEtag()
-        {
-            return null;
-        }
-
         [Obsolete("Use RavenFS instead.")]
         public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
         {
@@ -182,7 +172,7 @@ namespace Raven.Smuggler
             {
                 result.Add(new RavenJObject
                            {
-                               { "name", index.Name }, 
+                               { "name", index.Name },
                                { "definition", RavenJObject.FromObject(index) }
                            });
             }
@@ -207,7 +197,7 @@ namespace Raven.Smuggler
             {
                 result.Add(new RavenJObject
                            {
-                               { "name", transformer.Name }, 
+                               { "name", transformer.Name },
                                { "definition", RavenJObject.FromObject(transformer) }
                            });
             }
@@ -215,10 +205,9 @@ namespace Raven.Smuggler
             return result;
         }
 
-        public async Task<string> GetVersion(RavenConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(RavenConnectionStringOptions server)
         {
-            var buildNumber = await Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false);
-            return buildNumber.ProductVersion;
+            return Store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
         }
 
         public void PurgeTombstones(OperationState result)
@@ -379,6 +368,15 @@ namespace Raven.Smuggler
                 return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
 
             return new CompletedTask();
+        }
+
+        public Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state)
+        {
+            var options = ExportOptions.Create(state, types, Options.ExportDeletions, Options.Limit);
+
+            var client = (AsyncServerClient)Store.AsyncDatabaseCommands;
+
+            return client.StreamExportAsync(options);
         }
 
         public string GetIdentifier()

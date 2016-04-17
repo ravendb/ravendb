@@ -64,9 +64,10 @@ namespace Raven.Database.Commercial
 
         public void Execute(InMemoryRavenConfiguration config)
         {
-            timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));
+            //We defer GettingNewLeaseSubscription the first time we run, we will run again with 1 minute so not to delay startup.
+            timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(15));
 
-            ExecuteInternal(config);
+            ExecuteInternal(config,true);
         }
 
         public void ForceExecute(InMemoryRavenConfiguration config)
@@ -74,7 +75,7 @@ namespace Raven.Database.Commercial
             ExecuteInternal(config);
         }
 
-        private void ExecuteInternal(InMemoryRavenConfiguration config)
+        private void ExecuteInternal(InMemoryRavenConfiguration config, bool firstTime = false)
         {
             var licensePath = GetLicensePath(config);
             var licenseText = GetLicenseText(config);
@@ -108,7 +109,7 @@ namespace Raven.Database.Commercial
                                 config.Catalog.Catalogs.Remove(catalog);
                             }
                         }
-                    }, config.TurnOffDiscoveryClient);
+                    }, config.TurnOffDiscoveryClient,firstTime);
                 }
                 catch (LicenseExpiredException ex)
                 {
@@ -137,7 +138,9 @@ namespace Raven.Database.Commercial
                     Status = status,
                     Error = !String.IsNullOrEmpty(errorMessage),
                     Message = String.IsNullOrEmpty(errorMessage) ? message : errorMessage,
-                    Attributes = attributes
+                    
+                    Attributes = attributes,
+                    LicensePath = licensePath
                 };
                 if (CurrentLicenseChanged != null)
                     CurrentLicenseChanged(CurrentLicense);
@@ -168,6 +171,7 @@ namespace Raven.Database.Commercial
                 {
                     Status = "AGPL - Open Source",
                     Error = true,
+                    LicensePath = licensePath,
                     Details = "License Path: " + licensePath + Environment.NewLine + ", License Text: " + licenseText + Environment.NewLine + ", Exception: " + e,
                     Message = "Could not validate license: " + e.Message,
                     Attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
@@ -196,13 +200,17 @@ namespace Raven.Database.Commercial
             if (licenseValidator != null)
                 licenseValidator.Dispose();
 
-            if (string.IsNullOrEmpty(value) == false)
+            if (File.Exists(fullPath))
             {
-                licenseValidator = new StringLicenseValidator(publicKey, value);
-            }
-            else if (File.Exists(fullPath))
-            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Creating new license validator for file: {0}", fullPath);
                 licenseValidator = new LicenseValidator(publicKey, fullPath);
+            }
+            else if (string.IsNullOrEmpty(value) == false)
+            {
+                if(logger.IsDebugEnabled)
+                    logger.Debug("Creating new license validator for string: {0}", value.Substring(0, Math.Min(100, value.Length)));
+                licenseValidator = new StringLicenseValidator(publicKey, value);
             }
             else
             {
@@ -210,6 +218,7 @@ namespace Raven.Database.Commercial
                 {
                     Status = "AGPL - Open Source",
                     Error = false,
+                    LicensePath = fullPath,
                     Message = "No license file was found at " + fullPath +
                               "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
                 };
@@ -218,8 +227,8 @@ namespace Raven.Database.Commercial
 
             licenseValidator.DisableFloatingLicenses = true;
             licenseValidator.SubscriptionEndpoint = "http://licensing.ravendb.net/Subscriptions.svc";
-            licenseValidator.LicenseInvalidated += OnLicenseInvalidated;
-            licenseValidator.MultipleLicensesWereDiscovered += OnMultipleLicensesWereDiscovered;
+            licenseValidator.LicenseInvalidated += (invalidationType) => OnLicenseInvalidated(invalidationType, fullPath);
+            licenseValidator.MultipleLicensesWereDiscovered += (sender, args) => OnMultipleLicensesWereDiscovered(sender, args, fullPath);
 
             return true;
         }
@@ -311,7 +320,7 @@ namespace Raven.Database.Commercial
             return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.xml");
         }
 
-        private void OnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
+        private void OnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs, string fullPath)
         {
             logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!",
                 clientDiscoveredEventArgs.MachineName,
@@ -322,6 +331,7 @@ namespace Raven.Database.Commercial
             {
                 Status = "AGPL - Open Source",
                 Error = true,
+                LicensePath = fullPath,
                 Message =
                     string.Format("A duplicate license was found at {0} for user {1}. User Id: {2}.", clientDiscoveredEventArgs.MachineName,
                                   clientDiscoveredEventArgs.UserName,
@@ -329,14 +339,15 @@ namespace Raven.Database.Commercial
             };
         }
 
-        private void OnLicenseInvalidated(InvalidationType invalidationType)
+        private void OnLicenseInvalidated(InvalidationType invalidationType, string fullPath)
         {
             logger.Error("The license have expired and can no longer be used");
             CurrentLicense = new LicensingStatus
             {
                 Status = "AGPL - Open Source",
                 Error = true,
-                Message = "License expired"
+                Message = "License expired",
+                LicensePath = fullPath
             };
         }
 

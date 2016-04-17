@@ -3,25 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Lucene.Net.Search;
+using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
-using Raven.Database.Util.Streams;
+using System.Linq;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
     using System;
-
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Logging;
-    using Raven.Database.Impl;
-    using Raven.Database.Storage.Voron.Impl;
-    using Raven.Database.Tasks;
-    using Raven.Json.Linq;
-
+    using Abstractions.Data;
+    using Abstractions.Logging;
+    using Database.Impl;
+    using Impl;
+    using Tasks;
     using global::Voron;
     using global::Voron.Impl;
 
@@ -83,7 +78,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public T GetMergedTask<T>() where T : DatabaseTask
+        public T GetMergedTask<T>(List<int> indexesToSkip, int[] allIndexes, HashSet<IComparable> alreadySeen)
+            where T : DatabaseTask
         {
             var type = CreateKey(typeof(T).FullName);
             var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
@@ -99,6 +95,27 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
                     if (value == null)
                         continue;
+
+                    var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
+                    var indexId = value.ReadInt(TaskFields.IndexId);
+                    if (indexesToSkip.Contains(indexId))
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for index id: {1}", currentId, indexId);
+                        continue;
+                    }
+
+                    if (alreadySeen.Add(currentId) == false)
+                        continue;
+
+                    if (allIndexes.Contains(indexId) == false)
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, indexId);
+
+                        continue;
+                    }
+
                     DatabaseTask task;
                     try
                     {
@@ -107,45 +124,79 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     catch (Exception e)
                     {
                         Logger.ErrorException(
-                            string.Format("Could not create instance of a task: {0}", value),
-                            e);
+                            string.Format("Could not create instance of a task: {0}", value), e);
+
+                        alreadySeen.Add(currentId);
                         continue;
                     }
 
-                    MergeSimilarTasks(task, value.ReadBytes(TaskFields.TaskId));
-                    RemoveTask(iterator.CurrentKey, task.Index, type);
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug("Fetched task id: {0}", currentId);
+
+                    task.Id = currentId;
+                    MergeSimilarTasks(task, alreadySeen, indexesToSkip, allIndexes);
 
                     return (T)task;
-                }
-                while (iterator.MoveNext());
+                } while (iterator.MoveNext());
             }
 
             return null;
         }
 
-        private void MergeSimilarTasks(DatabaseTask task, byte[] taskId)
+        private void MergeSimilarTasks(DatabaseTask task, HashSet<IComparable> alreadySeen, List<int> indexesToSkip, int[] allIndexes)
         {
-            var id = Etag.Parse(taskId);
+            string tree;
+            Slice slice;
             var type = task.GetType().FullName;
-            var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
+            if (task.SeparateTasksByIndex)
+            {
+                tree = Tables.Tasks.Indices.ByIndexAndType;
+                slice = (Slice)CreateKey(task.Index, type);
+            }
+            else
+            {
+                tree = Tables.Tasks.Indices.ByType;
+                slice = (Slice)CreateKey(type);
+            }
 
-            using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, (Slice)CreateKey(task.Index, type)))
+            using (var iterator = tableStorage.Tasks.GetIndex(tree).MultiRead(Snapshot, slice))
             {
                 if (!iterator.Seek(Slice.BeforeAllKeys))
                     return;
 
-                int totalTaskCount = 0;
-
+                var totalKeysToProcess = task.NumberOfKeys;
                 do
                 {
-                    var currentId = Etag.Parse(iterator.CurrentKey.ToString());
-                    if (currentId == id)
-                        continue;
+                    if (totalKeysToProcess >= 5 * 1024)
+                        break;
 
                     ushort version;
                     var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
                     if (value == null)
                         continue;
+
+                    var currentId = Etag.Parse(iterator.CurrentKey.ToString());
+                    var indexId = value.ReadInt(TaskFields.IndexId);
+                    if (task.SeparateTasksByIndex == false && indexesToSkip.Contains(indexId))
+                    {
+                        //need to check this only when not separating tasks by index
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for index id: {1}", currentId, indexId);
+                        continue;
+                    }
+
+                    if (alreadySeen.Add(currentId) == false)
+                        continue;
+
+                    if (task.SeparateTasksByIndex == false && allIndexes.Contains(indexId) == false)
+                    {
+                        //need to check this only when not separating tasks by index
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug("Skipping task id: {0} for non existing index id: {0}", currentId, indexId);
+
+                        continue;
+                    }
+
                     DatabaseTask existingTask;
                     try
                     {
@@ -153,21 +204,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     }
                     catch (Exception e)
                     {
-                        Logger.ErrorException(
-                            string.Format("Could not create instance of a task: {0}", value),
-                            e);
-
-                        RemoveTask(iterator.CurrentKey, task.Index, type);
+                        Logger.ErrorException(string.Format("Could not create instance of a task: {0}", value), e);
+                        alreadySeen.Add(currentId);
                         continue;
                     }
 
+                    totalKeysToProcess += existingTask.NumberOfKeys;
                     task.Merge(existingTask);
-                    RemoveTask(iterator.CurrentKey, task.Index, type);
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug("Merged task id: {0} with task id: {1}", currentId, task.Id);
 
-                    if (totalTaskCount++ > 1024)
-                        break;
-                }
-                while (iterator.MoveNext());
+                } while (iterator.MoveNext());
             }
         }
 
@@ -186,45 +233,94 @@ namespace Raven.Database.Storage.Voron.StorageActions
             tasksByIndexAndType.MultiDelete(writeBatch.Value, (Slice)AppendToKey(indexKey, type), taskId);
         }
 
-
         public System.Collections.Generic.IEnumerable<TaskMetadata> GetPendingTasksForDebug()
         {
-            if(!HasTasks)
+            if (!HasTasks)
                 yield break;
 
             using (var taskIterator = tableStorage.Tasks.Iterate(Snapshot, writeBatch.Value))
             {
-                if(!taskIterator.Seek(Slice.BeforeAllKeys))
+                if (!taskIterator.Seek(Slice.BeforeAllKeys))
                     yield break;
 
                 do
                 {
                     ushort version;
-                    var taskData = LoadStruct(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch.Value, out version); 
-                    if (taskData == null) 
-                            throw new InvalidOperationException("Retrieved a pending task object, but was unable to parse it. This is probably a data corruption or a bug.");
+                    var taskData = LoadStruct(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch.Value, out version);
+                    if (taskData == null)
+                        throw new InvalidOperationException("Retrieved a pending task object, but was unable to parse it. This is probably a data corruption or a bug.");
 
-                        TaskMetadata pendingTasksForDebug;
-                        try
+                    TaskMetadata pendingTasksForDebug;
+                    try
+                    {
+                        pendingTasksForDebug = new TaskMetadata
                         {
-                            pendingTasksForDebug = new TaskMetadata
-                            {
-                                Id = Etag.Parse(taskData.ReadBytes(TaskFields.TaskId)),
-                                AddedTime = DateTime.FromBinary(taskData.ReadLong(TaskFields.AddedAt)),
-                                Type = taskData.ReadString(TaskFields.Type),
-                                IndexId = taskData.ReadInt(TaskFields.IndexId)
-                            };
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("The pending task record was parsed, but contained invalid values. See more details at inner exception.",e);
-                        }
+                            Id = Etag.Parse(taskData.ReadBytes(TaskFields.TaskId)),
+                            AddedTime = DateTime.FromBinary(taskData.ReadLong(TaskFields.AddedAt)),
+                            Type = taskData.ReadString(TaskFields.Type),
+                            IndexId = taskData.ReadInt(TaskFields.IndexId)
+                        };
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("The pending task record was parsed, but contained invalid values. See more details at inner exception.", e);
+                    }
 
-                        yield return pendingTasksForDebug;
+                    yield return pendingTasksForDebug;
                 } while (taskIterator.MoveNext());
             }
-            
+        }
 
+        public void DeleteTasks(HashSet<IComparable> alreadySeen)
+        {
+            foreach (Etag etag in alreadySeen)
+            {
+                ushort version;
+                var taskId = new Slice(etag.ToString());
+                var value = LoadStruct(tableStorage.Tasks, taskId, writeBatch.Value, out version);
+                if (value == null)
+                    continue;
+
+                RemoveTask(taskId, value.ReadInt(TaskFields.IndexId), value.ReadString(TaskFields.Type));
+            }
+        }
+
+        public int DeleteTasksForIndex(int indexId)
+        {
+            var count = 0;
+            var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
+            using (var iterator = tasksByIndexAndType.MultiRead(Snapshot, (Slice)CreateKey(indexId)))
+            {
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                    return count;
+
+                do
+                {
+                    ushort version;
+                    var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
+                    if (value == null)
+                        continue;
+
+                    DatabaseTask task;
+                    try
+                    {
+                        task = DatabaseTask.ToTask(value.ReadString(TaskFields.Type), value.ReadBytes(TaskFields.SerializedTask));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.ErrorException(
+                            string.Format("Could not create instance of a task: {0}, for deletion", value),
+                            e);
+                        continue;
+                    }
+
+                    var type = task.GetType().FullName;
+                    RemoveTask(iterator.CurrentKey, task.Index, type);
+                    count++;
+                } while (iterator.MoveNext());
+            }
+
+            return count;
         }
     }
 }

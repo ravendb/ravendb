@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -14,6 +15,7 @@ namespace Raven.Abstractions.Connection
 #if !DNXCORE50
         [NonSerialized]
 #endif
+
         private readonly HttpResponseMessage response;
 
         public HttpResponseMessage Response
@@ -48,16 +50,6 @@ namespace Raven.Abstractions.Connection
         {
             this.response = response;
             ResponseString = responseString;
-        }
-
-        public static ErrorResponseException FromHttpRequestException(HttpRequestException exception)
-        {
-            var ex = new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), exception.Message, exception.Message);
-
-            foreach (var key in exception.Data.Keys)
-                ex.Data[key] = exception.Data[key];
-
-            return ex;
         }
 
         public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
@@ -108,5 +100,57 @@ namespace Raven.Abstractions.Connection
         {
         }
 #endif
+
+        public static ErrorResponseException FromException(TaskCanceledException e)
+        {
+            return new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), e.Message, "Unable to connect to the remote server\r\nStatus Code: ConnectFailure");
+        }
+
+        public static ErrorResponseException FromException(HttpRequestException e)
+        {
+            var builder = new StringBuilder();
+            var statusCode = HttpStatusCode.ServiceUnavailable;
+
+#if !DNXCORE50
+            var webException = e.InnerException as WebException;
+            if (webException != null)
+            {
+                builder.Append("WebException Message: ");
+                builder.AppendLine(webException.Message);
+                builder.Append("Status Code: ");
+                builder.AppendLine(webException.Status.ToString());
+                var webResponse = webException.Response as HttpWebResponse;
+                if (webResponse != null)
+                {
+                    builder.Append("Response Status Code: ");
+                    statusCode = webResponse.StatusCode;
+                    builder.AppendLine(statusCode.ToString());
+
+                    try
+                    {
+                        using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
+                        using (var reader = new StreamReader(stream))
+                        {
+                            builder.Append("Response: ");
+                            builder.AppendLine(reader.ReadToEnd());
+                        }
+                    }
+                    catch (Exception e2)
+                    {
+                        builder.Append("Failed to read the response: " + e2);
+                    }
+                }
+
+                var win32Exception = webException.InnerException as Win32Exception;
+                if (win32Exception != null)
+                {
+                    builder.Append("Win32 Error: ");
+                    builder.AppendLine(win32Exception.Message);
+                }
+            }
+#endif
+
+            return new ErrorResponseException(new HttpResponseMessage(statusCode), e.Message, responseString: builder.ToString());
+        }
     }
 }

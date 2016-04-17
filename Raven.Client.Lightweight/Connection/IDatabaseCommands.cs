@@ -512,6 +512,14 @@ namespace Raven.Client.Connection
         string PutIndex(string name, IndexDefinition indexDef, bool overwrite);
 
         /// <summary>
+        ///     Creates an index with the specified name, based on an index definition
+        /// </summary>
+        /// <param name="name">name of an index</param>
+        /// <param name="indexDef">definition of an index</param>
+        /// <param name="precomputeBatchOperation">Operation of first time index population.</param>
+        string PutIndex(string name, IndexDefinition indexDef, out Operation precomputeBatchOperation);
+
+        /// <summary>
         ///     Creates an index with the specified name, based on an index definition that is created by the supplied
         ///     IndexDefinitionBuilder
         /// </summary>
@@ -621,7 +629,9 @@ namespace Raven.Client.Connection
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
+        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
+        IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
 
         /// <summary>
         ///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
@@ -668,6 +678,11 @@ namespace Raven.Client.Connection
         /// <param name="patch">JavaScript patch that will be executed on query results</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
         Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
+
+        /// <summary>
+        /// Gets the primary database Url
+        /// </summary>
+        string Url { get; }
 
         /// <summary>
         ///     Get the full URL for the given document key
@@ -738,7 +753,7 @@ namespace Raven.Client.Connection
         /// </param>
         /// <param name="incremental">indicates if backup is incremental</param>
         /// <param name="databaseName">name of a database that will be backed up</param>
-        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
+        Operation StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 
         /// <summary>
         ///     Begins a restore operation.
@@ -756,7 +771,7 @@ namespace Raven.Client.Connection
         /// <summary>
         ///     Get the indexing status
         /// </summary>
-        string GetIndexingStatus();
+        IndexingStatus GetIndexingStatus();
 
         /// <summary>
         ///     Enables indexing.

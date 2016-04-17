@@ -8,11 +8,9 @@ using Raven.Tests.Common.Attributes;
 using Raven.Tests.Helpers;
 using System.Collections.Generic;
 using Xunit;
-using FluentAssertions;
 
 namespace Raven.Tests.Issues
 {
-
     public class RavenDB_3460 : RavenTestBase
     {
         [Fact]
@@ -21,15 +19,15 @@ namespace Raven.Tests.Issues
             using (var store = NewRemoteDocumentStore())
             {
                 var customers = SetupAndGetCustomers(store);
-                customers.Should().NotBeEmpty();
+                Assert.NotEmpty(customers);
 
                 var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%3A1", store.Url, store.DefaultDatabase);
 
-                GetResults(url).Values().Should().NotBeEmpty();
+                Assert.NotEmpty(GetResults(url).Values());
             }
         }
 
-        [TimeBombedFact(2016,3,1,"Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
+        [TimeBombedFact(2016,9,1,"Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
         public void Can_query_for_special_percentage_character()
         {
             using (var store = NewRemoteDocumentStore())
@@ -52,7 +50,7 @@ namespace Raven.Tests.Issues
                                              .Where(x => x.FirstName == "%2F")
                                              .ToList();
 
-                    queryResult.Should().HaveCount(1);
+                    Assert.Equal(1, queryResult.Count);
                 }
             }
         }
@@ -63,13 +61,13 @@ namespace Raven.Tests.Issues
             using (var store = NewRemoteDocumentStore())
             {
                 var customers = SetupAndGetCustomers(store);
-                customers.Should().NotBeEmpty();
+                Assert.NotEmpty(customers);
 
                 var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%253A1", store.Url, store.DefaultDatabase);
 
-                GetResults(url).Values().Should().NotBeEmpty();
+                Assert.NotEmpty(GetResults(url).Values());
             }
-        }	
+        }
 
         private IEnumerable<Customer> SetupAndGetCustomers(IDocumentStore store)
         {

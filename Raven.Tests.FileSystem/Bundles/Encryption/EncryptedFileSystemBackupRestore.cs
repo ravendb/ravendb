@@ -58,8 +58,8 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 var md5Sums = FetchMd5Sums(client);
 
                 // create backup
-                await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
-                WaitForBackup(client, true);
+                var opId = await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
+                await WaitForOperationAsync(server.SystemDatabase.ServerUrl, opId);
 
                 // restore newly created backup
                 await client.Admin.StartRestore(new FilesystemRestoreRequest
@@ -119,8 +119,8 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
-                WaitForBackup(store.AsyncFilesCommands.ForFileSystem("FS1"), true);
+                var opId = await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
+                await WaitForOperationAsync(server.SystemDatabase.ServerUrl, opId);
 
                 string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS2");
 

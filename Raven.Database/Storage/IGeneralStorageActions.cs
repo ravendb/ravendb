@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Database.Storage
@@ -14,6 +15,6 @@ namespace Raven.Database.Storage
         IEnumerable<KeyValuePair<string, long>> GetIdentities(int start, int take, out long totalCount);
 
         void PulseTransaction();
-        bool MaybePulseTransaction();
+        bool MaybePulseTransaction(int addToPulseCount = 1, Action beforePulseTransaction = null);
     }
 }

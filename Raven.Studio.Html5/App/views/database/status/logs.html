@@ -1,6 +1,6 @@
 <section id="logsContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div class="form-horizontal">
-        <button type="button" class="btn btn-default" data-bind="click: fetchLogs"><i class="fa fa-refresh"></i></button>
+        <button class="btn btn-default" data-bind="autoRefresh: { duration: 2000, onRefresh: $root.fetchLogs.bind($root), autoStart:true }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterAll">
                 <input type="radio" name="options" id="option1"> <span data-bind="text: 'All logs (' + allLogs().length + ')'"></span>
@@ -73,7 +73,7 @@
                     </span>
                 </div>
             </div>
-            <div id="logRecords" class="form-group logRecords" style="white-space: nowrap" data-bind="foreach: filteredAndSortedLogs, delegatedHandler: 'click'">
+            <div id="logRecords" class="form-group logRecords" style="white-space: nowrap" data-bind="foreach: allLogs, delegatedHandler: 'click'">
                 <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="visible: IsVisible, css: { warning: Level === 'Warn', danger: Level === 'Error' || Level === 'Fatal', 'selected': $data === $parent.selectedLog() }">
                     <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: Level"></div>
                     <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: HumanizedTimestamp, attr: { title: TimeStampText }"></div>

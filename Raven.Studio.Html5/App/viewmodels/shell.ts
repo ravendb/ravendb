@@ -26,6 +26,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
+import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import changesApi = require("common/changesApi");
 import changesContext = require("common/changesContext");
@@ -42,6 +43,7 @@ import getServerBuildVersionCommand = require("commands/resources/getServerBuild
 import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
+import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
@@ -153,7 +155,7 @@ class shell extends viewModelBase {
     static serverMainVersion = ko.observable<number>(4);
     static serverMinorVersion = ko.observable<number>(5);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    localLicenseStatus = license.licenseStatus;
+   
     windowHeightObservable: KnockoutObservable<number>;
     recordedErrors = ko.observableArray<alertArgs>();
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;
@@ -163,6 +165,9 @@ class shell extends viewModelBase {
     activeArea = ko.observable<string>("Databases");
     hasReplicationSupport = ko.computed(() => !!this.activeDatabase() && this.activeDatabase().activeBundles.contains("Replication"));
     showSplash = viewModelBase.showSplash;
+
+    licenseStatus = license.licenseCssClass;
+    supportStatus = license.supportCssClass;
 
     static has40Features = ko.computed(() => shell.serverMainVersion() >= 4);
 
@@ -190,6 +195,7 @@ class shell extends viewModelBase {
         ko.postbox.subscribe("LoadProgress", (alertType?: alertType) => this.dataLoadProgress(alertType));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
+        ko.postbox.subscribe("SelectNone", () => this.selectNone());
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.activateDatabase(db));
         ko.postbox.subscribe("ActivateFilesystem", (fs: fileSystem) => this.activateFileSystem(fs));
         ko.postbox.subscribe("ActivateCounterStorage", (cs: counterStorage) => this.activateCounterStorage(cs));
@@ -203,6 +209,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        enableResizeBindingHandler.install();
         helpBindingHandler.install();
 
         this.isSystemConnected = ko.computed(() => {
@@ -224,7 +231,7 @@ class shell extends viewModelBase {
             return shell.resources();
         });
 
-        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.0." + v.BuildVersion));
+        this.clientBuildVersion.subscribe(v => viewModelBase.clientVersion("3.5." + v.BuildVersion));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -243,7 +250,7 @@ class shell extends viewModelBase {
             { route: ["", "resources"], title: "Resources", moduleId: "viewmodels/resources/resources", nav: true, hash: this.appUrls.resourcesManagement },
             { route: "databases/documents", title: "Documents", moduleId: "viewmodels/database/documents/documents", nav: true, hash: this.appUrls.documents },
             { route: "databases/conflicts", title: "Conflicts", moduleId: "viewmodels/database/conflicts/conflicts", nav: true, hash: this.appUrls.conflicts },
-            { route: "databases/patch", title: "Patch", moduleId: "viewmodels/database/patch/patch", nav: true, hash: this.appUrls.patch },
+            { route: "databases/patch(/:recentPatchHash)", title: "Patch", moduleId: "viewmodels/database/patch/patch", nav: true, hash: this.appUrls.patch },
             { route: "databases/upgrade", title: "Upgrade in progress", moduleId: "viewmodels/common/upgrade", nav: false, hash: this.appUrls.upgrade },
             { route: "databases/indexes*details", title: "Indexes", moduleId: "viewmodels/database/indexes/indexesShell", nav: true, hash: this.appUrls.indexes },
             { route: "databases/transformers*details", title: "Transformers", moduleId: "viewmodels/database/transformers/transformersShell", nav: false, hash: this.appUrls.transformers },
@@ -393,6 +400,11 @@ class shell extends viewModelBase {
     }
 
     private activateDatabase(db: database) {
+        if (db == null) {
+            this.disconnectFromCurrentResource();
+            return;
+        }
+
         this.fecthStudioConfigForDatabase(db);
 
         var changeSubscriptionArray = () => [
@@ -415,6 +427,11 @@ class shell extends viewModelBase {
     }
 
     private activateFileSystem(fs: fileSystem) {
+        if (fs == null) {
+            this.disconnectFromCurrentResource();
+            return;
+        }
+
         this.fecthStudioConfigForDatabase(new database(fs.name));
 
         var changesSubscriptionArray = () => [
@@ -433,6 +450,12 @@ class shell extends viewModelBase {
                 .done((result: filesystemStatisticsDto) => fs.saveStatistics(result))
                 .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get file system stats", response.responseText, response.statusText));
         }
+    }
+
+    private disconnectFromCurrentResource() {
+        shell.disconnectFromResourceChangesApi();
+        this.lastActivatedResource(null);
+        this.currentConnectedResource = appUrl.getSystemDatabase();
     }
 
     private activateCounterStorage(cs: counterStorage) {
@@ -587,6 +610,7 @@ class shell extends viewModelBase {
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
+            this.fetchSupportCoverage();
             this.loadServerConfig();
 
             var databasesLoadTask = shell.reloadDatabases();
@@ -656,7 +680,7 @@ class shell extends viewModelBase {
                 if (!!resourceToDelete) {
                     resourceObservableArray.remove(resourceToDelete);
 
-                    this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
+                    //this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
                     if (resourceType == TenantType.Database)
                         recentQueriesStorage.removeRecentQueries(resourceToDelete);
                 }
@@ -759,6 +783,7 @@ class shell extends viewModelBase {
                 this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
                 this.fetchLicenseStatus();
+                this.fetchSupportCoverage();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
             })
@@ -1027,8 +1052,8 @@ class shell extends viewModelBase {
                 shell.serverMinorVersion(parseInt(assemblyVersionTokens[1]));
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
-                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion != 13) {
-                    new getLatestServerBuildVersionCommand(true, 3000, 3999) //pass false as a parameter to get the latest unstable
+                if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
+                    new getLatestServerBuildVersionCommand(true, 35000, 39999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
                             if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //
@@ -1065,6 +1090,14 @@ class shell extends viewModelBase {
             });
     }
 
+    fetchSupportCoverage() {
+        new getSupportCoverageCommand()
+            .execute()
+            .done((result: supportCoverageDto) => {
+                license.supportCoverage(result);
+            });
+    }
+
     fetchGoToDocSearchResults(query: string) {
         if (query.length >= 2) {
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.activeDatabase())
@@ -1096,7 +1129,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
-        var dialog = new licensingStatus(license.licenseStatus());
+        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage());
         app.showDialog(dialog);
     }
 
@@ -1121,6 +1154,11 @@ class shell extends viewModelBase {
 
     navigateToClusterSettings() {
         this.navigate(this.appUrls.adminSettingsCluster());
+    }
+
+    selectNone() {
+        this.activateDatabase(null);
+        this.activeFilesystem(null);
     }
 
     private spinnerOptions = {

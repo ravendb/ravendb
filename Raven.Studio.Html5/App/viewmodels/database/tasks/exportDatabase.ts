@@ -5,7 +5,17 @@ import collection = require("models/database/documents/collection");
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
 import appUrl = require("common/appUrl");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import messagePublisher = require('common/messagePublisher'); 
+import messagePublisher = require('common/messagePublisher');
+
+class filterSetting {
+    path = ko.observable<string>("");
+    value = ko.observable<string>("");
+    shouldMatch = ko.observable<boolean>(false);
+
+    static empty() {
+        return new filterSetting();
+    }
+}
 
 class exportDatabase extends viewModelBase {
     includeDocuments = ko.observable(true);
@@ -18,12 +28,13 @@ class exportDatabase extends viewModelBase {
     showAdvancedOptions = ko.observable(false);
     batchSize = ko.observable(1024);
     includedCollections = ko.observableArray<{ collection: string; isIncluded: KnockoutObservable<boolean>; }>();
-    filters = ko.observableArray<filterSettingDto>();
+    filters = ko.observableArray<filterSetting>();
     transformScript = ko.observable<string>();
-    exportActionUrl:KnockoutComputed<string>;
+    exportActionUrl: KnockoutComputed<string>;
     noneDefualtFileName = ko.observable<string>("");
     chooseDifferntFileName = ko.observable<boolean>(false);
     authToken = ko.observable<string>();
+    exportCommand: KnockoutComputed<string>;
 
     constructor() {
         super();
@@ -49,6 +60,86 @@ class exportDatabase extends viewModelBase {
             var token = this.authToken();
             return appUrl.forResourceQuery(this.activeDatabase()) + "/studio-tasks/exportDatabase" + (token ? '?singleUseAuthToken=' + token : '');
         });
+
+        this.exportCommand = ko.computed(() => {
+            var targetServer = appUrl.forServer();
+            var outputFilename = this.chooseDifferntFileName() ? exportDatabase.escapeForShell(this.noneDefualtFileName()) : "raven.dump"; 
+            var commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
+
+            var types = [];
+            if (this.includeDocuments()) {
+                 types.push("Documents");
+            }
+            if (this.includeIndexes()) {
+                types.push("Indexes");
+            }
+            if (this.includeAttachments()) {
+                types.push("Attachments");
+            }
+            if (this.includeTransformers()) {
+                types.push("Transformers");
+            }
+            if (this.removeAnalyzers()) {
+                types.push("RemoveAnalyzers");
+            }
+            if (types.length > 0) {
+                commandTokens.push("--operate-on-types=" + types.join(","));
+            }
+
+            var databaseName = this.activeDatabase().name;
+            commandTokens.push("--database=" + exportDatabase.escapeForShell(databaseName));
+
+            var batchSize = this.batchSize();
+            commandTokens.push("--batch-size=" + batchSize);
+
+            if (!this.includeExpiredDocuments()) {
+                commandTokens.push("--excludeexpired");
+            }
+
+            if (!this.includeAllCollections()) {
+                var collections = this.includedCollections().filter((collection) => collection.isIncluded()).map((collection) => collection.collection);
+                commandTokens.push("--metadata-filter=Raven-Entity-Name=" + exportDatabase.escapeForShell(collections.toString()));
+            }
+
+            var filters = exportDatabase.convertFiltersToDto(this.filters());
+            for (var i = 0; i < filters.length; i++) {
+                var filter = filters[i];
+                var parameterName = filter.ShouldMatch ? "--filter=" : "--negative-filter=";
+                commandTokens.push(parameterName + filter.Path + "=" + exportDatabase.escapeForShell(filter.Values.toString()));
+            }
+
+            if (this.transformScript()) {
+                commandTokens.push("--transform=" + exportDatabase.escapeForShell(this.transformScript())); 
+            }
+            
+            return commandTokens.join(" ");
+        });
+    }
+
+    /**
+     * Groups filters by key
+     */
+    private static convertFiltersToDto(filters: filterSetting[]): filterSettingDto[] {
+        var output: filterSettingDto[] = [];
+        for (var i = 0; i < filters.length; i++) {
+            var filter = filters[i];
+
+            var existingOutput = output.first(x => filter.shouldMatch() === x.ShouldMatch && filter.path() === x.Path);
+            if (existingOutput) {
+                existingOutput.Values.push(filter.value());
+            } else {
+                output.push({
+                    ShouldMatch: filter.shouldMatch(),
+                    Path: filter.path(),
+                    Values: [filter.value()]
+                });
+            }
+        }
+        return output;
+    }
+
+    static escapeForShell(input: string) {
+        return '"' + input.replace(/[\r\n]/g, "").replace(/(["\\])/g, '\\$1') + '"';
     }
 
     attached() {
@@ -78,19 +169,18 @@ class exportDatabase extends viewModelBase {
             operateOnTypes += 8000;
         }
 
-        var filtersToSend: filterSettingDto[] = [];
-        filtersToSend.pushAll(this.filters());
+        var filtersToSend = exportDatabase.convertFiltersToDto(this.filters());
 
         if (!this.includeAllCollections()) {
             filtersToSend.push(
-            {
-                ShouldMatch: true,
-                Path: "@metadata.Raven-Entity-Name",
-                Values: this.includedCollections().filter((curCol) => curCol.isIncluded() == true).map((curCol) => curCol.collection)
-            });
+                {
+                    ShouldMatch: true,
+                    Path: "@metadata.Raven-Entity-Name",
+                    Values: this.includedCollections().filter((curCol) => curCol.isIncluded()).map((curCol) => curCol.collection)
+                });
         }
 
-        var smugglerOptions : smugglerOptionsDto = {
+        var smugglerOptions: smugglerOptionsDto = {
             OperateOnTypes: operateOnTypes,
             BatchSize: this.batchSize(),
             ShouldExcludeExpired: !this.includeExpiredDocuments(),
@@ -98,15 +188,15 @@ class exportDatabase extends viewModelBase {
             TransformScript: this.transformScript(),
             NoneDefualtFileName: this.noneDefualtFileName()
         };
-        
+
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
 
         new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase()).execute()
             .done(() => {
-        new getSingleAuthTokenCommand(this.activeDatabase()).execute().done((token: singleAuthToken) => {
-            this.authToken(token.Token);
-            $("#dbExportDownloadForm").submit();
-        }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for export.", errorThrown));
+                new getSingleAuthTokenCommand(this.activeDatabase()).execute().done((token: singleAuthToken) => {
+                    this.authToken(token.Token);
+                    $("#dbExportDownloadForm").submit();
+                }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for export.", errorThrown));
             })
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Invalid export options", response.responseText, response.statusText);
@@ -114,7 +204,7 @@ class exportDatabase extends viewModelBase {
 
     }
 
-    selectOptions(){
+    selectOptions() {
         this.showAdvancedOptions(false);
     }
 
@@ -122,20 +212,14 @@ class exportDatabase extends viewModelBase {
         this.showAdvancedOptions(true);
     }
 
-    removeFilter(filter: filterSettingDto) {
+    private removeFilter(filter: filterSetting) {
         this.filters.remove(filter);
     }
 
     addFilter() {
-        var filter = {
-            Path: "",
-            ShouldMatch: false,
-            ShouldMatchObservable: ko.observable(false),
-            Values: []
-        };
-
-        filter.ShouldMatchObservable.subscribe(val => filter.ShouldMatch = val);
-        this.filters.splice(0, 0, filter);
+        var setting = filterSetting.empty();
+        setting.shouldMatch(true);
+        this.filters.unshift(setting);
     }
 
 }

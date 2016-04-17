@@ -8,7 +8,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,21 +22,17 @@ namespace Raven.Database.FileSystem.Actions
     {
         private readonly ConcurrentDictionary<long, PendingTaskWithStateAndDescription> pendingTasks = new ConcurrentDictionary<long, PendingTaskWithStateAndDescription>();
 
-        private readonly IObservable<long> timer;
-
         private long pendingTaskCounter;
 
         public TaskActions(RavenFileSystem fileSystem, ILog log)
             : base(fileSystem, log)
         {
-            timer = Observable.Interval(TimeSpan.FromMinutes(1));
-
             InitializeTimer();
         }
 
         private void InitializeTimer()
         {
-            timer.Subscribe(tick => ClearCompletedPendingTasks());
+            FileSystem.TimerManager.NewTimer(state => ClearCompletedPendingTasks(), TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
         private void ClearCompletedPendingTasks()
@@ -97,7 +92,7 @@ namespace Raven.Database.FileSystem.Actions
             pendingTasks.TryRemove(taskId, out value);
         }
 
-        public object KillTask(long id)
+        public IOperationState KillTask(long id)
         {
             PendingTaskWithStateAndDescription value;
             if (pendingTasks.TryGetValue(id, out value))
@@ -115,7 +110,7 @@ namespace Raven.Database.FileSystem.Actions
             return null;
         }
 
-        public object GetTaskState(long id)
+        public IOperationState GetTaskState(long id)
         {
             PendingTaskWithStateAndDescription value;
             if (pendingTasks.TryGetValue(id, out value))

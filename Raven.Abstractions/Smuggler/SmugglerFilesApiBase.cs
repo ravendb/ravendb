@@ -10,6 +10,7 @@ using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -17,6 +18,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Smuggler
@@ -36,9 +38,9 @@ namespace Raven.Abstractions.Smuggler
             [JsonIgnore]
             public bool IsTombstone
             {
-                get 
+                get
                 {
-                    if ( Metadata.ContainsKey( Constants.RavenDeleteMarker ))
+                    if (Metadata.ContainsKey(Constants.RavenDeleteMarker))
                         return Metadata[Constants.RavenDeleteMarker].Value<bool>();
 
                     return false;
@@ -77,7 +79,7 @@ namespace Raven.Abstractions.Smuggler
 
             if (result.FilePath != null)
             {
-                result.FilePath = Path.GetFullPath(result.FilePath);    
+                result.FilePath = Path.GetFullPath(result.FilePath);
             }
 
             if (Options.Incremental)
@@ -181,70 +183,84 @@ namespace Raven.Abstractions.Smuggler
 
             Exception exceptionHappened = null;
 
-            try
+            using (var cts = new CancellationTokenSource())
             {
-                while (true)
+                var fileHeaders = new BlockingCollection<FileHeader>();
+                var getFilesTask = Task.Run(async () => await GetFilesTask(lastEtag, maxEtag, cts, fileHeaders).ConfigureAwait(false), cts.Token);
+
+                try
                 {
-                    bool hasDocs = false;
-                    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize).ConfigureAwait(false))
+                    while (true)
                     {
-                        while (await files.MoveNextAsync().ConfigureAwait(false))
+                        FileHeader fileHeader = null;
+                        try
                         {
-                            hasDocs = true;
-                            var file = files.Current;
-                            if (file.IsTombstone)
-                            {
-                                lastEtag = file.Etag;
-                                continue;
-                            }
+                            fileHeader = fileHeaders.Take(cts.Token);
+                        }
+                        catch (InvalidOperationException) // CompleteAdding Called
+                        {
+                            Operations.ShowProgress("Files List Retrieval Completed");
+                            break;
+                        }
 
-                            var tempLastEtag = file.Etag;
-                            if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
-                                break;
+                        cts.Token.ThrowIfCancellationRequested();
 
-                            // Write the metadata (which includes the stream size and file container name)
-                            var fileContainer = new FileContainer
-                            {
-                                Key = Path.Combine(file.Directory.TrimStart('/'), file.Name),
-                                Metadata = file.Metadata,
-                            };
+                        // Write the metadata (which includes the stream size and file container name)
+                        var fileContainer = new FileContainer
+                        {
+                            Key = Path.Combine(fileHeader.Directory.TrimStart('/'), fileHeader.Name),
+                            Metadata = fileHeader.Metadata,
+                        };
 
-                            ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
+                        ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
 
-                            using (var fileStream = await Operations.DownloadFile(file).ConfigureAwait(false))
-                            using (var zipStream = fileToStore.Open())
-                            {
-                                await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
-                            }
+                        using (var fileStream = await Operations.DownloadFile(fileHeader).ConfigureAwait(false))
+                        using (var zipStream = fileToStore.Open())
+                        {
+                            await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
+                        }
 
-                            metadataList.Add(fileContainer);
+                        metadataList.Add(fileContainer);
 
-                            lastEtag = tempLastEtag;
-
-                            totalCount++;
-                            if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                            {
-                                //TODO: Show also the MB/sec and total GB exported.
-                                Operations.ShowProgress("Exported {0} files. ", totalCount);
-                                lastReport = SystemTime.UtcNow;
-                            }
+                        totalCount++;
+                        if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                        {
+                            Operations.ShowProgress("Exported {0} files. ", totalCount);
+                            lastReport = SystemTime.UtcNow;
                         }
                     }
-                    if (!hasDocs)
-                        break;
+                }
+                catch (Exception e)
+                {
+                    Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e);
+                    Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 
+                    cts.Cancel();
+
+                    exceptionHappened = new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
+                }
+
+                try
+                {
+                    getFilesTask.Wait(CancellationToken.None);
+                }
+                catch (OperationCanceledException)
+                {
+                    // we are fine with this
+                }
+                catch (Exception e)
+                {
+                    Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                    exceptionHappened = new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
                 }
             }
-            catch (Exception e)
-            {
-                Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-                Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 
-                exceptionHappened = new SmugglerExportException(e.Message, e)
-                {
-                    LastEtag = lastEtag,
-                };
-            }
 
             var metadataEntry = archive.CreateEntry(MetadataEntry);
             using (var metadataStream = metadataEntry.Open())
@@ -259,6 +275,58 @@ namespace Raven.Abstractions.Smuggler
 
             Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
             return lastEtag;
+        }
+
+        private async Task GetFilesTask(Etag lastEtag, Etag maxEtag, CancellationTokenSource cts, BlockingCollection<FileHeader> fileHeaders)
+        {
+            while (true)
+            {
+                try
+                {
+                    if (cts.IsCancellationRequested)
+                        break;
+
+                    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize).ConfigureAwait(false))
+                    {
+                        var hasDocs = false;
+                        while (await files.MoveNextAsync().ConfigureAwait(false))
+                        {
+                            if (cts.IsCancellationRequested)
+                                break;
+
+                            var file = files.Current;
+
+                            hasDocs = true;
+
+                            if (file.IsTombstone)
+                            {
+                                lastEtag = file.Etag;
+                                continue;
+                            }
+
+                            var tempLastEtag = file.Etag;
+                            if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+                                break;
+
+                            fileHeaders.Add(files.Current);
+
+                            lastEtag = tempLastEtag;
+                        }
+
+                        if (hasDocs == false)
+                        {
+                            fileHeaders.CompleteAdding();
+                            break;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    cts.Cancel();
+                    fileHeaders.CompleteAdding();
+                    throw;
+                }
+            }
         }
 
         private async Task ExportConfigurations(ZipArchive archive)
@@ -332,13 +400,13 @@ namespace Raven.Abstractions.Smuggler
             if (string.IsNullOrEmpty(serverVersion))
                 throw new SmugglerExportException("Server version is not available.");
 
-            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerFilesApiBase>()).ProductVersion;
-            var subServerVersion = serverVersion.Substring(0, 3);
-            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
 
-            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+            var customAttributes = typeof(SmugglerDatabaseApiBase).Assembly.GetCustomAttributes(false);
+            dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+            var intServerVersion = int.Parse(versionAtt.Version.Replace(".", ""));
+
             if (intServerVersion < 30)
-                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion));
+                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version));
         }
 
         private static void ReadLastEtagsFromFile(ExportFilesResult result)

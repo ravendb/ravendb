@@ -43,6 +43,8 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
+        private const int LongStatementWarnThresholdInMiliseconds = 3000;
+
         bool hadErrors;
 
         public static void TestConnection(string factoryName, string connectionString)
@@ -294,7 +296,8 @@ namespace Raven.Database.Bundles.SqlReplication
                         sb.Append(" OPTION(RECOMPILE)");
                     }
 
-                    cmd.CommandText = sb.ToString();
+                    var stmt = sb.ToString();
+                    cmd.CommandText = stmt;
 
                     if (commandCallback!= null)
                     {
@@ -316,15 +319,22 @@ namespace Raven.Database.Bundles.SqlReplication
                     {
                         sp.Stop();
 
+                        var elapsedMiliseconds = sp.ElapsedMilliseconds;
+
                         if (log.IsDebugEnabled)
                         {
-                            log.Debug(string.Format("Insert took: {0}ms, statement: {1}", sp.ElapsedMilliseconds, sb));
+                            log.Debug(string.Format("Insert took: {0}ms, statement: {1}", elapsedMiliseconds, stmt));
                         }
 
                         var elapsedMicroseconds = (long)(sp.ElapsedTicks*SystemTime.MicroSecPerTick);
                         replicationInsertDurationHistogram.Update(elapsedMicroseconds);
                         replicationInsertActionsMetrics.Mark(1);
                         replicationInsertActionsHistogram.Update(1);
+
+                        if (elapsedMiliseconds > LongStatementWarnThresholdInMiliseconds)
+                        {
+                            HandleSlowSql(elapsedMiliseconds, stmt);
+                        }
                     }
                 }
             }
@@ -377,7 +387,8 @@ namespace Raven.Database.Bundles.SqlReplication
                     {
                         sb.Append(" OPTION(RECOMPILE)");
                     }
-                    cmd.CommandText = sb.ToString();
+                    var stmt = sb.ToString();
+                    cmd.CommandText = stmt;
 
                     if (commandCallback != null)
                     {
@@ -400,18 +411,39 @@ namespace Raven.Database.Bundles.SqlReplication
                     {
                         sp.Stop();
 
+                        var elapsedMiliseconds = sp.ElapsedMilliseconds;
+
                         if (log.IsDebugEnabled)
                         {
-                            log.Debug(string.Format("Delete took: {0}ms, statement: {1}", sp.ElapsedMilliseconds, sb));
+                            log.Debug(string.Format("Delete took: {0}ms, statement: {1}", elapsedMiliseconds, stmt));
                         }
 
                         var elapsedMicroseconds = (long)(sp.ElapsedTicks * SystemTime.MicroSecPerTick);
                         replicationDeleteDurationHistogram.Update(elapsedMicroseconds);
                         replicationDeletesActionsHistogram.Update(1);
                         replicationDeletesActionsMetrics.Mark(1);
+
+                        if (elapsedMiliseconds > LongStatementWarnThresholdInMiliseconds)
+                        {
+                            HandleSlowSql(elapsedMiliseconds, stmt);
+                        }
                     }
                 }
             }
+        }
+
+        private void HandleSlowSql(long elapsedMiliseconds, string stmt)
+        {
+            var message = string.Format("Slow SQL detected. Execution took: {0}ms, statement: {1}", elapsedMiliseconds, stmt);
+            log.Warn(message);
+            database.AddAlert(new Alert
+            {
+                AlertLevel = AlertLevel.Warning,
+                CreatedAt = SystemTime.UtcNow,
+                Message = message,
+                Title = "Slow SQL statement",
+                UniqueKey = "Slow SQL statement"
+            });
         }
 
         private string GetTableNameString(string tableName)

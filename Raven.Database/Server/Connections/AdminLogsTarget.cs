@@ -74,9 +74,6 @@ namespace Raven.Database.Server.Connections
 
         public override void Write(LogEventInfo logEvent)
         {
-            if (!logEvent.LoggerName.StartsWith("Raven.")) 
-                return;
-
             if (connections.Count > 0)
             {
                 foreach (var connection in connections)

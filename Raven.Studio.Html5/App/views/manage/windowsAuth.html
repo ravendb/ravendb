@@ -31,28 +31,38 @@
                                 </h3>
                             </div>
                             <div class="panel-body">
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Name</label>
-                                        <div class="col-sm-9">
-                                            <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity" />
+                                <div class="form-group">
+                                    <label class="col-sm-3 control-label">Name</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity"/>
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="visible: invalidName">
+                                    <div class="col-sm-9 col-sm-offset-3 text-warning">
+                                        <i class="fa fa-warning"></i> Supplied username does not exist in domain
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="visible: verificationInProgress">
+                                    <div class="col-sm-9 col-sm-offset-3">
+                                        <i class="fa fa-spin fa-spinner"></i> Verifing username and domain
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-3 control-label">Enabled</label>
+                                    <div class="col-sm-9">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                <span data-bind="visible: enabled">Enabled</span>
+                                                <span data-bind="visible: !enabled()">Disabled</span>
+                                                <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="#" data-bind="click: enable">Enabled</a></li>
+                                                <li><a href="#" data-bind="click: disable">Disabled</a></li>
+                                            </ul>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Enabled</label>
-                                        <div class="col-sm-9">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                    <span data-bind="visible: enabled">Enabled</span>
-                                                    <span data-bind="visible: !enabled()">Disabled</span>
-                                                    <span class="caret"></span>
-                                                </button>
-                                                <ul class="dropdown-menu" role="menu">
-                                                    <li><a href="#" data-bind="click: enable">Enabled</a></li>
-                                                    <li><a href="#" data-bind="click: disable">Disabled</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
+                                </div>
                                 <div class="form-group">
                                     <label class="col-sm-3 control-label">Databases</label>
                                     <div class="col-sm-9">
@@ -79,8 +89,8 @@
                                                 <tr>
                                                     <td>
                                                         <div class="btn-group">
-                                                            <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'userDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
-                                                            <ul class="dropdown-menu scrollable-menu" role="menu" style="height: 150px; display: none;" data-bind="autoComplete: '#userDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
+                                                            <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'userDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                            <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#userDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                                 <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                                     <a role="menuitem" tabindex="-1" href="#" class="nounderline">
                                                                         <span data-bind="text: $data"></span>
@@ -127,28 +137,38 @@
                                 </h3>
                             </div>
                             <div class="panel-body">
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Name</label>
-                                        <div class="col-sm-9">
-                                            <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity" />
+                                <div class="form-group">
+                                    <label class="col-sm-3 control-label">Name</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity"/>
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="visible: invalidName">
+                                    <div class="col-sm-9 col-sm-offset-3 text-warning">
+                                        <i class="fa fa-warning"></i> Supplied group does not exist in domain
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="visible: verificationInProgress">
+                                    <div class="col-sm-9 col-sm-offset-3">
+                                        <i class="fa fa-spin fa-spinner"></i> Verifing group and domain
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-3 control-label">Enabled</label>
+                                    <div class="col-sm-9">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                <span data-bind="visible: enabled">Enabled</span>
+                                                <span data-bind="visible: !enabled()">Disabled</span>
+                                                <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="#" data-bind="click: enable">Enabled</a></li>
+                                                <li><a href="#" data-bind="click: disable">Disabled</a></li>
+                                            </ul>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-3 control-label">Enabled</label>
-                                        <div class="col-sm-9">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                    <span data-bind="visible: enabled">Enabled</span>
-                                                    <span data-bind="visible: !enabled()">Disabled</span>
-                                                    <span class="caret"></span>
-                                                </button>
-                                                <ul class="dropdown-menu" role="menu">
-                                                    <li><a href="#" data-bind="click: enable">Enabled</a></li>
-                                                    <li><a href="#" data-bind="click: disable">Disabled</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
+                                </div>
                                 <div class="form-group">
                                     <label class="col-sm-3 control-label">Databases</label>
                                     <div class="col-sm-9">
@@ -175,8 +195,8 @@
                                                 <tr>
                                                     <td>
                                                         <div class="btn-group">
-                                                            <input tabindex="2" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'groupDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
-                                                            <ul class="dropdown-menu scrollable-menu" role="menu" style="display: none;" data-bind="autoComplete: '#groupDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
+                                                            <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'groupDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                            <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#groupDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                                 <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                                     <a role="menuitem" tabindex="-1" href="#" class="nounderline">
                                                                         <span data-bind="text: $data"></span>

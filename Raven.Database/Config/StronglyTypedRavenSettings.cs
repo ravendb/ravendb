@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="StronglyTypedRavenSettings.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -61,7 +61,13 @@ namespace Raven.Database.Config
         }
 
         public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
-        {
+        { 
+            const int defaultPrecomputedBatchSize = 32 * 1024;
+            MaxPrecomputedBatchSizeForNewIndex = new IntegerSetting(settings["Raven/MaxPrecomputedBatchSizeForNewIndex"], defaultPrecomputedBatchSize);
+
+            const int defaultPrecomputedBatchTotalDocumentSizeInBytes = 1024*1024*250;  //250 mb
+            MaxPrecomputedBatchTotalDocumentSizeInBytes = new IntegerSetting(settings["Raven/MaxPrecomputedBatchTotalDocumentSizeInBytes"], defaultPrecomputedBatchTotalDocumentSizeInBytes);
+
             //1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
             MaxClauseCount = new IntegerSetting(settings[Constants.MaxClauseCount], 1024);
 
@@ -242,6 +248,7 @@ namespace Raven.Database.Config
 
             Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
             Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
+            Voron.SkipConsistencyChecks = new BooleanSetting(settings[Constants.Voron.SkipConsistencyChecks], false);
             Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
 
             var txJournalPath = settings[Constants.RavenTxJournalPath];
@@ -317,6 +324,7 @@ namespace Raven.Database.Config
                 TimeSpan.FromSeconds(15),
                 TimeSpanArgumentType.FromParse);
 
+            CacheDocumentsInMemory = new BooleanSetting(settings["Raven/CacheDocumentsInMemory"], true);
             TempPath = new StringSetting(settings[Constants.TempPath], Path.GetTempPath());
 
             FillMonitoringSettings();
@@ -348,6 +356,12 @@ namespace Raven.Database.Config
 
             return val;
         }
+
+        public IntegerSetting MaxPrecomputedBatchTotalDocumentSizeInBytes { get; private set; }
+
+        public IntegerSetting MaxPrecomputedBatchSizeForNewIndex { get; private set; }
+
+        public BooleanSetting CacheDocumentsInMemory { get; set; }
 
         public IntegerSetting MaxConcurrentResourceLoads { get; private set; }
 
@@ -516,6 +530,9 @@ namespace Raven.Database.Config
             public StringSetting JournalsStoragePath { get; set; }
 
             public BooleanSetting AllowOn32Bits { get; set; }
+
+            public BooleanSetting SkipConsistencyChecks { get; set; }
+
         }
 
         public class EsentConfiguration

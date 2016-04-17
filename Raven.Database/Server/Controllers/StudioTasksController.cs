@@ -124,7 +124,22 @@ for(var customFunction in customFunctions) {{
 }};", document.Value<string>("Functions")));
 
         }
-    
+
+        [HttpGet]
+        [RavenRoute("studio-tasks/check-sufficient-diskspace")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/check-sufficient-diskspace")]
+        public async Task<HttpResponseMessage> CheckSufficientDiskspaceBeforeImport(long fileSize)
+        {
+            string tempRoot = Path.GetPathRoot(Database.Configuration.TempPath);
+            var rootPathToDriveInfo = new Dictionary<string,DriveInfo>();
+            DriveInfo.GetDrives().ForEach(drive => rootPathToDriveInfo[drive.RootDirectory.FullName] = drive);
+            DriveInfo tempFolderDrive;
+            if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) || 
+                tempFolderDrive.AvailableFreeSpace - (long)(tempFolderDrive.TotalSize * 0.1) < fileSize)
+                throw new HttpResponseException(HttpStatusCode.BadRequest);
+
+            return GetEmptyMessage();
+        }
 
         [HttpPost]
         [RavenRoute("studio-tasks/import")]
@@ -156,15 +171,22 @@ for(var customFunction in customFunctions) {{
 
             var status = new ImportOperationStatus();
             var cts = new CancellationTokenSource();
-            
+
+            var user = CurrentOperationContext.User.Value;
+            var requestDisposables = CurrentOperationContext.RequestDisposables.Value;
+            var headers = CurrentOperationContext.Headers.Value;
+
             var task = Task.Run(async () =>
             {
                 try
                 {
+                    CurrentOperationContext.User.Value = user;
+                    CurrentOperationContext.RequestDisposables.Value = requestDisposables;
+                    CurrentOperationContext.Headers.Value = headers;
                     using (var fileStream = File.Open(uploadedFilePath, FileMode.Open, FileAccess.Read))
                     {
                         var dataDumper = new DatabaseDataDumper(Database);
-                        dataDumper.Progress += s => status.LastProgress = s;
+                        dataDumper.Progress += s => status.MarkProgress(s);
                         var smugglerOptions = dataDumper.Options;
                         smugglerOptions.BatchSize = batchSize;
                         smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
@@ -186,17 +208,15 @@ for(var customFunction in customFunctions) {{
 
                         await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
                     }
+                    // use the last status which contains info about amount of doc/indexes imported
+                    status.MarkCompleted(status.State.Value<string>("Progress"));
                 }
                 catch (Exception e)
                 {
-                    status.Faulted = true;
-                    status.State = RavenJObject.FromObject(new
-                                                           {
-                                                               Error = e.ToString()
-                                                           });
+                    
                     if (cts.Token.IsCancellationRequested)
                     {
-                        status.State = RavenJObject.FromObject(new { Error = "Task was cancelled"  });
+                        status.MarkCanceled("Task was cancelled");
                         cts.Token.ThrowIfCancellationRequested(); //needed for displaying the task status as canceled and not faulted
                     }
 
@@ -218,11 +238,11 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = e.ToString();
                     }
+                    status.MarkFaulted(e.ToString());
                     throw;
                 }
                 finally
                 {
-                    status.Completed = true;
                     File.Delete(uploadedFilePath);
                 }
             }, cts.Token);
@@ -232,7 +252,7 @@ for(var customFunction in customFunctions) {{
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.ImportDatabase,
-                Payload = fileName,
+                Description = fileName,
                 
             }, out id, cts);
 
@@ -436,7 +456,7 @@ for(var customFunction in customFunctions) {{
 
         [HttpGet]
         [RavenRoute("studio-tasks/latest-server-build-version")]
-        public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 3000, int max = 3999)
+        public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 35000, int max = 39999)
         {
             var args = string.Format("stableOnly={0}&min={1}&max={2}", stableOnly, min, max);
             var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
@@ -447,12 +467,14 @@ for(var customFunction in customFunctions) {{
                 using (var stream = response.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();
-                    return GetMessageWithObject(new {LatestBuild = result});
+                    var parts = result.Split('-');
+                    var build = int.Parse(parts[0]);
+                    return GetMessageWithObject(new { LatestBuild = build });
                 }
             }
             catch (Exception e)
             {
-                return GetMessageWithObject(new {Exception = e.Message});
+                return GetMessageWithObject(new { Exception = e.Message });
             }
         }
 
@@ -550,7 +572,11 @@ for(var customFunction in customFunctions) {{
 
                     var totalCount = 0;
                     var batch = new List<RavenJObject>();
-                    var columns = headers.Where(x => x.StartsWith("@") == false).ToArray();
+
+                    var validColumnIndexes = headers.Select((h, i) => new { Header = h, Index = i })
+                        .Where(x => x.Header.StartsWith("@") == false)
+                        .Select(s=> s.Index)
+                        .ToArray();
 
                     batch.Clear();
                     while (csvReader.EndOfData == false)
@@ -559,33 +585,35 @@ for(var customFunction in customFunctions) {{
                         var document = new RavenJObject();
                         string id = null;
                         RavenJObject metadata = null;
-                        for (int index = 0; index < columns.Length; index++)
+                        foreach (var index in validColumnIndexes)
                         {
-                            var column = columns[index];
+                            var column = headers[index];
                             if (string.IsNullOrEmpty(column))
                                 continue;
+                            var value = record[index];
 
-                            if (string.Equals("@id", column, StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals("id", column, StringComparison.OrdinalIgnoreCase))
                             {
-                                id = record[index];
+                                id = value;
                             }
                             else if (string.Equals(Constants.RavenEntityName, column, StringComparison.OrdinalIgnoreCase))
                             {
                                 metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenEntityName] = record[index];
-                                id = id ?? record[index] + "/";
+                                metadata[Constants.RavenEntityName] = value;
+                                id = id ?? value + "/";
                             }
                             else if (string.Equals(Constants.RavenClrType, column, StringComparison.OrdinalIgnoreCase))
                             {
                                 metadata = metadata ?? new RavenJObject();
-                                metadata[Constants.RavenClrType] = record[index];
-                                id = id ?? record[index] + "/";
+                                metadata[Constants.RavenClrType] = value;
+                                id = id ?? value + "/";
                             }
                             else
                             {
-                                document[column] = SetValueInDocument(record[index]);
+                                document[column] = SetValueInDocument(value);
                             }
                         }
+
 
                         metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
                         document.Add("@metadata", metadata);
@@ -627,9 +655,13 @@ for(var customFunction in customFunctions) {{
                 .LastCollectionEtags
                 .GetLastChangedCollections(date.ToUniversalTime());
 
+            var collectionsTouchedByIndexer = Database.LastMapCompletedDatesPerCollection.GetLastChangedCollections(date.ToUniversalTime());
+
+            var collectionsUnion = new HashSet<string>(collections.Union(collectionsTouchedByIndexer, StringComparer.OrdinalIgnoreCase));
+
             var results = new ConcurrentBag<CollectionNameAndCount>();
 
-            Parallel.ForEach(collections, collectionName =>
+            Parallel.ForEach(collectionsUnion, collectionName =>
             {
                 var result = Database
                     .Queries
@@ -815,13 +847,9 @@ for(var customFunction in customFunctions) {{
             return value;
         }
 
-        private class ImportOperationStatus : IOperationState
+        private class ImportOperationStatus : OperationStateBase
         {
-            public bool Completed { get; set; }
-            public string LastProgress { get; set; }
             public string ExceptionDetails { get; set; }
-            public bool Faulted { get; set; }
-            public RavenJToken State { get; set; }
         }
 
         private class CollectionNameAndCount

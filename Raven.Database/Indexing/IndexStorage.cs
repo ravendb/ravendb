@@ -1148,14 +1148,15 @@ namespace Raven.Database.Indexing
 
         public void RemoveFromIndex(int index, string[] keys, WorkContext context)
         {
-            Index value = indexes[index];
-            if (value == null)
+            Index value;
+            if (indexes.TryGetValue(index, out value) == false)
             {
                 if (log.IsDebugEnabled)
                     log.Debug("Removing from non existing index '{0}', ignoring", index);
 
                 return;
             }
+
             value.Remove(keys, context);
             context.RaiseIndexChangeNotification(new IndexChangeNotification
             {
@@ -1175,13 +1176,14 @@ namespace Raven.Database.Indexing
                 return null;
             }
             using (CultureHelper.EnsureInvariantCulture())
-            using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+            using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
             {
                 var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
                 context.RaiseIndexChangeNotification(new IndexChangeNotification
                 {
                     Name = value.PublicName,
-                    Type = IndexChangeTypes.MapCompleted
+                    Type = IndexChangeTypes.MapCompleted,
+                    Collections = batch.Collections
                 });
 
                 return performance;
@@ -1199,19 +1201,21 @@ namespace Raven.Database.Indexing
             HashSet<string> reduceKeys,
             int inputCount)
         {
-            Index value = indexes[index];
-            if (value == null)
+            Index value;
+            if (indexes.TryGetValue(index, out value) == false)
             {
                 if (log.IsDebugEnabled)
                     log.Debug("Tried to index on a non existent index {0}, ignoring", index);
                 return null;
             }
+
             var mapReduceIndex = value as MapReduceIndex;
             if (mapReduceIndex == null)
             {
                 log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
                 return null;
             }
+
             using (CultureHelper.EnsureInvariantCulture())
             {
                 var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
@@ -1378,13 +1382,13 @@ namespace Raven.Database.Indexing
                      where index.Value.PublicName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
                      orderby lastQueryTime
                      select new UnusedIndexState
-                         {
-                             LastQueryTime = lastQueryTime,
-                             Index = index.Value,
-                             Name = index.Value.PublicName,
-                             Priority = stats.Priority,
-                             CreationDate = stats.CreatedTimestamp
-                         }).ToArray();
+                     {
+                         LastQueryTime = lastQueryTime,
+                         Index = index.Value,
+                         Name = index.Value.PublicName,
+                         Priority = stats.Priority,
+                         CreationDate = stats.CreatedTimestamp
+                     }).ToArray();
 
                 var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
                 var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
@@ -1514,9 +1518,11 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
-            foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
+
+            foreach (var index in indexes)
             {
-                value.Flush(value.GetLastEtagFromStats());
+                if (index.Value.IsMapReduce == false)
+                    FlushIndex(index.Value);
             }
         }
 
@@ -1524,11 +1530,79 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
-            foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
+
+            foreach (var index in indexes)
+            {
+                if (index.Value.IsMapReduce)
+                    FlushIndex(index.Value);
+            }
+        }
+
+        public void FlushIndexes(HashSet<int> indexIds, bool onlyAddIndexError)
+        {
+            if (indexes == null || indexIds.Count == 0)
+                return;
+
+            foreach (var indexId in indexIds)
+            {
+                FlushIndex(indexId, onlyAddIndexError);
+            }
+        }
+
+        public void FlushIndex(int indexId, bool onlyAddIndexError)
+        {
+            Index value;
+            if (indexes.TryGetValue(indexId, out value))
+                FlushIndex(value, onlyAddIndexError);
+        }
+
+        private static void FlushIndex(Index value, bool onlyAddIndexError = false)
+        {
+            var sp = Stopwatch.StartNew();
+            
+            try
             {
                 value.Flush(value.GetLastEtagFromStats());
             }
+            catch (Exception e)
+            {
+                value.HandleWriteError(e);
+                log.WarnException(string.Format("Failed to flush {0} index: {1} (id: {2})",
+                    GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId), e);
+
+                if (onlyAddIndexError)
+                {
+                    value.AddIndexFailedFlushError(e);
+                    return;
+                }
+
+                throw;
+            }
+
+            if (log.IsDebugEnabled)
+            {
+                log.Debug("Flushed {0} index: {1} (id: {2}), took {3}ms",
+                    GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
+            }
         }
+
+        private static string GetIndexType(bool isMapReduce)
+        {
+            return isMapReduce ? "map-reduce" : "simple map";
+        }
+
+        public List<int> GetDisabledIndexIds()
+        {
+            var indexIds = new List<int>();
+
+            foreach (var index in indexes)
+            {
+                if (index.Value.Priority.HasFlag(IndexingPriority.Disabled))
+                    indexIds.Add(index.Key);
+            }
+
+            return indexIds;
+        } 
 
         public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
         {
@@ -1582,10 +1656,10 @@ namespace Raven.Database.Indexing
             return GetIndexInstance(index).GetIndexingPerformance();
         }
 
-        public void Backup(string directory, string incrementalTag = null, Action<string, string, BackupStatus.BackupMessageSeverity> notifyCallback = null)
+        public void Backup(string directory, string incrementalTag = null, Action<string, Exception, BackupStatus.BackupMessageSeverity> notifyCallback = null, CancellationToken token = default(CancellationToken))
         {
             Parallel.ForEach(indexes.Values, index =>
-                index.Backup(directory, path, incrementalTag, notifyCallback));
+                index.Backup(directory, path, incrementalTag, notifyCallback, token));
         }
 
         public void MergeAllIndexes()
@@ -1609,7 +1683,13 @@ namespace Raven.Database.Indexing
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
         {
             var indexToReplace = indexDefinitionStorage.GetIndexDefinition(indexToReplaceName);
-
+            switch (indexToReplace.LockMode)
+            {
+                case IndexLockMode.LockedIgnore:
+                    return false;
+                case IndexLockMode.LockedError:
+                    throw new InvalidOperationException("An attempt to replace an index, locked with LockedError, by a side by side index was detected.");
+            }
             var success = indexDefinitionStorage.ReplaceIndex(indexName, indexToReplaceName);
             if (success == false)
                 return false;

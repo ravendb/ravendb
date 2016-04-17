@@ -53,7 +53,7 @@ class apiKey extends document {
 
         this.needToShowSystemDatabaseWarning = ko.computed(() => {
             var resources = this.databases();
-            var hasAllDatabasesAdminAccess = resources.filter(x => x.admin() && x.tenantId() === "*").length > 0;
+            var hasAllDatabasesAdminAccess = resources.filter(x => (x.admin() || !x.readOnly()) && x.tenantId() === "*").length > 0;
             var hasSystemDatabaseAdminAcces = resources.filter(x => x.admin() && x.tenantId() === "<system>").length > 0;
             return hasAllDatabasesAdminAccess && hasSystemDatabaseAdminAcces === false;
         });
