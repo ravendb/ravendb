@@ -331,6 +331,7 @@ class shell extends viewModelBase {
         });
 
         $(window).resize(() => self.lastActivatedResource.valueHasMutated());
+        return shell.fetchLicenseStatus();
     }
 
     private isActiveResourceDisabled(rs: resource): boolean {
@@ -639,7 +640,7 @@ class shell extends viewModelBase {
             shell.fetchStudioConfig();
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
-            this.fetchLicenseStatus();
+            shell.fetchLicenseStatus();
             this.fetchSupportCoverage();
             this.loadServerConfig();
 
@@ -812,7 +813,7 @@ class shell extends viewModelBase {
                 this.fetchClusterTopology();
                 this.fetchServerBuildVersion();
                 this.fetchClientBuildVersion();
-                this.fetchLicenseStatus();
+                shell.fetchLicenseStatus();
                 this.fetchSupportCoverage();
                 this.fetchSystemDatabaseAlerts();
                 router.activate();
@@ -1101,8 +1102,8 @@ class shell extends viewModelBase {
             });
     }
 
-    fetchLicenseStatus() {
-        new getLicenseStatusCommand()
+    static fetchLicenseStatus(): JQueryPromise<licenseStatusDto> {
+        return new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => {
                 if (result.Status.contains("AGPL")) {

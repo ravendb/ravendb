@@ -30,6 +30,7 @@ import counterStorage = require("models/counter/counterStorage");
 import createCounterStorageCommand = require("commands/resources/createCounterStorageCommand");
 import timeSeries = require("models/timeSeries/timeSeries");
 import createTimeSeriesCommand = require("commands/resources/createTimeSeriesCommand");
+import license = require("models/auth/license");
 
 class resources extends viewModelBase {
     resources: KnockoutComputed<resource[]>;
@@ -51,7 +52,7 @@ class resources extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
-    showCreateCluster = ko.computed(() => !shell.clusterMode());
+    showCreateCluster = ko.computed(() => !shell.clusterMode() && (!license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true"));
     canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     databaseType = database.type;
