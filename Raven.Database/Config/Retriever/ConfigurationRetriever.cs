@@ -90,26 +90,16 @@ namespace Raven.Database.Config.Retriever
                 }
 
                 string globalConfigurationAsString;
-                bool globalConfiguration;
-                if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("globalConfiguration", out globalConfigurationAsString) && bool.TryParse(globalConfigurationAsString, out globalConfiguration))
-                {
-                    string expirationStr;
-                    DateTime expiration;
-                    if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("expiration", out expirationStr)
-                        && DateTime.TryParse(expirationStr,out expiration))
-                    {
-                        licenseEnabled = expiration;
-                    }
-                    return globalConfiguration;
-                }
-                //if we are here we are either on a open source license or a non-enterprise license.
+                bool globalConfiguration = false;
+                if(ValidateLicense.CurrentLicense.Attributes.TryGetValue("globalConfiguration", out globalConfigurationAsString))
+                    bool.TryParse(globalConfigurationAsString, out globalConfiguration);                
                 if (ValidateLicense.CurrentLicense.Status.Equals("AGPL - Open Source"))
                 {
                     //allowing open source users to use global configuration
                     return true;
                 }
                 //If we are here we have a license but it is not enterprise.
-                return false;
+                return globalConfiguration;
             }
         }
 
