@@ -1,5 +1,14 @@
 <form class="custom-functions-form" id="customFunctionsContainer">
-    <div class="panel panel-default">
+    <div class="panel panel-default" data-bind="visible: !$root.canUseGlobalConfigurations()">
+        <div class="panel-body">
+            <div class="text-center">
+                <h3 class="text-info">
+                    Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="panel panel-default" data-bind="visible: $root.canUseGlobalConfigurations()">
         <div class="panel-heading">
             <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled, visible: activated()" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: activated() == false">
@@ -8,6 +17,7 @@
             <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
                 <i class="fa fa-trash"></i> Remove global configuration for Custom Functions
             </button>
+            <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
         </div>
         <div class="panel-body">
             <p data-bind="visible: activated() == false">

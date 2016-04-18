@@ -152,7 +152,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/databases/{*id}")]
         public object OldToggleDisable(string id)
         {
-            if(id.StartsWith(ToggleIndexing))			
+            if (id.StartsWith(ToggleIndexing))			
             {
                 string dbId = id.Substring(ToggleIndexing.Length + 1);
                 var isSettingIndexingDisabledStr = GetQueryStringValue("isSettingIndexingDisabled");
@@ -183,6 +183,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
         private const string ToggleIndexing = "toggle-indexing";
         private const string ToggleRejectClients = "toggle-reject-clients";
+
         [HttpPost]
         [RavenRoute("admin/databases-toggle-disable")]
         public HttpResponseMessage ToggleDisable(string id, bool isSettingDisabled)

@@ -3,10 +3,13 @@ import versioningEntry = require("models/database/documents/versioningEntry");
 import appUrl = require("common/appUrl");
 import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
 import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 
 class globalConfigVersioning extends viewModelBase {
     activated = ko.observable<boolean>(false);
 
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     versionings = ko.observableArray<versioningEntry>().extend({ required: true });
     toRemove: versioningEntry[];
     isSaveEnabled: KnockoutComputed<boolean>;

@@ -26,12 +26,20 @@
                 </h2>
             </div>
             <div class="col-md-5" data-bind="visible: showCreateCluster()">
-                <h2 class="page-header text-info">
+                <h2 class="page-header text-info" data-bind="visible: canCreateCluster()">
+                    <i class="fa fa-cubes fa-5x"></i>
+                    <br/>
+                    <br/>
+                    Create cluster <br/>
+                    <small>Go ahead and <a href="#" data-bind="click: navigateToCreateCluster">create cluster</a></small><br/>
+                    <small class="text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</small>
+                </h2>
+                <h2 class="page-header text-info" style="color: gray" data-bind="visible: !canCreateCluster()">
                     <i class="fa fa-cubes fa-5x"></i>
                     <br />
                     <br />
                     Create cluster <br />
-                    <small>Go ahead and <a href="#" data-bind="click: navigateToCreateCluster">create cluster</a></small>
+                    <small>Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a></small>
                 </h2>
             </div>
         </div>

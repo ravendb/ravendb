@@ -8,9 +8,12 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 
 class globalConfigSqlReplication extends viewModelBase{
-    
+
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     htmlSelector ="#sqlReplicationConnectionsManagement";
     connections = ko.observable<sqlReplicationConnections>();
     isSaveEnabled: KnockoutComputed<boolean>;
