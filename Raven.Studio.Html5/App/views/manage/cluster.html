@@ -1,7 +1,7 @@
 <section>
 
     <div data-bind="if: !topology().clusterMode()">
-        <div class="panel panel-default">
+        <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
             <div class="panel-heading">
                 Cluster configuration
             </div>
@@ -9,6 +9,19 @@
                 <div class="text-center">
                     <h3 class="text-info">
                         This server is not part of cluster. <small>Go ahead and <a href="#" data-bind="click: createCluster">create cluster</a>.</small>
+                    </h3>
+                </div>
+                <div class="pull-right text-warning" data-bind="visible: developerLicense">Enterprise feature</div>
+            </div>
+        </div>
+        <div class="panel panel-default" data-bind="visible: !$root.canCreateCluster()">
+            <div class="panel-heading">
+                Cluster configuration
+            </div>
+            <div class="panel-body">
+                <div class="text-center">
+                    <h3 class="text-info">
+                        Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
                     </h3>
                 </div>
             </div>

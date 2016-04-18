@@ -215,7 +215,7 @@ class aceEditorBindingHandler {
         if ($(element).height() < this.minHeight) {
             $(element).height(this.minHeight);
         }
-        $(element).resizable({
+        $(element).resizable(<any>{
             minHeight: this.minHeight,
             handles: "s, se",
             grid: [10000000000000000, 1],
