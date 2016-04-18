@@ -188,6 +188,12 @@ namespace Raven.Abstractions.Smuggler
 
             writer.WriteEndArray();
 
+            if (IsMultiPartExportSupported == false)
+            {
+                await ExportIdentities(writer, Options.OperateOnTypes).ConfigureAwait(false);
+                return;
+            }
+
             using (var enumerator = await Operations.ExportItems(Options.OperateOnTypes, state).ConfigureAwait(false))
             {
                 string currentProperty = null;
@@ -235,6 +241,69 @@ namespace Raven.Abstractions.Smuggler
                     state.LastDocDeleteEtag = summary.LastDocDeleteEtag;
                     state.LastDocsEtag = summary.LastDocsEtag;
                 }
+            }
+        }
+
+        private async Task ExportIdentities(JsonTextWriter jsonWriter, ItemType operateOnTypes)
+        {
+            var retries = RetriesCount;
+
+            Operations.ShowProgress("Exporting Identities");
+
+            while (true)
+            {
+                List<KeyValuePair<string, long>> identities;
+                try
+                {
+                    identities = await Operations.GetIdentities();
+                }
+                catch (Exception e)
+                {
+                    if (retries-- == 0 && IgnoreErrorsAndContinue)
+                    {
+                        Operations.ShowProgress("Failed to fetch identities too much times. Cancelling identities export. Message: {0}", e.Message);
+                        return;
+                    }
+
+                    if (IgnoreErrorsAndContinue == false)
+                        throw;
+
+                    Operations.ShowProgress("Failed to fetch identities. {0} retries remaining. Message: {1}", retries, e.Message);
+                    continue;
+                }
+
+                Operations.ShowProgress("Exported {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
+
+                var filteredIdentities = identities.Where(x => FilterIdentity(x.Key, operateOnTypes)).ToList();
+
+                Operations.ShowProgress("After filtering {0} identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
+
+                jsonWriter.WritePropertyName("Identities");
+                jsonWriter.WriteStartArray();
+
+                foreach (var identityInfo in filteredIdentities)
+                {
+                    try
+                    {
+                        new RavenJObject
+                        {
+                            { "Key", identityInfo.Key },
+                            { "Value", identityInfo.Value }
+                        }.WriteTo(jsonWriter);
+                    }
+                    catch (Exception e)
+                    {
+                        if (IgnoreErrorsAndContinue == false)
+                            throw;
+
+                        Operations.ShowProgress("Export of identity {0} failed. Message: {1}", identityInfo.Key, e.Message);
+                    }
+                }
+
+                jsonWriter.WriteEndArray();
+
+                Operations.ShowProgress("Done with exporting identities");
+                return;
             }
         }
 
@@ -1194,14 +1263,14 @@ namespace Raven.Abstractions.Smuggler
                     if (jsonReader.Read() == false)
                         throw new EndOfStreamException();
                     if (jsonReader.TokenType == JsonToken.PropertyName)
-                {
+                    {
                         ValidatePropertyName(jsonReader, "Etag");
                         if (jsonReader.Read() == false) // read the etag value
                             throw new EndOfStreamException();
                         if (jsonReader.Read() == false) // consume the etag value...
                             throw new EndOfStreamException();
 
-                }
+                    }
                     ValidateEndObject(jsonReader);
 
                     if ((Operations.Options.OperateOnTypes & ItemType.Attachments) !=
@@ -1210,7 +1279,7 @@ namespace Raven.Abstractions.Smuggler
 
                     Operations.ShowProgress("Importing attachment {0}", key);
                     if (Operations.Options.StripReplicationInformation)
-                {
+                    {
                         metadata.Remove(Constants.RavenReplicationSource);
                         metadata.Remove(Constants.RavenReplicationVersion);
                     }
@@ -1570,43 +1639,62 @@ namespace Raven.Abstractions.Smuggler
 
         private async Task DetectServerSupportedFeatures(RavenConnectionStringOptions server)
         {
-            var serverVersion = await Operations.GetVersion(server);
-            if (string.IsNullOrEmpty(serverVersion))
+            var version = await Operations.GetVersion(server);
+            if (version == null || string.IsNullOrEmpty(version.ProductVersion))
             {
                 SetLegacyMode();
                 return;
             }
 
-
             var customAttributes = typeof(SmugglerDatabaseApiBase).Assembly.GetCustomAttributes(false);
             dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
             var intServerVersion = int.Parse(versionAtt.Version.Replace(".", ""));
-
 
             if (intServerVersion < 25)
             {
                 IsTransformersSupported = false;
                 IsDocsStreamingSupported = false;
                 IsIdentitiesSmugglingSupported = false;
-                Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version);
+                IsMultiPartExportSupported = false;
+
+                Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
                 return;
             }
 
             if (intServerVersion == 25)
             {
-                Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version);
+                Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
 
                 IsTransformersSupported = true;
                 IsDocsStreamingSupported = true;
                 IsIdentitiesSmugglingSupported = false;
+                IsMultiPartExportSupported = false;
 
                 return;
             }
 
+            if (intServerVersion == 30)
+            {
+                int build;
+                if (int.TryParse(version.BuildVersion, out build) == false)
+                    IsMultiPartExportSupported = false;
+                else
+                    IsMultiPartExportSupported = build == 13 || build >= 30100;
+
+                if (IsMultiPartExportSupported == false)
+                    Operations.ShowProgress("Multi-part export is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
+
+                IsTransformersSupported = true;
+                IsDocsStreamingSupported = true;
+                IsIdentitiesSmugglingSupported = true;
+
+                return;
+            }
 
             IsTransformersSupported = true;
             IsDocsStreamingSupported = true;
             IsIdentitiesSmugglingSupported = true;
+            IsMultiPartExportSupported = true;
         }
 
         private void SetLegacyMode()
@@ -1620,6 +1708,7 @@ namespace Raven.Abstractions.Smuggler
         public bool IsTransformersSupported { get; private set; }
         public bool IsDocsStreamingSupported { get; private set; }
         public bool IsIdentitiesSmugglingSupported { get; private set; }
+        public bool IsMultiPartExportSupported { get; private set; }
     }
 
     public class ExportOperationStatus

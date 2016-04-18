@@ -49,7 +49,7 @@ namespace Raven.Abstractions.Smuggler
 
         Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start);
 
-        Task<string> GetVersion(RavenConnectionStringOptions server);
+        Task<BuildNumber> GetVersion(RavenConnectionStringOptions server);
 
         void PurgeTombstones(OperationState result);
 
@@ -75,5 +75,7 @@ namespace Raven.Abstractions.Smuggler
         Task SeedIdentityFor(string identityName, long identityValue);
 
         Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state);
+
+        Task<List<KeyValuePair<string, long>>> GetIdentities();
     }
 }

@@ -382,12 +382,11 @@ namespace Raven.Database.Indexing
                                 }
                                 catch (AggregateException e)
                                 {
-                                    var anyOperationsCanceled = e
+                                    var allOperationsCanceled = e
                                         .InnerExceptions
-                                        .OfType<OperationCanceledException>()
-                                        .Any();
+                                        .All(x => x is OperationCanceledException);
 
-                                    if (anyOperationsCanceled == false)
+                                    if (allOperationsCanceled == false)
                                         throw;
 
                                     operationCanceled = true;
@@ -416,13 +415,30 @@ namespace Raven.Database.Indexing
                             }
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        //expected exception here, nothing to do
+                    }
+                    catch (AggregateException e)
+                    {
+                        var allOperationsCanceled = e
+                            .InnerExceptions
+                            .All(x => x is OperationCanceledException);
+
+                        if (allOperationsCanceled == false)
+                        {
+                            var message = string.Format("Unexpected AggregateException happened during execution of indexing batch...this is not supposed to happen. Reason: {0}", e);
+                            Log.Error(message, e);
+                            indexesToWorkOn.ForEach(index => context.AddError(index.IndexId, index.Index.PublicName, null, message));
+                        }
+                    }
                     catch (Exception e)
                     {
                         //this is a precaution, no exception should happen at this point
                         var message = string.Format("Unexpected exception happened during execution of indexing batch...this is not supposed to happen. Reason: {0}", e);
                         Log.Error(message, e);
                         indexesToWorkOn.ForEach(index => context.AddError(index.IndexId, index.Index.PublicName, null, message));
-                        
+
                         //rethrow because we do not want to interrupt the existing exception flow
                         // ReSharper disable once ThrowingSystemException
                         throw;

@@ -221,9 +221,9 @@ namespace Raven.Database.Smuggler
             });
         }
 
-        public Task<string> GetVersion(RavenConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(RavenConnectionStringOptions server)
         {
-            return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+            return new CompletedTask<BuildNumber>(new BuildNumber { BuildVersion = DocumentDatabase.BuildVersion.ToString(), ProductVersion = DocumentDatabase.ProductVersion });
         }
 
         public Task<DatabaseStatistics> GetStats()
@@ -279,6 +279,11 @@ namespace Raven.Database.Smuggler
             exporter.Export(items.Add, database.WorkContext.CancellationToken);
 
             return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(items.GetEnumerator()));
+        }
+
+        public Task<List<KeyValuePair<string, long>>> GetIdentities()
+        {
+            throw new NotSupportedException("Should support multi-part.");
         }
 
         public RavenJToken DisableVersioning(RavenJObject metadata)

@@ -291,6 +291,7 @@ namespace Raven.Abstractions.Data
         {
             public const string DisableIndexingFreeSpaceThreshold = "Raven/Indexing/DisableIndexingFreeSpaceThreshold";
             public const string DisableMapReduceInMemoryTracking = "Raven/Indexing/DisableMapReduceInMemoryTracking";
+            public const string SkipRecoveryOnStartup = "Raven/Indexing/SkipRecoveryOnStartup";
         }
     }
 }
