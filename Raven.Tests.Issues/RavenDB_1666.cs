@@ -68,11 +68,11 @@ namespace Raven.Tests.Issues
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesPut(string.Empty));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesDelete(string.Empty));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabasesBatchDelete());
-            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleDisable(string.Empty, false));
-            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleDisable(string.Empty, true));
+            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.ToggleDisable(string.Empty, false));
+            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.ToggleDisable(string.Empty, true));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(false));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseBatchToggleDisable(true));
-            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleIndexingDisable(null, false));
+            RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.ToggleIndexingDisable(null, false));
             RegisterRouteForOnlySysDb<AdminDatabasesController>(a => a.DatabaseToggleRejectClientsEnabled(string.Empty, false));
             RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(false));
             RegisterRouteForOnlySysDb<DatabasesController>(a => a.Databases(true));
