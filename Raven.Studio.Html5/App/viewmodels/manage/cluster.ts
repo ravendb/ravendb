@@ -27,7 +27,7 @@ class cluster extends viewModelBase {
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>(); 
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
-
+    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     constructor() {
         super();
         autoRefreshBindingHandler.install();
