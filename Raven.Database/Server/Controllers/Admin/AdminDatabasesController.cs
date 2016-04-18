@@ -15,6 +15,9 @@ namespace Raven.Database.Server.Controllers.Admin
     [RoutePrefix("")]
     public class AdminDatabasesController : BaseAdminController
     {
+        private const string ToggleIndexing = "toggle-indexing";
+        private const string ToggleRejectClients = "toggle-reject-clients";
+
         [HttpGet]
         [RavenRoute("admin/databases/{*id}")]
         public HttpResponseMessage DatabasesGet(string id)
@@ -134,7 +137,40 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpPost]
         [RavenRoute("admin/databases/{*id}")]
-        public HttpResponseMessage DatabaseToggleDisable(string id, bool isSettingDisabled)
+        public object OldToggleDisable(string id)
+        {
+            if (id.StartsWith(ToggleIndexing))			
+            {
+                string dbId = id.Substring(ToggleIndexing.Length + 1);
+                var isSettingIndexingDisabledStr = GetQueryStringValue("isSettingIndexingDisabled");
+                bool isSettingIndexingDisabled;
+                if (!string.IsNullOrEmpty(isSettingIndexingDisabledStr) && bool.TryParse(isSettingIndexingDisabledStr, out isSettingIndexingDisabled))
+                {
+                    return ToggleIndexingDisable(dbId, isSettingIndexingDisabled);
+                }
+                return GetMessageWithString(string.Format("Failed to route call {0}", Request.RequestUri.OriginalString), HttpStatusCode.BadRequest);
+            }
+            if (id.StartsWith(ToggleRejectClients))
+            {
+                var dbId = id.Substring(ToggleRejectClients.Length + 1);
+                var isRejectClientsEnabledStr = GetQueryStringValue("isRejectClientsEnabled");
+                bool isRejectClientsEnabled;
+                if (!string.IsNullOrEmpty(isRejectClientsEnabledStr) && bool.TryParse(isRejectClientsEnabledStr, out isRejectClientsEnabled))
+                {
+                    return DatabaseToggleRejectClientsEnabled(dbId, isRejectClientsEnabled);
+                }
+                return GetMessageWithString(string.Format("Failed to route call {0}", Request.RequestUri.OriginalString), HttpStatusCode.BadRequest);
+            }
+            var isSettingDisabledStr = GetQueryStringValue("isSettingDisabled");
+            bool isSettingDisabled;
+            if (!string.IsNullOrEmpty(isSettingDisabledStr) && bool.TryParse(isSettingDisabledStr, out isSettingDisabled))
+                return ToggleDisable(id, isSettingDisabled);
+            return GetMessageWithString(string.Format("Failed to route call {0}", Request.RequestUri.OriginalString), HttpStatusCode.BadRequest);
+        }
+
+        [HttpPost]
+        [RavenRoute("admin/databases-toggle-disable")]
+        public HttpResponseMessage ToggleDisable(string id, bool isSettingDisabled)
         {
             var message = ToggeleDatabaseDisabled(id, isSettingDisabled);
             if (message.ErrorCode != HttpStatusCode.OK)
@@ -146,8 +182,8 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [HttpPost]
-        [RavenRoute("admin/databases/toggle-indexing/{*id}")]
-        public HttpResponseMessage DatabaseToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
+        [RavenRoute("admin/databases-toggle-indexing")]
+        public HttpResponseMessage ToggleIndexingDisable(string id, bool isSettingIndexingDisabled)
         {
             var message = ToggeleDatabaseIndexingDisabled(id, isSettingIndexingDisabled);
             if (message.ErrorCode != HttpStatusCode.OK)
@@ -159,7 +195,7 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [HttpPost]
-        [RavenRoute("admin/databases/toggle-reject-clients/{*id}")]
+        [RavenRoute("admin/databases-toggle-reject-clients")]
         public HttpResponseMessage DatabaseToggleRejectClientsEnabled(string id, bool isRejectClientsEnabled)
         {
             var message = ToggleRejectClientsEnabled(id, isRejectClientsEnabled);
