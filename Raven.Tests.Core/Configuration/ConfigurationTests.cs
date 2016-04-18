@@ -230,6 +230,7 @@ namespace Raven.Tests.Core.Configuration
 
             configurationComparer.Assert(expected => expected.Indexing.DisableIndexingFreeSpaceThreshold.Value, actual => actual.Indexing.DisableIndexingFreeSpaceThreshold);
             configurationComparer.Assert(expected => expected.Indexing.DisableMapReduceInMemoryTracking.Value, actual => actual.Indexing.DisableMapReduceInMemoryTracking);
+            configurationComparer.Assert(expected => expected.Indexing.SkipRecoveryOnStartup.Value, actual => actual.Indexing.SkipRecoveryOnStartup);
 
             configurationComparer.Assert(expected => expected.Monitoring.Snmp.Port.Value, actual => actual.Monitoring.Snmp.Port);
             configurationComparer.Assert(expected => expected.Monitoring.Snmp.Community.Value, actual => actual.Monitoring.Snmp.Community);
