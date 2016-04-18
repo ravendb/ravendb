@@ -17,7 +17,6 @@ using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -27,6 +26,8 @@ namespace Raven.Database.Actions
 {
     public class MaintenanceActions : ActionsBase
     {
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
         public MaintenanceActions(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
             : base(database, recentTouches, uuidGenerator, log)
         {
@@ -157,11 +158,14 @@ namespace Raven.Database.Actions
         }
         public void DeleteRemovedIndexes(Dictionary<int, DocumentDatabase.IndexFailDetails> reason)
         {
+            var pendingDeletions = new List<RavenJObject>();
+            var idsOfLostIndexes = new List<int>();
+
             TransactionalStorage.Batch(actions =>
             {
                 foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
                 {
-                    Database.Indexes.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"), result.Data.Value<string>("IndexName"));
+                    pendingDeletions.Add(result.Data);
                 }
 
                 List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
@@ -171,41 +175,68 @@ namespace Raven.Database.Actions
                     if (index != null)
                         continue;
 
-                    // index is not found on disk, better kill for good
-                    // Even though technically we are running into a situation that is considered to be corrupt data
-                    // we can safely recover from it by removing the other parts of the index.
-                    Database.IndexStorage.DeleteIndex(id);
-                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
-
-                    string indexName;
-                    string msg;
-                    string ex;
-
-                    DocumentDatabase.IndexFailDetails failDetails;
-                    if (reason == null || reason.TryGetValue(id, out failDetails) == false)
-                    {
-                        indexName = "Unknown Name";
-                        msg = string.Format("Index '{0}-({1})' couldn't be found or invalid", id, indexName);
-                        ex = "";
-                    }
-                    else
-                    {
-                        indexName = failDetails.IndexName;
-                        msg = failDetails.Reason;
-                        ex = failDetails.Ex.ToString();
-                    }
-
-                    Database.AddAlert(new Alert
-                    {
-                        AlertLevel = AlertLevel.Error,
-                        CreatedAt = SystemTime.UtcNow,
-                        Message = msg,
-                        Title = string.Format("Index '{0}-({1})' removed because it is not found or invalid", id, indexName),
-                        Exception = ex,
-                        UniqueKey = msg
-                    });
+                    idsOfLostIndexes.Add(id);
                 }
             });
+
+            foreach (var pendingDeletion in pendingDeletions)
+            {
+                Database.Indexes.StartDeletingIndexDataAsync(pendingDeletion.Value<int>("IndexId"), pendingDeletion.Value<string>("IndexName"));
+            }
+
+            Task.Factory.StartNew(() =>
+            {
+                foreach (var indexId in idsOfLostIndexes)
+                {
+                    try
+                    {
+                        // index is not found on disk, better kill for good
+                        // Even though technically we are running into a situation that is considered to be corrupt data
+                        // we can safely recover from it by removing the other parts of the index.
+
+                        Database.TransactionalStorage.Batch(actions =>
+                        {
+                            // index is not found on disk, better kill for good
+                            // Even though technically we are running into a situation that is considered to be corrupt data
+                            // we can safely recover from it by removing the other parts of the index.
+                            Database.IndexStorage.DeleteIndex(indexId);
+                            actions.Indexing.DeleteIndex(indexId, WorkContext.CancellationToken);
+
+                            string indexName;
+                            string msg;
+                            string ex;
+
+                            DocumentDatabase.IndexFailDetails failDetails;
+                            if (reason == null || reason.TryGetValue(indexId, out failDetails) == false)
+                            {
+                                indexName = "Unknown Name";
+                                msg = string.Format("Index '{0}-({1})' couldn't be found or invalid", indexId, indexName);
+                                ex = "";
+                            }
+                            else
+                            {
+                                indexName = failDetails.IndexName;
+                                msg = failDetails.Reason;
+                                ex = failDetails.Ex.ToString();
+                            }
+
+                            Database.AddAlert(new Alert
+                            {
+                                AlertLevel = AlertLevel.Error,
+                                CreatedAt = SystemTime.UtcNow,
+                                Message = msg,
+                                Title = string.Format("Index '{0}-({1})' removed because it is not found or invalid", indexId, indexName),
+                                Exception = ex,
+                                UniqueKey = msg
+                            });
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        Log.ErrorException("Could not delete data from the storage of an index which was not found on the disk. Index id: " + indexId, e);
+                    }
+                }
+            }, TaskCreationOptions.LongRunning);
         }
     }
 }
