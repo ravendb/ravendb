@@ -52,7 +52,9 @@ class resources extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
-    showCreateCluster = ko.computed(() => !shell.clusterMode() && (!license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true"));
+    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
+    showCreateCluster = ko.computed(() => !shell.clusterMode());
+    canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     databaseType = database.type;

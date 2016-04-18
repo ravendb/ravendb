@@ -1,11 +1,16 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import adminSettings = require("viewmodels/manage/adminSettings");
+import license = require("models/auth/license");
 
 class globalConfig extends viewModelBase {
 
     router: DurandalRouter;
     currentRouteTitle: KnockoutComputed<string>;
+
+    static developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
+    static canUseGlobalConfigurations = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.globalConfigurations === "true");
+
 
     constructor() {
         super();

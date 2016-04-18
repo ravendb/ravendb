@@ -63,6 +63,8 @@ class adminSettings extends viewModelBase {
         var routes = [
             apiKeyRoute,
             windowsAuthRoute,
+            clusterRoute,
+            globalConfigRoute,
             serverSmuggling,
             backupRoute,
             compactRoute,
@@ -80,14 +82,6 @@ class adminSettings extends viewModelBase {
 
         if (license.licenseStatus().Attributes.hotSpare === "true")
             routes.push(hotSpareRoute);
-
-        if (!license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true") {
-            routes.splice(2, 0, clusterRoute);
-        }
-
-        if (!license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.globalConfigurations === "true") {
-            routes.splice(2, 0, globalConfigRoute);
-        }
 
         this.router = this.router
             .reset()

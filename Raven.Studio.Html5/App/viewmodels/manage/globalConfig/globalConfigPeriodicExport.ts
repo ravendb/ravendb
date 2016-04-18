@@ -8,9 +8,12 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import getEffectiveSettingsCommand = require("commands/database/globalConfig/getEffectiveSettingsCommand");
 import saveGlobalSettingsCommand = require("commands/database/globalConfig/saveGlobalSettingsCommand");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 
 class globalConfigPeriodicExport extends viewModelBase {
 
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     settingsDocument = ko.observable<document>();
     activated = ko.observable<boolean>(false);
 

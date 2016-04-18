@@ -692,6 +692,7 @@ interface databaseRestoreRequestDto extends restoreRequestDto {
     DatabaseName: string;
     DatabaseLocation: string;
     DisableReplicationDestinations: boolean;
+    GenerateNewDatabaseId: boolean;
 }
 
 interface filesystemRestoreRequestDto extends restoreRequestDto {
