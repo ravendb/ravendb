@@ -299,6 +299,7 @@ namespace Raven.Database.Config
             Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking], false);
             Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 512);
             Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
+            Indexing.SkipRecoveryOnStartup = new BooleanSetting(settings[Constants.Indexing.SkipRecoveryOnStartup], false);
 
             Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 10);		// 12000ms
             Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
@@ -564,6 +565,7 @@ namespace Raven.Database.Config
             public BooleanSetting DisableMapReduceInMemoryTracking { get; set; }
             public IntegerSetting MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
             public BooleanSetting UseLuceneASTParser { get; set; }
+            public BooleanSetting SkipRecoveryOnStartup { get; set; }
         }
 
         public class ClusterConfiguration
