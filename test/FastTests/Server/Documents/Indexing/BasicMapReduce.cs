@@ -244,17 +244,29 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
+                
+                Assert.Equal(2, indexes[1].IndexId);
+                Assert.Equal(1, indexes[1].Definition.Collections.Length);
+                Assert.Equal("Users", indexes[1].Definition.Collections[0]);
 
-                // TODO arek finish this test
-                //Assert.Equal(2, indexes[1].IndexId);
-                //Assert.Equal(1, indexes[1].Definition.Collections.Length);
-                //Assert.Equal("Users", indexes[1].Definition.Collections[0]);
-                //Assert.Equal(1, indexes[1].Definition.MapFields.Count);
-                //Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
-                //Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Name2"].SortOption);
-                //Assert.False(indexes[1].Definition.MapFields["Name2"].Highlighted);
-                //Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
-                //Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
+                Assert.Equal(2, indexes[1].Definition.MapFields.Count);
+                Assert.Equal("Count", indexes[1].Definition.MapFields["Count"].Name);
+                Assert.Equal(FieldMapReduceOperation.Count, indexes[1].Definition.MapFields["Count"].MapReduceOperation);
+                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Count"].SortOption);
+                Assert.Equal("Sum", indexes[1].Definition.MapFields["Sum"].Name);
+                Assert.Equal(FieldMapReduceOperation.Sum, indexes[1].Definition.MapFields["Sum"].MapReduceOperation);
+                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Sum"].SortOption);
+
+                definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
+
+                Assert.NotNull(definition);
+
+                Assert.Equal(1, definition.GroupByFields.Length);
+                Assert.Equal("Location", definition.GroupByFields[0].Name);
+                Assert.Equal(SortOptions.String, definition.GroupByFields[0].SortOption);
+
+                Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
+                Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
             }
         }
 
