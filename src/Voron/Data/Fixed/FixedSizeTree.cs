@@ -53,8 +53,16 @@ namespace Voron.Data.Fixed
         {
             _tx = tx;
             _parent = parent;
-            _treeName = treeName;
             _valSize = valSize;
+
+            if (treeName.Array != null)
+                _treeName = treeName;
+            else
+            {
+                var bytes = new byte[treeName.Size];
+                treeName.CopyTo(bytes);
+                _treeName = new Slice(bytes);
+            }
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
@@ -1215,7 +1223,7 @@ namespace Voron.Data.Fixed
             {
                 int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
                 Memory.Copy(tmp.TempPagePointer, ptr, srcCopyStart);
-                Memory.Copy(tmp.TempPagePointer + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos) * _entrySize);
+                Memory.Copy(tmp.TempPagePointer + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos - 1) * _entrySize);
 
                 var newDataSize = sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize);
                 byte* newData = _parent.DirectAdd(_treeName, newDataSize);

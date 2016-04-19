@@ -416,17 +416,27 @@ namespace Voron.Data.Tables
 
         private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize)
         {
+            Slice immutableName;
+            if (name.Array != null)
+                immutableName = name;
+            else
+            {
+                var bytes = new byte[name.Size];
+                name.CopyTo(bytes);
+                immutableName = new Slice(bytes);
+            }
+            
             Dictionary<Slice, FixedSizeTree> cache;
             var parentName = parent.Name ?? Constants.RootTreeName;
             if (_fixedSizeTreeCache.TryGetValue(parentName, out cache) == false)
             {
                 _fixedSizeTreeCache[parentName] = cache = new Dictionary<Slice, FixedSizeTree>();
-                return cache[name] = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize);
+                return cache[immutableName] = new FixedSizeTree(_tx.LowLevelTransaction, parent, immutableName, valSize);
             }
 
             FixedSizeTree tree;
-            if (cache.TryGetValue(name, out tree) == false)
-                return cache[name] = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize);
+            if (cache.TryGetValue(immutableName, out tree) == false)
+                return cache[immutableName] = new FixedSizeTree(_tx.LowLevelTransaction, parent, immutableName, valSize);
 
             return tree;
         }

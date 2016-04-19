@@ -446,8 +446,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact(Skip = "Failing very badly because we try to delete an id twice, which shouldn't be possible. "+
-            "Reproducing this consistently took a lot of time, but I don't have the time to get to the root cause yet")]
+        [Fact]
         public void Errors2()
         {
             var times = new[]
