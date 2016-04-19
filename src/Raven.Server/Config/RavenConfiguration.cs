@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-
+using Sparrow.Platform;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 
 namespace Raven.Server.Config
@@ -60,8 +60,11 @@ namespace Raven.Server.Config
 
         public RavenConfiguration()
         {
+            var platformPostfix = "windows";
+            if (Platform.RunningOnPosix)
+                platformPostfix = "posix";
             _configBuilder = new ConfigurationBuilder()
-                .AddJsonFile("settings.json", optional: true)
+                .AddJsonFile($"settings_{platformPostfix}.json", optional: true)
                 .AddEnvironmentVariables(prefix: "RAVEN_");
             Settings = _configBuilder.Build();
             Core = new CoreConfiguration();
