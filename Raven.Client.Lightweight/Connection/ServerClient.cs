@@ -470,6 +470,11 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.SeedIdentityForAsync(name, value));
         }
 
+        public void SeedIdentities(List<KeyValuePair<string, long>> identities)
+        {
+            AsyncHelpers.RunSync(() => asyncServerClient.SeedIdentitiesAsync(identities));
+        }
+
         public string UrlFor(string documentKey)
         {
             return asyncServerClient.UrlFor(documentKey);

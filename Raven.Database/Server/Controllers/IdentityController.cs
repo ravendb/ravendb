@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
 
 using Raven.Database.Server.WebApi.Attributes;
@@ -78,11 +81,50 @@ namespace Raven.Database.Server.Controllers
                 }, HttpStatusCode.BadRequest);
             }
 
-            Database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(name, value));
+            using (Database.IdentityLock.Lock())
+            {
+                Database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(name, value));
+            }
+                
             return GetMessageWithObject(new
             {
                 Value = value
             });
+        }
+
+        [HttpPost]
+        [RavenRoute("identity/seed/bulk")]
+        [RavenRoute("databases/{databaseName}/identity/seed/bulk")]
+        public async Task<HttpResponseMessage> IdentitiesSeed()
+        {
+            var identities = await ReadJsonObjectAsync<List<KeyValuePair<string, long>>>().ConfigureAwait(false);
+
+            if (identities.Any(x => string.IsNullOrWhiteSpace(x.Key)))
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "'key' is mandatory and cannot be empty"
+                }, HttpStatusCode.BadRequest);
+            }
+
+            if (identities.Any(x => x.Key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) &&
+                "Raven/Replication/Hilo".Equals(x.Key, StringComparison.OrdinalIgnoreCase) == false))
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "'key' parameter cannot start with 'Raven' because that is a reserved system name"
+                }, HttpStatusCode.BadRequest);
+            }
+
+            using (Database.IdentityLock.Lock())
+            {
+                foreach (var identity in identities)
+                {
+                    Database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identity.Key, identity.Value));
+                }
+            }
+
+            return GetEmptyMessage();
         }
     }
 }
