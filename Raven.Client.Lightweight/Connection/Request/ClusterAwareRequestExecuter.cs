@@ -23,6 +23,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Extensions;
+using Raven.Client.Metrics;
 
 namespace Raven.Client.Connection.Request
 {
@@ -92,7 +93,7 @@ namespace Raven.Client.Connection.Request
 
         public ReplicationDestination[] FailoverServers { get; set; }
 
-        public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, Task<T>> operation, CancellationToken token)
+        public Task<T> ExecuteOperationAsync<T>(AsyncServerClient serverClient, HttpMethod method, int currentRequest, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token)
         {
             return ExecuteWithinClusterInternalAsync(serverClient, method, operation, token);
         }
@@ -105,7 +106,7 @@ namespace Raven.Client.Connection.Request
             LeaderNode = null;
             return UpdateReplicationInformationForCluster(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), operationMetadata =>
             {
-                return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, TimeSpan.FromSeconds(GetReplicationDestinationsTimeoutInSeconds)).ContinueWith(t =>
+                return serverClient.DirectGetReplicationDestinationsAsync(operationMetadata, null, timeout: TimeSpan.FromSeconds(GetReplicationDestinationsTimeoutInSeconds)).ContinueWith(t =>
                 {
                     if (t.IsFaulted || t.IsCanceled)
                         return null;
@@ -126,7 +127,7 @@ namespace Raven.Client.Connection.Request
                 httpJsonRequest.AddHeader(Constants.Cluster.ClusterFailoverBehaviorHeader, "true");
         }
 
-        private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
+        private async Task<T> ExecuteWithinClusterInternalAsync<T>(AsyncServerClient serverClient, HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token, int numberOfRetries = 2)
         {
             token.ThrowIfCancellationRequested();
 
@@ -197,7 +198,7 @@ namespace Raven.Client.Connection.Request
             return node;
         }
 
-        private async Task<T> HandleWithFailovers<T>(Func<OperationMetadata, Task<T>> operation, CancellationToken token)
+        private async Task<T> HandleWithFailovers<T>(Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token)
         {
             var nodes = NodeUrls;
             for (var i = 0; i < nodes.Count; i++)
@@ -226,7 +227,7 @@ namespace Raven.Client.Connection.Request
             return false;
         }
 
-        private async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata node, Func<OperationMetadata, Task<T>> operation, bool avoidThrowing, CancellationToken token)
+        private async Task<AsyncOperationResult<T>> TryClusterOperationAsync<T>(OperationMetadata node, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, bool avoidThrowing, CancellationToken token)
         {
             Debug.Assert(node != null);
 
@@ -236,7 +237,7 @@ namespace Raven.Client.Connection.Request
             var operationResult = new AsyncOperationResult<T>();
             try
             {
-                operationResult.Result = await operation(node).ConfigureAwait(false);
+                operationResult.Result = await operation(node, null).ConfigureAwait(false);
                 operationResult.Success = true;
             }
             catch (Exception e)
@@ -299,7 +300,7 @@ namespace Raven.Client.Connection.Request
                 {
                     var tryFailoverServers = false;
                     var triedFailoverServers = FailoverServers == null || FailoverServers.Length == 0;
-                    for (; ; )
+                    for (;;)
                     {
                         var nodes = NodeUrls.ToHashSet();
 
@@ -346,7 +347,7 @@ namespace Raven.Client.Connection.Request
 
                         var newestTopology = replicationDocuments
                             .Where(x => x.Task.Result != null)
-                            .OrderByDescending(x=>x.Task.Result.Term)
+                            .OrderByDescending(x => x.Task.Result.Term)
                             .ThenByDescending(x =>
                             {
                                 var index = x.Task.Result.ClusterCommitIndex;
@@ -371,8 +372,8 @@ namespace Raven.Client.Connection.Request
                         if (newestTopology != null)
                         {
                             Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
-                            LeaderNode = newestTopology.Task.Result.ClusterInformation.IsLeader? 
-                                Nodes.FirstOrDefault(n=>n.Url == newestTopology.Node.Url):null;
+                            LeaderNode = newestTopology.Task.Result.ClusterInformation.IsLeader ?
+                                Nodes.FirstOrDefault(n => n.Url == newestTopology.Node.Url) : null;
 
                             ReplicationInformerLocalCache.TrySavingClusterNodesToLocalCache(serverHash, Nodes);
 

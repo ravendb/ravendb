@@ -57,7 +57,7 @@ namespace Raven.Client.Document
             asyncDatabaseCommands.ForceReadFromMaster();
 
             var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, 
-                        operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata)).ConfigureAwait(false);
+                        (operationMetadata, requestTimeMetric) => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata, requestTimeMetric)).ConfigureAwait(false);
             if (replicationDocument == null)
                 return -1;
 

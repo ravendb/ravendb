@@ -17,6 +17,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Client.Metrics;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -31,8 +32,8 @@ namespace Raven.Client.Connection
 
         private Task refreshReplicationInformationTask;
 
-        public ReplicationInformer(DocumentConvention conventions, HttpJsonRequestFactory jsonRequestFactory)
-            : base(conventions, jsonRequestFactory)
+        public ReplicationInformer(DocumentConvention conventions, HttpJsonRequestFactory jsonRequestFactory, Func<string, IRequestTimeMetric> requestTimeMetricGetter)
+            : base(conventions, jsonRequestFactory, requestTimeMetricGetter)
         {
         }
 
@@ -44,8 +45,7 @@ namespace Raven.Client.Connection
         public Task UpdateReplicationInformationIfNeededAsync(AsyncServerClient serverClient)
         {
             return UpdateReplicationInformationIfNeededInternalAsync(serverClient.Url, () => 
-                AsyncHelpers.RunSync(() => 
-                    serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
+                AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null)));
         }
 
         private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
@@ -137,12 +137,12 @@ namespace Raven.Client.Connection
 
         public void RefreshReplicationInformation(AsyncServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null))));
+            RefreshReplicationInformationInternal(serverClient.Url, () => AsyncHelpers.RunSync(() => serverClient.DirectGetReplicationDestinationsAsync(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null)));
         }
 
         public override void RefreshReplicationInformation(ServerClient serverClient)
         {
-            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null)));
+            RefreshReplicationInformationInternal(serverClient.Url, () => serverClient.DirectGetReplicationDestinations(new OperationMetadata(serverClient.Url, serverClient.PrimaryCredentials, null), null));
         }
 
         private void RefreshReplicationInformationInternal(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)

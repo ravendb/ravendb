@@ -12,6 +12,7 @@ using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Metrics;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -27,7 +28,7 @@ namespace Raven.Tests.Issues
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-            }, new HttpJsonRequestFactory(MaxNumber))
+            }, new HttpJsonRequestFactory(MaxNumber), s => new RequestTimeMetric())
             {
                 ReplicationDestinations =
                     {
@@ -39,8 +40,8 @@ namespace Raven.Tests.Issues
             {
                 var urlsTried = new List<string>();
 
-                var webException = (WebException)Assert.Throws<AggregateException>(() => 
-                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
+                var webException = (WebException)Assert.Throws<AggregateException>(() =>
+                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, (url, rtm) =>
                 {
                     urlsTried.Add(url.Url);
                     throw new WebException("Timeout", WebExceptionStatus.Timeout);
@@ -60,7 +61,7 @@ namespace Raven.Tests.Issues
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.ReadFromAllServers
-            }, new HttpJsonRequestFactory(MaxNumber))
+            }, new HttpJsonRequestFactory(MaxNumber), s => new RequestTimeMetric())
             {
                 ReplicationDestinations =
                     {
@@ -72,12 +73,12 @@ namespace Raven.Tests.Issues
             {
                 var urlsTried = new List<string>();
 
-                var webException = (WebException) Assert.Throws<AggregateException>(() => 
-                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
-                {
-                    urlsTried.Add(url.Url);
-                    throw new WebException("Timeout", WebExceptionStatus.Timeout);
-                }).Wait()).ExtractSingleInnerException();
+                var webException = (WebException)Assert.Throws<AggregateException>(() =>
+                   replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, (url, rtm) =>
+               {
+                   urlsTried.Add(url.Url);
+                   throw new WebException("Timeout", WebExceptionStatus.Timeout);
+               }).Wait()).ExtractSingleInnerException();
 
                 Assert.Equal(2, urlsTried.Count);
                 Assert.Equal("http://localhost:3", urlsTried[0]); // striped
@@ -93,7 +94,7 @@ namespace Raven.Tests.Issues
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-            }, new HttpJsonRequestFactory(MaxNumber))
+            }, new HttpJsonRequestFactory(MaxNumber), s => new RequestTimeMetric())
             {
                 ReplicationDestinations =
                     {
@@ -106,7 +107,7 @@ namespace Raven.Tests.Issues
                 var urlsTried = new List<string>();
 
                 var aggregateException = Assert.Throws<AggregateException>(() =>
-                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, (url, rtm) =>
                     {
                         urlsTried.Add(url.Url);
 
@@ -130,7 +131,7 @@ namespace Raven.Tests.Issues
             using (var replicationInformer = new ReplicationInformer(new DocumentConvention
             {
                 FailoverBehavior = FailoverBehavior.ReadFromAllServers
-            }, new HttpJsonRequestFactory(MaxNumber))
+            }, new HttpJsonRequestFactory(MaxNumber), s => new RequestTimeMetric())
             {
                 ReplicationDestinations =
                     {
@@ -143,7 +144,7 @@ namespace Raven.Tests.Issues
                 var urlsTried = new List<string>();
 
                 var aggregateException = Assert.Throws<AggregateException>(() =>
-                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), null, 1, 1, url =>
+                    replicationInformer.ExecuteWithReplicationAsync<int>(HttpMethods.Get, "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, (url, rtm) =>
                     {
                         urlsTried.Add(url.Url);
 

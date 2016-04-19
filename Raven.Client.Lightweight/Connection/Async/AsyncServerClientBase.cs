@@ -7,21 +7,22 @@ using System.Collections.Specialized;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Client.Metrics;
 
 namespace Raven.Client.Connection.Async
 {
-    public abstract class AsyncServerClientBase<TConvention, TReplicationInformer> : IDisposalNotification 
+    public abstract class AsyncServerClientBase<TConvention, TReplicationInformer> : IDisposalNotification
         where TConvention : ConventionBase, new()
         where TReplicationInformer : IReplicationInformerBase
     {
         private const int DefaultNumberOfCachedRequests = 2048;
 
-        protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory, 
+        protected AsyncServerClientBase(string serverUrl, TConvention convention, OperationCredentials credentials, HttpJsonRequestFactory jsonRequestFactory,
                                      Guid? sessionId, NameValueCollection operationsHeaders, Func<string, TReplicationInformer> replicationInformerGetter, string resourceName)
         {
             WasDisposed = false;
 
-            ServerUrl = serverUrl.TrimEnd('/'); 
+            ServerUrl = serverUrl.TrimEnd('/');
             Conventions = convention ?? new TConvention();
             CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             RequestFactory = jsonRequestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests, authenticationScheme: Conventions.AuthenticationScheme);
@@ -31,7 +32,7 @@ namespace Raven.Client.Connection.Async
 
             SessionId = sessionId;
             OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
-            
+
             ReplicationInformerGetter = replicationInformerGetter ?? DefaultReplicationInformerGetter();
             replicationInformer = new Lazy<TReplicationInformer>(() => ReplicationInformerGetter(resourceName), true);
             MaxQuerySizeForGetRequest = 8 * 1024;
@@ -68,7 +69,7 @@ namespace Raven.Client.Connection.Async
         public IDisposable ForceReadFromMaster()
         {
             var old = ReadStrippingBase;
-            readStrippingBase= -1;// this means that will have to use the master url first
+            readStrippingBase = -1;// this means that will have to use the master url first
             return new DisposableAction(() => readStrippingBase = old);
         }
 
@@ -85,7 +86,7 @@ namespace Raven.Client.Connection.Async
         public TReplicationInformer ReplicationInformer { get { return replicationInformer.Value; } }
         protected readonly Func<string, TReplicationInformer> ReplicationInformerGetter;
 
-        private int? readStrippingBase=null;
+        private int? readStrippingBase = null;
 
         public int ReadStrippingBase
         {
@@ -94,7 +95,8 @@ namespace Raven.Client.Connection.Async
                 if (readStrippingBase.HasValue)
                 {
                     return readStrippingBase.Value;
-                }else if (ReplicationInformer == null)
+                }
+                else if (ReplicationInformer == null)
                 {
                     readStrippingBase = -1;
                 }
@@ -107,7 +109,7 @@ namespace Raven.Client.Connection.Async
         private volatile bool currentlyExecuting;
         private static readonly NameValueCollection DefaultNameValueCollection = new NameValueCollection();
 
-        internal async Task<T> ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, Task<T>> operation)
+        internal async Task<T> ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
             if (currentlyExecuting && Conventions.AllowMultipuleAsyncOperations == false)
@@ -116,8 +118,9 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return await ReplicationInformer.ExecuteWithReplicationAsync(method, BaseUrl, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null, currentRequest, ReadStrippingBase, operation)
-                                                .ConfigureAwait(false);
+                return await ReplicationInformer
+                    .ExecuteWithReplicationAsync(method, BaseUrl, CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, currentRequest, ReadStrippingBase, operation)
+                    .ConfigureAwait(false);
             }
             catch (AggregateException e)
             {
@@ -133,14 +136,14 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        internal Task ExecuteWithReplication(HttpMethod method, Func<OperationMetadata, Task> operation)
+        internal Task ExecuteWithReplication(HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, Task> operation)
         {
             // Convert the Func<string, Task> to a Func<string, Task<object>>
-            return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
-            {
-                t.AssertNotFailed();
-                return null;
-            }));
+            return ExecuteWithReplication(method, (u, rtm) => operation(u, rtm).ContinueWith<object>(t =>
+             {
+                 t.AssertNotFailed();
+                 return null;
+             }));
         }
 
         #endregion
