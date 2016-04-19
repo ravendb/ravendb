@@ -1,0 +1,5 @@
+﻿{
+  "Raven/ServerUrl": "http://0.0.0.0:8080",
+  "Raven/DataDir": "Databsaes/System",
+  "Raven/RunInMemory": false
+}
