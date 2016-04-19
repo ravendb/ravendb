@@ -10,9 +10,10 @@ type attributeItem = {
 
 class licensingStatus extends dialogViewModelBase {
 
-    isDevelopmentOnly: boolean;
-    isNonExpiredCommercial: boolean;
-    isExpired: boolean;
+    isHotSpare = false;
+    isDevelopmentOnly = false;
+    isNonExpiredCommercial = false;
+    isExpired = false;
     licenseStatusText: string;
     licenseExpiresAt: string;
 
@@ -29,13 +30,21 @@ class licensingStatus extends dialogViewModelBase {
     attrCpus: string;
     attributes: attributeItem[];
 
-    constructor(private licenseStatus: licenseStatusDto, supportCoverage: supportCoverageDto) {
+    constructor(private licenseStatus: licenseStatusDto, supportCoverage: supportCoverageDto, hotSpare: HotSpareDto) {
         super();
 
-        this.isDevelopmentOnly = !licenseStatus.IsCommercial;
-        this.isNonExpiredCommercial = licenseStatus.IsCommercial && !licenseStatus.Status.contains("Expired");
-        this.isExpired = licenseStatus.IsCommercial && licenseStatus.Status.contains("Expired");
-        this.licenseStatusText = licenseStatus.Status;
+        if (hotSpare && hotSpare.ActivationMode === "Activated") {
+            this.isHotSpare = true;
+            this.licenseStatusText = "Hot Spare";
+            this.licenseExpiresAt = moment(hotSpare.ActivationTime).add("days", 4).format("YYYY-MMM-DD");
+        } else {
+            this.isDevelopmentOnly = !licenseStatus.IsCommercial;
+            this.isNonExpiredCommercial = licenseStatus.IsCommercial && !licenseStatus.Status.contains("Expired");
+            this.isExpired = licenseStatus.IsCommercial && licenseStatus.Status.contains("Expired");
+            this.licenseStatusText = licenseStatus.Status;
+            this.licenseExpiresAt = licenseStatus.Attributes.updatesExpiration;
+        }
+
         this.supportStatus = supportCoverage.Status;
         this.isProfessionalSupport = supportCoverage.Status === 'ProfessionalSupport';
         this.isProductionSupport = supportCoverage.Status === 'ProductionSupport';
@@ -46,7 +55,7 @@ class licensingStatus extends dialogViewModelBase {
         this.attrRam = this.prepareHtmlForAttribute(rawFormatted);
         this.attrCpus = this.prepareHtmlForAttribute(licenseStatus.Attributes.maxParallelism);
 
-        this.licenseExpiresAt = licenseStatus.Attributes.updatesExpiration;
+        
         this.supportExpiresAt = supportCoverage.EndsAt ? moment(supportCoverage.EndsAt).format("YYYY-MMM-DD") : null;
 
         this.licensePath = licenseStatus.LicensePath;

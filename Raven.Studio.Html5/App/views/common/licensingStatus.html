@@ -10,6 +10,13 @@
         <div class="row">
             <div class="col-sm-6">
                 <div class="text-center">
+                    <div data-bind="visible: isHotSpare">
+                        <div class="roundborder hot-spare">
+                            <i class="fa fa-clock-o"></i>
+                        </div>
+                        <h3>LICENSE</h3>
+                        <h4>Hot Spare</h4>
+                    </div>
                     <div data-bind="visible: isDevelopmentOnly">
                         <div class="roundborder dev-only">
                             <i class="fa fa-wrench"></i>

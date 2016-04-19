@@ -399,7 +399,7 @@ class shell extends viewModelBase {
             appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
             if (hotSpare.ActivationMode === "Activated") {
                 // override environment colors with hot spare
-                this.activateHotSpareEnviroment();
+                this.activateHotSpareEnviroment(hotSpare);
             } else {
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
@@ -420,7 +420,7 @@ class shell extends viewModelBase {
             var doc = <documentClass>docResult[0];
             if (hotSpare.ActivationMode === "Activated") {
                 // override environment colors with hot spare
-                shell.activateHotSpareEnviroment();
+                shell.activateHotSpareEnviroment(hotSpare);
             } else {
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
@@ -924,8 +924,9 @@ class shell extends viewModelBase {
         this.navigate(appUrl.forResources());
     }
 
-    private static activateHotSpareEnviroment() {
+    private static activateHotSpareEnviroment(hotSpare: HotSpareDto) {
         var color = new environmentColor("Hot Spare", "#FF8585");
+        license.hotSpare(hotSpare);
         shell.selectedEnvironmentColorStatic(color);
         shell.originalEnviromentColor(color);
     }
@@ -1152,7 +1153,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
-        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage());
+        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showDialog(dialog);
     }
 
