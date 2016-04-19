@@ -323,6 +323,12 @@ namespace Raven.Smuggler
             return new CompletedTask();
         }
 
+        public Task SeedIdentities(List<KeyValuePair<string, long>> itemsToInsert)
+        {
+            var client = (AsyncServerClient) Store.AsyncDatabaseCommands;
+            return client.SeedIdentitiesAsync(itemsToInsert);
+        }
+
         public Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state)
         {
             var options = ExportOptions.Create(state, types, Options.ExportDeletions, Options.Limit);
