@@ -616,6 +616,12 @@ namespace Raven.Client.Connection.Async
         Task<long> SeedIdentityForAsync(string name, long value, CancellationToken token = default(CancellationToken));
 
         /// <summary>
+        ///     Seeds the next identities value on the server
+        /// </summary>
+        /// <param name="identities"></param>
+        Task SeedIdentitiesAsync(List<KeyValuePair<string, long>> identities, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
         ///     Retrieves documents for the specified key prefix.
         /// </summary>
         /// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>
