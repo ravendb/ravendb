@@ -327,15 +327,9 @@ function echoSkippingErros () {
 
 function buildRaven () {
 	printf "\n${BLUE}Restoring Packages:${NC}\n"
-	if [ ${OP_REPORT} == 1 ]
-	then
-		printf "${PURPLE}dnu restore out saved into ${OUT_FILE}.dnurestore${NC}\n"
-		dnu restore >& ${OUT_FILE}.dnurestore
-        	status=$?
-	else
-		dnu restore
-		status=$?
-	fi
+	printf "${PURPLE}dnu restore out saved into ${OUT_FILE}.dnurestore${NC}\n"
+	dnu restore >& ${OUT_FILE}.dnurestore
+       	status=$?
 	if [ ${status} -ne 0 ]
 	then
 		if [ ${OP_REPORT} == 1 ] 
@@ -363,18 +357,12 @@ function buildRaven () {
 		then
 			echo -n "`date +"%d/%m/%Y_%H:%M:%S"` Build start for ${i} ... " >> ${REPORT_FILE}
 		fi
-		pushd ${i}
-		if [ ${OP_REPORT} == 1 ] 
-		then
-			printf "${PURPLE}Build out saved into ${OUT_FILE}.build${NC}\n"
-			dnu build ${extra_build_args} >& ${OUT_FILE}.build
-			status=$?
-		else
-			dnu build ${extra_build_args}
-			status=$?
-		fi
-		popd
-		if [ ${status} -ne 0 ]
+		pushd ${i} &> /dev/null
+		printf "${PURPLE}Build out saved into ${OUT_FILE}.build${NC}\n"
+		dnu build ${extra_build_args} >& ${OUT_FILE}.build
+		status=$?
+		popd &> /dev/null
+	 	if [ ${status} -ne 0 ]
 		then
 			if [ ${OP_REPORT} == 1 ]
 			then
@@ -405,21 +393,51 @@ then
 	for i in "${TEST_DIRS[@]}"
 	do
 		if [ ${i} == "test/Tryouts" ]; then continue; fi
+
+		pushd ${i} /dev/null
+ 		printf "\n${BLUE}Building ${i}:${NC}\n"
+                if [ ${OP_REPORT} == 1 ]
+                then
+                        echo -n "`date +"%d/%m/%Y_%H:%M:%S"` Build start for ${i} ... " >> ${REPORT_FILE}
+                fi
+                printf "${PURPLE}Build out saved into ${OUT_FILE}.build${NC}\n"
+                dnu build ${extra_build_args} >& ${OUT_FILE}.build
+                status=$?
+                if [ ${status} -ne 0 ]
+                then
+                        if [ ${OP_REPORT} == 1 ]
+                        then
+                                echo "FAILED !!" >> ${REPORT_FILE}
+                                echo "`date +"%d/%m/%Y_%H:%M:%S"` ERRORS:" >> ${REPORT_FILE}
+                                grep "error CS" ${OUT_FILE}.build >> ${REPORT_FILE}
+                                REPORT_FLAG=1
+                        fi
+                        printf "${NC}\n${RED}Build errors in test ${i}${NC}\n"
+                        if [ ${OP_SKIP_ERRORS} == 0 ]
+                        then
+                                exit 130
+                        fi
+                        echoSkippingErros
+                else
+                        if [ ${OP_REPORT} == 1 ]
+                        then
+                                echo "Successs." >> ${REPORT_FILE}
+                        fi
+                fi
 		printf "\n${BLUE}Testing ${i}:${NC}\n"
-		if [ ${OP_REPORT} == 1 ] 
-		then
-			echo -n "`date +"%d/%m/%Y_%H:%M:%S"` Test start for ${i} ... " >> ${REPORT_FILE}
-		fi
-		pushd ${i}
+                if [ ${OP_REPORT} == 1 ]
+                then
+                        echo -n "`date +"%d/%m/%Y_%H:%M:%S"` Test start for ${i} ... " >> ${REPORT_FILE}
+                fi
 		if [ ${OP_REPORT} == 1 ]
 		then
 			dnx test -verbose >& ${OUT_FILE}.test
                 	status=$?
 		else
-			dnx test -verbose
+			dnx test -verbose |& tee ${OUT_FILE}.test
 			status=$?
 		fi
-		popd
+		popd &> /dev/null
 		finline=`cat ${OUT_FILE}.test | egrep "Total.*Errors.*Failed.*Skipped" | wc -l | cut -f1`
 		if [ ${finline} == 0 ] # tests can return 0 after specific errors
 		then
