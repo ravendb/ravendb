@@ -69,10 +69,10 @@ class shell extends viewModelBase {
     private router = router;
     static studioConfigDocumentId = "Raven/StudioConfig";
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
-    static originalEnviromentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
+    static originalEnvironmentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
     selectedColor = shell.selectedEnvironmentColorStatic;
-    selectedEnviromentText = ko.computed(() => this.selectedColor().name + " Enviroment");
-    canShowEnviromentText = ko.computed(() => this.selectedColor().name !== "Default");
+    selectedEnvironmentText = ko.computed(() => this.selectedColor().name + " Environment");
+    canShowEnvironmentText = ko.computed(() => this.selectedColor().name !== "Default");
 
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
@@ -399,13 +399,13 @@ class shell extends viewModelBase {
             appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
             if (hotSpare.ActivationMode === "Activated") {
                 // override environment colors with hot spare
-                this.activateHotSpareEnviroment();
+                this.activateHotSpareEnvironment();
             } else {
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
                     var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
                     shell.selectedEnvironmentColorStatic(color);
-                    shell.originalEnviromentColor(color);
+                    shell.originalEnvironmentColor(color);
                 }
             }
         });
@@ -420,14 +420,14 @@ class shell extends viewModelBase {
             var doc = <documentClass>docResult[0];
             if (hotSpare.ActivationMode === "Activated") {
                 // override environment colors with hot spare
-                shell.activateHotSpareEnviroment();
+                shell.activateHotSpareEnvironment();
             } else {
                 var envColor = doc["EnvironmentColor"];
                 if (envColor != null) {
                     shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
                 }
             }
-        }).fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor()));
+        }).fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor()));
     }
 
     private activateDatabase(db: database) {
@@ -924,10 +924,10 @@ class shell extends viewModelBase {
         this.navigate(appUrl.forResources());
     }
 
-    private static activateHotSpareEnviroment() {
+    private static activateHotSpareEnvironment() {
         var color = new environmentColor("Hot Spare", "#FF8585");
         shell.selectedEnvironmentColorStatic(color);
-        shell.originalEnviromentColor(color);
+        shell.originalEnvironmentColor(color);
     }
 
     private handleRavenConnectionFailure(result) {
