@@ -56,7 +56,7 @@ class studioConfig extends viewModelBase {
         this.selectedColor(selectedColor);
         
         var self = this;
-        this.selectedColor.subscribe((newValue) => self.setEnviromentColor(newValue));
+        this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
 
         this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
         this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
@@ -105,7 +105,7 @@ class studioConfig extends viewModelBase {
         });
     }
 
-    setEnviromentColor(envColor: environmentColor) {
+    setEnvironmentColor(envColor: environmentColor) {
         var newDocument = this.configDocument();
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);

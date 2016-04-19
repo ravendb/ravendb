@@ -60,10 +60,10 @@ class shell extends viewModelBase {
     private router = router;
     static studioConfigDocumentId = "Raven/StudioConfig";
     static selectedEnvironmentColorStatic = ko.observable<environmentColor>(new environmentColor("Default", "#f8f8f8"));
-    static originalEnviromentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
+    static originalEnvironmentColor = ko.observable<environmentColor>(shell.selectedEnvironmentColorStatic());
     selectedColor = shell.selectedEnvironmentColorStatic;
-    selectedEnviromentText = ko.computed(() => this.selectedColor().name + " Enviroment");
-    canShowEnviromentText = ko.computed(() => this.selectedColor().name != "Default");
+    selectedEnvironmentText = ko.computed(() => this.selectedColor().name + " Environment");
+    canShowEnvironmentText = ko.computed(() => this.selectedColor().name != "Default");
 
     renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
@@ -359,7 +359,7 @@ class shell extends viewModelBase {
                     shell.selectedEnvironmentColorStatic(new environmentColor(envColor.Name, envColor.BackgroundColor));
                 }
             })
-            .fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor()));
+            .fail(() => shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor()));
     }
 
     private activateDatabase(db: database) {
@@ -796,7 +796,7 @@ class shell extends viewModelBase {
                 if (envColor != null) {
                     var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
                     shell.selectedEnvironmentColorStatic(color);
-                    shell.originalEnviromentColor(color);
+                    shell.originalEnvironmentColor(color);
                 }
             });
     }
