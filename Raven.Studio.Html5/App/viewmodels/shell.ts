@@ -397,7 +397,8 @@ class shell extends viewModelBase {
             var hotSpare = <HotSpareDto>hotSpareResult[0];
 
             appUrl.warnWhenUsingSystemDatabase = doc && doc["WarnWhenUsingSystemDatabase"];
-            if (hotSpare.ActivationMode === "Activated") {
+
+            if (license.licenseStatus().Attributes.hotSpare === "true") {
                 // override environment colors with hot spare
                 this.activateHotSpareEnviroment(hotSpare);
             } else {
@@ -925,7 +926,7 @@ class shell extends viewModelBase {
     }
 
     private static activateHotSpareEnviroment(hotSpare: HotSpareDto) {
-        var color = new environmentColor("Hot Spare", "#FF8585");
+        var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare": "Hot Spare", "#FF8585");
         license.hotSpare(hotSpare);
         shell.selectedEnvironmentColorStatic(color);
         shell.originalEnviromentColor(color);

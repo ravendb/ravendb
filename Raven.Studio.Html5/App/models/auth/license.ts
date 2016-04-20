@@ -6,7 +6,7 @@ class license {
     static licenseCssClass = ko.computed(() => {
         var status = license.licenseStatus();
         var hotSpare = license.hotSpare();
-        if (hotSpare && hotSpare.ActivationMode === "Activated") {
+        if (hotSpare) {
             return 'hot-spare';
         }
         if (status == null || !status.IsCommercial) {

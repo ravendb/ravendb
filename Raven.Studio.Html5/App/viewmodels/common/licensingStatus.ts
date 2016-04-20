@@ -33,10 +33,17 @@ class licensingStatus extends dialogViewModelBase {
     constructor(private licenseStatus: licenseStatusDto, supportCoverage: supportCoverageDto, hotSpare: HotSpareDto) {
         super();
 
-        if (hotSpare && hotSpare.ActivationMode === "Activated") {
+        if (licenseStatus.Attributes.hotSpare === "true") {
             this.isHotSpare = true;
-            this.licenseStatusText = "Hot Spare";
-            this.licenseExpiresAt = moment(hotSpare.ActivationTime).add("days", 4).format("YYYY-MMM-DD");
+            
+            if (hotSpare.ActivationMode === "Activated") {
+                this.licenseStatusText = "Hot Spare: Activated";
+                this.licenseExpiresAt = moment(hotSpare.ActivationTime).add("days", 4).format("YYYY-MMM-DD");
+            } else {
+                this.licenseStatusText = "Hot Spare: Not Activated";
+                this.licenseExpiresAt = null;
+            }
+            
         } else {
             this.isDevelopmentOnly = !licenseStatus.IsCommercial;
             this.isNonExpiredCommercial = licenseStatus.IsCommercial && !licenseStatus.Status.contains("Expired");
