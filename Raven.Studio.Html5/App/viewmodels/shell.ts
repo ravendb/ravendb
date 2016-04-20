@@ -391,17 +391,18 @@ class shell extends viewModelBase {
 
     static fetchStudioConfig() {
         var hotSpareTask = new getHotSpareInformation().execute();
-        var configTask = new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase()).execute();
+        var configTask = new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase(), true).execute();
 
         $.when(hotSpareTask, configTask).done((hotSpareResult, doc: documentClass) => {
             var hotSpare = <HotSpareDto>hotSpareResult[0];
 
-            appUrl.warnWhenUsingSystemDatabase = doc["WarnWhenUsingSystemDatabase"];
-            if (hotSpare.ActivationMode === "Activated") {
+            appUrl.warnWhenUsingSystemDatabase = doc && doc["WarnWhenUsingSystemDatabase"];
+
+            if (license.licenseStatus().Attributes.hotSpare === "true") {
                 // override environment colors with hot spare
                 this.activateHotSpareEnviroment(hotSpare);
             } else {
-                var envColor = doc["EnvironmentColor"];
+                var envColor = doc && doc["EnvironmentColor"];
                 if (envColor != null) {
                     var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
                     shell.selectedEnvironmentColorStatic(color);
@@ -925,7 +926,7 @@ class shell extends viewModelBase {
     }
 
     private static activateHotSpareEnviroment(hotSpare: HotSpareDto) {
-        var color = new environmentColor("Hot Spare", "#FF8585");
+        var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare": "Hot Spare", "#FF8585");
         license.hotSpare(hotSpare);
         shell.selectedEnvironmentColorStatic(color);
         shell.originalEnviromentColor(color);
