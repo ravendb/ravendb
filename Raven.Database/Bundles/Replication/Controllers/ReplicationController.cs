@@ -460,11 +460,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
                             retries++;
                         }
                     }
-                    //We don't want to delay large batches of documents otherwise we will endup with alot of data that needs to get replicated.
-                    if (Request.Content.Headers.ContentLength > Database.Configuration.Replication.ReplicationPropagationDelaySizeInBytes)
-                    {
-                        Database.WorkContext.ReplicationResetEvent.Set();
-                    }
                 }                
             }
             finally
@@ -585,11 +580,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                      }),
                                      new RavenJObject(), null);
                     });
-                }
-                //We don't want to delay large batches of attachments otherwise we will endup with alot of data that needs to get replicated.
-                if (Request.Content.Headers.ContentLength > Database.Configuration.Replication.ReplicationPropagationDelaySizeInBytes)
-                {
-                    Database.WorkContext.ReplicationResetEvent.Set();
                 }
             }
             finally

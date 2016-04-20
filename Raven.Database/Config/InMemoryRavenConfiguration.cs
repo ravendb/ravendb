@@ -336,7 +336,6 @@ namespace Raven.Database.Config
             Replication.ForceReplicationRequestBuffering = ravenSettings.Replication.ForceReplicationRequestBuffering.Value;
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
             Replication.ReplicationPropagationDelayInSeconds = ravenSettings.Replication.ReplicationPropagationDelayInSeconds.Value;
-            Replication.ReplicationPropagationDelaySizeInBytes = ravenSettings.Replication.ReplicationPropagationDelaySizeInBytes.Value;
 
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
             FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
@@ -1524,10 +1523,6 @@ namespace Raven.Database.Config
             /// Indicates how many seconds replication task will wait before propagating replication documents
             /// </summary>
             public int ReplicationPropagationDelayInSeconds { get; set; }
-            /// <summary>
-            /// This is a threshold for replication batches, if a batch is bigger than this value we will invoke replication right away.
-            /// </summary>
-            public int ReplicationPropagationDelaySizeInBytes { get; set; }
         }
 
         public class FileSystemConfiguration
