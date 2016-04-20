@@ -1033,7 +1033,7 @@ namespace Raven.Client.Connection.Async
 
         public Task SeedIdentitiesAsync(List<KeyValuePair<string, long>> identities, CancellationToken token = default(CancellationToken))
         {
-            return ExecuteWithReplication(HttpMethod.Post, async operationMetadata =>
+            return ExecuteWithReplication(HttpMethod.Post, async (operationMetadata,requestTimeMetric) =>
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/seed/bulk", HttpMethod.Post, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
                 {
