@@ -41,6 +41,8 @@ namespace Raven.Client.Connection
 
         private readonly HttpJsonRequestFactory requestFactory;
 
+        private readonly Func<string, IRequestTimeMetric> requestTimeMetricGetter;
+
         private static readonly List<OperationMetadata> Empty = new List<OperationMetadata>();
 
         private static int readStripingBase;
@@ -81,10 +83,11 @@ namespace Raven.Client.Connection
             }
         }
 
-        protected ReplicationInformerBase(QueryConvention conventions, HttpJsonRequestFactory requestFactory, int delayTime = 1000)
+        protected ReplicationInformerBase(QueryConvention conventions, HttpJsonRequestFactory requestFactory, Func<string, IRequestTimeMetric> requestTimeMetricGetter, int delayTime = 1000)
         {
             Conventions = conventions;
             this.requestFactory = requestFactory;
+            this.requestTimeMetricGetter = requestTimeMetricGetter;
             ReplicationDestinations = new List<OperationMetadata>();
             DelayTimeInMiliSec = delayTime;
             FailureCounters = new FailureCounters();
@@ -160,15 +163,15 @@ namespace Raven.Client.Connection
                 token.ThrowCancellationIfNotDefault();
                 try
                 {
-                    var r = await TryOperationAsync<object>(async metadata =>
+                    var r = await TryOperationAsync<object>(async (metadata, requestTimeMetric) =>
                     {
-                                var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethods.Get, metadata.Credentials, Conventions);
+                        var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethods.Get, metadata.Credentials, Conventions);
                         using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
                         {
                             await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                         }
                         return null;
-                    }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
+                    }, operationMetadata, primaryOperation, null, true, token).ConfigureAwait(false);
                     if (r.Success)
                     {
                         FailureCounters.ResetFailureCount(operationMetadata.Url);
@@ -223,10 +226,9 @@ namespace Raven.Client.Connection
         public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,
             string primaryUrl,
             OperationCredentials primaryCredentials,
-            RequestTimeMetric primaryRequestTimeMetric,
             int currentRequest,
             int currentReadStripingBase,
-            Func<OperationMetadata, Task<T>> operation,
+            Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation,
             CancellationToken token = default(CancellationToken))
         {
             Debug.Assert(typeof(T).FullName.Contains("Task") == false);
@@ -238,23 +240,59 @@ namespace Raven.Client.Connection
             var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
             var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
+            var primaryRequestTimeMetric = requestTimeMetricGetter(primaryOperation.Url);
+            var complexTimeMetric = new ComplexTimeMetric();
 
             if (method == HttpMethods.Get && (shouldReadFromAllServers || allowReadFromSecondariesWhenRequestTimeThresholdIsPassed))
             {
                 var replicationIndex = -1;
-                if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && primaryRequestTimeMetric != null && primaryRequestTimeMetric.RateSurpassed(Conventions))
-                    replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count);
+                if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && shouldReadFromAllServers)
+                {
+                    complexTimeMetric.AddCurrent(primaryRequestTimeMetric); // want to decrease everything
+                    foreach (var destination in localReplicationDestinations)
+                        complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
+
+                    replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1); // include primary
+                    for (var i = 0; i < localReplicationDestinations.Count + 1; i++)
+                    {
+                        IRequestTimeMetric metric;
+                        if (replicationIndex >= localReplicationDestinations.Count) // primary
+                            metric = primaryRequestTimeMetric;
+                        else
+                            metric = requestTimeMetricGetter(localReplicationDestinations[replicationIndex].Url);
+
+                        if (metric.RateSurpassed(Conventions) == false)
+                        {
+                            complexTimeMetric.AddCurrent(metric);
+                            break;
+                        }
+
+                        replicationIndex = (replicationIndex + 1) % (localReplicationDestinations.Count + 1);
+                    }
+                }
+                else if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed)
+                {
+                    complexTimeMetric.AddCurrent(primaryRequestTimeMetric);
+
+                    if (complexTimeMetric.RateSurpassed(Conventions))
+                        replicationIndex = currentReadStripingBase % localReplicationDestinations.Count; // this will skip the primary
+                }
                 else if (shouldReadFromAllServers)
+                {
                     replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
+                }
 
                 // if replicationIndex == destinations count, then we want to use the master
                 // if replicationIndex < 0, then we were explicitly instructed to use the master
                 if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
                 {
+                    var destination = localReplicationDestinations[replicationIndex];
                     // if it is failing, ignore that, and move to the master or any of the replicas
-                    if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], primaryOperation, method, false, null, token))
+                    if (ShouldExecuteUsing(destination, primaryOperation, method, false, null, token))
                     {
-                        operationResult = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true, token).ConfigureAwait(false);
+                        complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
+
+                        operationResult = await TryOperationAsync(operation, destination, primaryOperation, complexTimeMetric, true, token).ConfigureAwait(false);
                         if (operationResult.Success)
                             return operationResult.Result;
                     }
@@ -263,19 +301,22 @@ namespace Raven.Client.Connection
 
             if (ShouldExecuteUsing(primaryOperation, primaryOperation, method, true, null, token))
             {
-                operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
+                complexTimeMetric.AddCurrent(primaryRequestTimeMetric);
+
+                operationResult = await TryOperationAsync(operation, primaryOperation, null, complexTimeMetric, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
                     .ConfigureAwait(false);
 
                 if (operationResult.Success)
                     return operationResult.Result;
 
                 FailureCounters.IncrementFailureCount(primaryOperation.Url);
-                if (!operationResult.WasTimeout && FailureCounters.IsFirstFailure(primaryOperation.Url))
+                if (operationResult.WasTimeout == false && FailureCounters.IsFirstFailure(primaryOperation.Url))
                 {
-                    operationResult = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0, token).ConfigureAwait(false);
+                    operationResult = await TryOperationAsync(operation, primaryOperation, null, complexTimeMetric, localReplicationDestinations.Count > 0, token).ConfigureAwait(false);
 
                     if (operationResult.Success)
                         return operationResult.Result;
+
                     FailureCounters.IncrementFailureCount(primaryOperation.Url);
                 }
             }
@@ -284,25 +325,27 @@ namespace Raven.Client.Connection
             {
                 token.ThrowCancellationIfNotDefault();
 
-                var replicationDestination = localReplicationDestinations[i];
-                if (ShouldExecuteUsing(replicationDestination, primaryOperation, method, false, operationResult.Error, token) == false)
+                var destination = localReplicationDestinations[i];
+                if (ShouldExecuteUsing(destination, primaryOperation, method, false, operationResult.Error, token) == false)
                     continue;
 
+                complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
+
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
-                operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, !operationResult.WasTimeout && hasMoreReplicationDestinations, token).ConfigureAwait(false);
+                operationResult = await TryOperationAsync(operation, destination, primaryOperation, complexTimeMetric, !operationResult.WasTimeout && hasMoreReplicationDestinations, token).ConfigureAwait(false);
 
                 if (operationResult.Success)
                     return operationResult.Result;
 
-                FailureCounters.IncrementFailureCount(replicationDestination.Url);
-                if (!operationResult.WasTimeout && FailureCounters.IsFirstFailure(replicationDestination.Url))
+                FailureCounters.IncrementFailureCount(destination.Url);
+                if (operationResult.WasTimeout == false && FailureCounters.IsFirstFailure(destination.Url))
                 {
-                    operationResult = await TryOperationAsync(operation, replicationDestination, primaryOperation, hasMoreReplicationDestinations, token).ConfigureAwait(false);
+                    operationResult = await TryOperationAsync(operation, destination, primaryOperation, complexTimeMetric, hasMoreReplicationDestinations, token).ConfigureAwait(false);
 
                     // tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1).ConfigureAwait(false);
                     if (operationResult.Success)
                         return operationResult.Result;
-                    FailureCounters.IncrementFailureCount(replicationDestination.Url);
+                    FailureCounters.IncrementFailureCount(destination.Url);
                 }
             }
 
@@ -312,14 +355,8 @@ There is a high probability of a network problem preventing access to all the re
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
         }
 
-        protected virtual async Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
-            OperationMetadata primaryOperationMetadata, bool avoidThrowing)
-        {
-            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken)).ConfigureAwait(false);
-        }
-
-        protected virtual async Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
-            OperationMetadata primaryOperationMetadata, bool avoidThrowing, CancellationToken cancellationToken)
+        protected virtual async Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, OperationMetadata operationMetadata,
+            OperationMetadata primaryOperationMetadata, IRequestTimeMetric requestTimeMetric, bool avoidThrowing, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tryWithPrimaryCredentials = FailureCounters.IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
             bool shouldTryAgain = false;
@@ -327,7 +364,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             try
             {
                 cancellationToken.ThrowCancellationIfNotDefault(); //canceling the task here potentially will stop the recursion
-                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials, primaryOperationMetadata.ClusterInformation) : operationMetadata).ConfigureAwait(false);
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials, primaryOperationMetadata.ClusterInformation) : operationMetadata, requestTimeMetric).ConfigureAwait(false);
                 FailureCounters.ResetFailureCount(operationMetadata.Url);
                 return new AsyncOperationResult<T>
                 {
@@ -364,7 +401,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
                     bool wasTimeout;
                     var isServerDown = HttpConnectionHelper.IsServerDown(e, out wasTimeout);
-                    
+
                     if (e.Data.Contains(Constants.RequestFailedExceptionMarker) && isServerDown)
                     {
                         return new AsyncOperationResult<T>
@@ -376,24 +413,24 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     }
 
                     if (isServerDown)
-        {
+                    {
                         return new AsyncOperationResult<T>
-            {
+                        {
                             Success = false,
                             WasTimeout = wasTimeout,
                             Error = e
                         };
-            }
+                    }
                     throw;
+                }
             }
-            }
-            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, cancellationToken).ConfigureAwait(false);
+            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, requestTimeMetric, avoidThrowing, cancellationToken).ConfigureAwait(false);
         }
 
         public virtual void Dispose()
         {
         }
-        }
+    }
 
     /// <summary>
     /// The event arguments for when the failover status changed

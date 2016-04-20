@@ -30,6 +30,7 @@ using Raven.Client.Connection.Request;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
+using Raven.Client.Metrics;
 using Raven.Database.Data;
 using Raven.Json.Linq;
 
@@ -86,7 +87,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key));
         }
 
-        public IGlobalAdminDatabaseCommands GlobalAdmin => 
+        public IGlobalAdminDatabaseCommands GlobalAdmin =>
             new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient));
 
         public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
@@ -106,11 +107,10 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.ExecuteGetRequest(requestUrl));
         }
 
-        internal T ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, T> operation)
+        internal T ExecuteWithReplication<T>(HttpMethod method, Func<OperationMetadata, IRequestTimeMetric, T> operation)
         {
             return
-                AsyncHelpers.RunSync(() => asyncServerClient.ExecuteWithReplication(method,
-                    operationMetadata => Task.FromResult(operation(operationMetadata))));
+                AsyncHelpers.RunSync(() => asyncServerClient.ExecuteWithReplication(method, (operationMetadata, requestTimeMetric) => Task.FromResult(operation(operationMetadata, requestTimeMetric))));
         }
 
         public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
@@ -210,11 +210,11 @@ namespace Raven.Client.Connection
         {
             AsyncHelpers.RunSync(() => asyncServerClient.ResetIndexAsync(name));
         }
-        public void SetIndexLock(string name, IndexLockMode unLockMode) 
+        public void SetIndexLock(string name, IndexLockMode unLockMode)
         {
             AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, unLockMode));
         }
-        public void SetIndexPriority(string name, IndexingPriority priority )
+        public void SetIndexPriority(string name, IndexingPriority priority)
         {
             AsyncHelpers.RunSync(() => asyncServerClient.SetIndexPriorityAsync(name, priority));
         }
@@ -283,10 +283,10 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexAsync(name, indexDef, overwrite));
         }
 
-        public string DirectPutIndex(string name, OperationMetadata operationMetadata, bool overwrite,
+        public string DirectPutIndex(string name, OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric, bool overwrite,
             IndexDefinition definition)
         {
-            return asyncServerClient.DirectPutIndexAsync(name, definition, overwrite, operationMetadata).Result;
+            return AsyncHelpers.RunSync(() => asyncServerClient.DirectPutIndexAsync(name, definition, overwrite, operationMetadata, requestTimeMetric));
         }
 
         public QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false,
@@ -402,7 +402,7 @@ namespace Raven.Client.Connection
         public IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null)
         {
             var newAsyncServerClient = asyncServerClient.ForDatabaseInternal(database, clusterBehavior);
-            if (asyncServerClient == newAsyncServerClient) 
+            if (asyncServerClient == newAsyncServerClient)
                 return this;
 
             return new ServerClient(newAsyncServerClient);
@@ -468,6 +468,11 @@ namespace Raven.Client.Connection
         public long SeedIdentityFor(string name, long value)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.SeedIdentityForAsync(name, value));
+        }
+
+        public void SeedIdentities(List<KeyValuePair<string, long>> identities)
+        {
+            AsyncHelpers.RunSync(() => asyncServerClient.SeedIdentitiesAsync(identities));
         }
 
         public string UrlFor(string documentKey)
@@ -557,12 +562,12 @@ namespace Raven.Client.Connection
             return asyncServerClient.DisableAllCaching();
         }
 
-        internal ReplicationDocumentWithClusterInformation DirectGetReplicationDestinations(OperationMetadata operationMetadata)
+        internal ReplicationDocumentWithClusterInformation DirectGetReplicationDestinations(OperationMetadata operationMetadata, IRequestTimeMetric requestTimeMetric)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata));
+            return AsyncHelpers.RunSync(() => asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata, requestTimeMetric));
         }
 
-#endregion
+        #endregion
 
         public ProfilingInformation ProfilingInformation
         {

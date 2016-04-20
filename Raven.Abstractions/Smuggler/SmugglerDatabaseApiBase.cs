@@ -1113,10 +1113,92 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        private async Task<int> ImportIdentities(JsonTextReader jsonReader)
+        private Task<int> ImportIdentities(JsonTextReader jsonReader)
         {
-            var count = 0;
+            var identities = ReadIdentities(jsonReader);
 
+            if (SupportedFeatures.IsBulkIdentitiesSmugglingSupported)
+            {
+                return ImportIdentitiesUsingBulk(identities);
+            }
+            return ImportIdentitiesUsingSingleOperation(identities);
+        }
+
+        private async Task<int> ImportIdentitiesUsingSingleOperation(IEnumerator<KeyValuePair<string, long>> identities)
+        {
+            int count = 0;
+            while (identities.MoveNext())
+            {
+                var currentIdentity = identities.Current;
+                try
+                {
+                    await Operations.SeedIdentityFor(currentIdentity.Key, currentIdentity.Value).ConfigureAwait(false);
+                    count++;
+                }
+                catch (Exception e)
+                {
+                    if (IgnoreErrorsAndContinue == false)
+                    {
+                        throw;
+                    }
+
+                    Operations.ShowProgress("Failed seeding identity for {0}. Message: {1}", currentIdentity.Key, e.Message);
+                }
+            }
+            return count;
+        }
+
+        private async Task<int> ImportIdentitiesUsingBulk(IEnumerator<KeyValuePair<string, long>> identities)
+        {
+            int count = 0;
+            var itemsToInsert = new List<KeyValuePair<string, long>>();
+
+            while (identities.MoveNext())
+            {
+                itemsToInsert.Add(identities.Current);
+                count++;
+
+                if (itemsToInsert.Count == 512)
+                {
+                    try
+                    {
+                        await Operations.SeedIdentities(itemsToInsert).ConfigureAwait(false);
+                        itemsToInsert.Clear();
+                    }
+                    catch (Exception e)
+                    {
+                        if (IgnoreErrorsAndContinue == false)
+                        {
+                            throw;
+                        }
+
+                        Operations.ShowProgress("Failed seeding identities. Message: {0}", e.Message);
+                    }
+                }
+            }
+
+            if (itemsToInsert.Count > 0)
+            {
+                try
+                {
+                    await Operations.SeedIdentities(itemsToInsert).ConfigureAwait(false);
+                    itemsToInsert.Clear();
+                }
+                catch (Exception e)
+                {
+                    if (IgnoreErrorsAndContinue == false)
+                    {
+                        throw;
+                    }
+
+                    Operations.ShowProgress("Failed seeding identities. Message: {0}", e.Message);
+                }
+            }
+            return count;
+        }
+
+        private IEnumerator<KeyValuePair<string, long>> ReadIdentities(JsonTextReader jsonReader)
+        {
             while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
             {
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
@@ -1128,25 +1210,8 @@ namespace Raven.Abstractions.Smuggler
                 if (FilterIdentity(identityName, Options.OperateOnTypes) == false)
                     continue;
 
-                try
-                {
-                    await Operations.SeedIdentityFor(identityName, identity.Value<long>("Value")).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    if (IgnoreErrorsAndContinue == false)
-                        throw;
-
-                    Operations.ShowProgress("Failed seeding identity for {0}. Message: {1}", identityName, e.Message);
-                    continue;
-                }
-
-                count++;
+                yield return new KeyValuePair<string, long>(identityName, identity.Value<long>("Value"));
             }
-
-            await Operations.SeedIdentityFor(null, -1).ConfigureAwait(false); // force flush
-
-            return count;
         }
 
         private async Task<int> ImportDeletedDocuments(JsonReader jsonReader)
@@ -1699,6 +1764,7 @@ namespace Raven.Abstractions.Smuggler
                     IsTransformersSupported = false,
                     IsDocsStreamingSupported = false,
                     IsIdentitiesSmugglingSupported = false,
+                    IsBulkIdentitiesSmugglingSupported = false,
                     IsMultiPartExportSupported = false
                 };
             }
@@ -1712,6 +1778,7 @@ namespace Raven.Abstractions.Smuggler
                     IsTransformersSupported = true,
                     IsDocsStreamingSupported = true,
                     IsIdentitiesSmugglingSupported = false,
+                    IsBulkIdentitiesSmugglingSupported = false,
                     IsMultiPartExportSupported = false
                 };
             }
@@ -1726,14 +1793,23 @@ namespace Raven.Abstractions.Smuggler
                 };
 
                 int build;
-                if (int.TryParse(version.BuildVersion, out build) == false)
+                bool canParseBuildVersion = int.TryParse(version.BuildVersion, out build);
+                if (canParseBuildVersion == false)
+                {
                     features.IsMultiPartExportSupported = false;
+                    features.IsBulkIdentitiesSmugglingSupported = false;
+                }
                 else
+                {
                     features.IsMultiPartExportSupported = build == 13 || build >= 30100;
+                    features.IsBulkIdentitiesSmugglingSupported = build == 13 || build >= 30123;
+                }
 
                 if (features.IsMultiPartExportSupported == false)
                     Operations.ShowProgress("Multi-part export is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
 
+                if (features.IsBulkIdentitiesSmugglingSupported == false)
+                    Operations.ShowProgress("Bulk identities smuggling is not supported. Server version: {0}. Smuggler version: {1}.", version.ProductVersion, versionAtt.Version);
                 return features;
             }
 
@@ -1742,6 +1818,7 @@ namespace Raven.Abstractions.Smuggler
                 IsTransformersSupported = true,
                 IsDocsStreamingSupported = true,
                 IsIdentitiesSmugglingSupported = true,
+                IsBulkIdentitiesSmugglingSupported = true,
                 IsMultiPartExportSupported = true
             };
         }
@@ -1753,6 +1830,7 @@ namespace Raven.Abstractions.Smuggler
                 IsTransformersSupported = false,
                 IsDocsStreamingSupported = false,
                 IsIdentitiesSmugglingSupported = false,
+                IsBulkIdentitiesSmugglingSupported = false,
                 IsMultiPartExportSupported = false
             };
 

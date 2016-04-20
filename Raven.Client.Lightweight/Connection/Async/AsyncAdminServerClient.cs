@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -59,7 +58,7 @@ namespace Raven.Client.Connection.Async
 
         public Task StopIndexingAsync(CancellationToken token = default (CancellationToken))
         {
-            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async (operationMetadata, requestTimeMetric) =>
             {
                 using (var req = adminRequest.StopIndexing(operationMetadata.Url))
                 {
@@ -70,7 +69,7 @@ namespace Raven.Client.Connection.Async
 
         public Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null, CancellationToken token = default (CancellationToken))
         {
-            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async operationMetadata =>
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Post, async (operationMetadata, requestTimeMetric) =>
             {
                 using (var req = adminRequest.StartIndexing(operationMetadata.Url, maxNumberOfParallelIndexTasks))
                 {
@@ -128,7 +127,7 @@ namespace Raven.Client.Connection.Async
 
         public Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken))
         {
-            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async operationMetadata =>
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async (operationMetadata, requestTimeMetric) =>
             {
                 using (var request = adminRequest.IndexingStatus(operationMetadata.Url))
                 {
@@ -140,7 +139,7 @@ namespace Raven.Client.Connection.Async
 
         public Task<RavenJObject> GetDatabaseConfigurationAsync(CancellationToken token = default (CancellationToken))
         {
-            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async operationMetadata =>
+            return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async (operationMetadata, requestTimeMetric) =>
             {
                 using (var request = adminRequest.GetDatabaseConfiguration(operationMetadata.Url))
                 {

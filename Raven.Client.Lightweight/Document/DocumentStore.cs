@@ -8,7 +8,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Connection;
@@ -26,6 +25,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Document.Async;
 using Raven.Client.Metrics;
 using Raven.Client.Util;
+using System.Threading;
 
 #if !DNXCORE50
 using Raven.Client.Document.DTC;
@@ -58,7 +58,7 @@ namespace Raven.Client.Document
         private const int DefaultNumberOfCachedRequests = 2048;
         private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
         private bool aggressiveCachingUsed;
-        
+
         /// <summary>
         /// Generate new instance of database commands
         /// </summary>
@@ -336,9 +336,9 @@ namespace Raven.Client.Document
             {
                 var session = new DocumentSession(options.Database, this, Listeners, sessionId,
                     SetupCommands(DatabaseCommands, options.Database, options.Credentials, options))
-                    {
-                        DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
-                    };
+                {
+                    DatabaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url)
+                };
                 AfterSessionCreated(session);
                 return session;
             }
@@ -422,7 +422,7 @@ namespace Raven.Client.Document
                     if (replicationDocument == null)
                     {
                         DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, true);
-                    }                    
+                    }
                 }
             }
             catch (Exception)
@@ -507,13 +507,13 @@ namespace Raven.Client.Document
                     databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
                 }
                 return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
-                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, null,
+                    currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null,
                     Listeners.ConflictListeners, true, Conventions.ClusterBehavior));
             };
 
             asyncDatabaseCommandsGenerator = () =>
             {
-                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForDatabase, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
+                var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetRequestExecuterForDatabase, GetRequestTimeMetricForUrl, null, Listeners.ConflictListeners, true, Conventions.ClusterBehavior);
 
                 if (string.IsNullOrEmpty(DefaultDatabase))
                     return asyncServerClient;
@@ -530,7 +530,7 @@ namespace Raven.Client.Document
                 key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
             }
 
-            var result = replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory));
+            var result = replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory, GetRequestTimeMetricForUrl));
 
             if (FailoverServers == null)
                 return result;
@@ -558,7 +558,7 @@ namespace Raven.Client.Document
 
             IRequestExecuter requestExecuter;
             if (clusterBehavior == ClusterBehavior.None)
-                requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory)), GetRequestTimeMetricForDatabase(databaseName));
+                requestExecuter = new ReplicationAwareRequestExecuter(replicationInformers.GetOrAdd(key, url => Conventions.ReplicationInformerFactory(url, jsonRequestFactory, GetRequestTimeMetricForUrl)));
             else
                 requestExecuter = clusterAwareRequestExecuters.GetOrAdd(key, url => new ClusterAwareRequestExecuter());
 
@@ -581,14 +581,12 @@ namespace Raven.Client.Document
             return requestExecuter;
         }
 
-        public RequestTimeMetric GetRequestTimeMetricForDatabase(string databaseName)
+        public RequestTimeMetric GetRequestTimeMetricForUrl(string url)
         {
-            var key = Url;
-            databaseName = databaseName ?? DefaultDatabase;
-            if (string.IsNullOrEmpty(databaseName) == false)
-                key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + databaseName;
+            if (url == null)
+                throw new ArgumentNullException(nameof(url));
 
-            return requestTimeMetrics.GetOrAdd(key, new RequestTimeMetric());
+            return requestTimeMetrics.GetOrAdd(url, new RequestTimeMetric());
         }
 
         /// <summary>

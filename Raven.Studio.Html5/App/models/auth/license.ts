@@ -1,10 +1,14 @@
 class license {
     static licenseStatus = ko.observable<licenseStatusDto>();
     static supportCoverage = ko.observable<supportCoverageDto>();
-
+    static hotSpare = ko.observable<HotSpareDto>();
 
     static licenseCssClass = ko.computed(() => {
         var status = license.licenseStatus();
+        var hotSpare = license.hotSpare();
+        if (hotSpare && hotSpare.ActivationMode === "Activated") {
+            return 'hot-spare';
+        }
         if (status == null || !status.IsCommercial) {
             return 'dev-only';
         }

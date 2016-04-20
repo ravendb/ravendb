@@ -79,5 +79,7 @@ namespace Raven.Abstractions.Smuggler
         string GetIdentifier();
 
         Task<List<KeyValuePair<string, long>>> GetIdentities();
+
+        Task SeedIdentities(List<KeyValuePair<string, long>> identities);
     }
 }

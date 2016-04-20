@@ -8782,6 +8782,13 @@ a.global_help_link:focus {
 #licenseSupportModal .roundborder.dev-only:after {
   border-color: #eeeeee;
 }
+#licenseSupportModal .roundborder.hot-spare .fa {
+  color: #f36523;
+}
+#licenseSupportModal .roundborder.hot-spare:after {
+  border-style: dotted;
+  border-color: #EFB73E;
+}
 #licenseSupportModal .roundborder.professional-support:before {
   border: solid 8px #eeeeee;
 }
@@ -8936,6 +8943,12 @@ a.global_help_link:focus {
 }
 #shellFooter .no-support .roundborder .fa,
 #shellFooter .dev-only .roundborder .fa {
+  color: #FFF;
+}
+#shellFooter .hot-spare {
+  background-color: #EFB73E !important;
+}
+#shellFooter .hot-spare .roundborder .fa {
   color: #FFF;
 }
 #shellFooter .professional-support,

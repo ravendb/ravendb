@@ -38,7 +38,7 @@ namespace Raven.Client.Connection
 
         FailureCounters FailureCounters { get; }
 
-        Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method, string primaryUrl, OperationCredentials primaryCredentials, RequestTimeMetric primaryRequestTimeMetric, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken));
+        Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, IRequestTimeMetric, Task<T>> operation, CancellationToken token = default (CancellationToken));
     }
 
     public interface IReplicationInformerBase<in TClient> : IReplicationInformerBase
