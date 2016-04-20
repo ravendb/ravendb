@@ -132,20 +132,14 @@ namespace Voron
             // After 128 bytes the gain is 4x.
             //
             // We should control the distribution of this over time. 
-            unsafe
+            if (Array != null)
             {
-                if (Array != null)
+                fixed (byte* arrayPtr = Array)
                 {
-                    fixed (byte* arrayPtr = Array)
-                    {
-                        return (int)Hashing.XXHash32.CalculateInline(arrayPtr, Size);
-                    }
-                }
-                else
-                {
-                    return (int)Hashing.XXHash32.CalculateInline(Pointer, Size);
+                    return (int)Hashing.XXHash32.CalculateInline(arrayPtr, Size);
                 }
             }
+            return (int)Hashing.XXHash32.CalculateInline(Pointer, Size);
         }
 
         public byte this[int index]
