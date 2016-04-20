@@ -272,6 +272,8 @@ namespace Raven.Database.Config
             Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
             Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"], false);
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
+            Replication.ReplicationPropagationDelayInSeconds = new IntegerSetting(settings[Constants.ReplicationPropagationDelayInSeconds],15);
+            Replication.ReplicationPropagationDelaySizeInBytes = new IntegerSetting(settings[Constants.ReplicationPropagationDelaySizeInBytes], 1024*1024);
 
             FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
             FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
@@ -592,6 +594,10 @@ namespace Raven.Database.Config
             public IntegerSetting ReplicationRequestTimeoutInMilliseconds { get; set; }
 
             public NullableIntegerSettingWithMin MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+
+            public IntegerSetting ReplicationPropagationDelayInSeconds { get; set; }
+
+            public IntegerSetting ReplicationPropagationDelaySizeInBytes { get; set; }
         }
 
         public class FileSystemConfiguration
