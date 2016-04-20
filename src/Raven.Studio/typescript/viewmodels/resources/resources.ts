@@ -381,7 +381,7 @@ class resources extends viewModelBase {
     navigateToAdminSettings() {
         this.navigate(this.appUrls.adminSettings());
         shell.disconnectFromResourceChangesApi();
-        shell.selectedEnvironmentColorStatic(shell.originalEnviromentColor());
+        shell.selectedEnvironmentColorStatic(shell.originalEnvironmentColor());
     }
 
     navigateToCreateCluster() {

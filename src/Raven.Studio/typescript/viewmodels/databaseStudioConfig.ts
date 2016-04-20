@@ -40,7 +40,7 @@ class studioConfig extends viewModelBase {
         this.selectedColor(selectedColor);
 
         var self = this;
-        this.selectedColor.subscribe((newValue) => self.setEnviromentColor(newValue));
+        this.selectedColor.subscribe((newValue) => self.setEnvironmentColor(newValue));
     }
 
     canActivate(args): any {
@@ -76,7 +76,7 @@ class studioConfig extends viewModelBase {
         });
     }
 
-    setEnviromentColor(envColor: environmentColor) {
+    setEnvironmentColor(envColor: environmentColor) {
         var newDocument = this.configDocument();
         newDocument["EnvironmentColor"] = envColor.toDto();
         var saveTask = this.saveStudioConfig(newDocument);
