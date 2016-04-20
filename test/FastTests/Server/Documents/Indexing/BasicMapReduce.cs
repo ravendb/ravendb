@@ -158,19 +158,19 @@ namespace FastTests.Server.Documents.Indexing
 
                 var index = (AutoMapReduceIndex) db.IndexStore.GetIndex(id);
 
-                Assert.Equal(-1, index._lastMapResultEtag);
+                Assert.Equal(-1, index.LastMapResultEtag);
 
                 CreateUsers(db, 10, "Poland");
                 index.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
 
-                Assert.Equal(9, index._lastMapResultEtag);
+                Assert.Equal(9, index.LastMapResultEtag);
             }
 
             using (var db = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var index = db.IndexStore.GetIndex(1);
 
-                Assert.Equal(9, ((AutoMapReduceIndex) index)._lastMapResultEtag);
+                Assert.Equal(9, ((AutoMapReduceIndex) index).LastMapResultEtag);
             }
         }
 
@@ -353,6 +353,67 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
+        [Fact]
+        public async Task CanGroupByNestedFieldAndAggregateOnCollection()
+        {
+            using (var db = CreateDocumentDatabase())
+            using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(
+                new [] { "Orders" }, 
+                new []
+                {
+                    new IndexField
+                    {
+                        Name = "Lines,Quantity",
+                        MapReduceOperation = FieldMapReduceOperation.Sum,
+                        Storage = FieldStorage.Yes
+                    },
+                    new IndexField
+                    {
+                        Name = "Lines,Price",
+                        MapReduceOperation = FieldMapReduceOperation.Sum,
+                        Storage = FieldStorage.Yes
+                    }
+                },
+                new []
+                {
+                    new IndexField
+                    {
+                        Name = "ShipTo.Country",
+                        Storage = FieldStorage.Yes
+                    }, 
+                }), db))
+            {
+                CreateOrders(db, 5, "Poland", "Israel");
+
+                mri.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await mri.Query(new IndexQuery()
+                    {
+                        Query = "ShipTo_Country:Poland"
+                    }, context, OperationCancelToken.None);
+
+                    Assert.Equal(1, queryResult.Results.Count);
+                    var result = queryResult.Results[0].Data;
+
+                    string location;
+                    Assert.True(result.TryGet("ShipTo_Country", out location));
+                    Assert.Equal("Poland", location);
+
+                    var price = result["Lines_Price"] as LazyDoubleValue;
+
+                    Assert.NotNull(price);
+                    Assert.Equal("63.6", price.Inner.ToString());
+
+                    var quantity = result["Lines_Quantity"] as LazyDoubleValue;
+
+                    Assert.NotNull(quantity);
+                    Assert.Equal("9.0", quantity.Inner.ToString());
+                }
+            }
+        }
+
         private static void CreateUsers(DocumentDatabase db, int numberOfUsers, params string[] locations)
         {
             using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -373,6 +434,48 @@ namespace FastTests.Server.Documents.Indexing
                         }, $"users/{i}"))
                         {
                             db.DocumentsStorage.Put(context, $"users/{i}", null, doc);
+                        }
+                    }
+
+                    tx.Commit();
+                }
+            }
+        }
+
+        private static void CreateOrders(DocumentDatabase db, int numberOfOrders, params string[] countries)
+        {
+            using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+            {
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    for (int i = 0; i < numberOfOrders; i++)
+                    {
+                        using (var doc = context.ReadObject(new DynamicJsonValue
+                        {
+                            ["ShipTo"] = new DynamicJsonValue
+                            {
+                                ["Country"] = countries[i % countries.Length],
+                            },
+                            ["Lines"] = new DynamicJsonArray
+                            {
+                                new DynamicJsonValue
+                                {
+                                    ["Price"] = 10.5,
+                                    ["Quantity"] = 1
+                                },
+                                new DynamicJsonValue
+                                {
+                                    ["Price"] = 10.7,
+                                    ["Quantity"] = 2
+                                }
+                            },
+                            [Constants.Metadata] = new DynamicJsonValue
+                            {
+                                [Constants.RavenEntityName] = "Orders"
+                            }
+                        }, $"orders/{i}"))
+                        {
+                            db.DocumentsStorage.Put(context, $"orders/{i}", null, doc);
                         }
                     }
 

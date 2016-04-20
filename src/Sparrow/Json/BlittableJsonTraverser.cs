@@ -16,6 +16,12 @@ namespace Sparrow.Json
 
         };
 
+        public BlittableJsonTraverser(char[] nonDefaultSeparators = null)
+        {
+            if (nonDefaultSeparators != null)
+                _separators = nonDefaultSeparators;
+        }
+
         public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result)
         {
             var indexOfFirstSeparator = path.IndexOfAny(_separators, 0);

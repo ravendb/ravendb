@@ -1,11 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-
 using Raven.Server.Indexing.Corax;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
+namespace Raven.Server.Json
 {
     public unsafe class LazyStringReader : IDisposable
     {

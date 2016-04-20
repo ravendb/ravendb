@@ -22,7 +22,7 @@ namespace Raven.Abstractions.Indexing
         /// <summary>Sort using term values as encoded Doubles.  Sort values are Double and
         /// lower values are at the front. 
         /// </summary>
-        NumbericDouble = 7,
+        NumericDouble = 7,
 
         /// <summary>Sort using term values as Strings, but comparing by
         /// value (using String.compareTo) for all comparisons.

@@ -93,5 +93,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             return moreWorkFound;
         }
+
+        public void Dispose()
+        {
+        }
     }
 }

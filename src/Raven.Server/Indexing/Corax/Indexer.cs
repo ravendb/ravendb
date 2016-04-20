@@ -197,7 +197,7 @@ namespace Raven.Server.Indexing.Corax
 
                 foreach (var slice in GetValuesFor(propertyByIndex.Item2))
                 {
-                    var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree, slice, 0);
+                    var fst = new FixedSizeTree(tx.LowLevelTransaction, fieldTree, slice.Clone(), 0);
                     fst.Add(entryId);
                 }
             }

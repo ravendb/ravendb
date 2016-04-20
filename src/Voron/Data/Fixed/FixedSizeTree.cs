@@ -51,6 +51,9 @@ namespace Voron.Data.Fixed
 
         public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize)
         {
+            if (treeName.Array == null)
+                throw new ArgumentException("Tree name must be immutable");
+
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
