@@ -1483,7 +1483,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 #shellHeader {
-    #enviroment-header {
+    #environment-header {
         position: fixed;
         z-index: -1;
         margin-left: 45%;
@@ -2627,6 +2627,17 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
             }
         }
 
+        &.hot-spare {
+            .fa {
+                color: @brand-primary;
+            }
+
+            &:after {
+                border-style: dotted;
+                border-color: @brand-warning;
+            }
+        }
+
         &.professional-support {
             &:before {
                 border: solid 8px @gray-lighter;
@@ -2842,6 +2853,16 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
     .no-support, .dev-only {
         background-color: @brand-danger !important;
+
+        .roundborder {
+            .fa {
+                color: #FFF;
+            }
+        }
+    }
+
+    .hot-spare {
+        background-color: @brand-warning !important;
 
         .roundborder {
             .fa {

@@ -10,9 +10,10 @@ type attributeItem = {
 
 class licensingStatus extends dialogViewModelBase {
 
-    isDevelopmentOnly: boolean;
-    isNonExpiredCommercial: boolean;
-    isExpired: boolean;
+    isHotSpare = false;
+    isDevelopmentOnly = false;
+    isNonExpiredCommercial = false;
+    isExpired = false;
     licenseStatusText: string;
     licenseExpiresAt: string;
 
@@ -29,13 +30,28 @@ class licensingStatus extends dialogViewModelBase {
     attrCpus: string;
     attributes: attributeItem[];
 
-    constructor(private licenseStatus: licenseStatusDto, supportCoverage: supportCoverageDto) {
+    constructor(private licenseStatus: licenseStatusDto, supportCoverage: supportCoverageDto, hotSpare: HotSpareDto) {
         super();
 
-        this.isDevelopmentOnly = !licenseStatus.IsCommercial;
-        this.isNonExpiredCommercial = licenseStatus.IsCommercial && !licenseStatus.Status.contains("Expired");
-        this.isExpired = licenseStatus.IsCommercial && licenseStatus.Status.contains("Expired");
-        this.licenseStatusText = licenseStatus.Status;
+        if (licenseStatus.Attributes.hotSpare === "true") {
+            this.isHotSpare = true;
+            
+            if (hotSpare.ActivationMode === "Activated") {
+                this.licenseStatusText = "Hot Spare: Activated";
+                this.licenseExpiresAt = moment(hotSpare.ActivationTime).add("days", 4).format("YYYY-MMM-DD");
+            } else {
+                this.licenseStatusText = "Hot Spare: Not Activated";
+                this.licenseExpiresAt = null;
+            }
+            
+        } else {
+            this.isDevelopmentOnly = !licenseStatus.IsCommercial;
+            this.isNonExpiredCommercial = licenseStatus.IsCommercial && !licenseStatus.Status.contains("Expired");
+            this.isExpired = licenseStatus.IsCommercial && licenseStatus.Status.contains("Expired");
+            this.licenseStatusText = licenseStatus.Status;
+            this.licenseExpiresAt = licenseStatus.Attributes.updatesExpiration;
+        }
+
         this.supportStatus = supportCoverage.Status;
         this.isProfessionalSupport = supportCoverage.Status === 'ProfessionalSupport';
         this.isProductionSupport = supportCoverage.Status === 'ProductionSupport';
@@ -46,7 +62,7 @@ class licensingStatus extends dialogViewModelBase {
         this.attrRam = this.prepareHtmlForAttribute(rawFormatted);
         this.attrCpus = this.prepareHtmlForAttribute(licenseStatus.Attributes.maxParallelism);
 
-        this.licenseExpiresAt = licenseStatus.Attributes.updatesExpiration;
+        
         this.supportExpiresAt = supportCoverage.EndsAt ? moment(supportCoverage.EndsAt).format("YYYY-MMM-DD") : null;
 
         this.licensePath = licenseStatus.LicensePath;
@@ -61,11 +77,11 @@ class licensingStatus extends dialogViewModelBase {
             { displayName: "Compression", value: licenseStatus.Attributes.compression },
             { displayName: "FIPS Compliance", value: licenseStatus.Attributes.fips },
             { displayName: "Quotas", value: licenseStatus.Attributes.quotas },
-            { displayName: "Global Configuration", value: licenseStatus.Attributes.globalConfiguration },
+            { displayName: "Global Configuration", value: licenseStatus.Attributes.globalConfigurations },
             { displayName: "Authorization", value: licenseStatus.Attributes.authorization },
             { displayName: "Document Expiration", value: licenseStatus.Attributes.documentExpiration },
             { displayName: "Versioning", value: licenseStatus.Attributes.versioning },
-            { displayName: "Cluster", value: licenseStatus.Attributes.cluster },
+            { displayName: "Cluster", value: licenseStatus.Attributes.clustering },
             { displayName: "Monitoring", value: licenseStatus.Attributes.monitoring },
             { displayName: "Hot Spare", value: licenseStatus.Attributes.hotSpare },
             { displayName: "Allow Windows Clustering", value: licenseStatus.Attributes.allowWindowsClustering }

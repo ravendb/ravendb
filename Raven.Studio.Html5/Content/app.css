@@ -7779,7 +7779,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   /* When the screen width < 1150, shrink down the padding between the nav bar items. */
   /* Tiny screens (phones, etc) will collapse the navbar into a drop down. */
 }
-#shellHeader #enviroment-header {
+#shellHeader #environment-header {
   position: fixed;
   z-index: -1;
   margin-left: 45%;
@@ -8782,6 +8782,13 @@ a.global_help_link:focus {
 #licenseSupportModal .roundborder.dev-only:after {
   border-color: #eeeeee;
 }
+#licenseSupportModal .roundborder.hot-spare .fa {
+  color: #f36523;
+}
+#licenseSupportModal .roundborder.hot-spare:after {
+  border-style: dotted;
+  border-color: #EFB73E;
+}
 #licenseSupportModal .roundborder.professional-support:before {
   border: solid 8px #eeeeee;
 }
@@ -8936,6 +8943,12 @@ a.global_help_link:focus {
 }
 #shellFooter .no-support .roundborder .fa,
 #shellFooter .dev-only .roundborder .fa {
+  color: #FFF;
+}
+#shellFooter .hot-spare {
+  background-color: #EFB73E !important;
+}
+#shellFooter .hot-spare .roundborder .fa {
   color: #FFF;
 }
 #shellFooter .professional-support,

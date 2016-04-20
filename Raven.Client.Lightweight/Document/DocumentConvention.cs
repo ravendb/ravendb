@@ -27,6 +27,7 @@ using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Metrics;
 
 namespace Raven.Client.Document
 {
@@ -92,7 +93,7 @@ namespace Raven.Client.Document
             MaxNumberOfRequestsPerSession = 30;
             MaxLengthOfQueryUsingGetUrl = 1024 + 512;
             ApplyReduceFunction = DefaultApplyReduceFunction;
-            ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
+            ReplicationInformerFactory = (url, jsonRequestFactory, requestTimeMetricGetter) => new ReplicationInformer(this, jsonRequestFactory, requestTimeMetricGetter);
             CustomizeJsonSerializer = serializer => { };
             FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
@@ -670,7 +671,7 @@ namespace Raven.Client.Document
         /// This is called to provide replication behavior for the client. You can customize 
         /// this to inject your own replication / failover logic.
         /// </summary>
-        public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
+        public Func<string, HttpJsonRequestFactory, Func<string, IRequestTimeMetric>, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
 #if !DNXCORE50
         /// <summary>

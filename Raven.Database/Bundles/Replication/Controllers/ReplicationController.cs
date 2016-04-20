@@ -178,8 +178,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
             var commitIndex = isInCluster ? ClusterManager.Engine.CommitIndex : -1;
             var term = isInCluster ? ClusterManager.Engine.PersistentState.CurrentTerm : -1;
             var currentTopology = isInCluster ? ClusterManager.Engine.CurrentTopology : null;
-            var currentLeader = ClusterManager.Engine.CurrentLeader;
-            var isLeader = currentLeader == ClusterManager.Engine.Options.SelfConnection.Name;
+            var currentLeader = isInCluster ? ClusterManager.Engine.CurrentLeader:null;
+            var isLeader = currentLeader != null && currentLeader == ClusterManager.Engine.Options.SelfConnection.Name;
 
             var configurationDocumentWithClusterInformation = new ReplicationDocumentWithClusterInformation
             {
@@ -384,7 +384,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             const int BatchSize = 512;
             var topologyId = Request.Headers.GetFirstValue("Topology-Id");
-            if (topologyId != null && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
+            if (!string.IsNullOrEmpty(topologyId) && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
             {
                 return GetMessageWithString("Refusing to accept data outside of my topology",HttpStatusCode.Forbidden);
             }

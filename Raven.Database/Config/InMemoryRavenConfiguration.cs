@@ -362,6 +362,7 @@ namespace Raven.Database.Config
             Indexing.UseLuceneASTParser = ravenSettings.Indexing.UseLuceneASTParser.Value;
             Indexing.DisableIndexingFreeSpaceThreshold = ravenSettings.Indexing.DisableIndexingFreeSpaceThreshold.Value;
             Indexing.DisableMapReduceInMemoryTracking = ravenSettings.Indexing.DisableMapReduceInMemoryTracking.Value;
+            Indexing.SkipRecoveryOnStartup = ravenSettings.Indexing.SkipRecoveryOnStartup.Value;
 
             Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
             Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
@@ -1699,9 +1700,11 @@ namespace Raven.Database.Config
                     if (value == useLuceneASTParser)
                         return;
                     QueryBuilder.UseLuceneASTParser = useLuceneASTParser = value;
-        }
+                }
             }
             private bool useLuceneASTParser = true;
+
+            public bool SkipRecoveryOnStartup { get; set; }
         }
 
         public class ClusterConfiguration

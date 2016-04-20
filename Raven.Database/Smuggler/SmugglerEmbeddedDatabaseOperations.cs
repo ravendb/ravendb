@@ -284,7 +284,31 @@ namespace Raven.Database.Smuggler
         public Task SeedIdentityFor(string identityName, long identityValue)
         {
             if (identityName != null)
-                database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
+            {
+                using (database.IdentityLock.Lock())
+                {
+                    database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
+                }
+            }
+
+            return new CompletedTask();
+        }
+
+        public Task SeedIdentities(List<KeyValuePair<string, long>> itemsToInsert)
+        {
+            using (database.IdentityLock.Lock())
+            {
+                database.TransactionalStorage.Batch(accessor =>
+                {
+                    foreach (var identityPair in itemsToInsert)
+                    {
+                        if (identityPair.Key != null)
+                        {
+                            accessor.General.SetIdentityValue(identityPair.Key, identityPair.Value);
+                        }
+                    }
+                });
+            }
 
             return new CompletedTask();
         }

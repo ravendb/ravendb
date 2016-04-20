@@ -7,9 +7,12 @@ import customFunctions = require("models/database/documents/customFunctions");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 
 class globalConfigCustomFunctions extends viewModelBase {
 
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     activated = ko.observable<boolean>(false);
 
     docEditor: AceAjax.Editor;

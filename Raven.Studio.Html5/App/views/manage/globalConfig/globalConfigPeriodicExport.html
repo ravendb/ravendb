@@ -3,7 +3,16 @@
         <div class="alert alert-danger">Too many periodic export types found. This isn't a supported scenario for the UI.</div>
     </div>
     <div data-bind="visible: !unsupported()">
-        <form data-bind="submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
+        <div class="panel panel-default" data-bind="visible: !$root.canUseGlobalConfigurations()">
+            <div class="panel-body">
+                <div class="text-center">
+                    <h3 class="text-info">
+                        Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <form data-bind="visible: $root.canUseGlobalConfigurations(), submit: $root.saveChanges.bind($root)" id="save-periodic-backup-form" class="form-horizontal" role="form">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled(), visible: $root.activated()" accesskey="S"><i class="fa fa-save"></i></button>
@@ -13,13 +22,14 @@
                     <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: $root.activated()">
                         <i class="fa fa-trash"></i> Remove global configuration for Periodic Export
                     </button>
+                    <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
                 </div>
                 <div class="panel-body">
                     <p data-bind="visible: $root.activated() == false">
                         <i class="fa fa-info-circle text-info"></i> Global configuration for Periodic Export is not currently defined.
                     </p>
-                    <div data-bind="if: $root.activated()"  id="periodicExportContainer">
-                        
+                    <div data-bind="if: $root.activated()" id="periodicExportContainer">
+
                         <div class="form-group">
                             <label for="disabled" class="col-sm-3 control-label">Enabled:</label>
                             <div class="col-sm-3">
@@ -53,19 +63,19 @@
                                 </div>
                             </div>
                         </div>
-                
+
                         <div class="form-group" data-bind="visible: onDiskExportEnabled">
                             <label for="onDiskLocation" class="col-sm-3 control-label">File System Folder:</label>
                             <div class="col-sm-3" data-bind="if: onDiskExportEnabled">
-                                <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown'" />
+                                <input type="text" id="onDiskLocation" placeholder="full path" required class="form-control" data-bind="value: localFolderName, valueUpdate: 'afterkeydown'"/>
                             </div>
                             <div class="col-sm-6">
                                 <span id="onDiskHint" class="help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
-                                    <i class="fa fa-info-circle text-info"></i>
-                                </span>
+                                        <i class="fa fa-info-circle text-info"></i>
+                                    </span>
                             </div>
                         </div>
-                
+
                         <div class="form-group">
                             <label for="serverUpload" class="col-sm-3 control-label">Upload to remote server:</label>
                             <div class="col-sm-3">
@@ -98,20 +108,20 @@
                             </div>
                             <div class="col-sm-1">
                                 <span class="folderHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
-                                    <i class="fa fa-info-circle text-info"></i>
-                                </span>
+                                        <i class="fa fa-info-circle text-info"></i>
+                                    </span>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsAccessKey" class="col-sm-3 control-label">AWS Access Key:</label>
                             <div class="col-sm-3">
-                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'" />
+                                <input required id="awsAccessKey" type="text" class="form-control" data-bind="value: awsAccessKey, valueUpdate: 'afterkeydown'"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
                             <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
                             <div class="col-sm-3">
-                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'" />
+                                <input required id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey, valueUpdate: 'afterkeydown'"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAwsInfoRequired, visible: additionalAwsInfoRequired">
@@ -127,14 +137,14 @@
                             </div>
                             <div class="col-sm-1">
                                 <span class="folderHint help-cursor" data-placement="auto left" data-original-title="Note" data-trigger="hover">
-                                    <i class="fa fa-info-circle text-info"></i>
-                                </span>
+                                        <i class="fa fa-info-circle text-info"></i>
+                                    </span>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
                             <label for="azureStorageAccount" class="col-sm-3 control-label">Azure Storage Account:</label>
                             <div class="col-sm-3">
-                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'" />
+                                <input required id="azureStorageAccount" type="text" class="form-control" data-bind="value: azureStorageAccount, valueUpdate: 'afterkeydown'"/>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: additionalAzureInfoRequired, visible: additionalAzureInfoRequired">
@@ -146,7 +156,7 @@
                         <div class="form-group">
                             <label for="incrementalBackupInterval" class="col-sm-3 control-label">Incremental Backup Interval:</label>
                             <div class="col-sm-1">
-                                <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
+                                <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'"/>
                             </div>
                             <div class="col-sm-2">
                                 <select class="form-control" data-bind="options: availableIntervalUnits, value: incrementalBackupIntervalUnit"></select>
@@ -155,7 +165,7 @@
                         <div class="form-group">
                             <label for="fullBackupInterval" class="col-sm-3 control-label">Full Backup Interval:</label>
                             <div class="col-sm-1">
-                                <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
+                                <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'"/>
                             </div>
                             <div class="col-sm-2">
                                 <select class="form-control" data-bind="options: availableIntervalUnits, value: fullBackupIntervalUnit"></select>

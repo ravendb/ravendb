@@ -10,8 +10,12 @@ import getAutomaticConflictResolutionDocumentCommand = require("commands/databas
 import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
+import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
 
 class globalConfigReplications extends viewModelBase {
+
+    developerLicense = globalConfig.developerLicense;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
 
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));

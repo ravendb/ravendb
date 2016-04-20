@@ -17,6 +17,12 @@ class tasks extends viewModelBase {
         this.isOnUserDatabase = ko.computed(() => !!this.activeDatabase() && !this.isOnSystemDatabase());
         this.appUrls = appUrl.forCurrentDatabase();
 
+        this.router = durandalRouter.createChildRouter();
+    }
+
+    activate(args: any) {
+        super.activate(args);
+
         var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(this.activeDatabase()));
         var exportDatabaseUrl = ko.computed(() => appUrl.forExportDatabase(this.activeDatabase()));
         var toggleIndexingUrl = ko.computed(() => appUrl.forToggleIndexing(this.activeDatabase()));
@@ -33,7 +39,8 @@ class tasks extends viewModelBase {
             { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/database/tasks/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
         ];
 
-        this.router = durandalRouter.createChildRouter()
+        this.router
+            .reset()
             .map(routeArray)
             .buildNavigationModel();
 
@@ -44,10 +51,6 @@ class tasks extends viewModelBase {
             var activeRoute = this.router.navigationModel().first(r=> r.isActive());
             return activeRoute != null ? activeRoute.title : "";
         });
-    }
-
-    activate(args: any) {
-        super.activate(args);
     }
 }
 

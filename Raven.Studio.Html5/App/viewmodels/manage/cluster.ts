@@ -19,13 +19,15 @@ import updateRaftClusterCommand = require("commands/database/cluster/updateRaftC
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
 import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
+import license = require("models/auth/license");
 
 class cluster extends viewModelBase {
 
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
-    serverUrl = ko.observable<string>();
-
+    serverUrl = ko.observable<string>(); 
+    canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
+    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     constructor() {
         super();
         autoRefreshBindingHandler.install();

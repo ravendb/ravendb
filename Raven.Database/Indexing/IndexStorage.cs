@@ -252,7 +252,7 @@ namespace Raven.Database.Indexing
                     if (indexImplementation != null)
                         indexImplementation.Dispose();
 
-                    if (recoveryTried == false && luceneDirectory != null)
+                    if (recoveryTried == false && luceneDirectory != null && configuration.Indexing.SkipRecoveryOnStartup == false)
                     {
                         recoveryTried = true;
                         startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);

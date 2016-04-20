@@ -56,22 +56,17 @@ namespace Raven.Database.Raft
         }
 
         private static bool IsValidLicense()
-        {
-            DevelopmentHelper.TimeBomb();
-            return true;
-
-            if (ValidateLicense.CurrentLicense.IsCommercial == false)
-                return false;
-
-            string value;
-            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("cluster", out value) == false)
-                return false;
-
-            bool cluster;
-            if (bool.TryParse(value, out cluster) == false)
-                return false;
-
-            return cluster;
+        {            
+            string hasClusteringStr;
+            bool hasClustering = false;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("clustering", out hasClusteringStr) && bool.TryParse(hasClusteringStr, out hasClustering) && hasClustering)
+                return true;
+            //we allow users with no license to use clustering 
+            if (ValidateLicense.CurrentLicense.Status.Equals("AGPL - Open Source"))
+            {
+                return true;
+            }
+            return hasClustering;
         }
 
         public void Dispose()

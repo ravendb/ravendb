@@ -32,7 +32,7 @@ namespace Raven.Client.FileSystem.Connection
         private Task refreshReplicationInformationTask;
 
         public FilesReplicationInformer(FilesConvention conventions, HttpJsonRequestFactory requestFactory)
-            : base(conventions, requestFactory)
+            : base(conventions, requestFactory, null)
         {
         }
 
