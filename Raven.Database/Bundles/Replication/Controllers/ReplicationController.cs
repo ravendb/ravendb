@@ -401,7 +401,11 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             var array = await ReadJsonArrayAsync().ConfigureAwait(false);
             if (ReplicationTask != null)
+            {
+                //indicates to the replication task that this thread is going to insert documents.
+                ReplicationTask.IsThreadProcessingReplication.Value = true;
                 ReplicationTask.HandleHeartbeat(src);
+            }
 
             using (Database.DisableAllTriggersForCurrentThread())
             {
@@ -454,8 +458,15 @@ namespace Raven.Database.Bundles.Replication.Controllers
                         retries++;
                     }
                 }
+                //We don't want to delay large batches of documents otherwise we will endup with alot of data that needs to get replicated.
+                if (Request.Content.Headers.ContentLength > Database.Configuration.Replication.ReplicationPropagationDelaySizeInBytes)
+                {
+                    Database.WorkContext.ReplicationResetEvent.Set();
+                }
             }
-
+            //indicates that this thread is no longer sending documents.
+            if(ReplicationTask != null)
+                ReplicationTask.IsThreadProcessingReplication.Value = false;
             return GetEmptyMessage();
         }
 
@@ -514,6 +525,11 @@ namespace Raven.Database.Bundles.Replication.Controllers
             if (string.IsNullOrEmpty(src))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
+            if (ReplicationTask != null)
+            {
+                //indicates to the replication task that this thread is going to insert attachments.
+                ReplicationTask.IsThreadProcessingReplication.Value = true;
+            }
             var array = await ReadBsonArrayAsync().ConfigureAwait(false);
             using (Database.DisableAllTriggersForCurrentThread())
             {
@@ -562,7 +578,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                  new RavenJObject(), null);
                 });
             }
-
+            //We don't want to delay large batches of attachments otherwise we will endup with alot of data that needs to get replicated.
+            if (Request.Content.Headers.ContentLength > Database.Configuration.Replication.ReplicationPropagationDelaySizeInBytes)
+            {
+                Database.WorkContext.ReplicationResetEvent.Set();
+            }
+            //indicates that this thread is no longer sending attachments.
+            if (ReplicationTask != null)
+                ReplicationTask.IsThreadProcessingReplication.Value = false;
             return GetEmptyMessage();
         }
 
