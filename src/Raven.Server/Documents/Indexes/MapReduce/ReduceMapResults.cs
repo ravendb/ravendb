@@ -6,6 +6,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Database.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -19,6 +20,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public unsafe class ReduceMapResults : IIndexingWork
     {
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
+        private readonly LazyStringReader _lazyStringReader = new LazyStringReader();
         private readonly AutoMapReduceIndexDefinition _indexDefinition;
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _indexingWorkContext;
@@ -181,27 +183,51 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             case FieldMapReduceOperation.Count:
                             case FieldMapReduceOperation.Sum:
-                                int cur;
-                                if (obj.TryGet(propertyName, out cur) == false)
+                                object value;
+
+                                if (obj.TryGetMember(propertyName, out value) == false)
                                     throw new InvalidOperationException($"Could not read numeric value of '{propertyName}' property");
 
+                                double doubleValue;
+                                long longValue;
+
+                                var numberType = BlittableNumber.Parse(value, _lazyStringReader, out doubleValue, out longValue);
+                                
                                 PropertyResult aggregate;
                                 if (aggregatedResult.TryGetValue(propertyName, out aggregate) == false)
                                 {
-                                    aggregatedResult[propertyName] = new PropertyResult
+                                    var propertyResult = new PropertyResult();
+
+                                    switch (numberType)
                                     {
-                                        ResultValue = cur,
-                                        SumValue = cur
-                                    };
+                                        case NumberParseResult.Double:
+                                            propertyResult.ResultValue = doubleValue;
+                                            propertyResult.DoubleSumValue = doubleValue;
+                                            break;
+                                        case NumberParseResult.Long:
+                                            propertyResult.ResultValue = longValue;
+                                            propertyResult.LongSumValue = longValue;
+                                            break;
+                                    }
+
+                                    aggregatedResult[propertyName] = propertyResult;
                                 }
                                 else
                                 {
-                                    aggregate.ResultValue = aggregate.SumValue += cur;
+                                    switch (numberType)
+                                    {
+                                        case NumberParseResult.Double:
+                                            aggregate.ResultValue = aggregate.DoubleSumValue += doubleValue;
+                                            break;
+                                        case NumberParseResult.Long:
+                                            aggregate.ResultValue = aggregate.LongSumValue += longValue;
+                                            break;
+                                    };
                                 }
                                 break;
                             //case FieldMapReduceOperation.None:
                             default:
-                                throw new ArgumentOutOfRangeException("TODO arek. Unhandled field type:" + indexField.MapReduceOperation);
+                                throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.MapReduceOperation}' to aggregate on");
                         }
                     }
                     else if (obj.TryGet(propertyName, out stringValue))
@@ -241,7 +267,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             public object ResultValue;
 
-            public long SumValue = 0;
+            public long LongSumValue = 0;
+
+            public double DoubleSumValue = 0;
+        }
+
+        public void Dispose()
+        {
+            _lazyStringReader.Dispose();
         }
     }
 }

@@ -203,7 +203,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                     Name = "Weight",
                     Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.NumbericDouble
+                    SortOption = SortOptions.NumericDouble
                 },
                 new IndexField
                 {

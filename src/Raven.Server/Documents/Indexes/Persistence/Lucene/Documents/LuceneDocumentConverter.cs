@@ -8,6 +8,7 @@ using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
+using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 
-        private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
+        private readonly BlittableJsonTraverser _blittableTraverser;
 
         private readonly ICollection<IndexField> _fields;
 
@@ -39,6 +40,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             _fields = fields;
             _reduceOutput = reduceOutput;
+
+            if (reduceOutput)
+                _blittableTraverser = new BlittableJsonTraverser(new char[] { }); // map-reduce results are have always flat structure
+            else
+                _blittableTraverser = new BlittableJsonTraverser();
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -142,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 yield return GetOrCreateField(path, null, ((LazyDoubleValue)value).Inner, storage, indexing);
             }
-            else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them // TODO arek - do we still need that?
+            else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
             {
                 yield return GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, storage, indexing); // TODO arek - ToString()? anything better?
             }
@@ -219,22 +225,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 numericField = cached.Field;
             }
 
-            if (value is LazyDoubleValue)
-            {
-                var doubleValue = double.Parse(cached.LazyStringReader.GetStringFor(((LazyDoubleValue) value).Inner), CultureInfo.InvariantCulture); // TODO arek - 
+            double doubleValue;
+            long longValue;
 
-                yield return numericField.SetDoubleValue(doubleValue);
-            }
-            else if (value is long)
+            switch (BlittableNumber.Parse(value, cached.LazyStringReader, out doubleValue, out longValue))
             {
-                if (field.SortOption == SortOptions.NumbericDouble)
-                    yield return numericField.SetDoubleValue((long)value);
-                else
-                    yield return numericField.SetLongValue((long) value);
-            }
-            else
-            {
-                throw new InvalidOperationException($"Could not create numeric field for the value '{value}' of the given type: {value.GetType().FullName}");
+                case NumberParseResult.Double:
+                    yield return numericField.SetDoubleValue(doubleValue);
+                    break;
+                case NumberParseResult.Long:
+                    if (field.SortOption == SortOptions.NumericDouble)
+                        yield return numericField.SetDoubleValue((long)value);
+                    else
+                        yield return numericField.SetLongValue((long)value);
+                    break;
             }
         }
 

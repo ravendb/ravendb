@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {
-                    sortOptions = SortOptions.NumbericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
+                    sortOptions = SortOptions.NumericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
                 }
 
                 return new SortField(x.Field, (int)sortOptions, x.Descending);

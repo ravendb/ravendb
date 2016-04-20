@@ -1,6 +1,7 @@
 ﻿using System;
 
 using Lucene.Net.Documents;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {

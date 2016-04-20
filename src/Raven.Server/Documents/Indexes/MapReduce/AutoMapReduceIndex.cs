@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -24,9 +24,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private readonly TableSchema _mapResultsSchema = new TableSchema();
 
-        private readonly MapReduceIndexingContext _indexingWorkContext = new MapReduceIndexingContext();
+        private readonly LazyStringReader _lazyStringReader = new LazyStringReader();
 
-        internal long _lastMapResultEtag = -1;
+        private readonly MapReduceIndexingContext _indexingWorkContext = new MapReduceIndexingContext();
 
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
@@ -53,6 +53,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 StartIndex = 2
             });
         }
+
+        internal long LastMapResultEtag { get; private set; } = -1;
 
         public static AutoMapReduceIndex CreateNew(int indexId, AutoMapReduceIndexDefinition definition,
             DocumentDatabase documentDatabase)
@@ -123,8 +125,56 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     case FieldMapReduceOperation.Count:
                         mappedResult[indexField.Name] = 1;
                         break;
-                    case FieldMapReduceOperation.None:
                     case FieldMapReduceOperation.Sum:
+                        object fieldValue;
+                        _blittableTraverser.TryRead(document.Data, indexField.Name, out fieldValue);
+
+                        var arrayResult = fieldValue as IEnumerable<object>;
+
+                        if (arrayResult == null)
+                        {
+                            // explicitly adding this even if the value isn't there, as a null
+                            mappedResult[indexField.Name] = fieldValue;
+                            continue;
+                        }
+
+                        double? totalDouble = null;
+                        long? totalLong = null;
+
+                        foreach (var item in arrayResult)
+                        {
+                            if (item == null)
+                                continue;
+
+                            double doubleValue;
+                            long longValue;
+
+                            switch (BlittableNumber.Parse(item, _lazyStringReader, out doubleValue, out longValue))
+                            {
+                                case NumberParseResult.Double:
+                                    if (totalDouble == null)
+                                        totalDouble = 0;
+
+                                    totalDouble += doubleValue;
+                                    break;
+                                case NumberParseResult.Long:
+                                    if (totalLong == null)
+                                        totalLong = 0;
+
+                                    totalLong += longValue;
+                                    break;
+                            }
+                        }
+
+                        if (totalDouble != null)
+                            mappedResult[indexField.Name] = totalDouble;
+                        else if (totalLong != null)
+                            mappedResult[indexField.Name] = totalLong;
+                        else
+                            mappedResult[indexField.Name] = 0; // TODO arek - long / double ?
+
+                        break;
+                    case FieldMapReduceOperation.None:
                         object result;
                         _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
 
@@ -182,7 +232,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, ReduceKeyState state, Table table, LazyStringValue documentKey, ulong reduceKeyHash)
         {
-            var etag = ++_lastMapResultEtag;
+            var etag = ++LastMapResultEtag;
 
             var etagBigEndian = IPAddress.HostToNetworkOrder(etag);
 
@@ -257,8 +307,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 int _;
                 var ptr = tvr.Read(0, out _);
-                _lastMapResultEtag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+                LastMapResultEtag = IPAddress.NetworkToHostOrder(*(long*)ptr);
             }
+        }
+
+        protected override void DisposeInternal()
+        {
+            _lazyStringReader.Dispose();
         }
     }
 }
