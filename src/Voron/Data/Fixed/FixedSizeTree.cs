@@ -54,15 +54,7 @@ namespace Voron.Data.Fixed
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
-
-            if (treeName.Array != null)
-                _treeName = treeName;
-            else
-            {
-                var bytes = new byte[treeName.Size];
-                treeName.CopyTo(bytes);
-                _treeName = new Slice(bytes);
-            }
+            _treeName = treeName;
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
