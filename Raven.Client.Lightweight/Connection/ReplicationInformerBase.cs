@@ -240,7 +240,7 @@ namespace Raven.Client.Connection
             var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
             var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
-            var primaryRequestTimeMetric = requestTimeMetricGetter(primaryOperation.Url);
+            var primaryRequestTimeMetric = requestTimeMetricGetter?.Invoke(primaryOperation.Url);
             var complexTimeMetric = new ComplexTimeMetric();
 
             if (method == HttpMethods.Get && (shouldReadFromAllServers || allowReadFromSecondariesWhenRequestTimeThresholdIsPassed))
@@ -248,34 +248,40 @@ namespace Raven.Client.Connection
                 var replicationIndex = -1;
                 if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && shouldReadFromAllServers)
                 {
-                    complexTimeMetric.AddCurrent(primaryRequestTimeMetric); // want to decrease everything
-                    foreach (var destination in localReplicationDestinations)
-                        complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
-
-                    replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1); // include primary
-                    for (var i = 0; i < localReplicationDestinations.Count + 1; i++)
+                    if (requestTimeMetricGetter != null && primaryRequestTimeMetric != null)
                     {
-                        IRequestTimeMetric metric;
-                        if (replicationIndex >= localReplicationDestinations.Count) // primary
-                            metric = primaryRequestTimeMetric;
-                        else
-                            metric = requestTimeMetricGetter(localReplicationDestinations[replicationIndex].Url);
+                        complexTimeMetric.AddCurrent(primaryRequestTimeMetric); // want to decrease everything
+                        foreach (var destination in localReplicationDestinations)
+                            complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
 
-                        if (metric.RateSurpassed(Conventions) == false)
+                        replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1); // include primary
+                        for (var i = 0; i < localReplicationDestinations.Count + 1; i++)
                         {
-                            complexTimeMetric.AddCurrent(metric);
-                            break;
-                        }
+                            IRequestTimeMetric metric;
+                            if (replicationIndex >= localReplicationDestinations.Count) // primary
+                                metric = primaryRequestTimeMetric;
+                            else
+                                metric = requestTimeMetricGetter(localReplicationDestinations[replicationIndex].Url);
 
-                        replicationIndex = (replicationIndex + 1) % (localReplicationDestinations.Count + 1);
+                            if (metric.RateSurpassed(Conventions) == false)
+                            {
+                                complexTimeMetric.AddCurrent(metric);
+                                break;
+                            }
+
+                            replicationIndex = (replicationIndex + 1) % (localReplicationDestinations.Count + 1);
+                        }
                     }
                 }
                 else if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed)
                 {
-                    complexTimeMetric.AddCurrent(primaryRequestTimeMetric);
+                    if (primaryRequestTimeMetric != null)
+                    {
+                        complexTimeMetric.AddCurrent(primaryRequestTimeMetric);
 
-                    if (complexTimeMetric.RateSurpassed(Conventions))
-                        replicationIndex = currentReadStripingBase % localReplicationDestinations.Count; // this will skip the primary
+                        if (complexTimeMetric.RateSurpassed(Conventions))
+                            replicationIndex = currentReadStripingBase % localReplicationDestinations.Count; // this will skip the primary
+                    }
                 }
                 else if (shouldReadFromAllServers)
                 {
@@ -290,7 +296,8 @@ namespace Raven.Client.Connection
                     // if it is failing, ignore that, and move to the master or any of the replicas
                     if (ShouldExecuteUsing(destination, primaryOperation, method, false, null, token))
                     {
-                        complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
+                        if (requestTimeMetricGetter != null)
+                            complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
 
                         operationResult = await TryOperationAsync(operation, destination, primaryOperation, complexTimeMetric, true, token).ConfigureAwait(false);
                         if (operationResult.Success)
@@ -301,7 +308,8 @@ namespace Raven.Client.Connection
 
             if (ShouldExecuteUsing(primaryOperation, primaryOperation, method, true, null, token))
             {
-                complexTimeMetric.AddCurrent(primaryRequestTimeMetric);
+                if (primaryRequestTimeMetric != null)
+                    complexTimeMetric.AddCurrent(primaryRequestTimeMetric);
 
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, complexTimeMetric, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
                     .ConfigureAwait(false);
@@ -329,7 +337,8 @@ namespace Raven.Client.Connection
                 if (ShouldExecuteUsing(destination, primaryOperation, method, false, operationResult.Error, token) == false)
                     continue;
 
-                complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
+                if (requestTimeMetricGetter != null)
+                    complexTimeMetric.AddCurrent(requestTimeMetricGetter(destination.Url));
 
                 var hasMoreReplicationDestinations = localReplicationDestinations.Count > i + 1;
                 operationResult = await TryOperationAsync(operation, destination, primaryOperation, complexTimeMetric, !operationResult.WasTimeout && hasMoreReplicationDestinations, token).ConfigureAwait(false);
