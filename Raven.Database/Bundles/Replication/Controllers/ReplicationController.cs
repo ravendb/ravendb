@@ -400,73 +400,74 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
             var array = await ReadJsonArrayAsync().ConfigureAwait(false);
-            if (ReplicationTask != null)
+            try
             {
-                //indicates to the replication task that this thread is going to insert documents.
-                ReplicationTask.IsThreadProcessingReplication.Value = true;
-                ReplicationTask.HandleHeartbeat(src);
-            }
-
-            using (Database.DisableAllTriggersForCurrentThread())
-            {
-                var conflictResolvers = DocsReplicationConflictResolvers; 
-
-                string lastEtag = Etag.Empty.ToString();
-
-                var docIndex = 0;
-                var retries = 0;
-                while (retries < 3 && docIndex < array.Length)
+                if (ReplicationTask != null)
                 {
-                    var lastIndex = docIndex;
-                    using (Database.DocumentLock.Lock())
+                    //indicates to the replication task that this thread is going to insert documents.
+                    ReplicationTask.IsThreadProcessingReplication.Value = true;
+                    ReplicationTask.HandleHeartbeat(src);
+                }
+
+                using (Database.DisableAllTriggersForCurrentThread())
+                {
+                    var conflictResolvers = DocsReplicationConflictResolvers;
+
+                    string lastEtag = Etag.Empty.ToString();
+
+                    var docIndex = 0;
+                    var retries = 0;
+                    while (retries < 3 && docIndex < array.Length)
                     {
-                        Database.TransactionalStorage.Batch(actions =>
+                        var lastIndex = docIndex;
+                        using (Database.DocumentLock.Lock())
                         {
-                            for (var j = 0; j < BatchSize && docIndex < array.Length; j++, docIndex++)
+                            Database.TransactionalStorage.Batch(actions =>
                             {
-                                var document = (RavenJObject)array[docIndex];
-                                var metadata = document.Value<RavenJObject>("@metadata");
-                                if (metadata[Constants.RavenReplicationSource] == null)
+                                for (var j = 0; j < BatchSize && docIndex < array.Length; j++, docIndex++)
                                 {
+                                    var document = (RavenJObject)array[docIndex];
+                                    var metadata = document.Value<RavenJObject>("@metadata");
+                                    if (metadata[Constants.RavenReplicationSource] == null)
+                                    {
                                     // not sure why, old document from when the user didn't have replication
                                     // that we suddenly decided to replicate, choose the source for that
                                     metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
+                                    }
+
+                                    lastEtag = metadata.Value<string>("@etag");
+                                    var id = metadata.Value<string>("@id");
+                                    document.Remove("@metadata");
+                                    ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
                                 }
 
-                                lastEtag = metadata.Value<string>("@etag");
-                                var id = metadata.Value<string>("@id");
-                                document.Remove("@metadata");
-                                ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
+                                SaveReplicationSource(src, lastEtag, array.Length, collections);
+                                retries = lastIndex == docIndex ? retries : 0;
+                            });
+                        }
+
+                        if (lastIndex == docIndex)
+                        {
+
+                            if (retries == 3)
+                            {
+                                Log.Warn("Replication processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
                             }
-
-                            SaveReplicationSource(src, lastEtag, array.Length, collections);
-                            retries = lastIndex == docIndex ? retries : 0;
-                        });
-                    }
-
-                    if (lastIndex == docIndex)
-                    {
-                        
-                        if (retries == 3)
-                        {
-                            Log.Warn("Replication processing did not end up replicating any documents for 3 times in a row, stopping operation", retries);
+                            else
+                            {
+                                Log.Warn("Replication processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
+                            }
+                            retries++;
                         }
-                        else
-                        {
-                            Log.Warn("Replication processing did not end up replicating any documents, due to possible storage error, retry number: {0}", retries);
-                        }
-                        retries++;
                     }
-                }
-                //We don't want to delay large batches of documents otherwise we will endup with alot of data that needs to get replicated.
-                if (Request.Content.Headers.ContentLength > Database.Configuration.Replication.ReplicationPropagationDelaySizeInBytes)
-                {
-                    Database.WorkContext.ReplicationResetEvent.Set();
-                }
+                }                
             }
-            //indicates that this thread is no longer sending documents.
-            if(ReplicationTask != null)
-                ReplicationTask.IsThreadProcessingReplication.Value = false;
+            finally
+            {
+                //indicates that this thread is no longer sending documents.
+                if (ReplicationTask != null)
+                    ReplicationTask.IsThreadProcessingReplication.Value = false;
+            }
             return GetEmptyMessage();
         }
 
@@ -525,67 +526,68 @@ namespace Raven.Database.Bundles.Replication.Controllers
             if (string.IsNullOrEmpty(src))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-            if (ReplicationTask != null)
+            try
             {
-                //indicates to the replication task that this thread is going to insert attachments.
-                ReplicationTask.IsThreadProcessingReplication.Value = true;
-            }
-            var array = await ReadBsonArrayAsync().ConfigureAwait(false);
-            using (Database.DisableAllTriggersForCurrentThread())
-            {
-                var conflictResolvers = AttachmentReplicationConflictResolvers; 
-
-                Database.TransactionalStorage.Batch(actions =>
+                if (ReplicationTask != null)
                 {
-                    Etag lastEtag = Etag.Empty;
-                    foreach (RavenJObject attachment in array)
+                    //indicates to the replication task that this thread is going to insert attachments.
+                    ReplicationTask.IsThreadProcessingReplication.Value = true;
+                }
+                var array = await ReadBsonArrayAsync().ConfigureAwait(false);
+                using (Database.DisableAllTriggersForCurrentThread())
+                {
+                    var conflictResolvers = AttachmentReplicationConflictResolvers;
+
+                    Database.TransactionalStorage.Batch(actions =>
                     {
-                        var metadata = attachment.Value<RavenJObject>("@metadata");
-                        if (metadata[Constants.RavenReplicationSource] == null)
+                        Etag lastEtag = Etag.Empty;
+                        foreach (RavenJObject attachment in array)
                         {
+                            var metadata = attachment.Value<RavenJObject>("@metadata");
+                            if (metadata[Constants.RavenReplicationSource] == null)
+                            {
                             // not sure why, old attachment from when the user didn't have replication
                             // that we suddenly decided to replicate, choose the source for that
                             metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
+                            }
+
+                            lastEtag = Etag.Parse(attachment.Value<byte[]>("@etag"));
+                            var id = attachment.Value<string>("@id");
+
+                            ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src, conflictResolvers);
                         }
 
-                        lastEtag = Etag.Parse(attachment.Value<byte[]>("@etag"));
-                        var id = attachment.Value<string>("@id");
+                        Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
 
-                        ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), src, conflictResolvers);
-                    }
+                        var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
+                        var replicationDocument = Database.Documents.Get(replicationDocKey, null);
+                        Etag lastDocId = null;
+                        if (replicationDocument != null)
+                        {
+                            lastDocId =
+                                replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
+                                    LastDocumentEtag;
+                        }
 
-                    Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
-
-                    var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
-                    var replicationDocument = Database.Documents.Get(replicationDocKey, null);
-                    Etag lastDocId = null;
-                    if (replicationDocument != null)
-                    {
-                        lastDocId =
-                            replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
-                                LastDocumentEtag;
-                    }
-
-                    Database.Documents.Put(replicationDocKey, null,
-                                 RavenJObject.FromObject(new SourceReplicationInformation
-                                 {
-                                     Source = src,
-                                     LastDocumentEtag = lastDocId,
-                                     LastAttachmentEtag = lastEtag,
-                                     ServerInstanceId = remoteServerInstanceId,
-                                     LastModified = SystemTime.UtcNow
-                                 }),
-                                 new RavenJObject(), null);
-                });
+                        Database.Documents.Put(replicationDocKey, null,
+                                     RavenJObject.FromObject(new SourceReplicationInformation
+                                     {
+                                         Source = src,
+                                         LastDocumentEtag = lastDocId,
+                                         LastAttachmentEtag = lastEtag,
+                                         ServerInstanceId = remoteServerInstanceId,
+                                         LastModified = SystemTime.UtcNow
+                                     }),
+                                     new RavenJObject(), null);
+                    });
+                }
             }
-            //We don't want to delay large batches of attachments otherwise we will endup with alot of data that needs to get replicated.
-            if (Request.Content.Headers.ContentLength > Database.Configuration.Replication.ReplicationPropagationDelaySizeInBytes)
+            finally
             {
-                Database.WorkContext.ReplicationResetEvent.Set();
-            }
-            //indicates that this thread is no longer sending attachments.
-            if (ReplicationTask != null)
-                ReplicationTask.IsThreadProcessingReplication.Value = false;
+                //indicates that this thread is no longer sending attachments.
+                if (ReplicationTask != null)
+                    ReplicationTask.IsThreadProcessingReplication.Value = false;
+            }            
             return GetEmptyMessage();
         }
 

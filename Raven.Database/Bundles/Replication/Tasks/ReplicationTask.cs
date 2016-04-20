@@ -1634,6 +1634,8 @@ namespace Raven.Bundles.Replication.Tasks
 
         public void Dispose()
         {
+            _propagationTimeoutTimer.Enabled = false;
+            _propagationTimeoutTimer.Dispose();
             if (IndexReplication != null)
                 IndexReplication.Dispose();
 
@@ -1641,7 +1643,7 @@ namespace Raven.Bundles.Replication.Tasks
                 TransformerReplication.Dispose();
 
             _cts.Cancel();
-
+            
             foreach (var activeTask in activeTasks)
             {
                 try

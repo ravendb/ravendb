@@ -135,7 +135,7 @@ namespace Raven.Database.Actions
             }
         }
 
-        public void DeleteStatic(string name, Etag etag, bool isFromReplication = false)
+        public void DeleteStatic(string name, Etag etag)
         {
             if (name == null)
                 throw new ArgumentNullException("name");
