@@ -5,14 +5,19 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-
+using System.Threading;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Storage;
 using Rachis.Transport;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Raft
 {
@@ -81,6 +86,41 @@ namespace Raven.Database.Raft
             Engine.CommitTopologyChange(tcc);
 
             Log.Info("Changed topology id: " + id + " and set the empty cluster topology");
+        }
+
+        public void CleanupAllClusteringData(DocumentDatabase systemDatabase)
+        {
+            // dispose cluster manager
+            Dispose();
+
+            // delete Raft Storage
+            var voronDataPath = Path.Combine(systemDatabase.Configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory, "Raft");
+            IOExtensions.DeleteDirectory(voronDataPath);
+
+            // delete last applied commit
+            systemDatabase.TransactionalStorage.Batch(accessor =>
+            {
+                accessor.Lists.Remove("Raven/Cluster", "Status");
+            });
+
+            // delete Raven-Non-Cluster-Database markers from databases settings
+            int nextStart = 0;
+            var databases = systemDatabase
+                .Documents
+                .GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, systemDatabase.WorkContext.CancellationToken, ref nextStart);
+
+            foreach (var database in databases)
+            {
+                var settings = database.Value<RavenJObject>("Settings");
+                
+                if (settings != null && settings.ContainsKey(Constants.Cluster.NonClusterDatabaseMarker))
+                {
+                    settings.Remove(Constants.Cluster.NonClusterDatabaseMarker);
+                    var jsonDocument = ((RavenJObject)database).ToJsonDocument();
+                    systemDatabase.Documents.Put(jsonDocument.Key, jsonDocument.Etag, jsonDocument.DataAsJson, jsonDocument.Metadata, null);
+                }
+            }
+
         }
 
         public void Dispose()

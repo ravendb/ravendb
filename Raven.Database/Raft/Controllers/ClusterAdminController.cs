@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,6 +16,7 @@ using Rachis.Transport;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
@@ -110,6 +112,24 @@ namespace Raven.Database.Raft.Controllers
                 ClusterManager.InitializeTopology(isPartOfExistingCluster: true);
             else
                 ClusterManager.InitializeEmptyTopologyWithId(Guid.Parse(id));
+
+            return GetEmptyMessage(HttpStatusCode.NoContent);
+        }
+
+        [HttpPatch]
+        [RavenRoute("admin/cluster/remove-clustering")]
+        public HttpResponseMessage RemoveClustering()
+        {
+            if (ClusterManager.Engine.CurrentTopology.AllNodes.Count() > 1)
+            {
+                return GetMessageWithString("Remove clustering is available on single node clusters only.", HttpStatusCode.BadRequest);
+            }
+
+            // delete Raft persistent storage and init new one
+            ClusterManager.CleanupAllClusteringData(SystemDatabase);
+
+            var newClusterManager = ClusterManagerFactory.Create(SystemDatabase, DatabasesLandlord);
+            ((Reference<ClusterManager>) Configuration.Properties[typeof(ClusterManager)]).Value = newClusterManager;
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }
