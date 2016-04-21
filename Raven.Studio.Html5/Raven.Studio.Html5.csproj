@@ -1204,6 +1204,7 @@
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesPoints.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesTypes.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
+    <TypeScriptCompile Include="App\widgets\virtualTable\settings.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
