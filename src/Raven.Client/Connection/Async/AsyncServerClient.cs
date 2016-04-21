@@ -686,19 +686,19 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<IndexingPerformanceStatistics[]> GetIndexingPerformanceStatisticsAsync()
+        public Task<IndexPerformanceStats[]> GetIndexPerformanceStatisticsAsync(string[] indexNames = null)
         {
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var url = operationMetadata.Url.IndexingPerformanceStatistics();
+                var url = operationMetadata.Url.IndexPerformanceStats(indexNames);
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                 {
                     var indexingPerformanceStatisticsJson = (RavenJArray)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                    var results = new IndexingPerformanceStatistics[indexingPerformanceStatisticsJson.Length];
+                    var results = new IndexPerformanceStats[indexingPerformanceStatisticsJson.Length];
                     for (var i = 0; i < indexingPerformanceStatisticsJson.Length; i++)
                     {
                         var stats = (RavenJObject)indexingPerformanceStatisticsJson[i];
-                        results[i] = stats.Deserialize<IndexingPerformanceStatistics>(convention);
+                        results[i] = stats.Deserialize<IndexPerformanceStats>(convention);
                     }
 
                     return results;

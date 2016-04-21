@@ -33,6 +33,8 @@ namespace Raven.Server.Documents.Indexes
         private string _path;
         private bool _run = true;
 
+        public readonly IndexIdentities Identities = new IndexIdentities();
+
         public IndexStore(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;

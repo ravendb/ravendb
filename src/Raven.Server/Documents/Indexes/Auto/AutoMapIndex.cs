@@ -36,18 +36,19 @@ namespace Raven.Server.Documents.Indexes.Auto
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing), 
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
             };
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.Delete(tombstone.Key);
+            using (stats.For("Lucene_Delete"))
+                writer.Delete(tombstone.Key);
         }
 
-        public override void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.IndexDocument(document);
+            writer.IndexDocument(document, stats);
 
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }

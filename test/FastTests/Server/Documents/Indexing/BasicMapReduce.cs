@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 CreateUsers(db, 2, "Poland");
                 
-                mri.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+                mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
@@ -74,7 +74,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 CreateUsers(db, 100, "Poland", "Israel", "USA");
                 
-                mri.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+                mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
@@ -107,7 +107,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 CreateUsers(db, 10, "Poland");
                 
-                index.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
@@ -131,7 +131,7 @@ namespace FastTests.Server.Documents.Indexing
                     }
                 }
 
-                index.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
@@ -161,7 +161,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(-1, index.LastMapResultEtag);
 
                 CreateUsers(db, 10, "Poland");
-                index.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 Assert.Equal(9, index.LastMapResultEtag);
             }
@@ -305,7 +305,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 CreateUsers(db, 2, "Poland");
 
-                mri.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+                mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
@@ -385,7 +385,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 CreateOrders(db, 5, "Poland", "Israel");
 
-                mri.DoIndexingWork(new IndexingBatchStats(), CancellationToken.None);
+                mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {

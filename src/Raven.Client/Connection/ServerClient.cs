@@ -171,9 +171,9 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexAsync(name));
         }
 
-        public IndexingPerformanceStatistics[] GetIndexingPerformanceStatistics()
+        public IndexPerformanceStats[] GetIndexPerformanceStatistics(string[] indexNames = null)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexingPerformanceStatisticsAsync());
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetIndexPerformanceStatisticsAsync(indexNames));
         }
 
         internal void ReplicateIndex(string name)

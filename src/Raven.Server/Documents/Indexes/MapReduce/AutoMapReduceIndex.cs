@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return _indexingWorkContext;
         }
 
-        public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var etagSlice = new Slice((byte*)null, sizeof(long));
 
@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
             var mappedResult = new DynamicJsonValue();
             var reduceKey = new DynamicJsonValue();

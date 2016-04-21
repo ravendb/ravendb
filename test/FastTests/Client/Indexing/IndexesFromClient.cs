@@ -7,7 +7,9 @@ using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Data.Indexes;
+using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
@@ -242,7 +244,7 @@ namespace FastTests.Client.Indexing
                 var now = SystemTime.UtcNow;
                 var nowNext = now.AddTicks(1);
 
-                var batchStats = new IndexingBatchStats();
+                var batchStats = new IndexingRunStats();
                 batchStats.AddMapError("users/1", "error/1");
                 batchStats.AddAnalyzerError(new IndexAnalyzerException());
                 batchStats.Errors[0].Timestamp = now;
@@ -375,6 +377,59 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(2, terms.Length);
                 Assert.True(terms.Any(x => string.Equals(x, "Fitzchak", StringComparison.OrdinalIgnoreCase)));
                 Assert.True(terms.Any(x => string.Equals(x, "Arek", StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
+        [Fact]
+        public async Task Performance()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName1;
+                string indexName2;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName1 = stats.IndexName;
+
+                    people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.LastName == "Arek")
+                        .ToList();
+
+                    indexName2 = stats.IndexName;
+                }
+
+                var performanceStats = await store.AsyncDatabaseCommands.GetIndexPerformanceStatisticsAsync();
+                Assert.Equal(2, performanceStats.Length);
+                Assert.Equal(indexName1, performanceStats[0].IndexName);
+                Assert.True(performanceStats[0].IndexId > 0);
+                Assert.True(performanceStats[0].Performance.Length > 0);
+
+                Assert.Equal(indexName2, performanceStats[1].IndexName);
+                Assert.True(performanceStats[1].IndexId > 0);
+                Assert.True(performanceStats[1].Performance.Length > 0);
+
+                performanceStats = await store.AsyncDatabaseCommands.GetIndexPerformanceStatisticsAsync(new[] { indexName1 });
+                Assert.Equal(1, performanceStats.Length);
+                Assert.Equal(indexName1, performanceStats[0].IndexName);
+                Assert.True(performanceStats[0].IndexId > 0);
+                Assert.True(performanceStats[0].Performance.Length > 0);
             }
         }
     }

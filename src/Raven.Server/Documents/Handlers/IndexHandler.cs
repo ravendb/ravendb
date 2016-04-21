@@ -439,5 +439,85 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
         }
+
+        [RavenAction("/databases/*/indexes/performance", "GET")]
+        public Task Performance()
+        {
+            var names = HttpContext.Request.Query["name"];
+            var froms = HttpContext.Request.Query["from"];
+            var from = 0;
+            if (froms.Count > 1)
+                throw new ArgumentException($"Query string value 'from' must appear exactly once");
+            if (froms.Count > 0 && int.TryParse(froms[0], out from) == false)
+                throw new ArgumentException($"Query string value 'from' must be a number");
+
+            IEnumerable<Index> indexes;
+
+            if (names.Count == 0)
+                indexes = Database.IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.IndexId);
+            else
+            {
+                indexes = Database.IndexStore
+                    .GetIndexes()
+                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            }
+
+            var stats = indexes
+                .Select(x => new IndexPerformanceStats
+                {
+                    IndexName = x.Name,
+                    IndexId = x.IndexId,
+                    Performance = x.GetIndexingPerformance(from)
+                })
+                .ToArray();
+
+            JsonOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartArray();
+
+                var isFirst = true;
+                foreach (var stat in stats)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(stat.IndexName)));
+                    writer.WriteString(context.GetLazyString(stat.IndexName));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(stat.IndexId)));
+                    writer.WriteInteger(stat.IndexId);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString(nameof(stat.Performance)));
+                    writer.WriteStartArray();
+                    var isFirstInternal = true;
+                    foreach (var performance in stat.Performance)
+                    {
+                        if (isFirstInternal == false)
+                            writer.WriteComma();
+
+                        isFirstInternal = false;
+
+                        writer.WriteIndexingPerformanceStats(context, performance);
+                    }
+                    writer.WriteEndArray();
+
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndArray();
+            }
+
+            return Task.CompletedTask;
+        }
     }
 }

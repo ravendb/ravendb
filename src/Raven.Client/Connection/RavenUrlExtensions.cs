@@ -62,9 +62,26 @@ namespace Raven.Client.Connection
             return $"{url}/indexes?start={start}&pageSize={pageSize}";
         }
 
-        public static string IndexingPerformanceStatistics(this string url)
+        public static string IndexPerformanceStats(this string url, string[] indexNames)
         {
-            return $"{url}/debug/indexing-perf-stats";
+            var result = $"{url}/indexes/performance";
+
+            if (indexNames == null)
+                return result;
+
+            var first = true;
+            foreach (var indexName in indexNames)
+            {
+                if (first)
+                    result += "?";
+                else
+                    result += "&";
+
+                first = false;
+                result += "name=" + indexName;
+            }
+
+            return result;
         }
 
         public static string Transformer(this string url, string transformer)

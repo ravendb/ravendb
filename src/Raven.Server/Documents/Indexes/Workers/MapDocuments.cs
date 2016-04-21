@@ -25,8 +25,10 @@ namespace Raven.Server.Documents.Indexes.Workers
             _indexStorage = indexStorage;
         }
 
+        public string Name => "Map";
+
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
-            Lazy<IndexWriteOperation> writeOperation, IndexingBatchStats stats, CancellationToken token)
+            Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             var pageSize = _configuration.MaxNumberOfTombstonesToFetch;
             var timeoutProcessing = Debugger.IsAttached == false ? _configuration.DocumentProcessingTimeout.AsTimeSpan : TimeSpan.FromMinutes(15);
@@ -35,71 +37,72 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var collection in _index.Collections)
             {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Collection: {collection}.");
-                
-                var lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. LastMappedEtag: {lastMappedEtag}.");
-
-                var lastEtag = lastMappedEtag;
-                var count = 0;
-
-                var sw = Stopwatch.StartNew();
-                IndexWriteOperation indexWriter = null;
-
-                using (databaseContext.OpenReadTransaction())
+                using (var collectionScope = stats.For("Collection_" + collection))
                 {
-                    foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Collection: {collection}.");
+
+                    var lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. LastMappedEtag: {lastMappedEtag}.");
+
+                    var lastEtag = lastMappedEtag;
+                    var count = 0;
+
+                    var sw = Stopwatch.StartNew();
+                    IndexWriteOperation indexWriter = null;
+
+                    using (databaseContext.OpenReadTransaction())
                     {
-                        token.ThrowIfCancellationRequested();
-
-                        if (indexWriter == null)
-                            indexWriter = writeOperation.Value;
-
-                        if (Log.IsDebugEnabled)
-                            Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {document.Key}.");
-
-                        stats.IndexingAttempts++;
-
-                        count++;
-                        lastEtag = document.Etag;
-
-                        try
+                        foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                         {
-                            _index.HandleMap(document, indexWriter, indexContext);
+                            token.ThrowIfCancellationRequested();
 
-                            stats.IndexingSuccesses++;
-                        }
-                        catch (Exception e)
-                        {
-                            stats.IndexingErrors++;
-                            if (Log.IsWarnEnabled)
-                                Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
+                            if (indexWriter == null)
+                                indexWriter = writeOperation.Value;
 
-                            stats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
-                        }
+                            if (Log.IsDebugEnabled)
+                                Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {document.Key}.");
 
-                        if (sw.Elapsed > timeoutProcessing)
-                        {
-                            break;
+                            collectionScope.RecordIndexingAttempt();
+
+                            count++;
+                            lastEtag = document.Etag;
+
+                            try
+                            {
+                                _index.HandleMap(document, indexWriter, indexContext, collectionScope);
+
+                                stats.RecordIndexingSuccess();
+                            }
+                            catch (Exception e)
+                            {
+                                stats.RecordIndexingError();
+                                if (Log.IsWarnEnabled)
+                                    Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
+
+                                stats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
+                            }
+
+                            if (sw.Elapsed > timeoutProcessing)
+                                break;
                         }
                     }
+
+                    if (count == 0)
+                        continue;
+
+                    if (lastEtag <= lastMappedEtag)
+                        continue;
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
+
+                    _indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+
+                    moreWorkFound = true;
                 }
-
-                if (count == 0)
-                    continue;
-
-                if (lastEtag <= lastMappedEtag)
-                    continue;
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
-
-                _indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
-
-                moreWorkFound = true;
             }
 
             return moreWorkFound;

@@ -222,9 +222,9 @@ namespace Raven.Client.Connection.Async
         Task<IndexDefinition> GetIndexAsync(string name, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Retrieves indexing performance statistics for all indexes
+        ///     Retrieves indexing performance statistics for indexes.
         /// </summary>
-        Task<IndexingPerformanceStatistics[]> GetIndexingPerformanceStatisticsAsync();
+        Task<IndexPerformanceStats[]> GetIndexPerformanceStatisticsAsync(string[] indexNames = null);
 
         /// <summary>
         ///     Retrieves all suggestions for an index merging
