@@ -661,6 +661,13 @@ namespace Raven.Database.Indexing
                 wasOperationCanceled = true;
                 throw;
             }
+            catch (IndexDoesNotExistsException)
+            {
+                //race condition -> index was deleted
+                //thus we do not need to update last indexed docs..
+                wasOperationCanceled = true;
+                throw;
+            }
             catch (Exception e)
             {
                 var exception = e;
