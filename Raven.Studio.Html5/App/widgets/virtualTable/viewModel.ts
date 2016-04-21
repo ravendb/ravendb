@@ -17,14 +17,10 @@ import customColumns = require("models/database/documents/customColumns");
 import customFunctions = require("models/database/documents/customFunctions");
 import timeSeriesKey = require("models/timeSeries/timeSeriesKey");
 import timeSeriesType = require("models/timeSeries/timeSeriesType");
-import numberFormattingStorage = require("common/numberFormattingStorage");
 
 class ctor {
 
-    static useRawFormat: boolean = numberFormattingStorage.shouldUseRaw();
     static idColumnWidth = 200;
-
-
 
     items: pagedList;
     recycleRows = ko.observableArray<row>();
@@ -836,16 +832,6 @@ class ctor {
         $(this.settings.gridSelector).off("mouseup.virtualTableColumnResize");
         $(this.settings.gridSelector).off("mousemove.virtualTableColumnResize");
     }
-
-    static watchStorage() {
-        $(window).bind("storage", (e: any) => {
-            if (e.originalEvent.key === numberFormattingStorage.localStorageName) {
-                ctor.useRawFormat = e.originalEvent.newValue;
-            }
-        });
-    }
 }
-
-ctor.watchStorage();
 
 export = ctor;
