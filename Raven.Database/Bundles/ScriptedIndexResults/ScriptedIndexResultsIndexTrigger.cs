@@ -69,15 +69,16 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void OnIndexEntryCreated(string entryKey, Document document)
             {
-                if (created.ContainsKey(entryKey) == false)
-                {
-                    created[entryKey] = new List<RavenJObject>();
-                }
+                //precaution, should never happen
+                if (string.IsNullOrWhiteSpace(entryKey))
+                    throw new ArgumentNullException("entryKey");
+
+                var createdList = created.GetOrAdd(entryKey);
 
                 if (Log.IsDebugEnabled)
                     Log.Debug("Schedule create with key {0} for scripted index results {1}", entryKey, scriptedIndexResults.Id);
 
-                created[entryKey].Add(CreateJsonDocumentFromLuceneDocument(document));
+                createdList.Add(CreateJsonDocumentFromLuceneDocument(document));
             }
 
             public override void OnIndexEntryDeleted(string entryKey, Document document = null)
