@@ -1,4 +1,5 @@
-﻿using Raven.Client.Data.Indexes;
+﻿using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries.Results;
@@ -53,9 +54,9 @@ namespace Raven.Server.Documents.Indexes.Auto
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query)
         {
-            return new DocumentQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext);
+            return new MapQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext, Definition, query);
         }
     }
 }

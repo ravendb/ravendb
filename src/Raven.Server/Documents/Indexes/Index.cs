@@ -755,7 +755,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             var totalResults = new Reference<int>();
 
-                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
+                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query)).ToList();
                             result.TotalResults = totalResults.Value;
                         }
 
@@ -897,6 +897,6 @@ namespace Raven.Server.Documents.Indexes
                 .ToArray();
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext);
+        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query);
     }
 }

@@ -168,6 +168,14 @@ namespace Raven.Server.Documents.Indexes
             return MapFields[field];
         }
 
+        public bool TryGetField(string field, out IndexField value)
+        {
+            if (field.EndsWith("_Range"))
+                field = field.Substring(0, field.Length - 6);
+
+            return MapFields.TryGetValue(field, out value);
+        }
+
         public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
 
         public override int GetHashCode()

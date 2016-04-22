@@ -1,6 +1,10 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+
+using FastTests.Server.Basic.Entities;
+
+using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -106,7 +110,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                 using (var session = store.OpenSession())
                 {
                     var cameras = session.Query<Camera>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Megapixels).ToList();
-                    
+
                     Assert.Equal("cameras/2", cameras[0].Id);
                     Assert.Equal("cameras/3", cameras[1].Id);
                     Assert.Equal("cameras/1", cameras[2].Id);
@@ -179,9 +183,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "David", Age = 31}, "users/1");
-                    await session.StoreAsync(new User { Name = "Adam", Age = 12}, "users/2");
-                    await session.StoreAsync(new User { Name = "John", Age = 24}, "users/3");
+                    await session.StoreAsync(new User { Name = "David", Age = 31 }, "users/1");
+                    await session.StoreAsync(new User { Name = "Adam", Age = 12 }, "users/2");
+                    await session.StoreAsync(new User { Name = "John", Age = 24 }, "users/3");
 
                     await session.SaveChangesAsync();
                 }
@@ -243,6 +247,68 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
                     Assert.Equal(1, users.Count);
                     Assert.Equal("users/4", users[0].Id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_project_in_map()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak", Age = 30 }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek", Age = 31 }).ConfigureAwait(false);
+                    await session.StoreAsync(new Order { ShipTo = new Address { City = "New York", Country = "USA" }, Employee = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var names = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Age > 10)
+                        .Select(x => x.Name)
+                        .ToList();
+
+                    Assert.Equal(2, names.Count);
+                    Assert.True(names.Any(x => x == "Arek"));
+                    Assert.True(names.Any(x => x == "Fitzchak"));
+
+                    var complex = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Age > 10)
+                        .Select(x => new
+                        {
+                            x.Name,
+                            x.Age
+                        })
+                        .ToList();
+
+                    Assert.Equal(2, complex.Count);
+                    Assert.True(complex.Any(x => x.Name == "Arek" && x.Age == 31));
+                    Assert.True(complex.Any(x => x.Name == "Fitzchak" && x.Age == 30));
+
+                    var nested = session.Query<Order>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Employee == "Arek")
+                        .Select(x => new
+                        {
+                            x.Employee,
+                            x.ShipTo.Country,
+                            x.ShipTo.City
+                        })
+                        .ToList();
+
+                    Assert.Equal(1, nested.Count);
+                    Assert.Equal("New York", nested[0].City);
+                    Assert.Equal("USA", nested[0].Country);
                 }
             }
         }

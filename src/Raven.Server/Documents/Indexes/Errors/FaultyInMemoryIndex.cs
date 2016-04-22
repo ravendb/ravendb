@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -32,8 +33,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext,
-            TransactionOperationContext indexContext)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }

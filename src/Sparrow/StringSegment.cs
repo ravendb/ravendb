@@ -107,6 +107,16 @@ namespace Sparrow
             return indexOfAny - Start;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int IndexOfLast(char[] charArray)
+        {
+            var indexOfAny = String.LastIndexOfAny(charArray, Length - 1, Length - Start);
+            if (indexOfAny == -1)
+                return -1;
+
+            return indexOfAny - Start;
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
