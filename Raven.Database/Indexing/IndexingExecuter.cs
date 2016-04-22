@@ -676,18 +676,15 @@ namespace Raven.Database.Indexing
             indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = true);
 
             
-            return new DisposableAction(() => indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = false));
-                    }
-
+            return new DisposableAction(() => 
+                indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = false));
+        }
 
         public void IndexPrecomputedBatch(PrecomputedIndexingBatch precomputedBatch, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
-
             context.MetricsCounters.IndexedPerSecond.Mark(precomputedBatch.Documents.Count);
-
-
             var indexToWorkOn = new IndexToWorkOn
             {
                 Index = precomputedBatch.Index,
@@ -793,6 +790,13 @@ namespace Raven.Database.Indexing
                 wasOperationCanceled = true;
                 throw;
             }
+            catch (IndexDoesNotExistsException)
+            {
+                //race condition -> index was deleted
+                //thus we do not need to update last indexed docs..
+                wasOperationCanceled = true;
+                throw;
+            }
             catch (Exception e)
             {
                 var exception = e;
@@ -813,35 +817,35 @@ namespace Raven.Database.Indexing
             finally
             {
                 if (performanceResult != null)
-                {                    
+                {
                     performanceResult.OnCompleted = null;
-                }				
+                }
 
                 Index _;
                 if (Log.IsDebugEnabled)
                 {
                     Log.Debug("After indexing {0} documents, the new last etag for is: {1} for {2}",
-                              batchForIndex.Batch.Docs.Count,
-                              lastEtag,
-                              batchForIndex.Index.PublicName);
+                        batchForIndex.Batch.Docs.Count,
+                        lastEtag,
+                        batchForIndex.Index.PublicName);
                 }
 
                 try
                 {
-                if (wasOutOfMemory == false && wasOperationCanceled == false)
-                {
+                    if (wasOutOfMemory == false && wasOperationCanceled == false)
+                    {
                         bool keepTrying = true;
 
                         for (int i = 0; i < 10 && keepTrying; i++)
                         {
                             keepTrying = false;
-                    transactionalStorage.Batch(actions =>
-                    {
+                            transactionalStorage.Batch(actions =>
+                            {
                                 try
                                 {
-                        // whatever we succeeded in indexing or not, we have to update this
-                        // because otherwise we keep trying to re-index failed documents
-                        actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+                                    // whatever we succeeded in indexing or not, we have to update this
+                                    // because otherwise we keep trying to re-index failed documents
+                                    actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
                                 }
                                 catch (Exception e)
                                 {
@@ -852,21 +856,21 @@ namespace Raven.Database.Indexing
                                     }
                                     throw;
                                 }
-                    });
+                            });
 
                             if (keepTrying)
                                 Thread.Sleep(11);
-                }
+                        }
                     }
-                else if (wasOutOfMemory)
-                    HandleOutOfMemory(batchForIndex);
+                    else if (wasOutOfMemory)
+                        HandleOutOfMemory(batchForIndex);
                 }
                 finally
                 {
-                currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+                    currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
                     batchForIndex.SignalIndexingComplete();
                     batchForIndex.Index.IsMapIndexingInProgress = false;
-            }
+                }
             }
 
             return performanceResult;
