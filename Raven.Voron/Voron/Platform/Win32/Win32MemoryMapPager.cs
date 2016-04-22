@@ -363,6 +363,27 @@ namespace Voron.Platform.Win32
             }
         }
 
+        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        {
+            if (IsWindows8OrNewer() == false)
+                return; // not supported
+
+            if (pagesToPrefetch.Count == 0)
+                return;
+
+            var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
+            for (int i = 0; i < entries.Length; i++)
+            {
+                entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
+                entries[i].VirtualAddress = AcquirePagePointer(pagesToPrefetch[i]);
+            }
+
+            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entriesPtr = entries)
+            {
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(), (UIntPtr)PagerState.AllocationInfos.Length, entriesPtr, 0);
+            }
+        }
+
         public override void TryPrefetchingWholeFile()
         {
             if (IsWindows8OrNewer() == false)
@@ -376,11 +397,9 @@ namespace Voron.Platform.Win32
                 entries[i].NumberOfBytes = (IntPtr)PagerState.AllocationInfos[i].Size;
             }
 
-
             if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
                 (UIntPtr)PagerState.AllocationInfos.Length, entries, 0) == false)
                 throw new Win32Exception();
-
         }
     }
 }
