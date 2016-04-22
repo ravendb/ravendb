@@ -100,7 +100,7 @@ namespace Raven.Client.Document
             ShouldSaveChangesForceAggressiveCacheCheck = true;
             IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
             AcceptGzipContent = true;
-            RequestTimeThresholdInMilliseconds = 100;
+            RequestTimeSlaThresholdInMilliseconds = 100;
         }
 
         private IEnumerable<object> DefaultApplyReduceFunction(

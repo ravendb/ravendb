@@ -35,9 +35,9 @@ namespace Raven.Abstractions.Replication
         AllowReadsFromSecondariesAndWritesToSecondaries = 3,
 
         /// <summary>
-        /// Allow read from secondaries when request time threshold is surpassed (configurable in conventions). Average request time is calculated using 60 second exponentially-weighted moving average (EWMA).
+        /// Allow read from secondaries when request time SLA threshold is reached (configurable in conventions). Average request time is calculated using 60 second exponentially-weighted moving average (EWMA).
         /// </summary>
-        AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed = 5,
+        AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached = 5,
 
         /// <summary>
         /// Immediately fail the request, without attempting any failover. This is true for both 

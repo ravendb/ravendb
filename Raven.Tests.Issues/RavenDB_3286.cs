@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
         {
             var conventions = new DocumentConvention
                               {
-                                  RequestTimeThresholdInMilliseconds = 100 // switch back threshold will be 75
+                                  RequestTimeSlaThresholdInMilliseconds = 100 // switch back threshold will be 75
                               };
 
             var metric = new RequestTimeMetric();
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
         {
             var conventions = new DocumentConvention
             {
-                RequestTimeThresholdInMilliseconds = 100 // switch back threshold will be 75
+                RequestTimeSlaThresholdInMilliseconds = 100 // switch back threshold will be 75
             };
 
             var metric = new RequestTimeMetric();
@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task Basic()
         {
-            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
+            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached))
             using (var store2 = CreateStore())
             {
                 SetupReplication(store1.DatabaseCommands, store2);
@@ -116,7 +116,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void RequestsWillBumpRequestTimeMetric()
         {
-            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
+            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached))
             {
                 var metric = store1.GetRequestTimeMetricForUrl(store1.Url.ForDatabase(store1.DefaultDatabase));
 
@@ -136,7 +136,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task WillSwitchBackToPrimary()
         {
-            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
+            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached))
             using (var store2 = CreateStore())
             {
                 SetupReplication(store1.DatabaseCommands, store2);
@@ -176,9 +176,9 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public async Task ReadFromAllServersWithAllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed()
+        public async Task ReadFromAllServersWithAllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached()
         {
-            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers | FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
+            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers | FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached))
             using (var store2 = CreateStore())
             using (var store3 = CreateStore())
             {

@@ -5,9 +5,8 @@ class replicationsSetup {
     source = ko.observable<string>();
     destinations = ko.observableArray<replicationDestination>().extend({ required: true });
     clientFailoverBehaviour = ko.observable<string>(null);
-    showCustomRequestTimeThreshold: KnockoutObservable<boolean>;
-    hasCustomRequestTimeThreshold = ko.observable<boolean>(false);
-    requestTimeThreshold = ko.observable<number>(null);
+    showRequestTimeSlaThreshold: KnockoutObservable<boolean>;
+    requestTimeSlaThreshold = ko.observable<number>(null);
 
     constructor(dto: configurationDocumentDto<replicationsDto>) {
         this.source(dto.MergedDocument.Source);
@@ -27,19 +26,19 @@ class replicationsSetup {
             if (clientConfiguration.FailoverBehavior) {
                 this.clientFailoverBehaviour(clientConfiguration.FailoverBehavior);
             }
-            if (clientConfiguration.RequestTimeThresholdInMilliseconds) {
-                this.hasCustomRequestTimeThreshold(true);
-                this.requestTimeThreshold(clientConfiguration.RequestTimeThresholdInMilliseconds);
+            if (clientConfiguration.RequestTimeSlaThresholdInMilliseconds) {
+                this.requestTimeSlaThreshold(clientConfiguration.RequestTimeSlaThresholdInMilliseconds);
             }
         }
-        this.showCustomRequestTimeThreshold = ko.computed(() => {
-            return this.clientFailoverBehaviour() === "AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed";
+        this.showRequestTimeSlaThreshold = ko.computed(() => {
+            return this.clientFailoverBehaviour() && this.clientFailoverBehaviour().contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
         });
 
         this.clientFailoverBehaviour.subscribe(newValue => {
-            if (newValue !== 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed') {
-                this.hasCustomRequestTimeThreshold(false);
-                this.requestTimeThreshold(undefined);
+            if (!newValue.contains('AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')) {
+                this.requestTimeSlaThreshold(undefined);
+            } else if (!this.requestTimeSlaThreshold()) {
+                this.requestTimeSlaThreshold(100);
             }
         });
 
@@ -51,26 +50,25 @@ class replicationsSetup {
             Source: this.source()
         };
         dto.ClientConfiguration = {
-            RequestTimeThresholdInMilliseconds: undefined,
+            RequestTimeSlaThresholdInMilliseconds: undefined,
             FailoverBehavior: undefined
         };
 
         if (this.clientFailoverBehaviour()) {
             dto.ClientConfiguration.FailoverBehavior = this.clientFailoverBehaviour();
         }
-        if (this.showCustomRequestTimeThreshold() && this.hasCustomRequestTimeThreshold()) {
-            dto.ClientConfiguration.RequestTimeThresholdInMilliseconds = this.requestTimeThreshold();
+        if (this.showRequestTimeSlaThreshold()) {
+            dto.ClientConfiguration.RequestTimeSlaThresholdInMilliseconds = this.requestTimeSlaThreshold();
         }
 
         return dto;
     }
 
-    copyFromParent(parentClientFailover: string, parentRequestTimeThreshold: number) {
+    copyFromParent(parentClientFailover: string, parentRequestTimeSlaThreshold: number) {
         this.clientFailoverBehaviour(parentClientFailover);
-        this.requestTimeThreshold(parentRequestTimeThreshold);
+        this.requestTimeSlaThreshold(parentRequestTimeSlaThreshold);
         this.destinations(this.destinations().filter(d => d.hasGlobal()));
         this.destinations().forEach(d => d.copyFromGlobal());
-        this.hasCustomRequestTimeThreshold(!!parentRequestTimeThreshold);
     }
 
     clear() {

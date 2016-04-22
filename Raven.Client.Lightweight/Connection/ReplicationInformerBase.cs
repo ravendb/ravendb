@@ -193,7 +193,7 @@ namespace Raven.Client.Connection
             switch (Conventions.FailoverBehaviorWithoutFlags)
             {
                 case FailoverBehavior.AllowReadsFromSecondaries:
-                case FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed:
+                case FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached:
                     if (method == HttpMethods.Get)
                         return;
                     break;
@@ -239,14 +239,14 @@ namespace Raven.Client.Connection
             var operationResult = new AsyncOperationResult<T>();
             var shouldReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 
-            var allowReadFromSecondariesWhenRequestTimeThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed);
+            var allowReadFromSecondariesWhenRequestTimeSlaThresholdIsPassed = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached);
             var primaryRequestTimeMetric = requestTimeMetricGetter?.Invoke(primaryOperation.Url);
             var complexTimeMetric = new ComplexTimeMetric();
 
-            if (method == HttpMethods.Get && (shouldReadFromAllServers || allowReadFromSecondariesWhenRequestTimeThresholdIsPassed))
+            if (method == HttpMethods.Get && (shouldReadFromAllServers || allowReadFromSecondariesWhenRequestTimeSlaThresholdIsPassed))
             {
                 var replicationIndex = -1;
-                if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed && shouldReadFromAllServers)
+                if (allowReadFromSecondariesWhenRequestTimeSlaThresholdIsPassed && shouldReadFromAllServers)
                 {
                     if (requestTimeMetricGetter != null && primaryRequestTimeMetric != null)
                     {
@@ -273,7 +273,7 @@ namespace Raven.Client.Connection
                         }
                     }
                 }
-                else if (allowReadFromSecondariesWhenRequestTimeThresholdIsPassed)
+                else if (allowReadFromSecondariesWhenRequestTimeSlaThresholdIsPassed)
                 {
                     if (primaryRequestTimeMetric != null)
                     {

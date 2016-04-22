@@ -33,11 +33,11 @@
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                 <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
-                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed'">Allow read from secondaries when request time threshold is surpassed</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow read from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
-                                <span data-bind="visible: $root.readFromAllButSwitchWhenRequestTimeThresholdIsSurpassed">Read from all servers but switch when request time threshold is surpassed</span>
+                                <span data-bind="visible: $root.readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached">Read from all servers but switch when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.readFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
                                 <span class="caret"></span>
                             </button>
@@ -45,38 +45,21 @@
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, null)">Let client decide</a></li>
                                 <li class="divider"></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed')">Allow read from secondaries when request time threshold is surpassed</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')">Allow read from secondaries when request time SLA threshold is reached</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'FailImmediately')">Fail immediately</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed,ReadFromAllServers')">Read from all servers but switch when request time threshold is surpassed</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached,ReadFromAllServers')">Read from all servers but switch when request time SLA threshold is reached</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a></li>
                             </ul>
                         </div>
                     </div>
                 </div>
-                <div data-bind="visible: replicationsSetup().showCustomRequestTimeThreshold">
-                    <div class="form-group" data-bind="with: replicationsSetup">
-                        <label class="col-sm-2 control-label">Request Time Threshold</label>
-                        <div class="col-sm-10">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="visible: !hasCustomRequestTimeThreshold()">Default</span>
-                                    <span data-bind="visible: hasCustomRequestTimeThreshold">Custom</span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" role="menu">
-                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, false)">Default</a></li>
-                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, true)">Custom</a></li>
-                                </ul>
-                            </div>
-                            
-                        </div>
-                    </div>
-                    <div class="form-group" data-bind="visible: replicationsSetup().hasCustomRequestTimeThreshold">
-                        <label class="col-sm-2 control-label">Custom Request Time Threshold (ms)</label>
+                <div data-bind="visible: replicationsSetup().showRequestTimeSlaThreshold()">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Request Time SLA Threshold (ms)</label>
                         <div class="col-sm-9">
-                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeThreshold, valueUpdate: 'afterkeydown'" />
+                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, valueUpdate: 'afterkeydown'" />
                         </div>
                     </div>
                 </div>

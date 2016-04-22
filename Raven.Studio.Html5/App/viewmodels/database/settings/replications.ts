@@ -31,7 +31,7 @@ class replications extends viewModelBase {
     replicationConfig = ko.observable<replicationConfig>(new replicationConfig({ DocumentConflictResolution: "None", AttachmentConflictResolution: "None" }));
     replicationsSetup = ko.observable<replicationsSetup>(new replicationsSetup({ MergedDocument: { Destinations: [], Source: null } }));
     globalClientFailoverBehaviour = ko.observable<string>(null);
-    globalClientRequestTimeThreshold = ko.observable<number>();
+    globalClientRequestTimeSlaThreshold = ko.observable<number>();
     globalReplicationConfig = ko.observable<replicationConfig>();
     collections = ko.observableArray<collection>();
 
@@ -47,7 +47,6 @@ class replications extends viewModelBase {
     skipIndexReplicationForAll = ko.observable<boolean>();
 
     showRequestTimeoutRow: KnockoutComputed<boolean>;
-    showCustomRequestTimeoutRow: KnockoutComputed<boolean>;
 
     private skipIndexReplicationForAllSubscription: KnockoutSubscription;
 
@@ -100,22 +99,22 @@ class replications extends viewModelBase {
         return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
     });
 
-    readFromAllButSwitchWhenRequestTimeThresholdIsSurpassed = ko.computed(() => {
+    readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
         var behaviour = this.replicationsSetup().clientFailoverBehaviour();
         if (behaviour == null) {
             return false;
         }
         var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed");
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
     });
 
-    globalReadFromAllButSwitchWhenRequestTimeThresholdIsSurpassed = ko.computed(() => {
+    globalReadFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
         var behaviour = this.globalClientFailoverBehaviour();
         if (behaviour == null) {
             return false;
         }
         var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed");
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
     });
 
     constructor() {
@@ -123,13 +122,9 @@ class replications extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.showRequestTimeoutRow = ko.computed(() => {
-            var localSetting = this.replicationsSetup().showCustomRequestTimeThreshold();
-            var globalSetting = this.hasGlobalValues() && this.globalClientFailoverBehaviour() === "AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed";
-            return localSetting || globalSetting;
-        });
-        this.showCustomRequestTimeoutRow = ko.computed(() => {
-            var localSetting = this.replicationsSetup().hasCustomRequestTimeThreshold();
-            var globalSetting = this.hasGlobalValues() && !!this.globalClientRequestTimeThreshold();
+            var localSetting = this.replicationsSetup().showRequestTimeSlaThreshold();
+            var globalSetting = this.hasGlobalValues() && this.globalClientFailoverBehaviour() &&
+                this.globalClientFailoverBehaviour().contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
             return localSetting || globalSetting;
         });
     }
@@ -221,7 +216,7 @@ class replications extends viewModelBase {
                 this.hasGlobalValues(repSetup.GlobalExists);
                 if (repSetup.GlobalDocument && repSetup.GlobalDocument.ClientConfiguration) {
                     this.globalClientFailoverBehaviour(repSetup.GlobalDocument.ClientConfiguration.FailoverBehavior);
-                    this.globalClientRequestTimeThreshold(repSetup.GlobalDocument.ClientConfiguration.RequestTimeThresholdInMilliseconds);
+                    this.globalClientRequestTimeSlaThreshold(repSetup.GlobalDocument.ClientConfiguration.RequestTimeSlaThresholdInMilliseconds);
                 }
 
                 ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
@@ -411,7 +406,7 @@ class replications extends viewModelBase {
             this.replicationConfig().documentConflictResolution(this.globalReplicationConfig().documentConflictResolution());
         }
 
-        this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour(), this.globalClientRequestTimeThreshold());
+        this.replicationsSetup().copyFromParent(this.globalClientFailoverBehaviour(), this.globalClientRequestTimeSlaThreshold());
     }
 
     enableReplication() {

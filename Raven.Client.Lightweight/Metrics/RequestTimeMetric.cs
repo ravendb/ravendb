@@ -84,13 +84,13 @@ namespace Raven.Client.Metrics
 
         public bool RateSurpassed(ConventionBase conventions)
         {
-            var requestTimeThresholdInMilliseconds = conventions.RequestTimeThresholdInMilliseconds;
+            var requestTimeSlaThresholdInMilliseconds = conventions.RequestTimeSlaThresholdInMilliseconds;
             var rate = Rate();
 
             if (surpassed)
-                return surpassed = rate >= SwitchBackRatio * requestTimeThresholdInMilliseconds;
+                return surpassed = rate >= SwitchBackRatio * requestTimeSlaThresholdInMilliseconds;
 
-            return surpassed = rate >= requestTimeThresholdInMilliseconds;
+            return surpassed = rate >= requestTimeSlaThresholdInMilliseconds;
         }
 
         public double Rate()
