@@ -22,6 +22,8 @@ namespace SlowTests.Voron.Bugs
         [InlineDataWithRandomSeed(5000, 10000)]
         [InlineDataWithRandomSeed(1000, 5000)]
         [InlineDataWithRandomSeed(1000, 50000)]
+        [InlineData(1000, 1500, 1396255086)]
+        [InlineData(1000, 5000, 1430320600)]
         public void FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(int initialNumberOfDocs, int numberOfModifications, int seed)
         {
             const string documents = "documents";

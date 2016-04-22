@@ -484,7 +484,7 @@ namespace Voron.Data.Fixed
         private unsafe ushort CopyEmbeddedContentToTempPage(long key, TemporaryPage tmp, out bool isNew, out int newSize, out int srcCopyStart)
         {
             var ptr = _parent.DirectRead(_treeName);
-            if (ptr == null || ((FixedSizeTreeHeader.Embedded*)ptr)->NumberOfEntries == 0)
+            if (ptr == null)
             {
                 // we called NewPage and emptied this completed, then called CopyEmbeddedContentToTempPage() on effectively empty
                 isNew = true;
@@ -970,10 +970,22 @@ namespace Voron.Data.Fixed
             var page = FindPageFor(key);
             if (page.LastMatch != 0)
                 return new DeletionResult();
-            page = ModifyPage(page);
-
+           
             var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             largeHeader->NumberOfEntries--;
+
+            if (largeHeader->NumberOfEntries == 0)
+            {
+                System.Diagnostics.Debug.Assert(page.NumberOfEntries == 1);
+
+                _type = null;
+                _parent.Delete(_treeName);
+                _tx.FreePage(page.PageNumber);
+
+                return new DeletionResult { NumberOfEntriesDeleted = 1, TreeRemoved = true };
+            }
+
+            page = ModifyPage(page);
 
             RemoveEntryFromPage(page, page.LastSearchPosition);
 
