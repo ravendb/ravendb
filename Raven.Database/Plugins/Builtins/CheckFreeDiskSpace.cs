@@ -12,6 +12,7 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -20,6 +21,8 @@ namespace Raven.Database.Plugins.Builtins
 {
     public class CheckFreeDiskSpace : IServerStartupTask
     {
+        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool GetDiskFreeSpaceEx(string lpDirectoryName,
@@ -146,11 +149,15 @@ namespace Raven.Database.Plugins.Builtins
 
             if (lacksFreeSpace.Any())
             {
+                var message = string.Format("Database disk{0} ({1}) has less than {2}% free space.", lacksFreeSpace.Count() > 1 ? "s" : string.Empty, string.Join(", ", lacksFreeSpace), (int) (FreeThreshold*100));
+
+                log.Warn(message);
+
                 options.SystemDatabase.AddAlert(new Alert
                 {
                     AlertLevel = AlertLevel.Warning,
                     CreatedAt = SystemTime.UtcNow,
-                    Title = string.Format("Database disk{0} ({1}) has less than {2}% free space.", lacksFreeSpace.Count() > 1 ? "s" : string.Empty, string.Join(", ", lacksFreeSpace), (int)(FreeThreshold * 100)),
+                    Title = message,
                     UniqueKey = "Free space"
                 });
             }

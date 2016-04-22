@@ -83,13 +83,15 @@ namespace Raven.Database.Bundles.SqlReplication
             }
             catch (Exception e)
             {
+                var message = "Sql Replication could not open connection to " + connection.ConnectionString;
+                log.Error(message);
                 database.AddAlert(new Alert
                 {
                     AlertLevel = AlertLevel.Error,
                     CreatedAt = SystemTime.UtcNow,
                     Exception = e.ToString(),
                     Title = "Sql Replication could not open connection",
-                    Message = "Sql Replication could not open connection to " + connection.ConnectionString,
+                    Message = message,
                     UniqueKey = "Sql Replication Connection Error: " + connection.ConnectionString
                 });
                 throw;
