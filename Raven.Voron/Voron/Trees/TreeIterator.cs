@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Trees
@@ -10,18 +11,22 @@ namespace Voron.Trees
     {
         private readonly Tree _tree;
         private readonly Transaction _tx;
+        private readonly bool _prefetch;
+
         private Cursor _cursor;
         private Page _currentPage;
         private Slice _currentKey = new Slice(SliceOptions.Key);
         private MemorySlice _currentInternalKey;
         private bool _disposed;
+        
 
         public event Action<IIterator> OnDispoal;
  
-        public TreeIterator(Tree tree, Transaction tx)
+        public TreeIterator(Tree tree, Transaction tx, bool prefetch)
         {
             _tree = tree;
             _tx = tx;
+            _prefetch = prefetch;
 
             if (tree.KeysPrefixing)
                 _currentInternalKey = new PrefixedSlice(SliceOptions.Key);
@@ -51,6 +56,7 @@ namespace Voron.Trees
             {
                 _currentPage.SetNodeKey(node, ref _currentInternalKey);
                 _currentKey = _currentInternalKey.ToSlice();
+
                 return this.ValidateCurrentKey(Current, _currentPage);
             }
             
@@ -121,8 +127,13 @@ namespace Voron.Trees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
+
                         _currentPage = _tx.GetReadOnlyPage(node->PageNumber);
                         _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
+
+                        if (_prefetch && _currentPage.IsLeaf)
+                            MaybePrefetchOverflowPages(_currentPage);
+
                     }
                     var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
                     if (this.ValidateCurrentKey(current, _currentPage) == false)
@@ -140,6 +151,14 @@ namespace Voron.Trees
             return false;
         }
 
+        private void MaybePrefetchOverflowPages(Page page)
+        {
+            if ( AbstractPager.CanPrefetch )
+            {
+                _tx.DataPager.MaybePrefetchMemory(page.GetAllOverflowPages());
+            }                
+        }
+
         public bool MoveNext()
         {
             if (_disposed)
@@ -155,9 +174,12 @@ namespace Voron.Trees
                     {
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tx.GetReadOnlyPage(node->PageNumber);
 
+                        _currentPage = _tx.GetReadOnlyPage(node->PageNumber);
                         _currentPage.LastSearchPosition = 0;
+
+                        if (_prefetch && _currentPage.IsLeaf)
+                            MaybePrefetchOverflowPages(_currentPage);
                     }
                     var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
                     if (this.ValidateCurrentKey(current, _currentPage) == false)

@@ -119,7 +119,7 @@ namespace Raven.Database.Counters
                     ServerId = new Guid(id.Reader.ReadBytes(sizeOfGuid, out used));
 
 
-                    using (var it = etags.Iterate())
+                    using (var it = etags.Iterate(false))
                     {
                         if (it.Seek(Slice.AfterAllKeys))
                         {
@@ -787,7 +787,7 @@ namespace Raven.Database.Counters
             private CounterNameAndGroup GetCounterNameAndGroupByServerId(Slice counterIdSlice)
             {
                 var counterNameAndGroup = new CounterNameAndGroup();
-                using (var it = counterIdWithNameToGroup.Iterate())
+                using (var it = counterIdWithNameToGroup.Iterate(false))
                 {
                     it.RequiredPrefix = counterIdSlice;
                     if (it.Seek(it.RequiredPrefix) == false)
@@ -1350,7 +1350,7 @@ namespace Raven.Database.Counters
             private void DeleteCounterById(byte[] counterIdBuffer)
             {
                 var counterIdSlice = new Slice(counterIdBuffer);
-                using (var it = counterIdWithNameToGroup.Iterate())
+                using (var it = counterIdWithNameToGroup.Iterate(false))
                 {
                     it.RequiredPrefix = counterIdSlice;
                     var seek = it.Seek(it.RequiredPrefix);

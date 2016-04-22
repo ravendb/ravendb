@@ -614,9 +614,9 @@ namespace Voron.Trees
             page.DebugValidate(_tx, State.RootPageNumber);
         }
 
-        public TreeIterator Iterate()
+        public TreeIterator Iterate(bool prefetch = true)
         {
-            return new TreeIterator(this, _tx);
+            return new TreeIterator(this, _tx, prefetch);
         }
 
         public ReadResult Read(Slice key)
@@ -806,7 +806,7 @@ namespace Voron.Trees
 
         public Slice LastKeyOrDefault()
         {
-            using (var it = Iterate())
+            using (var it = Iterate(false))
             {
                 if (it.Seek(Slice.AfterAllKeys) == false)
                     return null;
@@ -816,7 +816,7 @@ namespace Voron.Trees
 
         public Slice FirstKeyOrDefault()
         {
-            using (var it = Iterate())
+            using (var it = Iterate(false))
             {
                 if (it.Seek(Slice.BeforeAllKeys) == false)
                     return null;
