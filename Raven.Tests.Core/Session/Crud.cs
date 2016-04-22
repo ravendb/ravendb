@@ -98,7 +98,6 @@ namespace Raven.Tests.Core.Session
                     });
 
                     session.SaveChanges();
-                    WaitForIndexing(store);
 
                     var result = session.Load<PostWithContentTransformer, PostWithContentTransformer.Result>("posts/1");
 

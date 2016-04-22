@@ -1,130 +1,65 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Client.Embedded;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
-using Raven.Client.Document;
+using Raven.Database.Config;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_3530 : RavenTestBase
+    public class RavenDB_3530 : RavenTest
     {
-        [Fact]
-        public void settingCompileIndexCacheDirectoryWithSettingsNVC()
+        private readonly string indexCachePath;
+        private bool useConfiguration;
+
+        public RavenDB_3530()
         {
-            const string databaseRoot = "Raven";
-            string dataDirectory = Path.Combine(databaseRoot, "Database");
-            string compiledIndexCacheDirectory = Path.Combine(databaseRoot, "CompiledIndexCache");
-            using (var embeddedStore = new EmbeddableDocumentStore
-            {
-                DefaultDatabase = "testApp",
-                UseEmbeddedHttpServer = true,
-                RunInMemory = false,
-                DataDirectory = dataDirectory,
-                Configuration =
-                {
-                    Port = 8079,
-                    Settings = new NameValueCollection
-                    {
-                        {"Raven/CompiledIndexCacheDirectory", compiledIndexCacheDirectory} 
-                    }
-                }
+            indexCachePath = Path.GetFullPath(NewDataPath("CompiledIndexCache"));
+        }
 
-            })
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            if (useConfiguration)
             {
-                embeddedStore.Initialize();
-                embeddedStore.DatabaseCommands.EnsureDatabaseExists("testDB");
-                embeddedStore.ExecuteIndex(new Index());
-                using (var session = embeddedStore.OpenSession())
+                configuration.CompiledIndexCacheDirectory = indexCachePath;
+            }
+            else
+            {
+                configuration.Settings = new NameValueCollection
                 {
-                    session.Store(new Person{Name = "Hila", Age = 29});
-                    session.Store(new Person { Name = "John", Age = 50 });
-                    session.SaveChanges();
-                    var persons= session.Query<Index>().ToString();
-
-                }
-                var directoryOfCompiledIndexExsits = Directory.Exists(compiledIndexCacheDirectory);
-                Assert.True(directoryOfCompiledIndexExsits); 
+                    { "Raven/CompiledIndexCacheDirectory", indexCachePath }
+                };
+                configuration.Initialize();
             }
         }
 
         [Fact]
-        public void settingCompileIndexCacheDirectoryUsingConfiguration()
+        public void SettingCompileIndexCacheDirectoryWithSettingsNVC()
         {
-            const string databaseRoot = "Raven";
-            string dataDirectory = Path.Combine(databaseRoot, "Database");
-            string compiledIndexCacheDirectory = Path.Combine(databaseRoot, "CompiledIndexCache");
-            using (var embeddedStore = new EmbeddableDocumentStore
-            {
-                DefaultDatabase = "testApp",
-                UseEmbeddedHttpServer = true,
-                RunInMemory = false,
-                DataDirectory = dataDirectory,
-                Configuration =
-                {
-                    Port = 8079
-                }
-            })
-            {
-                embeddedStore.Configuration.CompiledIndexCacheDirectory = compiledIndexCacheDirectory;
-                embeddedStore.Initialize();
-                embeddedStore.DatabaseCommands.EnsureDatabaseExists("testDB");
-                embeddedStore.ExecuteIndex(new Index());
-                using (var session = embeddedStore.OpenSession())
-                {
-                    session.Store(new Person { Name = "Hila", Age = 29 });
-                    session.Store(new Person { Name = "John", Age = 50 });
-                    session.SaveChanges();
-                    var persons = session.Query<Index>().ToString();
+            useConfiguration = false;
 
-                }
-                var directoryOfCompiledIndexExsits = Directory.Exists(compiledIndexCacheDirectory);
-                Assert.True(directoryOfCompiledIndexExsits);
+            using (var embeddedStore = NewDocumentStore(runInMemory: false))
+            {
+                embeddedStore.ExecuteIndex(new Index());
+                var directoryOfCompiledIndexExsits = Directory.Exists(indexCachePath);
+                Assert.True(directoryOfCompiledIndexExsits, "Unable to find directory: " + indexCachePath);
             }
         }
+
         [Fact]
-        public void settingCompileIndexCacheDirectoryWitoutSettingsNVC()
+        public void SettingCompileIndexCacheDirectoryUsingConfiguration()
         {
-            const string databaseRoot = "Raven";
-            string dataDirectory = Path.Combine(databaseRoot, "Database");
-            string compiledIndexCacheDirectory = Path.Combine(databaseRoot, "CompiledIndexCache");
-            using (var embeddedStore = new EmbeddableDocumentStore
-            {
-                DefaultDatabase = "testApp",
-                UseEmbeddedHttpServer = true,
-                RunInMemory = false,
-                DataDirectory = dataDirectory,
-                Configuration =
-                {
-                    CompiledIndexCacheDirectory = compiledIndexCacheDirectory,
-                    Port = 8079
-                }
+            useConfiguration = true;
 
-            })
+            using (var embeddedStore = NewDocumentStore(runInMemory: false))
             {
-                embeddedStore.Initialize();
-                embeddedStore.DatabaseCommands.EnsureDatabaseExists("testDB");
                 embeddedStore.ExecuteIndex(new Index());
-                using (var session = embeddedStore.OpenSession())
-                {
-                    session.Store(new Person { Name = "Hila", Age = 29 });
-                    session.Store(new Person { Name = "John", Age = 50 });
-                    session.SaveChanges();
-                    var persons = session.Query<Index>().ToString();
-
-                }
-                var directoryOfCompiledIndexExsits = Directory.Exists(compiledIndexCacheDirectory);
-                Assert.True(directoryOfCompiledIndexExsits);
+                var directoryOfCompiledIndexExsits = Directory.Exists(indexCachePath);
+                Assert.True(directoryOfCompiledIndexExsits, "Unable to find directory: " + indexCachePath);
             }
         }
+
         public class Person
         {
             public string Name;

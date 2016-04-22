@@ -108,10 +108,9 @@ namespace Raven.Tests.Core.Indexing
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
-
                     var results =
                         session.Query<Company>()
+                            .Customize(x => x.WaitForNonStaleResults())
                             .TransformWith<CompanyFullAddressTransformer, CompanyFullAddressTransformer.Result>()
                             .ToList().OrderByDescending(x => x.FullAddress.Length).ToArray();
 

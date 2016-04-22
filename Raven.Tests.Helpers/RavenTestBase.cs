@@ -554,6 +554,9 @@ namespace Raven.Tests.Helpers
                 ? TimeSpan.FromMinutes(5)
                 : TimeSpan.FromSeconds(20));
 
+            if (databaseCommands.GetStatistics().Indexes.Length == 0)
+                throw new Exception("Looks like you WaitForIndexing on database without indexes!");
+
             var spinUntil = SpinWait.SpinUntil(() => 
                 databaseCommands.GetStatistics().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0, 
                 timeout.Value);
@@ -595,6 +598,9 @@ namespace Raven.Tests.Helpers
         /// <param name="db">The document database where the indexes exist.</param>
         public static void WaitForIndexing(DocumentDatabase db)
         {
+            if (db.Statistics.Indexes.Length == 0) 
+                throw new Exception("Looks like you WaitForIndexing on database without indexes!");
+
             if (!SpinWait.SpinUntil(() => db.Statistics.StaleIndexes.Length == 0, TimeSpan.FromMinutes(5)))
                 throw new Exception("WaitForIndexing failed");
         }
