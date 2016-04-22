@@ -36,6 +36,7 @@ class collection {
     prettyLabel(text: string) {
         return text.replace(/__/g, '/');
     }
+
     getDocuments(): pagedList {
         if (!this.documentsList) {
             this.documentsList = this.createPagedList();

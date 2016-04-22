@@ -783,7 +783,7 @@ class editDocument extends viewModelBase {
             if (list) {
                 list.getNthItem(index)
                     .done((doc: document) => {
-                        if (this.isInDocMode() === true) {
+                        if (this.isInDocMode()) {
                             this.loadDocument(doc.getId());
                             list.currentItemIndex(index);
                             this.updateUrl(doc.getId());
@@ -912,6 +912,18 @@ class editDocument extends viewModelBase {
         }
 
         return "";
+    }
+
+    prettyLabel(text: string) {
+        return text ? text.replace(/__/g, '/') : text;
+    }
+
+    generateCollectionName(ravenEntityName: string, withPrettyLabel: boolean = false) {
+        if (withPrettyLabel) {
+            return ravenEntityName ? this.prettyLabel(ravenEntityName) : 'System Documents';
+        } else {
+            return ravenEntityName || 'System Documents';
+        }
     }
 
     generateCode() {
