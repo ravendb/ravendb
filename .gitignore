@@ -4,6 +4,9 @@
 build/
 [Hh]elp/
 *.suo
+*.js.map
+*.less.map
+*.css.map
 *.sln.cache
 _ReSharper.*/
 *.user
