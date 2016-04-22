@@ -91,7 +91,7 @@ namespace Raven.Database.Config.Retriever
 
                 string globalConfigurationAsString;
                 bool globalConfiguration = false;
-                if(ValidateLicense.CurrentLicense.Attributes.TryGetValue("globalConfiguration", out globalConfigurationAsString))
+                if(ValidateLicense.CurrentLicense.Attributes.TryGetValue("globalConfigurations", out globalConfigurationAsString))
                     bool.TryParse(globalConfigurationAsString, out globalConfiguration);                
                 if (ValidateLicense.CurrentLicense.Status.Equals("AGPL - Open Source"))
                 {

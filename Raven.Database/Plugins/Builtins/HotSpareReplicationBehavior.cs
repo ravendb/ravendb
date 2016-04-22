@@ -138,7 +138,6 @@ namespace Raven.Database.Plugins.Builtins
         public void EnableTestModeForHotSpareLicense()
         {
             var id = GetLicenseId();
-            var now = SystemTime.UtcNow;
             if (string.IsNullOrEmpty(id))
             {
                 log.Warn(noIdMessage);

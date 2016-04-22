@@ -37,6 +37,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Sparrow.Collections;
+using Timer = System.Timers.Timer;
 
 namespace Raven.Bundles.Replication.Tasks
 {
@@ -87,10 +88,34 @@ namespace Raven.Bundles.Replication.Tasks
 
         private CancellationTokenSource _cts;
 
+        private Timer _propagationTimeoutTimer;
+        private ThreadLocal<bool> isThreadProcessingReplication = new ThreadLocal<bool>();
+
+        /// <summary>
+        /// Indicates that this thread is doing replication.
+        /// </summary>
+        internal ThreadLocal<bool> IsThreadProcessingReplication { get { return isThreadProcessingReplication; } set { isThreadProcessingReplication = value; } }
+
+        private bool CheckIfShouldWakeUpReplicationAndResetTimerIfNeeded()
+        {          
+            //If ThreadDoingReplication.Value is false it means that the source of the document isn't from replication controller,
+            //thus we should wake up replication right away.
+            if (!IsThreadProcessingReplication.Value)
+            {
+                _propagationTimeoutTimer.Stop();
+                return true;
+            }
+            _propagationTimeoutTimer.Start();
+            //No need to replicate right away we can wait and send a bigger batch.
+            return false;
+        }
+
         public void Execute(DocumentDatabase database)
         {
             docDb = database;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.WorkContext.CancellationToken);
+            _propagationTimeoutTimer = new Timer() {AutoReset = false,Interval = docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds*1000};
+            _propagationTimeoutTimer.Elapsed += (o, s) => { docDb.WorkContext.ReplicationResetEvent.Set(); };
             docDb.Notifications.OnIndexChange += (_, indexChangeNotification) =>
             {
                 if (indexChangeNotification.Type == IndexChangeTypes.MapCompleted ||
@@ -108,9 +133,11 @@ namespace Raven.Bundles.Replication.Tasks
             };
             docDb.Notifications.OnAttachmentChange += (_, attachmentChangeNotification, ___) =>
             {
+                if (!CheckIfShouldWakeUpReplicationAndResetTimerIfNeeded())
+                    return;
                 lastWorkIsIndexOrTransformer = false;                
                 //There is no need to be thread safe this is only used to prevent unnecessary work
-                lastWorkAttachmentEtag = attachmentChangeNotification.Etag??Etag.InvalidEtag;
+                lastWorkAttachmentEtag = attachmentChangeNotification.Etag??Etag.InvalidEtag;                
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
             docDb.Notifications.OnBulkInsertChange += (_, BulkInsertChangeNotification) =>
@@ -121,11 +148,13 @@ namespace Raven.Bundles.Replication.Tasks
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
             docDb.Notifications.OnDocumentChange += (_, dcn, ___) =>
-            {
+            {                
                 if (dcn.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // ignore sys docs
                                                                                        // but we do update for replication destination
                     string.Equals(dcn.Id, Constants.RavenReplicationDestinations, StringComparison.OrdinalIgnoreCase) == false &&
                     dcn.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilo documents
+                    return;
+                if (!CheckIfShouldWakeUpReplicationAndResetTimerIfNeeded())
                     return;
                 lastWorkIsIndexOrTransformer = false;
                 //There is no need to be thread safe this is only used to prevent unnecessary work
@@ -1605,6 +1634,8 @@ namespace Raven.Bundles.Replication.Tasks
 
         public void Dispose()
         {
+            _propagationTimeoutTimer.Enabled = false;
+            _propagationTimeoutTimer.Dispose();
             if (IndexReplication != null)
                 IndexReplication.Dispose();
 
@@ -1612,7 +1643,7 @@ namespace Raven.Bundles.Replication.Tasks
                 TransformerReplication.Dispose();
 
             _cts.Cancel();
-
+            
             foreach (var activeTask in activeTasks)
             {
                 try

@@ -87,7 +87,7 @@ class replications extends viewModelBase {
         if (behaviour == null) {
             return false;
         }
-        var tokens = behaviour.split(",");
+        var tokens = behaviour.split(",").map(x => x.trim());
         return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
     });
 
@@ -96,8 +96,26 @@ class replications extends viewModelBase {
         if (behaviour == null) {
             return false;
         }
-        var tokens = behaviour.split(",");
+        var tokens = behaviour.split(",").map(x => x.trim());
         return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
+    });
+
+    readFromAllButSwitchWhenRequestTimeThresholdIsSurpassed = ko.computed(() => {
+        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
+        if (behaviour == null) {
+            return false;
+        }
+        var tokens = behaviour.split(",").map(x => x.trim());
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed");
+    });
+
+    globalReadFromAllButSwitchWhenRequestTimeThresholdIsSurpassed = ko.computed(() => {
+        var behaviour = this.globalClientFailoverBehaviour();
+        if (behaviour == null) {
+            return false;
+        }
+        var tokens = behaviour.split(",").map(x => x.trim());
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed");
     });
 
     constructor() {

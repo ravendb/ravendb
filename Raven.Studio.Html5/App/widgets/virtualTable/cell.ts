@@ -1,4 +1,4 @@
-import viewModel = require("widgets/virtualTable/viewModel");
+import settings = require("widgets/virtualTable/settings");
 
 class cell {
     data = ko.observable<any>();
@@ -18,7 +18,7 @@ class cell {
     }
 
     update(data: any) {
-        if (this.isNumber(data) && !viewModel.useRawFormat) {
+        if (this.isNumber(data) && !settings.useRawFormat) {
             data = data.toLocaleString('en-US');
         }
         this.data(data);

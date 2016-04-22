@@ -38,6 +38,7 @@
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
+                                <span data-bind="visible: $root.readFromAllButSwitchWhenRequestTimeThresholdIsSurpassed">Read from all servers but switch when request time threshold is surpassed</span>
                                 <span data-bind="visible: $root.readFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
                                 <span class="caret"></span>
                             </button>
@@ -49,6 +50,7 @@
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'FailImmediately')">Fail immediately</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed,ReadFromAllServers')">Read from all servers but switch when request time threshold is surpassed</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a></li>
                             </ul>
                         </div>
@@ -62,6 +64,7 @@
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
+                                <span data-bind="visible: $root.globalReadFromAllButSwitchWhenRequestTimeThresholdIsSurpassed">Read from all servers but switch when request time threshold is surpassed</span>
                                 <span data-bind="visible: $root.globalReadFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
                                 <span class="caret"></span>
                             </button>

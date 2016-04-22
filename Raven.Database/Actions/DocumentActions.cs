@@ -835,7 +835,6 @@ namespace Raven.Database.Actions
                                     Type = DocumentChangeTypes.Delete,
                                     TypeName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenClrType) : null,
                                     CollectionName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenEntityName) : null
-
                                 }, metadataVar);
                             });
 

@@ -32,6 +32,7 @@
     <TypeScriptCompile Include="App\commands\counter\resetCounterCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\saveCounterStorageReplicationCommand.ts" />
     <TypeScriptCompile Include="App\commands\counter\updateCounterCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\cluster\removeClusteringCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\cluster\initializeNewClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
@@ -1204,6 +1205,7 @@
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesPoints.ts" />
     <TypeScriptCompile Include="App\viewmodels\timeSeries\timeSeriesTypes.ts" />
     <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
+    <TypeScriptCompile Include="App\widgets\virtualTable\settings.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\cell.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />

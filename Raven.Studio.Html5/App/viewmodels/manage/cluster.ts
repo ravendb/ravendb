@@ -13,6 +13,7 @@ import extendRaftClusterCommand = require("commands/database/cluster/extendRaftC
 import initializeNewClusterCommand = require("commands/database/cluster/initializeNewClusterCommand");
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import removeClusteringCommand = require("commands/database/cluster/removeClusteringCommand");
 import clusterConfiguration = require("models/database/cluster/clusterConfiguration");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
 import updateRaftClusterCommand = require("commands/database/cluster/updateRaftClusterCommand");
@@ -100,6 +101,18 @@ class cluster extends viewModelBase {
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
         app.showDialog(dialog);
+    }
+
+    removeClustering() {
+        this.confirmationMessage("Are you sure?", "You are about to clear cluster information on this server.")
+            .done(() => {
+                new removeClusteringCommand(appUrl.getSystemDatabase())
+                    .execute()
+                    .done(() => setTimeout(() => {
+                        this.refresh();
+                        shell.clusterMode(false);
+                    }, 500));
+            });
     }
 
     createCluster() {
