@@ -65,10 +65,13 @@ namespace Raven.Tests.Common.Attributes
                 Name = "DynamicFile"
             };
 
-
-            var asyncTarget = new AsyncTargetWrapper(fileTarget)
+            // tweak async target:
+            // - increase batch size to avoid frequent and small disk writes
+            // - don't discard messages if overflow 
+            var asyncTarget = new AsyncTargetWrapper(fileTarget, 20000, AsyncTargetWrapperOverflowAction.Block)
             {
-                Name = "DynamicAsync"
+                Name = "DynamicAsync",
+                BatchSize = 2000
             };
 
             newConfig.AddTarget(asyncTarget);

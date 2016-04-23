@@ -220,12 +220,16 @@ namespace Raven.Database.Actions
                                 ex = failDetails.Ex.ToString();
                             }
 
+                            var logTitle = string.Format("Index '{0}-({1})' removed because it is not found or invalid", indexId, indexName);
+
+                            Log.Error(logTitle);
+
                             Database.AddAlert(new Alert
                             {
                                 AlertLevel = AlertLevel.Error,
                                 CreatedAt = SystemTime.UtcNow,
                                 Message = msg,
-                                Title = string.Format("Index '{0}-({1})' removed because it is not found or invalid", indexId, indexName),
+                                Title = logTitle,
                                 Exception = ex,
                                 UniqueKey = msg
                             });

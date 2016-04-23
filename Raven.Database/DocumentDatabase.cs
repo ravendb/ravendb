@@ -1406,11 +1406,14 @@ namespace Raven.Database
                     {
                         database.StopIndexingWorkers(false);
 
+                        var alertTitle = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int) (notification.FreeSpaceInPercentage*100), thresholdInMb);
+                        Log.Error(alertTitle);
+
                         database.AddAlert(new Alert
                         {
                             AlertLevel = AlertLevel.Error,
                             CreatedAt = SystemTime.UtcNow,
-                            Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+                            Title = alertTitle,
                             UniqueKey = "Free space (index)"
                         });
                     }
@@ -1418,11 +1421,14 @@ namespace Raven.Database
                     {
                         if (freeSpaceInMb <= warningThresholdInMb)
                         {
+                            var alertTitle = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int) (notification.FreeSpaceInPercentage*100), thresholdInMb);
+                            Log.Warn(alertTitle);
+
                             database.AddAlert(new Alert
                             {
                                 AlertLevel = AlertLevel.Warning,
                                 CreatedAt = SystemTime.UtcNow,
-                                Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
+                                Title = alertTitle,
                                 UniqueKey = "Free space warning (index)"
                             });
                         }

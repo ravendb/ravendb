@@ -81,7 +81,7 @@ namespace Raven.Tests.Issues
             JsonDocument container = null;
             while (container == null && retries-- >0)
             {
-                container = store3.DatabaseCommands.Get("Raven/Alerts");
+                container = store3.DatabaseCommands.Get(Constants.RavenAlerts);
                 if(container == null)
                     Thread.Sleep(100);
             }

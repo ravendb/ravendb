@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/operation/alerts")]
         public HttpResponseMessage Alerts()
         {
-            var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
+            var jsonDocument = Database.Documents.Get(Constants.RavenAlerts, null);
             if (jsonDocument == null)
             {
                 return GetMessageWithObject(new Alert[0]);
@@ -95,7 +95,7 @@ namespace Raven.Database.Server.Controllers
         {
             var request = await ReadJsonObjectAsync<RavenJObject>().ConfigureAwait(false);
             var key = request.Value<string>("key");
-            var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
+            var jsonDocument = Database.Documents.Get(Constants.RavenAlerts, null);
             if (jsonDocument == null)
             {
                 return GetMessageWithString("Unable to find Raven/Alerts document", HttpStatusCode.BadRequest);
@@ -110,7 +110,7 @@ namespace Raven.Database.Server.Controllers
             alertToDismiss.Observed = true;
             alertToDismiss.LastDismissedAt = SystemTime.UtcNow;
 
-            Database.Documents.Put("Raven/Alerts", null, RavenJObject.FromObject(alerts), jsonDocument.Metadata, null);
+            Database.Documents.Put(Constants.RavenAlerts, null, RavenJObject.FromObject(alerts), jsonDocument.Metadata, null);
             return GetEmptyMessage();
         }
 
