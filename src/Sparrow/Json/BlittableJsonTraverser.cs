@@ -22,6 +22,15 @@ namespace Sparrow.Json
                 _separators = nonDefaultSeparators;
         }
 
+        public StringSegment GetNameFromPath(StringSegment path)
+        {
+            var indexOfLastSeparator = path.IndexOfLast(_separators);
+            if (indexOfLastSeparator == -1)
+                return path;
+
+            return path.SubSegment(indexOfLastSeparator + 1);
+        }
+
         public bool TryRead(BlittableJsonReaderObject docReader, StringSegment path, out object result)
         {
             var indexOfFirstSeparator = path.IndexOfAny(_separators, 0);

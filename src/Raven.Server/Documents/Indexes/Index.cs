@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -78,13 +79,13 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly HashSet<string> Collections;
 
-        private volatile bool _indexingInProgress;
-
         internal IndexStorage _indexStorage;
 
         private IIndexingWork[] _indexWorkers;
 
         public readonly ConcurrentSet<ExecutingQueryInfo> CurrentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
+
+        private readonly ConcurrentQueue<IndexingStatsAggregator> _lastIndexingStats = new ConcurrentQueue<IndexingStatsAggregator>();
 
         private int _numberOfQueries;
 
@@ -419,66 +420,62 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
-                        _indexingInProgress = true;
-
                         if (Log.IsDebugEnabled)
                             Log.Debug($"Starting indexing for '{Name} ({IndexId})'.");
 
                         _mre.Reset();
 
-                        var startTime = SystemTime.UtcNow;
-                        var stats = new IndexingBatchStats();
-                        try
+                        var stats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
+                        using (var scope = stats.CreateScope())
                         {
-                            cts.Token.ThrowIfCancellationRequested();
-
-                            DoIndexingWork(stats, cts.Token);
-
-                            _indexingBatchCompleted.SetAndResetAtomically();
-
-                            DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                            try
                             {
-                                Name = Name,
-                                Type = IndexChangeTypes.BatchCompleted
-                            });
+                                cts.Token.ThrowIfCancellationRequested();
 
-                            ResetWriteErrors();
+                                DoIndexingWork(scope, cts.Token);
 
-                            if (Log.IsDebugEnabled)
-                                Log.Debug($"Finished indexing for '{Name} ({IndexId})'.'");
-                        }
-                        catch (OutOfMemoryException oome)
-                        {
-                            Log.WarnException($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
-                            // TODO [ppekrol] GC?
-                        }
-                        catch (IndexWriteException iwe)
-                        {
-                            HandleWriteErrors(stats, iwe);
-                        }
-                        catch (IndexAnalyzerException iae)
-                        {
-                            stats.AddAnalyzerError(iae);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            return;
-                        }
-                        catch (Exception e)
-                        {
-                            Log.WarnException($"Exception occurred for '{Name} ({IndexId})'.", e);
+                                _indexingBatchCompleted.SetAndResetAtomically();
+
+                                DocumentDatabase.Notifications.RaiseNotifications(
+                                    new IndexChangeNotification { Name = Name, Type = IndexChangeTypes.BatchCompleted });
+
+                                ResetWriteErrors();
+
+                                if (Log.IsDebugEnabled) Log.Debug($"Finished indexing for '{Name} ({IndexId})'.'");
+                            }
+                            catch (OutOfMemoryException oome)
+                            {
+                                Log.WarnException($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
+                                // TODO [ppekrol] GC?
+                            }
+                            catch (IndexWriteException iwe)
+                            {
+                                HandleWriteErrors(scope, iwe);
+                            }
+                            catch (IndexAnalyzerException iae)
+                            {
+                                scope.AddAnalyzerError(iae);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                return;
+                            }
+                            catch (Exception e)
+                            {
+                                Log.WarnException($"Exception occurred for '{Name} ({IndexId})'.", e);
+                            }
+
+                            try
+                            {
+                                _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                            }
+                            catch (Exception e)
+                            {
+                                Log.ErrorException($"Could not update stats for '{Name} ({IndexId})'.", e);
+                            }
                         }
 
-                        try
-                        {
-                            _indexStorage.UpdateStats(startTime, stats);
-                        }
-                        catch (Exception e)
-                        {
-                            Log.ErrorException($"Could not update stats for '{Name} ({IndexId})'.", e);
-                        }
-
-                        _indexingInProgress = false;
+                        AddIndexingPerformance(stats);
 
                         try
                         {
@@ -502,7 +499,7 @@ namespace Raven.Server.Documents.Indexes
             writeErrors = Interlocked.Exchange(ref writeErrors, 0);
         }
 
-        internal void HandleWriteErrors(IndexingBatchStats stats, IndexWriteException iwe)
+        internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
         {
             stats.AddWriteError(iwe);
 
@@ -524,7 +521,7 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public void DoIndexingWork(IndexingBatchStats stats, CancellationToken cancellationToken)
+        public void DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
         {
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
@@ -540,28 +537,39 @@ namespace Raven.Server.Documents.Indexes
                 {
                     foreach (var work in _indexWorkers)
                     {
-                        var mightBeMore = work.Execute(databaseContext, indexContext, writeOperation, stats, cancellationToken);
+                        using (var scope = stats.For(work.Name))
+                        {
+                            var mightBeMore = work.Execute(databaseContext, indexContext, writeOperation, scope, cancellationToken);
 
-                        if (mightBeMore)
-                            _mre.Set();
+                            if (mightBeMore)
+                                _mre.Set();
+                        }
                     }
                 }
                 finally
                 {
                     if (writeOperation.IsValueCreated)
-                        writeOperation.Value.Dispose();
+                    {
+                        using (stats.For("Lucene_Write"))
+                            writeOperation.Value.Dispose();
+                    }
+
                 }
 
-                tx.Commit();
+                using (stats.For("Storage_Commit"))
+                    tx.Commit();
 
                 if (writeOperation.IsValueCreated)
-                    IndexPersistence.RecreateSearcher(); // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                {
+                    using (stats.For("Lucene_RecreateSearcher"))
+                        IndexPersistence.RecreateSearcher(); // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                }
             }
         }
 
-        public abstract void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext);
+        public abstract void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext);
+        public abstract void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChangeNotification notification)
         {
@@ -747,7 +755,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             var totalResults = new Reference<int>();
 
-                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext)).ToList();
+                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query)).ToList();
                             result.TotalResults = totalResults.Value;
                         }
 
@@ -873,6 +881,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext);
+        private void AddIndexingPerformance(IndexingStatsAggregator stats)
+        {
+            _lastIndexingStats.Enqueue(stats);
+
+            while (_lastIndexingStats.Count > 25)
+                _lastIndexingStats.TryDequeue(out stats);
+        }
+
+        public IndexingPerformanceStats[] GetIndexingPerformance(int fromId)
+        {
+            return _lastIndexingStats
+                .Where(x => x.Id >= fromId)
+                .Select(x => x.ToIndexingPerformanceStats())
+                .ToArray();
+        }
+
+        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query);
     }
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 using Raven.Abstractions;
 using Raven.Client.Data;
@@ -7,11 +6,12 @@ using Raven.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class IndexingBatchStats
+    public class IndexingRunStats
     {
         public int IndexingAttempts;
         public int IndexingSuccesses;
         public int IndexingErrors;
+        public int IndexingOutputs;
 
         public List<IndexingError> Errors;
 

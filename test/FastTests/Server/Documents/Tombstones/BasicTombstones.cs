@@ -123,8 +123,9 @@ namespace FastTests.Server.Documents.Tombstones
                             tx.Commit();
                         }
 
-                        var batchStats = new IndexingBatchStats();
-                        index.DoIndexingWork(batchStats, CancellationToken.None);
+                        var batchStats = new IndexingRunStats();
+                        var stats = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(stats, CancellationToken.None);
 
                         var tombstones = index.GetLastProcessedDocumentTombstonesPerCollection();
                         Assert.Equal(1, tombstones.Count);
@@ -163,8 +164,9 @@ namespace FastTests.Server.Documents.Tombstones
                             Assert.Equal(1, count);
                         }
 
-                        batchStats = new IndexingBatchStats();
-                        index.DoIndexingWork(batchStats, CancellationToken.None);
+                        batchStats = new IndexingRunStats();
+                        stats = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(stats, CancellationToken.None);
 
                         tombstones = index.GetLastProcessedDocumentTombstonesPerCollection();
                         Assert.Equal(1, tombstones.Count);

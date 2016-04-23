@@ -7,7 +7,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public interface IIndexingWork : IDisposable
     {
+        string Name { get; }
+
         bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
-                     Lazy<IndexWriteOperation> writeOperation, IndexingBatchStats stats, CancellationToken token);
+                     Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token);
     }
 }

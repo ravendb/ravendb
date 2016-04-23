@@ -2,6 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -258,6 +264,61 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                             .ToList();
                     });
                 }
+            }
+        }
+
+        [Fact]
+        public async Task Can_project_in_map_reduce()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Torun"
+                    });
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Torun"
+                    });
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Hadera"
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var results = store.DatabaseCommands.Query("dynamic/Addresses", new IndexQuery
+                {
+                    DynamicMapReduceFields = new[]
+                    {
+                        new DynamicMapReduceField
+                        {
+                            Name = "City",
+                            ClientSideName = null,
+                            IsGroupBy = true,
+                            OperationType = FieldMapReduceOperation.None
+                        },
+                        new DynamicMapReduceField
+                        {
+                            Name = "TotalCount",
+                            ClientSideName = "Count",
+                            IsGroupBy = false,
+                            OperationType = FieldMapReduceOperation.Count
+                        }
+                    },
+                    FieldsToFetch = new[] { "City" },
+                    WaitForNonStaleResultsAsOfNow = true
+                });
+
+                Assert.Equal(2, results.Results.Count);
+                Assert.True(results.Results.All(x => x.Keys.Count == 2));
+                Assert.True(results.Results.All(x => x.ContainsKey("City")));
+                Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata)));
+                Assert.True(results.Results.Any(x => x.Value<string>("City") == "Torun"));
+                Assert.True(results.Results.Any(x => x.Value<string>("City") == "Hadera"));
             }
         }
 

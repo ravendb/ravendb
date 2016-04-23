@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return _indexingWorkContext;
         }
 
-        public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var etagSlice = new Slice((byte*)null, sizeof(long));
 
@@ -114,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
             var mappedResult = new DynamicJsonValue();
             var reduceKey = new DynamicJsonValue();
@@ -217,9 +218,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query)
         {
-            return new MapReduceQueryResultRetriever(indexContext);
+            return new MapReduceQueryResultRetriever(indexContext, query);
         }
 
         private Table GetMapEntriesTable(Transaction tx)
