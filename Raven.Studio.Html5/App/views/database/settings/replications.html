@@ -34,11 +34,11 @@
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
                                 <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
-                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed'">Allow reads from secondaries when request time threshold is surpassed</span>
+                                <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow reads from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
-                                <span data-bind="visible: $root.readFromAllButSwitchWhenRequestTimeThresholdIsSurpassed">Read from all servers but switch when request time threshold is surpassed</span>
+                                <span data-bind="visible: $root.readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached">Read from all servers but switch when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.readFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
                                 <span class="caret"></span>
                             </button>
@@ -46,11 +46,11 @@
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, null)">Let client decide</a></li>
                                 <li class="divider"></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed')">Allow reads from secondaries when request time threshold is surpassed</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')">Allow reads from secondaries when request time SLA threshold is reached</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries')">Allow reads from secondaries and writes to secondaries</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'FailImmediately')">Fail immediately</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'ReadFromAllServers')">Read from all servers</a></li>
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed,ReadFromAllServers')">Read from all servers but switch when request time threshold is surpassed</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached,ReadFromAllServers')">Read from all servers but switch when request time SLA threshold is reached</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondariesAndWritesToSecondaries,ReadFromAllServers')">Read from all servers and allow write to secondaries</a></li>
                             </ul>
                         </div>
@@ -60,53 +60,25 @@
                             <button disabled="disabled" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() == null">Let client decide</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
-                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed'">Allow reads from secondaries when request time threshold is surpassed</span>
+                                <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow reads from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
-                                <span data-bind="visible: $root.globalReadFromAllButSwitchWhenRequestTimeThresholdIsSurpassed">Read from all servers but switch when request time threshold is surpassed</span>
+                                <span data-bind="visible: $root.globalReadFromAllButSwitchWhenRequestTimeSlaThresholdIsReached">Read from all servers but switch when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.globalReadFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
                                 <span class="caret"></span>
                             </button>
                         </div>
                     </div>
                 </div>
-
                 <div data-bind="if: showRequestTimeoutRow()">
-                    <div class="form-group" data-bind="with: replicationsSetup">
-                        <label class="col-sm-2 control-label">Request Time Threshold</label>
-                        <div class="col-sm-5">
-                            <div class="btn-group" data-bind="visible: showCustomRequestTimeThreshold()">
-                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
-                                    <span data-bind="visible: !hasCustomRequestTimeThreshold()">Default</span>
-                                    <span data-bind="visible: hasCustomRequestTimeThreshold">Custom</span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" role="menu">
-                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, false)">Default</a></li>
-                                    <li><a href="#" data-bind="click: hasCustomRequestTimeThreshold.bind(hasCustomRequestTimeThreshold, true)">Custom</a></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed' ">
-                            <div class="btn-group">
-                                <button type="button" disabled="disabled" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                    <span data-bind="visible: !$root.globalClientRequestTimeThreshold()">Default</span>
-                                    <span data-bind="visible: $root.globalClientRequestTimeThreshold()">Custom</span>
-                                    <span class="caret"></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div data-bind="if: showCustomRequestTimeoutRow()">
                     <div class="form-group">
-                        <label class="col-sm-2 control-label">Custom Request Time Threshold (ms)</label>
+                        <label class="col-sm-2 control-label">Request Time SLA Threshold (ms)</label>
                         <div class="col-sm-5">
-                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeThreshold, visible: replicationsSetup().hasCustomRequestTimeThreshold,  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false"/>
+                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, visible: replicationsSetup().showRequestTimeSlaThreshold(),  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false"/>
                         </div>
-                        <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientRequestTimeThreshold()">
-                            <input disabled="disabled" type="number" class="form-control" data-bind="value: $root.globalClientRequestTimeThreshold()" />
+                        <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientRequestTimeSlaThreshold()">
+                            <input disabled="disabled" type="number" class="form-control" data-bind="value: $root.globalClientRequestTimeSlaThreshold()" />
                         </div>
                     </div>
                 </div>

@@ -71,13 +71,13 @@ class globalConfigReplications extends viewModelBase {
         return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
     });
 
-    readFromAllButSwitchWhenRequestTimeThresholdIsSurpassed = ko.computed(() => {
+    readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
         var behaviour = this.replicationsSetup().clientFailoverBehaviour();
         if (behaviour == null) {
             return false;
         }
         var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed");
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
     });
 
     canActivate(args: any): JQueryPromise<any> {
@@ -111,7 +111,7 @@ class globalConfigReplications extends viewModelBase {
         
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
-        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.replicationsSetup().requestTimeThreshold, this.replicationsSetup().hasCustomRequestTimeThreshold]);
+        this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.replicationsSetup().requestTimeSlaThreshold, this.replicationsSetup().hasCustomRequestTimeSlaThreshold]);
         this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
 
         var combinedFlag = ko.computed(() => {

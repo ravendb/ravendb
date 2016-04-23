@@ -538,7 +538,7 @@ interface replicationsDto {
 
 interface replicationClientConfigurationDto {
     FailoverBehavior?: string;
-    RequestTimeThresholdInMilliseconds: number;
+    RequestTimeSlaThresholdInMilliseconds: number;
 }
 
 interface environmentColorDto {
