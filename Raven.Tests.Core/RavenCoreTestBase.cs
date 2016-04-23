@@ -118,6 +118,9 @@ namespace Raven.Tests.Core
             if (db != null)
                 databaseCommands = databaseCommands.ForDatabase(db);
             var to = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
+
+            Assert.True(databaseCommands.GetIndexNames(0, 1).Length > 0, "Looks like you WaitForIndexing on database without indexes!");
+
             var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, to);
 
             if (spinUntil == false)
