@@ -11,6 +11,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Connection
@@ -21,6 +22,7 @@ namespace Raven.Client.Connection
         private readonly byte[] buffer = new byte[8192];
         private int posInBuffer;
         private readonly Action onDispose;
+        private readonly object taskFaultedSyncObj = new object();
 
         private readonly ConcurrentSet<IObserver<string>> subscribers = new ConcurrentSet<IObserver<string>>();
 
@@ -95,34 +97,55 @@ namespace Raven.Client.Connection
                                 {
                                     if (task.IsFaulted)
                                     {
-                                        try
-                                        {
-                                            stream.Dispose();
-                                        }
-                                        catch (Exception)
-                                        {
-                                            // explicitly ignoring this
-                                        }
-                                        var aggregateException = task.Exception;
-                                        var exception = aggregateException.ExtractSingleInnerException();
-                                        if (exception is ObjectDisposedException)
-                                            return; // this isn't an error
-
-#if !DNXCORE50
-                                        var we = exception as WebException;
-                                        if (we != null && we.Status == WebExceptionStatus.RequestCanceled)
-                                            return; // not an error, actually
-#endif
-
-                                        foreach (var subscriber in subscribers)
-                                        {
-                                            subscriber.OnError(aggregateException);
-                                        }
+                                        DisposeAndSingalConnectionError(task);
                                         return;
                                     }
 
                                     Start(); // read more lines
                                 });
+        }
+
+        private void DisposeAndSingalConnectionError(Task task)
+        {
+            try
+            {
+                if (!Monitor.TryEnter(taskFaultedSyncObj))
+                    return;
+                try
+                {
+                    stream.Dispose();
+                }
+                catch (Exception)
+                {
+                    // explicitly ignoring this
+                }
+
+                //make sure the existing connection is returned
+                //to http client cache
+                //since the stream has faulted, we will either
+                //reconnect or fail the Changes API with exception
+                //so in any case we need to cleanup things
+                onDispose();
+
+                var aggregateException = task.Exception;
+                var exception = aggregateException.ExtractSingleInnerException();
+                if (exception is ObjectDisposedException)
+                    return;
+
+#if !DNXCORE50
+                var we = exception as WebException;
+                if (we != null && we.Status == WebExceptionStatus.RequestCanceled)
+                    return;
+#endif
+                foreach (var subscriber in subscribers)
+                {
+                    subscriber.OnError(aggregateException);
+                }
+            }
+            finally
+            {
+                Monitor.Exit(taskFaultedSyncObj);
+            }
         }
 
         private async Task<int> ReadAsync()
