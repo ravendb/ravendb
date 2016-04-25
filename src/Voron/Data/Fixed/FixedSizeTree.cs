@@ -13,7 +13,6 @@ using Sparrow.Platform;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 
 namespace Voron.Data.Fixed
@@ -447,6 +446,9 @@ namespace Voron.Data.Fixed
                         // which removed the page from the embedded entry we are trying to use, need to re-read it
                         // before copying
                         newEntriesCount = CopyEmbeddedContentToTempPage(key, tmp, out isNew, out newSize, out srcCopyStart);
+
+                        if (newEntriesCount <= _maxEmbeddedEntries) // TODO arek - debug purposes only
+                            throw new InvalidOperationException("Error in conversion to large tree - will result in inconsistent state of the fixed size tree");
                     }
 
                     var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
@@ -974,17 +976,6 @@ namespace Voron.Data.Fixed
             var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
             largeHeader->NumberOfEntries--;
 
-            if (largeHeader->NumberOfEntries == 0)
-            {
-                System.Diagnostics.Debug.Assert(page.NumberOfEntries == 1);
-
-                _type = null;
-                _parent.Delete(_treeName);
-                _tx.FreePage(page.PageNumber);
-
-                return new DeletionResult { NumberOfEntriesDeleted = 1, TreeRemoved = true };
-            }
-
             page = ModifyPage(page);
 
             RemoveEntryFromPage(page, page.LastSearchPosition);
@@ -1018,8 +1009,11 @@ namespace Voron.Data.Fixed
             if (_cursor.Count == 0)
             {
                 // root page
-                if (page.NumberOfEntries <= _maxEmbeddedEntries && page.IsLeaf)
+                if (largeTreeHeader->NumberOfEntries <= _maxEmbeddedEntries)
                 {
+                    System.Diagnostics.Debug.Assert(page.IsLeaf);
+                    System.Diagnostics.Debug.Assert(page.NumberOfEntries == largeTreeHeader->NumberOfEntries);
+
                     // and small enough to fit, converting to embedded
                     var ptr = _parent.DirectAdd(_treeName,
                         sizeof(FixedSizeTreeHeader.Embedded) + (_entrySize * page.NumberOfEntries));
@@ -1034,9 +1028,8 @@ namespace Voron.Data.Fixed
                         (_entrySize * page.NumberOfEntries));
 
                     _tx.FreePage(page.PageNumber);
-                    largeTreeHeader->PageCount--;
                 }
-                if (page.IsBranch && page.NumberOfEntries == 1)
+                else if (page.IsBranch && page.NumberOfEntries == 1)
                 {
                     var childPage = PageValueFor(page, 0);
                     var rootPageNum = page.PageNumber;
