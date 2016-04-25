@@ -4,9 +4,12 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -428,6 +431,69 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(indexName1, performanceStats[0].IndexName);
                 Assert.True(performanceStats[0].IndexId > 0);
                 Assert.True(performanceStats[0].Performance.Length > 0);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteByIndex()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
+
+                var operation = await store
+                    .AsyncDatabaseCommands
+                    .DeleteByIndexAsync(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false })
+                    .ConfigureAwait(false);
+
+                await operation
+                    .WaitForCompletionAsync()
+                    .ConfigureAwait(false);
+
+                var statistics = await store
+                    .AsyncDatabaseCommands
+                    .GetStatisticsAsync()
+                    .ConfigureAwait(false);
+
+                Assert.Equal(1, statistics.CountOfDocuments);
+                var documents = store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
+                Assert.Equal(1, documents.Result.Length);
+                Assert.Equal("Raven/Hilo/users", documents.Result[0].Key);
+
+                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync().ConfigureAwait(false);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                var e = Assert.Throws<ErrorResponseException>(() => store
+                    .DatabaseCommands
+                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+
+                Assert.True(e.Message.Contains("Query is stale"));
             }
         }
     }

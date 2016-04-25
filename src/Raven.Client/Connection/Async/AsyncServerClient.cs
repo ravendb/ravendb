@@ -445,15 +445,15 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken))
+        public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Delete, async operationMetadata =>
             {
-                var notNullOptions = options ?? new BulkOperationOptions();
-                string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + notNullOptions.AllowStale
+                var notNullOptions = options ?? new QueryOperationOptions();
+                string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries") + "&allowStale=" + notNullOptions.AllowStale
                      + "&details=" + notNullOptions.RetrieveDetails;
-                if (notNullOptions.MaxOpsPerSec != null)
-                    path += "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSec;
+                if (notNullOptions.MaxOpsPerSecond != null)
+                    path += "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSecond;
                 if (notNullOptions.StaleTimeout != null)
                     path += "&staleTimeout=" + notNullOptions.StaleTimeout;
 
@@ -853,9 +853,9 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken))
+        public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken))
         {
-            var notNullOptions = options ?? new BulkOperationOptions();
+            var notNullOptions = options ?? new QueryOperationOptions();
             var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
             return UpdateByIndexImpl(indexName, queryToUpdate, notNullOptions, requestData, HttpMethods.Eval, token);
         }
@@ -899,13 +899,13 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, BulkOperationOptions options, String requestData, HttpMethod method, CancellationToken token = default(CancellationToken))
+        private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, QueryOperationOptions options, String requestData, HttpMethod method, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(method, async operationMetadata =>
             {
-                var notNullOptions = options ?? new BulkOperationOptions();
-                string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + notNullOptions.AllowStale
-                    + "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSec + "&details=" + notNullOptions.RetrieveDetails;
+                var notNullOptions = options ?? new QueryOperationOptions();
+                string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries") + "&allowStale=" + notNullOptions.AllowStale
+                    + "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSecond + "&details=" + notNullOptions.RetrieveDetails;
                 if (notNullOptions.StaleTimeout != null)
                     path += "&staleTimeout=" + notNullOptions.StaleTimeout;
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
@@ -1257,7 +1257,7 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication(method, async operationMetadata =>
             {
                 EnsureIsNotNullOrEmpty(index, "index");
-                string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "indexes", includeQuery: method == HttpMethod.Get);
+                string path = query.GetIndexQueryUrl(operationMetadata.Url, index, "queries", includeQuery: method == HttpMethod.Get);
 
                 if (metadataOnly)
                     path += "&metadata-only=true";
@@ -2236,7 +2236,7 @@ namespace Raven.Client.Connection.Async
 
         public async Task<RavenJToken> GetOperationStatusAsync(long id)
         {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url + "/operation/status?id=" + id, HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url)).AddOperationHeaders(OperationsHeaders)))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url + "/operations/status?id=" + id, HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url)).AddOperationHeaders(OperationsHeaders)))
             {
                 try
                 {

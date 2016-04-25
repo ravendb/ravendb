@@ -336,13 +336,13 @@ namespace Raven.Client.Connection
             get { return asyncServerClient.Url; }
         }
 
-        public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
+        public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, options));
         }
 
         public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest patch,
-            BulkOperationOptions options = null)
+            QueryOperationOptions options = null)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, options));
         }

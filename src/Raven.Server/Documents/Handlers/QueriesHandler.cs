@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -11,6 +10,7 @@ using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -18,11 +18,11 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/indexes/$", "GET")]
+        [RavenAction("/databases/*/queries/$", "GET")]
         public async Task Get()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var query = GetIndexQuery();
+            var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
 
             DocumentsOperationContext context;
             using (var token = CreateTimeLimitedOperationToken())
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers
                 var includes = GetStringValuesQueryString("include", required: false);
 
                 var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
-                
+
                 var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
 
                 if (result.NotModified)
@@ -91,12 +91,65 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private IndexQuery GetIndexQuery()
+        [RavenAction("/databases/*/queries/$", "DELETE")]
+        public Task Delete()
+        {
+            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            var query = GetIndexQuery(int.MaxValue);
+            var options = GetBulkOperationOptions();
+            var token = CreateTimeLimitedOperationToken();
+
+            return ExecuteQueryOperation(indexName, query, options, token, QueryOperationType.Delete);
+        }
+
+        private async Task ExecuteQueryOperation(string indexName, IndexQuery query, QueryOperationOptions options, OperationCancelToken token, QueryOperationType operationType)
+        {
+            // TODO [ppekrol] 
+            // implement Tasks
+            // support RetrieveDetails
+            // implement rate limit (MaxOpsPerSec)
+
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var queryRunner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
+                switch (operationType)
+                {
+                    case QueryOperationType.Delete:
+                        await queryRunner.ExecuteDeleteQuery(indexName, query, options, context, token).ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new NotSupportedException(operationType.ToString());
+                }
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(context.GetLazyString("OperationId"));
+                writer.WriteInteger(-1); // TODO [ppekrol]
+
+                writer.WriteEndObject();
+            }
+        }
+
+        private QueryOperationOptions GetBulkOperationOptions()
+        {
+            return new QueryOperationOptions
+            {
+                AllowStale = GetBoolValueQueryString("allowStale"),
+                MaxOpsPerSecond = GetIntQueryString("maxOpsPerSec", required: false),
+                StaleTimeout = GetTimeSpanQueryString("staleTimeout", required: false),
+                RetrieveDetails = GetBoolValueQueryString("details")
+            };
+        }
+
+        private IndexQuery GetIndexQuery(int maxPageSize)
         {
             var result = new IndexQuery
             {
                 // all defaults which need to have custom value
-                PageSize = Database.Configuration.Core.MaxPageSize
+                PageSize = maxPageSize
             };
 
             foreach (var item in HttpContext.Request.Query)
@@ -109,10 +162,10 @@ namespace Raven.Server.Documents.Handlers
                             result.Query = item.Value[0];
                             break;
                         case StartParameter:
-                            result.Start = int.Parse(item.Value[0]);
+                            result.Start = GetStart();
                             break;
                         case PageSizeParameter:
-                            result.PageSize = int.Parse(item.Value[0]);
+                            result.PageSize = GetPageSize(maxPageSize);
                             break;
                         case "cutOffEtag":
                             result.CutoffEtag = long.Parse(item.Value[0]);
@@ -183,5 +236,10 @@ namespace Raven.Server.Documents.Handlers
             }
             return mapReduceFields;
         }
+    }
+
+    public enum QueryOperationType
+    {
+        Delete
     }
 }

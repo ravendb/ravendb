@@ -13,6 +13,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Indexing;
@@ -93,10 +94,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
             {
-                throw new NotImplementedException("TODO arek");
-                //var gatherAllCollector = new GatherAllCollector();
-                //indexSearcher.Search(documentQuery, gatherAllCollector);
-                //return gatherAllCollector.ToTopDocs();
+                var gatherAllCollector = new GatherAllCollector();
+                _searcher.Search(documentQuery, gatherAllCollector);
+                return gatherAllCollector.ToTopDocs();
             }
 
             var absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow

@@ -728,7 +728,7 @@ namespace Raven.Server.Documents.Indexes
 
                         result.IsStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
 
-                        if (WillResultBeAcceptable(result, query, wait) == false)
+                        if (WillResultBeAcceptable(result.IsStale, query, wait) == false)
                         {
                             documentsContext.Reset();
                             indexContext.Reset();
@@ -800,9 +800,9 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private static bool WillResultBeAcceptable(DocumentQueryResult result, IndexQuery query, AsyncWaitForIndexing wait)
+        private static bool WillResultBeAcceptable(bool isStale, IndexQuery query, AsyncWaitForIndexing wait)
         {
-            if (result.IsStale == false)
+            if (isStale == false)
                 return true;
 
             if (query.WaitForNonStaleResultsTimeout == null)
