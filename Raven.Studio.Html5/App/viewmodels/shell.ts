@@ -1100,7 +1100,7 @@ class shell extends viewModelBase {
         new getClusterTopologyCommand(appUrl.getSystemDatabase())
             .execute()
             .done((topology: topology) => {
-                shell.clusterMode(topology.allNodes().length > 0);
+                shell.clusterMode(topology && topology.allNodes().length > 0);
             });
     }
 

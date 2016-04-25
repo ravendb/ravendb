@@ -1,6 +1,6 @@
 <section>
 
-    <div data-bind="if: !topology().clusterMode()">
+    <div data-bind="if: !clusterMode()">
         <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
             <div class="panel-heading">
                 Cluster configuration
@@ -27,7 +27,7 @@
             </div>
         </div>
     </div>
-    <div data-bind="if: topology().clusterMode()">
+    <div data-bind="if: clusterMode()">
         <div class="panel panel-default">
             <div class="panel-heading">
                 <button data-bind="click: addAnotherServerToCluster.bind($root, false)" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
