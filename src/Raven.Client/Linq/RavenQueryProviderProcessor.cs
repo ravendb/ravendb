@@ -1475,7 +1475,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (mapReduceOperationCall == null)
                             continue;
 
-                        AddMapReduceFieldToFetch(mapReduceOperationCall, newExpression.Members[index], elementSelectorPath);
+                        AddMapReduceField(mapReduceOperationCall, newExpression.Members[index], elementSelectorPath);
                     }
                     break;
                 //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -1511,7 +1511,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (mapReduceOperationCall == null)
                             continue;
 
-                        AddMapReduceFieldToFetch(mapReduceOperationCall, t.Member, elementSelectorPath);
+                        AddMapReduceField(mapReduceOperationCall, t.Member, elementSelectorPath);
                     }
                     break;
                 default:
@@ -1540,7 +1540,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void AddMapReduceFieldToFetch(MethodCallExpression mapReduceOperationCall, MemberInfo memberInfo, MemberExpression elementSelectorPath)
+        private void AddMapReduceField(MethodCallExpression mapReduceOperationCall, MemberInfo memberInfo, MemberExpression elementSelectorPath)
         {
             if (mapReduceOperationCall.Method.DeclaringType != typeof (Enumerable))
                 throw new NotSupportedException(
@@ -1587,8 +1587,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 mapReduceField = "Count";
             }
-
-            FieldsToFetch.Add(mapReduceField);
 
             var dynamicMapReduceField = new DynamicMapReduceField
             {
