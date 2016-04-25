@@ -123,11 +123,12 @@ namespace Voron.Trees
                         int high = numberOfEntries - 1;
                         int position = 0;
 
+                        ushort* keys = KeysOffsets;
                         while (low <= high)
                         {
                             position = (low + high) >> 1;
 
-                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
+                            var node = (NodeHeader*)(_base + keys[position]);
 
                             SetNodeKey(node, ref pageKey);
 
@@ -204,11 +205,12 @@ namespace Voron.Trees
                         int high = numberOfEntries - 1;
                         int position = 0;
 
+                        ushort* keys = KeysOffsets;
                         while (low <= high)
                         {
                             position = (low + high) >> 1;
 
-                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
+                            var node = (NodeHeader*)(_base + keys[position]);
 
                             SetNodeKey(node, ref pageKey);
 
