@@ -118,28 +118,32 @@ namespace Raven.Server.Web
 
         protected int GetStart(int defaultValue = 0)
         {
-            return GetIntQueryString(StartParameter, defaultValue);
+            return GetIntQueryString(StartParameter, required: false) ?? defaultValue;
         }
 
         protected int GetPageSize(int defaultValue = 25)
         {
-            return GetIntQueryString(PageSizeParameter, defaultValue);
+            return GetIntQueryString(PageSizeParameter, required: false) ?? defaultValue;
         }
 
-        protected int GetIntQueryString(string name, int? defaultValue = null)
+        protected int? GetIntQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0)
             {
-                if (defaultValue.HasValue)
-                    return defaultValue.Value;
-                throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+                if (required)
+                    throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+
+                return null;
             }
+
+            if (required == false && string.IsNullOrWhiteSpace(val[0]))
+                return null;
 
             int result;
             if (int.TryParse(val[0], out result) == false)
-                throw new ArgumentException(
-                    string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+                throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+
             return result;
         }
 
@@ -212,6 +216,21 @@ namespace Raven.Server.Web
 
             DateTime result;
             if (DateTime.TryParseExact(dataAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+                return result;
+
+            throw new ArgumentException($"Could not parse query string '{name}' as date");
+        }
+
+        protected TimeSpan? GetTimeSpanQueryString(string name, bool required = true)
+        {
+            var timeSpanAsString = GetStringQueryString(name, required);
+            if (timeSpanAsString == null)
+                return null;
+
+            timeSpanAsString = Uri.UnescapeDataString(timeSpanAsString);
+
+            TimeSpan result;
+            if (TimeSpan.TryParse(timeSpanAsString, out result))
                 return result;
 
             throw new ArgumentException($"Could not parse query string '{name}' as date");

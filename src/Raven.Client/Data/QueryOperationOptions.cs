@@ -1,17 +1,19 @@
 using System;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     /// <summary>
     /// Holds different setting options for base operations.
     /// </summary>
-    public class BulkOperationOptions
+    public class QueryOperationOptions
     {
+        private int? _maxOpsPerSecond;
+
         /// <summary>
         /// Indicates whether operations are allowed on stale indexes.
         /// </summary>
         public bool AllowStale { get; set; }
-        
+
         /// <summary>
         /// If AllowStale is set to false and index is stale, then this is the maximum timeout to wait for index to become non-stale. If timeout is exceeded then exception is thrown.
         /// <para>Value:</para>
@@ -23,7 +25,21 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Limits the amount of base operation per second allowed.
         /// </summary>
-        public int? MaxOpsPerSec { get; set; }
+        public int? MaxOpsPerSecond
+        {
+            get
+            {
+                return _maxOpsPerSecond;
+            }
+
+            set
+            {
+                if (value.HasValue && value.Value <= 0)
+                    throw new InvalidOperationException("MaxOpsPerSecond must be greater than 0");
+
+                _maxOpsPerSecond = value;
+            }
+        }
 
         /// <summary>
         /// Determines whether operation details about each document should be returned by server.

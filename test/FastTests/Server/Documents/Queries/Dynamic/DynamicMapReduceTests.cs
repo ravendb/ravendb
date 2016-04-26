@@ -5,7 +5,6 @@ using FastTests.Server.Basic.Entities;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Tests.Core.Utils.Entities;
@@ -40,16 +39,16 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
                 using (var session = store.OpenSession())
                 {
-                    var addressesCount =
-                        session.Query<Address>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.City).Select(
-                            x =>
-                                new
-                                {
-                                    City = x.Key,
-                                    Count = x.Count(),
-                                })
-                            .Where(x => x.Count == 2)
-                            .ToList();
+                    var addressesCount = session.Query<Address>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .GroupBy(x => x.City)
+                        .Select(x => new
+                        {
+                            City = x.Key,
+                            Count = x.Count(),
+                        })
+                        .Where(x => x.Count == 2)
+                        .ToList();
 
                     Assert.Equal(2, addressesCount[0].Count);
                     Assert.Equal("Torun", addressesCount[0].City);

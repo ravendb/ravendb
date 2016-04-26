@@ -97,7 +97,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="queryToDelete">Tquery that will be performed</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
         /// <param name="token">The cancellation token.</param>
-        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
+        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Deletes the specified index
@@ -589,7 +589,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="patch">JavaScript patch that will be executed on query results</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
         /// <param name="token">The cancellation token.</param>
-        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Get the full URL for the given document key

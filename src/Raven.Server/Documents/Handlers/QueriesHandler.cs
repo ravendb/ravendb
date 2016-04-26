@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -11,18 +10,21 @@ using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/indexes/$", "GET")]
+        [RavenAction("/databases/*/queries/$", "GET")]
         public async Task Get()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var query = GetIndexQuery();
+            var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
 
             DocumentsOperationContext context;
             using (var token = CreateTimeLimitedOperationToken())
@@ -31,8 +33,8 @@ namespace Raven.Server.Documents.Handlers
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
                 var includes = GetStringValuesQueryString("include", required: false);
 
-                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
-                
+                var runner = new QueryRunner(Database, context);
+
                 var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
 
                 if (result.NotModified)
@@ -91,12 +93,72 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private IndexQuery GetIndexQuery()
+        [RavenAction("/databases/*/queries/$", "DELETE")]
+        public Task Delete()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, token), context);
+            }
+        }
+
+        [RavenAction("/databases/*/queries/$", "PATCH")]
+        public Task Patch()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                var patch = PatchRequest.Parse(reader);
+
+                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, token), context);
+            }
+        }
+
+        private async Task ExecuteQueryOperation(Func<QueryRunner, string, IndexQuery, QueryOperationOptions, OperationCancelToken, Task> operation, DocumentsOperationContext context)
+        {
+            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            var query = GetIndexQuery(int.MaxValue);
+            var options = GetQueryOperationOptions();
+            var token = CreateTimeLimitedOperationToken();
+
+            // TODO [ppekrol] 
+            // implement Tasks
+            // support RetrieveDetails
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var queryRunner = new QueryRunner(Database, context);
+                await operation(queryRunner, indexName, query, options, token).ConfigureAwait(false);
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(context.GetLazyString("OperationId"));
+                writer.WriteInteger(-1); // TODO [ppekrol]
+
+                writer.WriteEndObject();
+            }
+        }
+
+        private QueryOperationOptions GetQueryOperationOptions()
+        {
+            return new QueryOperationOptions
+            {
+                AllowStale = GetBoolValueQueryString("allowStale"),
+                MaxOpsPerSecond = GetIntQueryString("maxOpsPerSec", required: false),
+                StaleTimeout = GetTimeSpanQueryString("staleTimeout", required: false),
+                RetrieveDetails = GetBoolValueQueryString("details")
+            };
+        }
+
+        private IndexQuery GetIndexQuery(int maxPageSize)
         {
             var result = new IndexQuery
             {
                 // all defaults which need to have custom value
-                PageSize = Database.Configuration.Core.MaxPageSize
+                PageSize = maxPageSize
             };
 
             foreach (var item in HttpContext.Request.Query)
@@ -109,10 +171,10 @@ namespace Raven.Server.Documents.Handlers
                             result.Query = item.Value[0];
                             break;
                         case StartParameter:
-                            result.Start = int.Parse(item.Value[0]);
+                            result.Start = GetStart();
                             break;
                         case PageSizeParameter:
-                            result.PageSize = int.Parse(item.Value[0]);
+                            result.PageSize = GetPageSize(maxPageSize);
                             break;
                         case "cutOffEtag":
                             result.CutoffEtag = long.Parse(item.Value[0]);
