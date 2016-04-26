@@ -88,6 +88,7 @@
     <Compile Include="Client\FailoverServers.cs" />
     <Compile Include="Client\Indexes.cs" />
     <Compile Include="Client\WithFailovers.cs" />
+    <Compile Include="ClusterLeave.cs" />
     <Compile Include="Snapshotting.cs" />
     <Compile Include="ClusterBasic.cs" />
     <Compile Include="Client\Basic.cs" />

@@ -20,7 +20,7 @@ using Rachis.Commands;
 using Rachis.Storage;
 using Rachis.Transport;
 using Rachis.Utils;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -345,7 +345,20 @@ namespace Raven.Database.Raft
                 }
                 else
                 {
+                    // before we send remove from cluster wait until configuration will be propaged
+                    // to avoid: Cannot modify the cluster topology when the committed index ___ is in term ___ but the current term is ___
+                    // Wait until the leader finishes committing entries from the current term and try again
+                    await Task.Delay(raftEngine.Options.HeartbeatTimeout * 2).ConfigureAwait(false);
+
+                    // remove node from cluster by excluding it from topology
                     await raftEngine.RemoveFromClusterAsync(node).ConfigureAwait(false);
+
+                    // since both remove from cluster and sendInitialize new cluster are send from current leader
+                    // we have to wait for first topology to apply on removing node
+                    await Task.Delay(raftEngine.Options.HeartbeatTimeout*2).ConfigureAwait(false);
+
+                    // send information to leaved node to create new single node topology
+                    await SendInitializeNewClusterForAsync(node).ConfigureAwait(false);
                     return;
                 }
             }
@@ -437,9 +450,9 @@ namespace Raven.Database.Raft
             }
         }
 
-        public async Task SendInitializeNewClusterForAsync(NodeConnectionInfo node, Guid clusterId)
+        public async Task SendInitializeNewClusterForAsync(NodeConnectionInfo node, Guid? clusterId = null)
         {
-            var url = node.Uri.AbsoluteUri + "admin/cluster/initialize-new-cluster?id=" + clusterId;
+            var url = node.Uri.AbsoluteUri + "admin/cluster/initialize-new-cluster" + (clusterId.HasValue ? "?id=" + clusterId.Value : string.Empty);
 
             using (var request = CreateRequest(node, url, HttpMethods.Patch))
             {
