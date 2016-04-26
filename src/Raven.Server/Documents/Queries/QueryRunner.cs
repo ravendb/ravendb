@@ -94,26 +94,33 @@ namespace Raven.Server.Documents.Queries
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
 
-            IEnumerable<Document> documents = results.Results;
-            if (options.MaxOpsPerSecond.HasValue)
-                documents = documents.LimitRate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1));
-
-            foreach (var document in documents)
+            using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
-                if (tx == null)
+                foreach (var document in results.Results)
                 {
-                    operations = 0;
-                    tx = context.OpenWriteTransaction();
+                    if (rateGate != null && rateGate.WaitToProceed(0) == false)
+                    {
+                        tx?.Commit();
+                        tx = null;
+
+                        rateGate.WaitToProceed();
+                    }
+
+                    if (tx == null)
+                    {
+                        operations = 0;
+                        tx = context.OpenWriteTransaction();
+                    }
+
+                    action(document.Key);
+                    operations++;
+
+                    if (operations < BatchSize)
+                        continue;
+
+                    tx.Commit();
+                    tx = null;
                 }
-
-                action(document.Key);
-                operations++;
-
-                if (operations < BatchSize)
-                    continue;
-
-                tx.Commit();
-                tx = null;
             }
 
             tx?.Commit();
