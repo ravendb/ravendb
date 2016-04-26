@@ -4,29 +4,31 @@ import appUrl = require("common/appUrl");
 import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
 import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigVersioning extends viewModelBase {
     activated = ko.observable<boolean>(false);
 
     developerLicense = globalConfig.developerLicense;
     canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
-    versionings = ko.observableArray<versioningEntry>().extend({ required: true });
+    versionings = ko.observableArray<versioningEntry>();
     toRemove: versioningEntry[];
     isSaveEnabled: KnockoutComputed<boolean>;
-
-    constructor() {
-        super();
-        this.versionings = ko.observableArray<versioningEntry>();
-    }
+    settingsAccess = new settingsAccessAuthorizer();
 
     canActivate(args: any): any {
         super.canActivate(args);
 
         var deferred = $.Deferred();
         var db = appUrl.getSystemDatabase();
-        this.fetchVersioningEntries(db)
-            .done(() => deferred.resolve({ can: true }))
-            .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(db) }));
+        if (this.settingsAccess.isForbidden()) {
+            deferred.resolve({ can: true });
+        } else {
+            this.fetchVersioningEntries(db)
+                .done(() => deferred.resolve({ can: true }))
+                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(db) }));
+        }
+        
         return deferred;
     }
 

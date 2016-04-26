@@ -5,6 +5,7 @@ import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigQuotas extends viewModelBase {
 
@@ -13,6 +14,7 @@ class globalConfigQuotas extends viewModelBase {
     settingsDocument = ko.observable<document>();
 
     activated = ko.observable<boolean>(false);
+    settingsAccess = new settingsAccessAuthorizer();
 
     maximumSize = ko.observable<number>();
     warningLimitThreshold = ko.observable<number>();
@@ -27,10 +29,14 @@ class globalConfigQuotas extends viewModelBase {
         var deferred = $.Deferred();
         var db = appUrl.getSystemDatabase();
         if (db) {
-            // fetch current quotas from the database
-            this.fetchQuotas(db)
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+            if (this.settingsAccess.isForbidden()) {
+                deferred.resolve({ can: true });
+            } else {
+                // fetch current quotas from the database
+                this.fetchQuotas(db)
+                    .done(() => deferred.resolve({ can: true }))
+                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+            }
         }
         return deferred;
     }
@@ -38,7 +44,7 @@ class globalConfigQuotas extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.initializeDirtyFlag();
-        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty() === true);
+        this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     private fetchQuotas(db: database): JQueryPromise<any> {
