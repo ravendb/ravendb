@@ -76,6 +76,24 @@ class replicationsSetup {
         this.clientFailoverBehaviour(null);
         this.source(null);
     }
+
+    readFromAllAllowWriteToSecondaries = ko.computed(() => {
+        var behaviour = this.clientFailoverBehaviour();
+        if (behaviour == null) {
+            return false;
+        }
+        var tokens = behaviour.split(",").map(x => x.trim());
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
+    });
+
+    readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
+        var behaviour = this.clientFailoverBehaviour();
+        if (behaviour == null) {
+            return false;
+        }
+        var tokens = behaviour.split(",").map(x => x.trim());
+        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
+    });
 }
 
 export = replicationsSetup;

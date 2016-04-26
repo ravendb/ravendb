@@ -81,15 +81,6 @@ class replications extends viewModelBase {
     usingGlobal = ko.observable<boolean>(false);
     hasGlobalValues = ko.observable<boolean>(false);
 
-    readFromAllAllowWriteToSecondaries = ko.computed(() => {
-        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
-    });
-
     globalReadFromAllAllowWriteToSecondaries = ko.computed(() => {
         var behaviour = this.globalClientFailoverBehaviour();
         if (behaviour == null) {
@@ -97,15 +88,6 @@ class replications extends viewModelBase {
         }
         var tokens = behaviour.split(",").map(x => x.trim());
         return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
-    });
-
-    readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
-        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
     });
 
     globalReadFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
