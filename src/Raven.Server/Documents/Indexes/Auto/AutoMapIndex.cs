@@ -1,4 +1,5 @@
-﻿using Raven.Client.Data.Indexes;
+﻿using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries.Results;
@@ -36,25 +37,26 @@ namespace Raven.Server.Documents.Indexes.Auto
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing), 
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
             };
         }
 
-        public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.Delete(tombstone.Key);
+            using (stats.For("Lucene_Delete"))
+                writer.Delete(tombstone.Key);
         }
 
-        public override void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext)
+        public override void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.IndexDocument(document);
+            writer.IndexDocument(document, stats);
 
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query)
         {
-            return new DocumentQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext);
+            return new MapQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext, Definition, query);
         }
     }
 }

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -302,8 +301,9 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        var batchStats = new IndexingBatchStats();
-                        index.DoIndexingWork(batchStats, CancellationToken.None);
+                        var batchStats = new IndexingRunStats();
+                        var scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
                         Assert.Equal(2, batchStats.IndexingAttempts);
                         Assert.Equal(2, batchStats.IndexingSuccesses);
@@ -347,8 +347,9 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        batchStats = new IndexingBatchStats();
-                        index.DoIndexingWork(batchStats, CancellationToken.None);
+                        batchStats = new IndexingRunStats();
+                        scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
                         Assert.Equal(3, index.GetLastMappedEtagsForDebug().Values.Min());
                         Assert.Equal(1, batchStats.IndexingAttempts);
                         Assert.Equal(1, batchStats.IndexingSuccesses);
@@ -382,8 +383,9 @@ namespace FastTests.Server.Documents.Indexing
                             tx.Commit();
                         }
 
-                        batchStats = new IndexingBatchStats();
-                        index.DoIndexingWork(batchStats, CancellationToken.None);
+                        batchStats = new IndexingRunStats();
+                        scope = new IndexingStatsScope(batchStats);
+                        index.DoIndexingWork(scope, CancellationToken.None);
                         Assert.Equal(4, index.GetLastProcessedDocumentTombstonesPerCollection().Values.Min());
                         Assert.Equal(0, batchStats.IndexingAttempts);
                         Assert.Equal(0, batchStats.IndexingSuccesses);
@@ -430,13 +432,14 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.True(index.IsRunning);
 
                     IndexStats stats;
-                    var batchStats = new IndexingBatchStats();
+                    var batchStats = new IndexingRunStats();
+                    var scope = new IndexingStatsScope(batchStats);
                     var iwe = new IndexWriteException();
                     for (int i = 0; i < 10; i++)
                     {
                         stats = index.GetStats();
                         Assert.Equal(IndexingPriority.Normal, stats.Priority);
-                        index.HandleWriteErrors(batchStats, iwe);
+                        index.HandleWriteErrors(scope, iwe);
                     }
 
                     stats = index.GetStats();
@@ -876,10 +879,10 @@ namespace FastTests.Server.Documents.Indexing
                     1,
                     new AutoMapIndexDefinition(
                         "Users",
-                        new[] {new IndexField {Name = "Name", Highlighted = false, Storage = FieldStorage.No}}),
+                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
                     database))
                 {
-                    var stats = new IndexingBatchStats();
+                    var stats = new IndexingRunStats();
 
                     stats.AddWriteError(new IndexWriteException());
                     stats.AddAnalyzerError(new IndexAnalyzerException());
@@ -908,7 +911,7 @@ namespace FastTests.Server.Documents.Indexing
                         new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
                     database))
                 {
-                    var stats = new IndexingBatchStats();
+                    var stats = new IndexingRunStats();
                     index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
 
                     Assert.Equal(0, index.GetErrors().Count);
@@ -1076,7 +1079,7 @@ namespace FastTests.Server.Documents.Indexing
                     SortOption = SortOptions.String
                 };
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {name1})));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
                 indexName = database.IndexStore.GetIndex(1).Name;
 
                 indexStoragePath = database.Configuration.Indexing.IndexStoragePath;

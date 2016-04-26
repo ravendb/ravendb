@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
@@ -25,6 +27,8 @@ namespace Raven.Server.Documents
         public readonly PatchDocument Patch;
 
         private readonly object _idleLocker = new object();
+
+        private Task _indexStoreTask;
 
         public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler)
         {
@@ -75,11 +79,18 @@ namespace Raven.Server.Documents
 
         private void InitializeInternal()
         {
-            var indexStoreTask = IndexStore.InitializeAsync();
+            _indexStoreTask = IndexStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
             DocumentTombstoneCleaner.Initialize();
 
-            indexStoreTask.Wait(DatabaseShutdown);
+            try
+            {
+                _indexStoreTask.Wait(DatabaseShutdown);
+            }
+            finally
+            {
+                _indexStoreTask = null;
+            }
         }
 
         public void Dispose()
@@ -87,6 +98,15 @@ namespace Raven.Server.Documents
             _databaseShutdown.Cancel();
 
             var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(DocumentDatabase)}");
+
+            if (_indexStoreTask != null)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    _indexStoreTask.Wait(DatabaseShutdown);
+                    _indexStoreTask = null;
+                });
+            }
 
             exceptionAggregator.Execute(() =>
             {
@@ -165,7 +185,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     etag = document.Etag;
-                    var existingAlert = (BlittableJsonReaderObject) document.Data[alert.UniqueKey];
+                    var existingAlert = (BlittableJsonReaderObject)document.Data[alert.UniqueKey];
                     alerts = new DynamicJsonValue(document.Data)
                     {
                         [alert.UniqueKey] = new DynamicJsonValue

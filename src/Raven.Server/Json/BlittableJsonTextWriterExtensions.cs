@@ -1,9 +1,9 @@
-﻿using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+﻿using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Server.Documents.Indexes;
 
 using Sparrow.Json;
 
@@ -11,6 +11,60 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTextWriterExtensions
     {
+        public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(stats.Completed)));
+            writer.WriteString(context.GetLazyString(stats.Completed.GetDefaultRavenFormat(isUtc: true)));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(stats.Started)));
+            writer.WriteString(context.GetLazyString(stats.Started.GetDefaultRavenFormat(isUtc: true)));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(stats.DurationInMilliseconds)));
+            writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(stats.DurationInMilliseconds.ToInvariantString())));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(stats.Details)));
+            writer.WriteIndexingPerformanceOperation(context, stats.Details);
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteIndexingPerformanceOperation(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceOperation operation)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(operation.DurationInMilliseconds)));
+            writer.WriteDouble(new LazyDoubleValue(context.GetLazyString(operation.DurationInMilliseconds.ToInvariantString())));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(operation.Name)));
+            writer.WriteString(context.GetLazyString(operation.Name));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(operation.Operations)));
+            writer.WriteStartArray();
+            if (operation.Operations != null)
+            {
+                var isFirstInternal = true;
+                foreach (var op in operation.Operations)
+                {
+                    if (isFirstInternal == false)
+                        writer.WriteComma();
+
+                    isFirstInternal = false;
+
+                    writer.WriteIndexingPerformanceOperation(context, op);
+                }
+            }
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteIndexQuery(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexQuery query)
         {
             writer.WriteStartObject();

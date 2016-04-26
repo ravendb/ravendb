@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        public unsafe void UpdateStats(DateTime indexingTime, IndexingBatchStats stats)
+        public unsafe void UpdateStats(DateTime indexingTime, IndexingRunStats stats)
         {
             if (Log.IsDebugEnabled)
                 Log.Debug($"Updating statistics for '{_index.Name} ({_index.IndexId})'. Stats: {stats}.");

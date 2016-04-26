@@ -33,7 +33,7 @@ REPORT_ATTACH=()
 ATTACHMENTS=()
 
 function printWelcome () {
-	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.4) ${NC}\n"
+	printf "\n\n${CYAN}RavenDB (Linux) Build Script${BLUE} (v0.5) ${NC}\n"
 	printf "${PURPLE}============================${NC}\n"
 }
 
@@ -320,18 +320,67 @@ function echoFailExec () {
 	printf "${RED}ERROR${NC}\n"
 }
 
+function echoPercents () {
+	if [ "$1" == "ERR" ];
+	then
+		tput cub 9999
+		tput cuf 1
+		printf "${RED} $1 ${NC}\n"
+	elif [ "$1" == "OK" ];
+	then
+		tput cub 9999
+		tput cuf 1
+		printf "${GREEN} $1  ${NC}\n"
+		return
+	else	
+		tput cub 9999
+		tput cuf 1
+		printf "${PURPLE}$1%%${NC}"
+	fi
+}
+
 function echoSkippingErros () {
 	printf "${YELLOW} --skip-errors set, ignoring failures${NC}\n"
 	# sleep 1
 }
 
+function showDynamicProgress () {
+	printf "${NC}[     ] $1.${PURPLE} $2${NC}"
+	echoPercents " 0"
+	cnt=0
+	while [ `pidof $4 | wc | awk '{print $3}'` -ne 0 ];
+	do
+		numOfLines=`cat $3 | wc -l | awk '{print $1}'`
+		let percents=(${numOfLines}*100)/$5
+		if [ ${percents} -gt 99 ];
+		then
+			percents=99
+		fi
+		str=" ${percents}"
+		if [ 10 -gt ${percents} ];
+		then
+			str=" ${percents}"
+		fi
+		echoPercents "${str}"
+		let cnt=${cnt}+1
+		if [ ${cnt} -gt 180 ];
+		then
+			return
+		fi		
+		sleep 1
+	done
+	echoPercents "100"
+}
+
 function buildRaven () {
-	printf "\n${BLUE}Restoring Packages:${NC}\n"
-	printf "${PURPLE}dnu restore out saved into ${OUT_FILE}.dnurestore${NC}\n"
-	dnu restore >& ${OUT_FILE}.dnurestore
+	dnu restore >& ${OUT_FILE}.dnurestore &
+	procpid=$!
+	showDynamicProgress "Restoring Packages" "Loggin into ${OUT_FILE}.dnurestore" ${OUT_FILE}.dnurestore dnx 400
+	wait ${procpid}
        	status=$?
 	if [ ${status} -ne 0 ]
 	then
+		echoPercents "ERR"
 		if [ ${OP_REPORT} == 1 ] 
 		then
 			echo "`date +"%d/%m/%Y_%H:%M:%S"` FATAL ERROR - Failed to restore packages. rc=${status}" >> ${REPORT_FILE}
@@ -343,6 +392,8 @@ function buildRaven () {
 			exit 107
 		fi
 		echoSkippingErros
+	else
+		echoPercents "OK"
 	fi
 		
 	for i in "${BUILD_DIRS[@]}"
@@ -351,19 +402,21 @@ function buildRaven () {
 		if [ ${i} == "src/Raven.Studio" ]
 		then
 			extra_build_args="--framework dnxcore50"
-		fi
-		printf "\n${BLUE}Building ${i}:${NC}\n"
+		fi		
 		if [ ${OP_REPORT} == 1 ] 
 		then
 			echo -n "`date +"%d/%m/%Y_%H:%M:%S"` Build start for ${i} ... " >> ${REPORT_FILE}
 		fi
 		pushd ${i} &> /dev/null
-		printf "${PURPLE}Build out saved into ${OUT_FILE}.build${NC}\n"
-		dnu build ${extra_build_args} >& ${OUT_FILE}.build
+		dnu build ${extra_build_args} >& ${OUT_FILE}.build &
+		procpid=$!
+		showDynamicProgress "Building ${i}" "Loggin into ${OUT_FILE}.build" ${OUT_FILE}.build dnx 500
+		wait ${procpid}
 		status=$?
 		popd &> /dev/null
 	 	if [ ${status} -ne 0 ]
 		then
+			echoPercents "ERR"
 			if [ ${OP_REPORT} == 1 ]
 			then
 				echo "FAILED !!" >> ${REPORT_FILE}
@@ -379,6 +432,7 @@ function buildRaven () {
 			fi
 			echoSkippingErros
 		else
+			echoPercents "OK"
 			if [ ${OP_REPORT} == 1 ] 
 			then
 				echo "Successs." >> ${REPORT_FILE}
@@ -394,17 +448,19 @@ then
 	do
 		if [ ${i} == "test/Tryouts" ]; then continue; fi
 
-		pushd ${i} /dev/null
- 		printf "\n${BLUE}Building ${i}:${NC}\n"
+		pushd ${i} &> /dev/null
                 if [ ${OP_REPORT} == 1 ]
                 then
                         echo -n "`date +"%d/%m/%Y_%H:%M:%S"` Build start for ${i} ... " >> ${REPORT_FILE}
                 fi
-                printf "${PURPLE}Build out saved into ${OUT_FILE}.build${NC}\n"
-                dnu build ${extra_build_args} >& ${OUT_FILE}.build
-                status=$?
+                dnu build ${extra_build_args} >& ${OUT_FILE}.build &
+		procpid=$!
+		showDynamicProgress "Building ${i}" "Loggin into ${OUT_FILE}.build" ${OUT_FILE}.build dnx 750
+		wait ${procpid}
+		status=$?
                 if [ ${status} -ne 0 ]
                 then
+			echoPercents "ERR"
                         if [ ${OP_REPORT} == 1 ]
                         then
                                 echo "FAILED !!" >> ${REPORT_FILE}
@@ -419,6 +475,7 @@ then
                         fi
                         echoSkippingErros
                 else
+			echoPercents "OK"
                         if [ ${OP_REPORT} == 1 ]
                         then
                                 echo "Successs." >> ${REPORT_FILE}

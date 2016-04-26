@@ -40,8 +40,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _indexingWorkContext = indexingWorkContext;
         }
 
+        public string Name => "Reduce";
+
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
-                            IndexingBatchStats stats, CancellationToken token)
+                            IndexingStatsScope stats, CancellationToken token)
         {
             _aggregationBatch.Clear();
 
@@ -82,10 +84,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         if (parentPage == -1)
                         {
                             writer.IndexDocument(new Document
-                            {
-                                Key = reduceKeyHash,
-                                Data = result
-                            });
+                                                     {
+                                                         Key = reduceKeyHash,
+                                                         Data = result
+                                                     }, stats);
                         }
                     }
 
@@ -141,10 +143,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             if (parentPage == -1)
                             {
                                 writer.IndexDocument(new Document
-                                {
-                                    Key = reduceKeyHash,
-                                    Data = result
-                                });
+                                                         {
+                                                             Key = reduceKeyHash,
+                                                             Data = result
+                                                         }, stats);
                             }
                         }
                     }

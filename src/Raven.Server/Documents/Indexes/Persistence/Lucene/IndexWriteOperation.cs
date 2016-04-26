@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 throw new IndexAnalyzerException(e);
             }
-            
+
             try
             {
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
@@ -79,11 +79,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void IndexDocument(Document document)
+        public void IndexDocument(Document document, IndexingStatsScope stats)
         {
-            var luceneDoc = _converter.ConvertToCachedDocument(document);
+            global::Lucene.Net.Documents.Document luceneDoc;
+            using (stats.For("Lucene_ConvertTo"))
+                luceneDoc = _converter.ConvertToCachedDocument(document);
 
-            _writer.AddDocument(luceneDoc, _analyzer);
+            using (stats.For("Lucene_AddDocument"))
+                _writer.AddDocument(luceneDoc, _analyzer);
+
+            stats.RecordIndexingOutput(); // TODO [ppekrol] in future we will have to support multiple index outputs from single document
 
             if (Log.IsDebugEnabled)
                 Log.Debug($"Indexed document for '{_name}'. Key: {document.Key} Etag: {document.Etag}. Output: {luceneDoc}.");

@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 using Raven.Abstractions.Data;
@@ -248,22 +247,14 @@ namespace Raven.Client.Data
             if (SkipDuplicateChecking)
                 path.Append("&skipDuplicateChecking=true");
 
-            if (DynamicMapReduceFields == null || DynamicMapReduceFields.Length == 0)
-            {
-                FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-            }
-            else
-            {
-                foreach (var field in DynamicMapReduceFields)
-                {
-                    path.Append("&mapReduce=")
+            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+
+            DynamicMapReduceFields.ApplyIfNotNull(field => path.Append("&mapReduce=")
                         .Append(Uri.EscapeDataString(field.Name))
                         .Append("-")
                         .Append(field.OperationType)
                         .Append("-")
-                        .Append(field.IsGroupBy);
-                }
-            }
+                        .Append(field.IsGroupBy));
 
             SortedFields.ApplyIfNotNull(
                 field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));

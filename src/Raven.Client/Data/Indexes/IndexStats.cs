@@ -6,11 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.Data.Indexes
 {
@@ -195,63 +193,5 @@ namespace Raven.Client.Data.Indexes
         }
         public long StartDelay { get; set; }
         public List<PerformanceStats> Operations { get; set; }
-    }
-
-    public class ReducingPerformanceStats
-    {
-        public ReducingPerformanceStats(ReduceType reduceType)
-        {
-            ReduceType = reduceType;
-            LevelStats = new List<ReduceLevelPeformanceStats>();
-        }
-
-        public ReduceType ReduceType { get; private set; }
-        public List<ReduceLevelPeformanceStats> LevelStats { get; set; }
-    }
-
-    public class ReduceLevelPeformanceStats
-    {
-        public int Level { get; set; }
-        public int ItemsCount { get; set; }
-        public int InputCount { get; set; }
-        public int OutputCount { get; set; }
-        public DateTime Started { get; set; }
-        public DateTime Completed { get; set; }
-        public TimeSpan Duration { get; set; }
-        public double DurationMs { get { return Math.Round(Duration.TotalMilliseconds, 2); } }
-        [JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
-        public List<BasePerformanceStats> Operations { get; set; }
-
-        public ReduceLevelPeformanceStats()
-        {
-            Operations = new List<BasePerformanceStats>();
-        }
-
-        public void Add(IndexingPerformanceStats other)
-        {
-            ItemsCount += other.ItemsCount;
-            InputCount += other.InputCount;
-            OutputCount += other.OutputCount;
-            foreach (var stats in other.Operations)
-            {
-                var performanceStats = stats as PerformanceStats;
-                if (performanceStats != null)
-                {
-                    var existingStat = Operations.OfType<PerformanceStats>().FirstOrDefault(x => x.Name == performanceStats.Name);
-                    if (existingStat != null)
-                    {
-                        existingStat.DurationMs += performanceStats.DurationMs;
-                    }
-                    else
-                    {
-                        Operations.Add(new PerformanceStats
-                        {
-                            Name = performanceStats.Name,
-                            DurationMs = performanceStats.DurationMs
-                        });
-                    }
-                }
-            }
-        }
     }
 }
