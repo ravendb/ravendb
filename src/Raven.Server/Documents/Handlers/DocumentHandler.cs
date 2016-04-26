@@ -92,8 +92,7 @@ namespace Raven.Server.Documents.Handlers
             IEnumerable<Document> documents;
             if (HttpContext.Request.Query.ContainsKey("etag"))
             {
-                documents = Database.DocumentsStorage.GetDocumentsAfter(context,
-                    GetLongQueryString("etag"), GetStart(), GetPageSize());
+                documents = Database.DocumentsStorage.GetDocumentsAfter(context, GetLongQueryString("etag").Value, GetStart(), GetPageSize());
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
@@ -265,7 +264,7 @@ namespace Raven.Server.Documents.Handlers
             var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("ids");
 
             var etag = GetLongFromHeaders("If-Match");
-            var isTestOnly = GetBoolValueQueryString("test", false);
+            var isTestOnly = GetBoolValueQueryString("test", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

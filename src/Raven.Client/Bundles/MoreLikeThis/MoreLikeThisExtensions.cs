@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Document.Async;
 using Raven.Client.Document.SessionOperations;
@@ -69,7 +70,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
                 throw new ArgumentException("Index name cannot be null or empty", "index");
 
             parameters.IndexName = index;
-            parameters.ResultsTransformer = transformer;
+            parameters.Transformer = transformer;
 
             // /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
             var cmd = ((DocumentSession) advancedSession).DatabaseCommands;
@@ -149,7 +150,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
                 throw new ArgumentException("Index name cannot be null or empty", "index");
 
             parameters.IndexName = index;
-            parameters.ResultsTransformer = transformer;
+            parameters.Transformer = transformer;
 
             // /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
             var cmd = ((AsyncDocumentSession)advancedSession).AsyncDatabaseCommands;

@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions;
@@ -20,6 +23,19 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/queries/morelikethis/$", "GET")]
+        public async Task MoreLikeThis()
+        {
+            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            DocumentsOperationContext context;
+            using (var token = CreateTimeLimitedOperationToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                var query = GetMoreLikeThisQuery(context);
+            }
+        }
+
         [RavenAction("/databases/*/queries/$", "GET")]
         public async Task Get()
         {
@@ -146,11 +162,48 @@ namespace Raven.Server.Documents.Handlers
         {
             return new QueryOperationOptions
             {
-                AllowStale = GetBoolValueQueryString("allowStale"),
-                MaxOpsPerSecond = GetIntQueryString("maxOpsPerSec", required: false),
+                AllowStale = GetBoolValueQueryString("allowStale", required: false) ?? false,
+                MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false),
                 StaleTimeout = GetTimeSpanQueryString("staleTimeout", required: false),
-                RetrieveDetails = GetBoolValueQueryString("details")
+                RetrieveDetails = GetBoolValueQueryString("details", required: false) ?? false
             };
+        }
+
+        private MoreLikeThisRequest GetMoreLikeThisQuery(JsonOperationContext context)
+        {
+            var result = new MoreLikeThisRequest
+            {
+                //IndexName = query.Get("index"),
+                Fields = GetStringValuesQueryString("fields"),
+                Boost = GetBoolValueQueryString("boost", required: false),
+                BoostFactor = GetFloatValueQueryString("boostFactor", required: false),
+                MaximumNumberOfTokensParsed = GetIntValueQueryString("maxNumTokens", required: false),
+                MaximumQueryTerms = GetIntValueQueryString("maxQueryTerms", required: false),
+                MaximumWordLength = GetIntValueQueryString("maxWordLen", required: false),
+                MinimumDocumentFrequency = GetIntValueQueryString("minDocFreq", required: false),
+                MaximumDocumentFrequency = GetIntValueQueryString("maxDocFreq", required: false),
+                MaximumDocumentFrequencyPercentage = GetIntValueQueryString("maxDocFreqPct", required: false),
+                MinimumTermFrequency = GetIntValueQueryString("minTermFreq", required: false),
+                MinimumWordLength = GetIntValueQueryString("minWordLen", required: false),
+                StopWordsDocumentId = GetStringQueryString("stopWords", required: false),
+                AdditionalQuery = GetStringQueryString("query", required: false),
+                Includes = GetStringValuesQueryString("include", required: false),
+                DocumentId = GetStringQueryString("docId", required: false),
+                Transformer = GetStringValuesQueryString("transformer")
+            };
+
+            result.TransformerParameters = new Dictionary<string, object>();
+            foreach (var tp in HttpContext.Request.Query.Where(x => x.Key.StartsWith("tp-", StringComparison.OrdinalIgnoreCase)))
+            {
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(tp.Value))) // ??
+                    result.TransformerParameters[tp.Key.Substring(3)] = context.Read(stream, tp.Key);
+            }
+
+            result.MapGroupFields = new Dictionary<string, string>();
+            foreach (var mgf in HttpContext.Request.Query.Where(x => x.Key.StartsWith("mgf-", StringComparison.OrdinalIgnoreCase)))
+                result.MapGroupFields[mgf.Key.Substring(4)] = mgf.Value[0];
+
+            return result;
         }
 
         private IndexQuery GetIndexQuery(int maxPageSize)

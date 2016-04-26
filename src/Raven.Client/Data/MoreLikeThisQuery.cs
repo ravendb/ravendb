@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Collections.Specialized;
 
+using System.Text;
+
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
-namespace Raven.Abstractions.Data
+namespace Raven.Client.Data
 {
     public class MoreLikeThisQuery
     {
         public MoreLikeThisQuery()
         {
-            MapGroupFields = new NameValueCollection();
+            MapGroupFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public const int DefaultMaximumNumberOfTokensParsed = 5000;
@@ -105,12 +105,12 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Values for the the mapping group fields to use as the basis for comparison
         /// </summary>
-        public NameValueCollection MapGroupFields { get; set; }
+        public Dictionary<string, string> MapGroupFields { get; set; }
 
         /// <summary>
         /// Transformer to use on the query results.
         /// </summary>
-        public string ResultsTransformer { get; set; }
+        public string Transformer { get; set; }
 
         /// <summary>
         /// Array of paths under which document Ids can be found. All found documents will be returned with the query results.
@@ -128,35 +128,19 @@ namespace Raven.Abstractions.Data
                 throw new InvalidOperationException("Index name cannot be null or empty");
 
             var uri = new StringBuilder();
-
-            string pathSuffix = string.Empty;
+            uri.AppendFormat("/queries/morelikethis/{0}?", Uri.EscapeUriString(IndexName));
 
             if (MapGroupFields.Count > 0)
-            {
-                var separator = string.Empty;
-                foreach(string key in MapGroupFields.Keys)
-                {
-                    pathSuffix = pathSuffix + separator + key + '=' + MapGroupFields[key];
-                    separator = ";";
-                }
-            }
+                MapGroupFields.ApplyIfNotNull(mgf => uri.AppendFormat("&mgf-{0}={1}", mgf.Key, mgf.Value));
             else
             {
-                if(DocumentId == null)
-                    throw new ArgumentNullException("DocumentId", "DocumentId cannot be null");
+                if (DocumentId == null)
+                    throw new ArgumentNullException(nameof(DocumentId), "DocumentId cannot be null");
 
-                pathSuffix = DocumentId;
+                uri.AppendFormat("docid={0}", DocumentId);
             }
 
-            uri.AppendFormat("/morelikethis?index={0}&docid={1}&", Uri.EscapeUriString(IndexName), Uri.EscapeDataString(pathSuffix));
-            if (Fields != null)
-            {
-                foreach (var field in Fields)
-                {
-                    uri.AppendFormat("fields={0}&", field);
-                }
-            }
-            if(string.IsNullOrWhiteSpace(AdditionalQuery) == false)
+            if (string.IsNullOrWhiteSpace(AdditionalQuery) == false)
                 uri.Append("query=").Append(Uri.EscapeDataString(AdditionalQuery)).Append("&");
             if (Boost != null && Boost != DefaultBoost)
                 uri.Append("boost=true&");
@@ -180,19 +164,12 @@ namespace Raven.Abstractions.Data
                 uri.AppendFormat("minWordLen={0}&", MinimumWordLength);
             if (StopWordsDocumentId != null)
                 uri.AppendFormat("stopWords={0}&", StopWordsDocumentId);
-            if (string.IsNullOrEmpty(ResultsTransformer) == false)
-                uri.AppendFormat("&resultsTransformer={0}", Uri.EscapeDataString(ResultsTransformer));
+            if (string.IsNullOrEmpty(Transformer) == false)
+                uri.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
 
-            if (TransformerParameters != null)
-            {
-                foreach (var input in TransformerParameters)
-                {
-                    uri.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
-                }
-            }
-
-            if (Includes != null && Includes.Length > 0)
-                uri.Append(string.Join("&", Includes.Select(x => "include=" + x).ToArray()));
+            Fields.ApplyIfNotNull(f => uri.AppendFormat("field={0}", f));
+            TransformerParameters.ApplyIfNotNull(tp => uri.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
+            Includes.ApplyIfNotNull(i => uri.AppendFormat("&include={0}", i));
 
             return uri.ToString();
         }

@@ -41,7 +41,7 @@ namespace Raven.Server.Web.System
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var isDisabled = GetBoolValueQueryString("isDisabled", true);
+            var isDisabled = GetBoolValueQueryString("isDisabled").Value;
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
