@@ -120,6 +120,7 @@
     <TypeScriptCompile Include="App\models\counter\counterStorage.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationDestination.ts" />
     <TypeScriptCompile Include="App\models\counter\counterStorageReplicationSetup.ts" />
+    <TypeScriptCompile Include="App\common\settingsAccessAuthorizer.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\selectCsvColumns.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\deleteCounterStorageConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\counter\editCounterDialog.ts" />

@@ -1,76 +1,82 @@
 <section>
+    <div data-bind="visible: settingsAccess.isForbidden" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
 
-    <div data-bind="if: !clusterMode()">
-        <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
-            <div class="panel-heading">
-                Cluster configuration
-            </div>
-            <div class="panel-body">
-                <div class="text-center">
-                    <h3 class="text-info">
-                        This server is not part of cluster. <small>Go ahead and <a href="#" data-bind="click: createCluster">create cluster</a>.</small>
-                    </h3>
+    <div data-bind="if: !settingsAccess.isForbidden()">
+        <div data-bind="if: !clusterMode()">
+            <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
+                <div class="panel-heading">
+                    Cluster configuration
                 </div>
-                <div class="pull-right text-warning" data-bind="visible: developerLicense">Enterprise feature</div>
+                <div class="panel-body">
+                    <div class="text-center">
+                        <h3 class="text-info">
+                            This server is not part of cluster. <small data-bind="visible: !settingsAccess.isReadOnly()">Go ahead and <a href="#" data-bind="click: createCluster">create cluster</a>.</small>
+                        </h3>
+                    </div>
+                    <div class="pull-right text-warning" data-bind="visible: developerLicense">Enterprise feature</div>
+                </div>
+            </div>
+            <div class="panel panel-default" data-bind="visible: !$root.canCreateCluster()">
+                <div class="panel-heading">
+                    Cluster configuration
+                </div>
+                <div class="panel-body">
+                    <div class="text-center">
+                        <h3 class="text-info">
+                            Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
+                        </h3>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="panel panel-default" data-bind="visible: !$root.canCreateCluster()">
-            <div class="panel-heading">
-                Cluster configuration
-            </div>
-            <div class="panel-body">
-                <div class="text-center">
-                    <h3 class="text-info">
-                        Enterprise feature. <a href="http://ravendb.net/buy" target="_blank">Upgrade your license</a>.
-                    </h3>
+        <div data-bind="if: clusterMode()">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <button data-bind="click: addAnotherServerToCluster.bind($root, false), disable: settingsAccess.isReadOnly()" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
+                    <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.refresh.bind($root), autoStart:false }"></button>
+                    <div class="btn-group">
+                        <button id="operationType" type="button" class="btn btn-danger dropdown-toggle" data-bind="visible: !settingsAccess.isReadOnly()" data-toggle="dropdown">
+                            <span>Emergency cluster operations</span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <li><a href="#" data-bind="click: initializeNewCluster">Cecede from cluster - rude step down into a single node cluster</a></li>
+                            <li><a href="#" data-bind="click: addAnotherServerToCluster.bind($root, true)">Kidnap node into cluster - force a node to the current cluster</a></li>
+                            <li><a href="#" data-bind="click: removeClustering.bind($root)">Remove cluster entirely and perform cleanup.</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <table class="table table-condensed table-striped">
+                        <thead>
+                            <tr>
+                                <th>State</th>
+                                <th>Status</th>
+                                <th>Server Url</th>
+                                <th data-bind="visible: !$root.settingsAccess.isReadOnly()">Edit</th>
+                                <th data-bind="visible: !$root.settingsAccess.isReadOnly()">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: topology().allNodes">
+                            <tr>
+                                <td data-bind="text: state"></td>
+                                <td>
+                                    <div data-bind="visible: status() === 'Online'" class=" text-success"><span class="fa fa-check"></span> Online</div>
+                                    <div data-bind="visible: status() === 'Offline'" class=" text-danger"><span class="fa fa-times"></span> Offline</div>
+                                    <div data-bind="visible: status() === 'WrongCredentials'" class="text-danger"><span class="fa fa-exclamation-circle"></span> Wrong Credentials</div>
+                                    <div data-bind="visible: status() === 'Loading'"><span class="fa fa-spin fa-spinner"></span> Loading...</div>
+                                </td>
+                                <td data-bind="text: uri"></td>
+                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()"><button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button></td>
+                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()"><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-    <div data-bind="if: clusterMode()">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <button data-bind="click: addAnotherServerToCluster.bind($root, false)" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
-                <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.refresh.bind($root), autoStart:false }"></button>
-                <div class="btn-group">
-                    <button id="operationType" type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">
-                        <span>Emergency cluster operations</span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#" data-bind="click: initializeNewCluster">Cecede from cluster - rude step down into a single node cluster</a></li>
-                        <li><a href="#" data-bind="click: addAnotherServerToCluster.bind($root, true)">Kidnap node into cluster - force a node to the current cluster</a></li>
-                        <li><a href="#" data-bind="click: removeClustering.bind($root)">Remove cluster entirely and perform cleanup.</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="panel-body">
-                <table class="table table-condensed table-striped">
-                    <thead>
-                        <tr>
-                            <th>State</th>
-                            <th>Status</th>
-                            <th>Server Url</th>
-                            <th>Edit</th>
-                            <th>Delete</th>
-                        </tr>
-                    </thead>
-                    <tbody data-bind="foreach: topology().allNodes">
-                        <tr>
-                            <td data-bind="text: state"></td>
-                            <td>
-                                <div data-bind="visible: status() === 'Online'" class=" text-success"><span class="fa fa-check"></span> Online</div>
-                                <div data-bind="visible: status() === 'Offline'" class=" text-danger"><span class="fa fa-times"></span> Offline</div>
-                                <div data-bind="visible: status() === 'WrongCredentials'" class="text-danger"><span class="fa fa-exclamation-circle"></span> Wrong Credentials</div>
-                                <div data-bind="visible: status() === 'Loading'"><span class="fa fa-spin fa-spinner"></span> Loading...</div>
-                            </td>
-                            <td data-bind="text: uri"></td>
-                            <td><button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button></td>
-                            <td><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    
 </section>

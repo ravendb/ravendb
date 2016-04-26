@@ -8964,3 +8964,7 @@ a.global_help_link:focus {
 #shellFooter .partial-support {
   background-color: #7cbc85 !important;
 }
+.no-matches {
+  padding: 30px;
+  text-align: center;
+}
