@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Threading;
@@ -52,8 +53,8 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
             private readonly Abstractions.Data.ScriptedIndexResults scriptedIndexResults;
             private readonly HashSet<string> forEntityNames;
 
-            private readonly Dictionary<string, List<RavenJObject>> created = new Dictionary<string, List<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
-            private readonly Dictionary<string, List<RavenJObject>> removed = new Dictionary<string, List<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
+            private readonly ConcurrentDictionary<string, ConcurrentBag<RavenJObject>> created = new ConcurrentDictionary<string, ConcurrentBag<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
+            private readonly ConcurrentDictionary<string, ConcurrentBag<RavenJObject>> removed = new ConcurrentDictionary<string, ConcurrentBag<RavenJObject>>(StringComparer.InvariantCultureIgnoreCase);
 
             public Batcher(DocumentDatabase database, Abstractions.Data.ScriptedIndexResults scriptedIndexResults, HashSet<string> forEntityNames)
             {
@@ -69,28 +70,22 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
             public override void OnIndexEntryCreated(string entryKey, Document document)
             {
-                if (created.ContainsKey(entryKey) == false)
-                {
-                    created[entryKey] = new List<RavenJObject>();
-                }
+                var bag = created.GetOrAdd(entryKey, _ => new ConcurrentBag<RavenJObject>());
 
                 if (Log.IsDebugEnabled)
                     Log.Debug("Schedule create with key {0} for scripted index results {1}", entryKey, scriptedIndexResults.Id);
 
-                created[entryKey].Add(CreateJsonDocumentFromLuceneDocument(document));
+                bag.Add(CreateJsonDocumentFromLuceneDocument(document));
             }
 
             public override void OnIndexEntryDeleted(string entryKey, Document document = null)
             {
-                if (removed.ContainsKey(entryKey) == false)
-                {
-                    removed[entryKey] = new List<RavenJObject>();
-                }
-
+                var bag = removed.GetOrAdd(entryKey, _ => new ConcurrentBag<RavenJObject>());
+                
                 if (Log.IsDebugEnabled)
                     Log.Debug("Schedule delete with key {0} for scripted index results {1}", entryKey, scriptedIndexResults.Id);
 
-                removed[entryKey].Add(document != null ? CreateJsonDocumentFromLuceneDocument(document) : new RavenJObject());
+                bag.Add(document != null ? CreateJsonDocumentFromLuceneDocument(document) : new RavenJObject());
             }
 
             public override void Dispose()
