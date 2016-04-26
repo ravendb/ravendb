@@ -121,13 +121,12 @@ namespace Raven.Server.Documents.Handlers
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
             var query = GetIndexQuery(int.MaxValue);
-            var options = GetBulkOperationOptions();
+            var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
             // TODO [ppekrol] 
             // implement Tasks
             // support RetrieveDetails
-            // implement rate limit (MaxOpsPerSec)
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -143,7 +142,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private QueryOperationOptions GetBulkOperationOptions()
+        private QueryOperationOptions GetQueryOperationOptions()
         {
             return new QueryOperationOptions
             {

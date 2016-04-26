@@ -7,6 +7,8 @@ namespace Raven.Client.Data
     /// </summary>
     public class QueryOperationOptions
     {
+        private int? _maxOpsPerSecond;
+
         /// <summary>
         /// Indicates whether operations are allowed on stale indexes.
         /// </summary>
@@ -23,7 +25,21 @@ namespace Raven.Client.Data
         /// <summary>
         /// Limits the amount of base operation per second allowed.
         /// </summary>
-        public int? MaxOpsPerSecond { get; set; }
+        public int? MaxOpsPerSecond
+        {
+            get
+            {
+                return _maxOpsPerSecond;
+            }
+
+            set
+            {
+                if (value.HasValue && value.Value <= 0)
+                    throw new InvalidOperationException("MaxOpsPerSecond must be greater than 0");
+
+                _maxOpsPerSecond = value;
+            }
+        }
 
         /// <summary>
         /// Determines whether operation details about each document should be returned by server.
