@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Database.Config;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem
 {
@@ -54,18 +55,20 @@ namespace Raven.Tests.FileSystem
             Assert.Equal(1, result.Length);
         }
 
-        [Fact]
-        public void Should_assign_signature_to_proper_file()
+        [Theory]
+        [InlineData("test.bin")]
+        [InlineData("/directory/test.bin")]
+        public void Should_assign_signature_to_proper_file(string fileName)
         {
-            var tested = new StorageSignatureRepository(transactionalStorage, "test.bin", configuration);
-            using(var sigContent = tested.CreateContent("test.bin.0.sig"))
+            var tested = new StorageSignatureRepository(transactionalStorage, fileName, configuration);
+            using(var sigContent = tested.CreateContent(fileName + ".0.sig"))
             {
                 sigContent.WriteByte(3);
             }
-            tested.Flush(new[] { SignatureInfo.Parse("test.bin.0.sig") } );
+            tested.Flush(new[] { SignatureInfo.Parse(fileName + ".0.sig") } );
 
-            var result = tested.GetByName("test.bin.0.sig");
-            Assert.Equal("test.bin.0.sig", result.Name);
+            var result = tested.GetByName(fileName + ".0.sig");
+            Assert.Equal(fileName + ".0.sig", result.Name);
             Assert.Equal(1, result.Length);
         }
 
