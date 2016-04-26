@@ -11,18 +11,19 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
+
 namespace Raven.Server.Documents.Queries
 {
     public class QueryRunner
     {
-        private readonly IndexStore _indexStore;
-        private readonly DocumentsStorage _documentsStorage;
+        private readonly DocumentDatabase _database;
+
         private readonly DocumentsOperationContext _documentsContext;
 
-        public QueryRunner(IndexStore indexStore, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext)
+        public QueryRunner(DocumentDatabase database, DocumentsOperationContext documentsContext)
         {
-            _indexStore = indexStore;
-            _documentsStorage = documentsStorage;
+            _database = database;
             _documentsContext = documentsContext;
         }
 
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Queries
             if (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) ||
                 indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase))
             {
-                var runner = new DynamicQueryRunner(_indexStore, _documentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, token);
 
                 result = await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
             }
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Queries
 
             if (result.NotModified == false && includes.Count > 0)
             {
-                var includeDocs = new IncludeDocumentsCommand(_documentsStorage, _documentsContext, includes);
+                var includeDocs = new IncludeDocumentsCommand(_database.DocumentsStorage, _documentsContext, includes);
                 includeDocs.Execute(result.Results, result.Includes);
             }
 
@@ -64,7 +65,12 @@ namespace Raven.Server.Documents.Queries
 
         public Task ExecuteDeleteQuery(string indexName, IndexQuery query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, key => _documentsStorage.Delete(context, key, null), token);
+            return ExecuteOperation(indexName, query, options, context, key => _database.DocumentsStorage.Delete(context, key, null), token);
+        }
+
+        public Task ExecutePatchQuery(string indexName, IndexQuery query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, OperationCancelToken token)
+        {
+            return ExecuteOperation(indexName, query, options, context, key => _database.Patch.Apply(context, key, null, patch, null), token);
         }
 
         private async Task ExecuteOperation(string indexName, IndexQuery query, QueryOperationOptions options, DocumentsOperationContext context, Action<string> action, OperationCancelToken token)
@@ -127,7 +133,7 @@ namespace Raven.Server.Documents.Queries
 
         private Index GetIndex(string indexName)
         {
-            var index = _indexStore.GetIndex(indexName);
+            var index = _database.IndexStore.GetIndex(indexName);
             if (index == null)
                 throw new InvalidOperationException("There is not index with name: " + indexName);
 

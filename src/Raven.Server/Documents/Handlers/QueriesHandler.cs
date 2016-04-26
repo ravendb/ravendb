@@ -14,6 +14,8 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
+
 namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
@@ -31,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
                 var includes = GetStringValuesQueryString("include", required: false);
 
-                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
+                var runner = new QueryRunner(Database, context);
 
                 var result = await runner.ExecuteQuery(indexName, query, includes, existingResultEtag, token).ConfigureAwait(false);
 
@@ -94,35 +96,43 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries/$", "DELETE")]
         public Task Delete()
         {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, token), context);
+            }
+        }
+
+        [RavenAction("/databases/*/queries/$", "PATCH")]
+        public Task Patch()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                var patch = PatchRequest.Parse(reader);
+
+                return ExecuteQueryOperation((runner, indexName, query, options, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, token), context);
+            }
+        }
+
+        private async Task ExecuteQueryOperation(Func<QueryRunner, string, IndexQuery, QueryOperationOptions, OperationCancelToken, Task> operation, DocumentsOperationContext context)
+        {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
             var query = GetIndexQuery(int.MaxValue);
             var options = GetBulkOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
-            return ExecuteQueryOperation(indexName, query, options, token, QueryOperationType.Delete);
-        }
-
-        private async Task ExecuteQueryOperation(string indexName, IndexQuery query, QueryOperationOptions options, OperationCancelToken token, QueryOperationType operationType)
-        {
             // TODO [ppekrol] 
             // implement Tasks
             // support RetrieveDetails
             // implement rate limit (MaxOpsPerSec)
 
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var queryRunner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
-                switch (operationType)
-                {
-                    case QueryOperationType.Delete:
-                        await queryRunner.ExecuteDeleteQuery(indexName, query, options, context, token).ConfigureAwait(false);
-                        break;
-                    default:
-                        throw new NotSupportedException(operationType.ToString());
-                }
+                var queryRunner = new QueryRunner(Database, context);
+                await operation(queryRunner, indexName, query, options, token).ConfigureAwait(false);
 
                 writer.WriteStartObject();
 
@@ -236,10 +246,5 @@ namespace Raven.Server.Documents.Handlers
             }
             return mapReduceFields;
         }
-    }
-
-    public enum QueryOperationType
-    {
-        Delete
     }
 }

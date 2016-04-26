@@ -407,7 +407,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
+                var runner = new QueryRunner(Database, context);
 
                 var result = runner.ExecuteGetTermsQuery(names[0], fields[0], fromValue, existingResultEtag, GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
 

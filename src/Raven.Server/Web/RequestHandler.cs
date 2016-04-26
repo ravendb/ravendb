@@ -137,10 +137,13 @@ namespace Raven.Server.Web
                 return null;
             }
 
+            if (required == false && string.IsNullOrWhiteSpace(val[0]))
+                return null;
+
             int result;
             if (int.TryParse(val[0], out result) == false)
-                throw new ArgumentException(
-                    string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+                throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+
             return result;
         }
 

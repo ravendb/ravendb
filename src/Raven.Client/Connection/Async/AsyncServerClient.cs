@@ -530,7 +530,7 @@ namespace Raven.Client.Connection.Async
         }
 
         public async Task<RavenJObject> PatchAsync(string key, PatchRequest patchExisting,
-                                                   PatchRequest patchDefault, 
+                                                   PatchRequest patchDefault,
                                                    CancellationToken token = default(CancellationToken))
         {
             var batchResults = await BatchAsync(new ICommandData[]
@@ -857,7 +857,7 @@ namespace Raven.Client.Connection.Async
         {
             var notNullOptions = options ?? new QueryOperationOptions();
             var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
-            return UpdateByIndexImpl(indexName, queryToUpdate, notNullOptions, requestData, HttpMethods.Eval, token);
+            return UpdateByIndexImpl(indexName, queryToUpdate, notNullOptions, requestData, token);
         }
 
         public async Task<LoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken))
@@ -899,16 +899,16 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, QueryOperationOptions options, String requestData, HttpMethod method, CancellationToken token = default(CancellationToken))
+        private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, QueryOperationOptions options, string requestData, CancellationToken token = default(CancellationToken))
         {
-            return ExecuteWithReplication(method, async operationMetadata =>
+            return ExecuteWithReplication(HttpMethods.Patch, async operationMetadata =>
             {
                 var notNullOptions = options ?? new QueryOperationOptions();
                 string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "queries") + "&allowStale=" + notNullOptions.AllowStale
                     + "&maxOpsPerSec=" + notNullOptions.MaxOpsPerSecond + "&details=" + notNullOptions.RetrieveDetails;
                 if (notNullOptions.StaleTimeout != null)
                     path += "&staleTimeout=" + notNullOptions.StaleTimeout;
-                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, HttpMethods.Patch, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {
                     request.AddOperationHeaders(OperationsHeaders);
                     await request.WriteAsync(requestData).ConfigureAwait(false);

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -494,6 +493,52 @@ namespace FastTests.Client.Indexing
                     .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
                 Assert.True(e.Message.Contains("Query is stale"));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateByIndex()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
+
+                var operation = await store
+                    .AsyncDatabaseCommands
+                    .UpdateByIndexAsync(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false })
+                    .ConfigureAwait(false);
+
+                await operation
+                    .WaitForCompletionAsync()
+                    .ConfigureAwait(false);
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    var user2 = session.Load<User>("users/2");
+
+                    Assert.Equal("Test", user1.LastName);
+                    Assert.Equal("Test", user2.LastName);
+                }
             }
         }
     }
