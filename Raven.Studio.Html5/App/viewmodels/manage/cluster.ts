@@ -12,9 +12,7 @@ import getStatusDebugConfigCommand = require("commands/database/debug/getStatusD
 import extendRaftClusterCommand = require("commands/database/cluster/extendRaftClusterCommand");
 import initializeNewClusterCommand = require("commands/database/cluster/initializeNewClusterCommand");
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import removeClusteringCommand = require("commands/database/cluster/removeClusteringCommand");
-import clusterConfiguration = require("models/database/cluster/clusterConfiguration");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
 import updateRaftClusterCommand = require("commands/database/cluster/updateRaftClusterCommand");
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
@@ -29,9 +27,15 @@ class cluster extends viewModelBase {
     serverUrl = ko.observable<string>(); 
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
+
+    clusterMode: KnockoutComputed<boolean>;
+
     constructor() {
         super();
         autoRefreshBindingHandler.install();
+        this.clusterMode = ko.computed(() => {
+            return this.topology() && this.topology().clusterMode();
+        });
     }
 
     canActivate(args: any): JQueryPromise<any> {
@@ -41,7 +45,9 @@ class cluster extends viewModelBase {
         $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
             .done(() => {
                 deferred.resolve({ can: true });
-                this.fetchStatus(db);
+                if (this.clusterMode()) {
+                    this.fetchStatus(db);    
+                }
             })
             .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
         return deferred;

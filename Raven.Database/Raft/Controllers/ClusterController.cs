@@ -61,7 +61,7 @@ namespace Raven.Database.Raft.Controllers
         [RavenRoute("cluster/topology")]
         public HttpResponseMessage Topology()
         {
-            return GetMessageWithObject(ClusterManager.GetTopology());
+            return GetMessageWithObject(ClusterManager?.GetTopology());
         }
 
         [HttpPost]
