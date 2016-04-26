@@ -112,23 +112,26 @@ namespace Raven.Tests.FileSystem.Synchronization
             randomStream.Read(buffer, 0, size);
             var stream = new MemoryStream(buffer);
 
-            using (var signatureRepository = new VolatileSignatureRepository("test"))
-            using (var rested = new SigGenerator())
+            foreach (var fileName in new [] { "test", "content/test", "/content/test"})
             {
-                var signatures = signatureRepository.GetByFileName();
-                Assert.Equal(0, signatures.Count());
+                using (var signatureRepository = new VolatileSignatureRepository(fileName))
+                using (var rested = new SigGenerator())
+                {
+                    var signatures = signatureRepository.GetByFileName();
+                    Assert.Equal(0, signatures.Count());
 
-                stream.Position = 0;
-                var result = rested.GenerateSignatures(stream, "test", signatureRepository);
+                    stream.Position = 0;
+                    var result = rested.GenerateSignatures(stream, fileName, signatureRepository);
 
-                signatures = signatureRepository.GetByFileName();
-                Assert.Equal(2, signatures.Count());
+                    signatures = signatureRepository.GetByFileName();
+                    Assert.Equal(2, signatures.Count());
 
-                stream.Position = 0;
-                result = rested.GenerateSignatures(stream, "test", signatureRepository);
+                    stream.Position = 0;
+                    result = rested.GenerateSignatures(stream, fileName, signatureRepository);
 
-                signatures = signatureRepository.GetByFileName();
-                Assert.Equal(2, signatures.Count());
+                    signatures = signatureRepository.GetByFileName();
+                    Assert.Equal(2, signatures.Count());
+                }
             }
         }
     }
