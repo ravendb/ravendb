@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
 
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -92,7 +94,11 @@ namespace Raven.Server.Documents.Queries
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
 
-            foreach (var document in results.Results)
+            IEnumerable<Document> documents = results.Results;
+            if (options.MaxOpsPerSecond.HasValue)
+                documents = documents.LimitRate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1));
+
+            foreach (var document in documents)
             {
                 if (tx == null)
                 {
