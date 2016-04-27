@@ -6,6 +6,7 @@ import fileDownloader = require("common/fileDownloader");
 import getGlobalReplicationTopology = require("commands/resources/getGlobalReplicationTopology");
 import d3 = require('d3/d3');
 import dagre = require('dagre');
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class topology extends viewModelBase {
 
@@ -22,6 +23,8 @@ class topology extends viewModelBase {
     currentLink = ko.observable<any>(null); 
     searchText = ko.observable<string>();
 
+    settingsAccess = new settingsAccessAuthorizer();
+
     fetchDb = ko.observable<boolean>(true);
     fetchFs = ko.observable<boolean>(true);
     fetchCs = ko.observable<boolean>(true);
@@ -35,11 +38,14 @@ class topology extends viewModelBase {
     colors = d3.scale.category10();
     line = d3.svg.line().x(d => d.x).y(d => d.y);
 
+    constructor() {
+        super();
+        this.searchText.throttle(250).subscribe(value => this.filter(value));
+    }
 
     hasSaveAsPngSupport = ko.computed(() => {
         return !(navigator && navigator.msSaveBlob);
     });
-
 
     activate(args) {
         super.activate(args);
@@ -49,7 +55,6 @@ class topology extends viewModelBase {
     attached() {
         super.attached();
         d3.select(window).on("resize", this.resize.bind(this));
-       
     }
 
     compositionComplete() {
@@ -333,9 +338,8 @@ class topology extends viewModelBase {
         fileDownloader.downloadAsJson(this.topology(), "topology.json");
     }
 
-    filter() {
+    filter(criteria: string) {
         var filtered: globalTopologyDto = jQuery.extend(true, {}, this.topology());
-        var criteria = this.searchText();
 
         this.resetZoom();
 
@@ -366,7 +370,6 @@ class topology extends viewModelBase {
         this.topologyFiltered(filtered);
 
         this.syncGraph();
-        
     }
 
     private resetZoom() {

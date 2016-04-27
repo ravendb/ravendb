@@ -1,5 +1,8 @@
 <form class="form-horizontal" role="form" data-bind="submit: $root.saveChanges">
-    <div class="panel panel-default" data-bind="visible: !$root.canUseGlobalConfigurations()">
+    <div data-bind="visible: $root.settingsAccess.isForbidden()" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <div class="panel panel-default" data-bind="visible: !$root.settingsAccess.isForbidden() && !$root.canUseGlobalConfigurations()">
         <div class="panel-body">
             <div class="text-center">
                 <h3 class="text-info">
@@ -8,16 +11,16 @@
             </div>
         </div>
     </div>
-    <div class="panel panel-default" data-bind="visible: $root.canUseGlobalConfigurations()">
+    <div class="panel panel-default" data-bind="visible: !$root.settingsAccess.isForbidden() && $root.canUseGlobalConfigurations()">
         <div class="panel-heading">
             <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: activated()" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated()">
+            <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated(), disable: $root.settingsAccess.isReadOnly()">
                 <i class="fa fa-plus"></i> Create global configuration for SQL Replication
             </button>
-            <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+            <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated(), disable: $root.settingsAccess.isReadOnly()">
                 <i class="fa fa-trash"></i> Remove global configuration for SQL Replication
             </button>
-            <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection, visible: activated()" title="Add connection string (Alt+N)" accesskey="N">
+            <button type="button" class="btn btn-default" data-bind="click: addSqlReplicationConnection, visible: activated(), disable: $root.settingsAccess.isReadOnly()" title="Add connection string (Alt+N)" accesskey="N">
                 <i class="fa fa-plus"></i> New connection string
             </button>
             <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
@@ -29,32 +32,32 @@
             <p data-bind="visible: predefinedConnections().length === 0 && $root.activated()">
                 <i class="fa fa-warning text-warning"></i> You've got no SQL replication connections set up.
             </p>
-            <div data-bind="foreach: predefinedConnections, if: $root.activated()">
+            <div data-bind="foreach: predefinedConnections">
                 <div class="col-sm-6">
                     <div class="sql-replication-connection-card panel panel-default">
                         <div class="panel-heading">
                             <h3 class="panel-title">
                                 <span data-bind="text: name() || '[untitled]'"></span>
-                                <button type="button" class="close" aria-hidden="true" data-bind="click: function(){$root.removeSqlReplicationConnection($data)}" title="Remove this connection"><i class="fa fa-times"></i></button>
+                                <button type="button" class="close" aria-hidden="true" data-bind="click: $root.removeSqlReplicationConnection.bind($root, $data), visible: !$root.settingsAccess.isReadOnly()" title="Remove this connection"><i class="fa fa-times"></i></button>
                             </h3>
                         </div>
                         <div class="panel-body">
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Name</label>
                                 <div class="col-sm-7">
-                                    <input required name="name" class="form-control" type="text" data-bind="value:name, valueUpdate: 'afterkeydown'"/>
+                                    <input required name="name" class="form-control" type="text" data-bind="value:name, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"/>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">SQL Provider</label>
                                 <div class="col-sm-7">
-                                    <select tabindex="5" required class="form-control" data-bind="event:{change:function(val,event){$root.providerChanged($data,event);return true;}},options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
+                                    <select tabindex="5" required class="form-control" data-bind="disable: $root.settingsAccess.isReadOnly(), event:{change:function(val,event){$root.providerChanged($data,event);return true;}},options: ['System.Data.SqlClient','System.Data.SqlServerCe.4.0','System.Data.OleDb','System.Data.OracleClient','MySql.Data.MySqlClient','System.Data.SqlServerCe.3.5','Npgsql'], optionsCaption: '', value: factoryName"></select>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Connection String</label>
                                 <div class="col-sm-7">
-                                    <textarea tabindex="6" rows="4" required class="form-control" data-bind="value: connectionString, valueUpdate: 'afterkeydown'"></textarea>
+                                    <textarea tabindex="6" rows="4" required class="form-control" data-bind="value: connectionString, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()"></textarea>
                                 </div>
                             </div>
                             <div class="form-group">

@@ -41,7 +41,7 @@ class apiKey extends document {
                 return "Requires name and secret";
             }
 
-            return "Url = " + appUrl.forServer() + "; ApiKey = " + this.fullApiKey() + "; Database = "
+            return "Url = " + appUrl.forServer() + "; ApiKey = " + this.fullApiKey() + "; Database = ";
         });
 
         this.directLink = ko.computed(() => {
@@ -121,7 +121,7 @@ class apiKey extends document {
     }
 
     isValid(index): boolean {
-        var isApiKeyNameValid = this.name().indexOf("\\") == -1;
+        var isApiKeyNameValid = this.name().indexOf("\\") === -1;
         var requiredValues = [this.name(), this.secret()];
         return requiredValues.every(v => v != null && v.length > 0) && isApiKeyNameValid;
     }

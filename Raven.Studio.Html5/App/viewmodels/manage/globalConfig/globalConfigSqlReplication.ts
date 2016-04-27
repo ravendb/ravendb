@@ -9,8 +9,9 @@ import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
-class globalConfigSqlReplication extends viewModelBase{
+class globalConfigSqlReplication extends viewModelBase {
 
     developerLicense = globalConfig.developerLicense;
     canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
@@ -19,10 +20,7 @@ class globalConfigSqlReplication extends viewModelBase{
     isSaveEnabled: KnockoutComputed<boolean>;
     
     activated = ko.observable<boolean>(false);
-
-    constructor() {
-        super();
-    }
+    settingsAccess = new settingsAccessAuthorizer();
 
     loadConnections():JQueryPromise<any> {
         return new getDocumentWithMetadataCommand("Raven/Global/SqlReplication/Connections", appUrl.getSystemDatabase())
@@ -40,22 +38,23 @@ class globalConfigSqlReplication extends viewModelBase{
             });
     }
 
-
-    getActiveDatabase() {
-        return this.getActiveDatabase();
-    }
-
     canActivate() {
-        var def = $.Deferred();
-        this.loadConnections()
-            .always(() => def.resolve({ can: true }));
-        return def;
+        var deferred = $.Deferred();
+
+        if (this.settingsAccess.isForbidden()) {
+            deferred.resolve({ can: true });
+        } else {
+            this.loadConnections()
+                .always(() => deferred.resolve({ can: true }));
+        }
+       
+        return deferred;
     }
 
     activate(args) {
         super.activate(args);
         this.dirtyFlag = new ko.DirtyFlag([this.connections]);
-        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     saveChanges() {
@@ -80,14 +79,13 @@ class globalConfigSqlReplication extends viewModelBase{
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
         target.etag = "";
-        target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
+        target.ravenEntityName = target.ravenEntityName || document.getEntityNameFromId(id);
         target.id = id;
     }
 
     getSqlReplicationConnectionsUrl() {
         return appUrl.forSqlReplicationConnections(appUrl.getSystemDatabase());
     }
-
 
     addSqlReplicationConnection() {
         var newPredefinedConnection = predefinedSqlConnection.empty();
@@ -101,12 +99,12 @@ class globalConfigSqlReplication extends viewModelBase{
     }
 
     subscribeToSqlReplicationConnectionName(con: predefinedSqlConnection) {
-        con.name.subscribe((previousName: string) => {
-                //Get the previous value of 'name' here before it's set to newValue
-            var nameInputArray = $("input[name=\"name\"]")
-                    .each((index, inputField: any) => {
-                    inputField.setCustomValidity("");
-                });
+        con.name.subscribe(() => {
+             //Get the previous value of 'name' here before it's set to newValue
+             $("input[name=\"name\"]")
+                .each((index, inputField: any) => {
+                inputField.setCustomValidity("");
+            });
         }, this, "beforeChange");
         con.name.subscribe((newName) => {
             var message = "";
@@ -125,17 +123,14 @@ class globalConfigSqlReplication extends viewModelBase{
     }
 
     isSqlPredefinedConnectionNameExists(connectionName: string) :boolean {
-        if (this.connections().predefinedConnections().count(x => x.name() === connectionName) >1) {
-            return true;
-        }
-        return false;
+        return this.connections().predefinedConnections().count(x => x.name() === connectionName) > 1;
     }
 
     providerChanged(obj, event) {
         if (event.originalEvent) {
             var curConnectionString = !!obj.connectionString() ? obj.connectionString().trim() : "";
             if (curConnectionString === "" ||
-                sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
+                sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString === curConnectionString)) {
                 var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == event.originalEvent.srcElement.selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
@@ -161,4 +156,4 @@ class globalConfigSqlReplication extends viewModelBase{
     }
 }
 
-export =globalConfigSqlReplication;
+export = globalConfigSqlReplication;

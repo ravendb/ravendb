@@ -59,8 +59,10 @@
                             <div class="progress progress-striped active" data-bind="visible: isBusy">
                                 <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                             </div>
-                            <div data-bind="foreach: backupStatusMessages, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
-                                <div data-bind="css: { 'text-danger': Severity === 'Error' }, text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div>
+                            <div class="bs-code-output" data-title="Log" data-bind="visible: backupStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                                <pre>
+<!-- ko foreach: backupStatusMessages --><div data-bind="css: { 'text-danger': Severity === 'Error' }, text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div><!-- /ko -->
+</pre>
                             </div>
                         </div>
                     </div>
@@ -116,8 +118,10 @@
                             <div class="progress progress-striped active" data-bind="visible: isBusy">
                                 <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                             </div>
-                            <div data-bind="foreach: backupStatusMessages, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
-                                <div data-bind="text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div>
+                            <div class="bs-code-output" data-title="Log" data-bind="visible: backupStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                                <pre>
+<!-- ko foreach: backupStatusMessages --><div data-bind="css: { 'text-danger': Severity === 'Error' }, text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div><!-- /ko -->
+</pre>
                             </div>
                         </div>
                     </div>
@@ -173,8 +177,10 @@
                             <div class="progress progress-striped active" data-bind="visible: isBusy">
                                 <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                             </div>
-                            <div data-bind="foreach: backupStatusMessages, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
-                                <div data-bind="text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div>
+                            <div class="bs-code-output" data-title="Log" data-bind="visible: backupStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                                <pre>
+<!-- ko foreach: backupStatusMessages --><div data-bind="css: { 'text-danger': Severity === 'Error' }, text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div><!-- /ko -->
+</pre>
                             </div>
                         </div>
                     </div>

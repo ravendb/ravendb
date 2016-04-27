@@ -1,236 +1,236 @@
-<form class="form-horizontal" role="form" data-bind="submit: saveChanges">
-    <div data-bind="visible: isForbidden" class="text-center">
+<form class="form-horizontal" id="manageWindowsAuth" role="form" data-bind="submit: saveChanges">
+    <div data-bind="visible: settingsAccess.isForbidden" class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
 
-    <div class="panel panel-default" data-bind="visible: isForbidden() == false">
+    <div class="panel panel-default" data-bind="visible: settingsAccess.isForbidden() == false">
         <div class="panel-heading">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: addUserSettings, disable: isReadOnly, visible: isUsersSectionActive" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
-            <button type="button" class="btn btn-default" data-bind="click: addGroupSettings, disable: isReadOnly, visible: !isUsersSectionActive()"><i class="fa fa-plus"></i> Add Group Settings</button>
+            <button type="button" class="btn btn-default" data-bind="click: addUserSettings, disable: settingsAccess.isReadOnly, visible: isUsersSectionActive" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
+            <button type="button" class="btn btn-default" data-bind="click: addGroupSettings, disable: settingsAccess.isReadOnly, visible: !isUsersSectionActive()"><i class="fa fa-plus"></i> Add Group Settings</button>
         </div>
         <div class="panel-body">
-            <!-- Nav tabs -->
             <ul class="nav nav-tabs">
                 <li class="active"><a href="#windowsAuthUsers" data-toggle="tab" data-bind="click: isUsersSectionActive.bind($root, true)">Users</a></li>
                 <li><a href="#windowsAuthGroups" data-toggle="tab" data-bind="click: isUsersSectionActive.bind($root, false)">Groups</a></li>
             </ul>
 
-            <!-- Tab panes -->
             <div class="tab-content win-auth-tabs">
-                <div class="tab-pane fade in active" id="windowsAuthUsers">
-                    <div data-bind="foreach: setup().requiredUsers" class="win-auth-panels-container">
-                        <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">
-                                    <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
-                                    <button type="button" style="display: inline-block;" class="close" title="Remove" data-bind="click: $parent.removeUserSettings.bind($parent), visible: $root.isReadOnly() == false">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                </h3>
+            <div class="tab-pane fade in active" id="windowsAuthUsers">
+                <div class="text-center" data-bind="visible: setup().requiredUsers().length === 0">
+                    <h3 class="text-info">
+                        You don't have any User Settings defined.
+                    </h3>
+                </div>
+                <div data-bind="foreach: setup().requiredUsers" class="win-auth-panels-container">
+                    <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
+                                <button type="button" style="display: inline-block;" class="close" title="Remove" data-bind="click: $parent.removeUserSettings.bind($parent), visible: $root.settingsAccess.isReadOnly() == false">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Name</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity"/>
+                                </div>
                             </div>
-                            <div class="panel-body">
-                                <div class="form-group">
-                                    <label class="col-sm-3 control-label">Name</label>
-                                    <div class="col-sm-9">
-                                        <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity"/>
+                            <div class="form-group" data-bind="visible: invalidName">
+                                <div class="col-sm-9 col-sm-offset-3 text-warning">
+                                    <i class="fa fa-warning"></i> Supplied username does not exist in domain
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="visible: verificationInProgress">
+                                <div class="col-sm-9 col-sm-offset-3">
+                                    <i class="fa fa-spin fa-spinner"></i> Verifing username and domain
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Enabled</label>
+                                <div class="col-sm-9">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="visible: enabled">Enabled</span>
+                                            <span data-bind="visible: !enabled()">Disabled</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: enable">Enabled</a></li>
+                                            <li><a href="#" data-bind="click: disable">Disabled</a></li>
+                                        </ul>
                                     </div>
                                 </div>
-                                <div class="form-group" data-bind="visible: invalidName">
-                                    <div class="col-sm-9 col-sm-offset-3 text-warning">
-                                        <i class="fa fa-warning"></i> Supplied username does not exist in domain
-                                    </div>
-                                </div>
-                                <div class="form-group" data-bind="visible: verificationInProgress">
-                                    <div class="col-sm-9 col-sm-offset-3">
-                                        <i class="fa fa-spin fa-spinner"></i> Verifing username and domain
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-sm-3 control-label">Enabled</label>
-                                    <div class="col-sm-9">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                <span data-bind="visible: enabled">Enabled</span>
-                                                <span data-bind="visible: !enabled()">Disabled</span>
-                                                <span class="caret"></span>
-                                            </button>
-                                            <ul class="dropdown-menu" role="menu">
-                                                <li><a href="#" data-bind="click: enable">Enabled</a></li>
-                                                <li><a href="#" data-bind="click: disable">Disabled</a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-sm-3 control-label">Databases</label>
-                                    <div class="col-sm-9">
-                                        <table class="table table-striped table-hover">
-                                            <thead>
-                                                <tr class="database-header" data-bind="visible: databases().length > 0">
-                                                    <td>Name</td>
-                                                    <td>Type</td>
-                                                    <td>
-                                                        <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: $root.isReadOnly() == false">
-                                                            <i class="fa fa-plus"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                <tr data-bind="visible: databases().length == 0">
-                                                    <td>
-                                                        <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add database">
-                                                            <i class="fa fa-plus"></i> Add database
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </thead>
-                                            <tbody data-bind="foreach: databases">
-                                                <tr>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'userDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
-                                                            <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#userDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
-                                                                <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
-                                                                    <a role="menuitem" tabindex="-1" href="#" class="nounderline">
-                                                                        <span data-bind="text: $data"></span>
-                                                                    </a>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                                <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
-                                                            </button>
-                                                            <ul class="dropdown-menu" role="menu">
-                                                                <!-- ko foreach:getTypes() -->
-                                                                <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
-                                                                <!-- /ko -->
-                                                            </ul>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <button type="button" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.isReadOnly() == false" title="Remove this database">
-                                                            <i class="fa fa-times"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Resources</label>
+                                <div class="col-sm-9">
+                                    <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add resource">
+                                        <i class="fa fa-plus"></i> Add resource
+                                    </button>
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                        <tr class="database-header" data-bind="visible: databases().length > 0">
+                                            <td>Name</td>
+                                            <td>Type</td>
+                                            <td>
+                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: $root.settingsAccess.isReadOnly() == false">
+                                                    <i class="fa fa-plus"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </thead>
+                                        <tbody data-bind="foreach: databases">
+                                        <tr>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'userDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                    <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#userDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
+                                                        <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
+                                                            <a role="menuitem" tabindex="-1" href="#" class="nounderline">
+                                                                <span data-bind="text: $data"></span>
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                        <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" role="menu">
+                                                        <!-- ko foreach:getTypes() -->
+                                                        <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
+                                                        <!-- /ko -->
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this resource">
+                                                    <i class="fa fa-times"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="windowsAuthGroups">
-                    <div data-bind="foreach: setup().requiredGroups" class="win-auth-panels-container">
-                        <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">
-                                    <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
-                                    <button type="button" style="display: inline-block;" class="close" title="Remove" data-bind="click: $parent.removeGroupSettings.bind($parent), visible: $root.isReadOnly() == false">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                </h3>
+            </div>
+            <div class="tab-pane fade" id="windowsAuthGroups">
+                <div class="text-center" data-bind="visible: setup().requiredGroups().length === 0">
+                    <h3 class="text-info">
+                        You don't have any Group Settings defined.
+                    </h3>
+                </div>
+                <div data-bind="foreach: setup().requiredGroups" class="win-auth-panels-container">
+                    <div class="panel win-auth-card" data-bind="css: { 'panel-info': enabled, 'panel-warning': !enabled() }">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
+                                <button type="button" style="display: inline-block;" class="close" title="Remove" data-bind="click: $parent.removeGroupSettings.bind($parent), visible: $root.settingsAccess.isReadOnly() == false">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Name</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity"/>
+                                </div>
                             </div>
-                            <div class="panel-body">
-                                <div class="form-group">
-                                    <label class="col-sm-3 control-label">Name</label>
-                                    <div class="col-sm-9">
-                                        <input type="text" class="form-control" required data-bind="value: name, valueUpdate: 'afterkeydown', customValidity: nameCustomValidity"/>
+                            <div class="form-group" data-bind="visible: invalidName">
+                                <div class="col-sm-9 col-sm-offset-3 text-warning">
+                                    <i class="fa fa-warning"></i> Supplied group does not exist in domain
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="visible: verificationInProgress">
+                                <div class="col-sm-9 col-sm-offset-3">
+                                    <i class="fa fa-spin fa-spinner"></i> Verifing group and domain
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Enabled</label>
+                                <div class="col-sm-9">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="visible: enabled">Enabled</span>
+                                            <span data-bind="visible: !enabled()">Disabled</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: enable">Enabled</a></li>
+                                            <li><a href="#" data-bind="click: disable">Disabled</a></li>
+                                        </ul>
                                     </div>
                                 </div>
-                                <div class="form-group" data-bind="visible: invalidName">
-                                    <div class="col-sm-9 col-sm-offset-3 text-warning">
-                                        <i class="fa fa-warning"></i> Supplied group does not exist in domain
-                                    </div>
-                                </div>
-                                <div class="form-group" data-bind="visible: verificationInProgress">
-                                    <div class="col-sm-9 col-sm-offset-3">
-                                        <i class="fa fa-spin fa-spinner"></i> Verifing group and domain
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-sm-3 control-label">Enabled</label>
-                                    <div class="col-sm-9">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                <span data-bind="visible: enabled">Enabled</span>
-                                                <span data-bind="visible: !enabled()">Disabled</span>
-                                                <span class="caret"></span>
-                                            </button>
-                                            <ul class="dropdown-menu" role="menu">
-                                                <li><a href="#" data-bind="click: enable">Enabled</a></li>
-                                                <li><a href="#" data-bind="click: disable">Disabled</a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-sm-3 control-label">Databases</label>
-                                    <div class="col-sm-9">
-                                        <table class="table table-striped table-hover">
-                                            <thead>
-                                                <tr class="database-header" data-bind="visible: databases().length > 0">
-                                                    <td>Name</td>
-                                                    <td>Type</td>
-                                                    <td>
-                                                        <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: $root.isReadOnly() == false">
-                                                            <i class="fa fa-plus"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                <tr data-bind="visible: databases().length == 0">
-                                                    <td>
-                                                        <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add database">
-                                                            <i class="fa fa-plus"></i> Add database
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </thead>
-                                            <tbody data-bind="foreach: databases">
-                                                <tr>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'groupDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
-                                                            <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#groupDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
-                                                                <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
-                                                                    <a role="menuitem" tabindex="-1" href="#" class="nounderline">
-                                                                        <span data-bind="text: $data"></span>
-                                                                    </a>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                                                <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
-                                                            </button>
-                                                            <ul class="dropdown-menu" role="menu">
-                                                                <!-- ko foreach:getTypes() -->
-                                                                <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
-                                                                <!-- /ko -->
-                                                            </ul>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <button type="button" class="close" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.isReadOnly() == false" title="Remove this database">
-                                                            <i class="fa fa-times"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Resources</label>
+                                <div class="col-sm-9">
+                                    <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add resource">
+                                        <i class="fa fa-plus"></i> Add resource
+                                    </button>
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                        <tr class="database-header" data-bind="visible: databases().length > 0">
+                                            <td>Name</td>
+                                            <td>Type</td>
+                                            <td>
+                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: $root.settingsAccess.isReadOnly() == false">
+                                                    <i class="fa fa-plus"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </thead>
+                                        <tbody data-bind="foreach: databases">
+                                        <tr>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="value: tenantId, valueUpdate: 'afterkeydown', customValidity: tenantCustomValidityError, attr: { 'id': 'groupDatabaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                    <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#groupDatabaseName' + $parentContext.$index() + $index(), foreach: searchResults">
+                                                        <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
+                                                            <a role="menuitem" tabindex="-1" href="#" class="nounderline">
+                                                                <span data-bind="text: $data"></span>
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                        <span data-bind="text: currentAccessType"></span> <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" role="menu">
+                                                        <!-- ko foreach:getTypes() -->
+                                                        <li><a href="#" class="nounderline" data-bind="text: $data, click: $parent.currentAccessType.bind($parent)"></a></li>
+                                                        <!-- /ko -->
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="close" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this resource">
+                                                    <i class="fa fa-times"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     </div>

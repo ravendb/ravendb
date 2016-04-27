@@ -38,8 +38,8 @@
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
-                                <span data-bind="visible: $root.readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached">Read from all servers but switch when request time SLA threshold is reached</span>
-                                <span data-bind="visible: $root.readFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
+                                <span data-bind="visible: readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached()">Read from all servers but switch when request time SLA threshold is reached</span>
+                                <span data-bind="visible: readFromAllAllowWriteToSecondaries()">Read from all servers and allow write to secondaries</span>
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">

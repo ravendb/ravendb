@@ -3,27 +3,24 @@ import windowsAuthData = require("models/auth/windowsAuthData");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getWindowsAuthCommand = require("commands/auth/getWindowsAuthCommand");
 import saveWindowsAuthCommand = require("commands/auth/saveWindowsAuthCommand");
-import shell = require("viewmodels/shell");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class windowsAuth extends viewModelBase {
 
-    setup = ko.observable<windowsAuthSetup>().extend({ required: true });
+    setup = ko.observable<windowsAuthSetup>();
     isSaveEnabled: KnockoutComputed<boolean>;
     isUsersSectionActive = ko.observable<boolean>(true);
-    isForbidden = ko.observable<boolean>();
-    isReadOnly: KnockoutComputed<boolean>;
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     canActivate(args) {
         var deferred = $.Deferred();
 
-        this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
-        this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
-
-        if (this.isForbidden() === false) {
+        if (this.settingsAccess.isForbidden()) {
+            deferred.resolve({ can: true });           
+        } else {
             this.setup(new windowsAuthSetup({ RequiredUsers: [], RequiredGroups: [] }));
             this.fetchWindowsAuth().always(() => deferred.resolve({ can: true }));
-        } else {
-            deferred.resolve({ can: true });
         }
 
         return deferred;
@@ -34,16 +31,16 @@ class windowsAuth extends viewModelBase {
         this.updateHelpLink('ZDGUY9');
 
         this.dirtyFlag = new ko.DirtyFlag([this.setup]);
-        this.isSaveEnabled = ko.computed(() => this.isReadOnly() === false && this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
         super.compositionComplete();
-        if (this.isReadOnly()) {
-            $('form input').attr('readonly', 'readonly');
-            $('button').attr('disabled', 'true');
+        if (this.settingsAccess.isReadOnly()) {
+            $('#manageWindowsAuth form input').attr('readonly', 'readonly');
+            $('#manageWindowsAuth button').attr('disabled', 'true');
         }
-        $("form").on("keypress", 'input[name="databaseName"]', (e) => e.which != 13);
+        $("#manageWindowsAuth form").on("keypress", 'input[name="databaseName"]', (e) => e.which !== 13);
     }
 
     private fetchWindowsAuth(): JQueryPromise<any> {

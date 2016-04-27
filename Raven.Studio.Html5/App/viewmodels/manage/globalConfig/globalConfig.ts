@@ -11,7 +11,6 @@ class globalConfig extends viewModelBase {
     static developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     static canUseGlobalConfigurations = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.globalConfigurations === "true");
 
-
     constructor() {
         super();
 

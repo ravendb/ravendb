@@ -1,5 +1,8 @@
 <form data-bind="submit: $root.saveChanges" class=" form-horizontal" role="form">
-    <div class="panel panel-default" data-bind="visible: !$root.canUseGlobalConfigurations()">
+    <div data-bind="visible: $root.settingsAccess.isForbidden()" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <div class="panel panel-default" data-bind="visible: !$root.settingsAccess.isForbidden() && !$root.canUseGlobalConfigurations()">
         <div class="panel-body">
             <div class="text-center">
                 <h3 class="text-info">
@@ -8,37 +11,37 @@
             </div>
         </div>
     </div>
-    <div class="panel panel-default" data-bind="visible: $root.canUseGlobalConfigurations()">
+    <div class="panel panel-default" data-bind="visible: !$root.settingsAccess.isForbidden() && $root.canUseGlobalConfigurations()">
         <div class="panel-heading">
             <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled() || isConfigSaveEnabled(), visible: activated()" title="Save changes (Alt+S)" accesskey="S">
                 <i class="fa fa-save"></i>
             </button>
-            <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated()">
+            <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated(), disable: $root.settingsAccess.isReadOnly()">
                 <i class="fa fa-plus"></i> Create global configuration for Replication
             </button>
-            <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated()">
+            <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated(), disable: $root.settingsAccess.isReadOnly()">
                 <i class="fa fa-trash"></i> Remove global configuration for Replication
             </button>
             <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
         </div>
         <div class="panel-body">
-            <p data-bind="visible: activated()==false">
+            <p data-bind="visible: !activated()">
                 <i class="fa fa-info-circle text-info"></i> Global configuration for Replication is not currently defined.
             </p>
             <div data-bind="if: activated()">
                 <div class="form-group">
-                    <label class="col-sm-2 control-label">Client failover behaviour</label>
-                    <div class="col-sm-10">
+                    <label class="col-sm-3 control-label">Client failover behaviour</label>
+                    <div class="col-sm-9">
                         <div class="btn-group" data-bind="with: replicationsSetup">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                 <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow read from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'FailImmediately'">Fail immediately</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'ReadFromAllServers'">Read from all servers</span>
-                                <span data-bind="visible: $root.readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached">Read from all servers but switch when request time SLA threshold is reached</span>
-                                <span data-bind="visible: $root.readFromAllAllowWriteToSecondaries">Read from all servers and allow write to secondaries</span>
+                                <span data-bind="visible: readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached()">Read from all servers but switch when request time SLA threshold is reached</span>
+                                <span data-bind="visible: readFromAllAllowWriteToSecondaries()">Read from all servers and allow write to secondaries</span>
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">
@@ -57,17 +60,21 @@
                 </div>
                 <div data-bind="visible: replicationsSetup().showRequestTimeSlaThreshold()">
                     <div class="form-group">
-                        <label class="col-sm-2 control-label">Request Time SLA Threshold (ms)</label>
-                        <div class="col-sm-9">
-                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, valueUpdate: 'afterkeydown'" />
+                        <label class="col-sm-3 control-label">Request Time SLA Threshold</label>
+                        <div class="col-sm-2">
+                            <div class="input-group">
+                                <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
+                                <span class="input-group-addon">ms</span>
+                            </div>
+                            
                         </div>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="conflictResolutionSelector" class="col-sm-2 control-label">Conflict resolution</label>
-                    <div class="col-sm-10">
+                    <label for="conflictResolutionSelector" class="col-sm-3 control-label">Conflict resolution</label>
+                    <div class="col-sm-9">
                         <div class="btn-group" data-bind="with: replicationConfig">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                 <span data-bind="visible: documentConflictResolution() === 'None'">None</span>
                                 <span data-bind="visible: documentConflictResolution() === 'ResolveToLocal'">Resolve to <strong>local</strong></span>
                                 <span data-bind="visible: documentConflictResolution() === 'ResolveToRemote'">Resolve to <strong>remote</strong></span>
@@ -84,11 +91,19 @@
                         </div>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Skip index replication for all destinations</label>
+                    <div class="col-sm-9">
+                        <button type="button" class="btn-link" data-bind="click: skipIndexReplicationForAll.bind($root, !skipIndexReplicationForAll()), disable: $root.settingsAccess.isReadOnly()">
+                            <img data-bind="checkbox: skipIndexReplicationForAll">
+                        </button>
+                    </div>
+                </div>
 
                 <div class="form-group">
-                    <label class="col-sm-2 control-label">Replication destinations</label>
-                    <div class="col-sm-10">
-                        <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
+                    <label class="col-sm-3 control-label">Replication destinations</label>
+                    <div class="col-sm-9">
+                        <button type="button" class="btn btn-default" data-bind="click: createNewDestination, disable: $root.settingsAccess.isReadOnly()" title="Add a replication destination (Alt+N)" accesskey="N">
                             <i class="fa fa-plus"></i> Add destination
                         </button>
                         <br />
@@ -109,7 +124,7 @@
                                         <div class="form-group">
                                             <div class="col-sm-offset-4 col-sm-7">
                                                 <div class="btn-group">
-                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                                         <span data-bind="visible: !disabled()">Enabled</span>
                                                         <span data-bind="visible: disabled">Disabled</span>
                                                         <span class="caret"></span>
@@ -124,7 +139,7 @@
                                         <div class="form-group">
                                             <label class="col-sm-4 control-label">Url</label>
                                             <div class="col-sm-7">
-                                                <input required type="url" class="form-control" title="The address of the server to replicate to" data-bind="value: url, valueUpdate: 'afterkeydown'" />
+                                                <input required type="url" class="form-control" title="The address of the server to replicate to" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
                                             </div>
                                         </div>
                                         <div class="form-group">
@@ -142,7 +157,7 @@
                                             <label class="col-sm-4 control-label">Credentials</label>
                                             <div class="col-sm-7">
                                                 <div class="btn-group">
-                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                                         <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
                                                         <span data-bind="visible: isUserCredentials">User</span>
                                                         <span data-bind="visible: isApiKeyCredentials">API key</span>
@@ -161,19 +176,19 @@
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">User Name</label>
                                                 <div class="col-sm-7">
-                                                    <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown'" />
+                                                    <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
                                                 </div>
                                             </div>
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Password</label>
                                                 <div class="col-sm-7">
-                                                    <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown'" />
+                                                    <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
                                                 </div>
                                             </div>
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Domain</label>
                                                 <div class="col-sm-7">
-                                                    <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown'" />
+                                                    <input required type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
                                                 </div>
                                             </div>
                                         </div>
@@ -181,7 +196,7 @@
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">API Key</label>
                                                 <div class="col-sm-7">
-                                                    <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown'" />
+                                                    <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
                                                 </div>
                                             </div>
                                         </div>
@@ -192,20 +207,22 @@
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Client Visible Url</label>
                                                 <div class="col-sm-7">
-                                                    <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'afterkeydown'"/>
+                                                    <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
                                                 </div>
                                             </div>
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Skip Index Replication</label>
                                                 <div class="col-sm-7">
-                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplication" />
+                                                    <button type="button" class="btn-link" data-bind="click: skipIndexReplication.bind($root, !skipIndexReplication()), disable: $root.settingsAccess.isReadOnly()">
+                                                        <img data-bind="checkbox: skipIndexReplication">
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Failover</label>
                                                 <div class="col-sm-7">
                                                     <div class="btn-group">
-                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                                             <span data-bind="visible: !ignoredClient()">Include</span>
                                                             <span data-bind="visible: ignoredClient">Skip</span>
                                                             <span class="caret"></span>
@@ -221,7 +238,7 @@
                                                 <label class="col-sm-4 control-label">Transitive Replication</label>
                                                 <div class="col-sm-7">
                                                     <div class="btn-group">
-                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
                                                             <span data-bind="visible: transitiveReplicationBehavior() === 'None'">Changed only</span>
                                                             <span data-bind="visible: transitiveReplicationBehavior() === 'Replicate'">Changed and replicated</span>
                                                             <span class="caret"></span>
@@ -240,14 +257,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
-                <span style="margin-left: 5px;">
-                    Skip index replication for all destinations
-                </span>
             </div>
         </div>
     </div>

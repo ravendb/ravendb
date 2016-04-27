@@ -8,10 +8,13 @@ import appUrl = require("common/appUrl");
 import listDiskPerformanceRunsCommand = require("commands/maintenance/listDiskPerformanceRunsCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
+import shell = require("viewmodels/shell");
 
 class diskIoViewer extends viewModelBase {
 
     isoFormat = d3.time.format.iso;
+
+    isForbidden = ko.observable(!shell.isGlobalAdmin());
 
     showChart = ko.observable<boolean>(true);
 

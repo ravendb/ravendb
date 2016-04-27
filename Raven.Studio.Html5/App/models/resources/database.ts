@@ -22,7 +22,7 @@ class database extends resource {
         this.rejectClientsMode(isRejectClientsMode);
         this.isLoaded(isLoaded);
         this.clusterWide(clusterWide);
-        this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-database" : "fa-cubes");
+        this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-fw fa-database" : "fa fa-fw fa-cubes");
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {

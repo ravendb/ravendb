@@ -8,12 +8,15 @@ import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigCustomFunctions extends viewModelBase {
 
     developerLicense = globalConfig.developerLicense;
     canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
     activated = ko.observable<boolean>(false);
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     docEditor: AceAjax.Editor;
     textarea: any;
@@ -29,9 +32,7 @@ class globalConfigCustomFunctions extends viewModelBase {
         this.fetchCustomFunctions();
 
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
-        this.isSaveEnabled = ko.computed<boolean>(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        this.isSaveEnabled = ko.computed<boolean>(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     attached() {

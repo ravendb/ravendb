@@ -19,16 +19,18 @@ import getClusterNodesStatusCommand = require("commands/database/cluster/getClus
 import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import license = require("models/auth/license");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class cluster extends viewModelBase {
 
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>(); 
+
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
     developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
-
     clusterMode: KnockoutComputed<boolean>;
+    settingsAccess = new settingsAccessAuthorizer();
 
     constructor() {
         super();
@@ -41,15 +43,20 @@ class cluster extends viewModelBase {
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        var db = appUrl.getSystemDatabase();
-        $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
-            .done(() => {
-                deferred.resolve({ can: true });
-                if (this.clusterMode()) {
-                    this.fetchStatus(db);    
-                }
-            })
-            .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
+        if (this.settingsAccess.isForbidden()) {
+            deferred.resolve({ can: true });
+        } else {
+            var db = appUrl.getSystemDatabase();
+            $.when(this.fetchClusterTopology(db), this.fetchDatabaseId(db), this.fetchServerUrl(db))
+                .done(() => {
+                    deferred.resolve({ can: true });
+                    if (this.clusterMode()) {
+                        this.fetchStatus(db);
+                    }
+                })
+                .fail(() => deferred.resolve({ redirect: appUrl.forAdminSettings() }));
+        }
+
         return deferred;
     }
 
@@ -145,7 +152,7 @@ class cluster extends viewModelBase {
     initializeNewCluster() {
         this.confirmationMessage("Are you sure?", "You are about to initialize new cluster on this server.")
             .done(() => {
-            new initializeNewClusterCommand(appUrl.getSystemDatabase())
+                new initializeNewClusterCommand(appUrl.getSystemDatabase())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
             });

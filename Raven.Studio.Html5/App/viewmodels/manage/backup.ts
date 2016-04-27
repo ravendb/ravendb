@@ -81,7 +81,7 @@ class backupDatabase extends viewModelBase {
     isForbidden = ko.observable<boolean>();
 
     canActivate(args): any {
-        this.isForbidden(shell.isGlobalAdmin() === false);
+        this.isForbidden(!shell.isGlobalAdmin());
         return true;
     }
 
@@ -92,8 +92,8 @@ class backupDatabase extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        $('form :input[name="databaseName"]').on("keypress", (e) => e.which != 13);
-        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which != 13);
+        $('form :input[name="databaseName"]').on("keypress", (e) => e.which !== 13);
+        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which !== 13);
     }
 
     startDbBackup() {
@@ -101,7 +101,7 @@ class backupDatabase extends viewModelBase {
         backupOptions.isBusy(true);
         var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
             backupOptions.backupStatusMessages(newBackupStatus.Messages);
-            backupOptions.isBusy(!!newBackupStatus.IsRunning);
+            backupOptions.isBusy(newBackupStatus.IsRunning);
         };
 
         var dbToBackup = shell.databases.first((db: database) => db.name === backupOptions.resourceName());
@@ -115,7 +115,7 @@ class backupDatabase extends viewModelBase {
         backupOptions.isBusy(true);
         var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
             backupOptions.backupStatusMessages(newBackupStatus.Messages);
-            backupOptions.isBusy(!!newBackupStatus.IsRunning);
+            backupOptions.isBusy(newBackupStatus.IsRunning);
         };
 
         var fsToBackup = shell.fileSystems.first((fs: filesystem) => fs.name === backupOptions.resourceName());
@@ -129,7 +129,7 @@ class backupDatabase extends viewModelBase {
         backupOptions.isBusy(true);
         var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
             backupOptions.backupStatusMessages(newBackupStatus.Messages);
-            backupOptions.isBusy(!!newBackupStatus.IsRunning);
+            backupOptions.isBusy(newBackupStatus.IsRunning);
         };
 
         var csToBackup = shell.counterStorages.first((cs: counterStorage) => cs.name === backupOptions.resourceName());

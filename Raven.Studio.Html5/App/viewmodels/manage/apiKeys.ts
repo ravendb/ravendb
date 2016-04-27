@@ -2,34 +2,29 @@ import getApiKeysCommand = require("commands/auth/getApiKeysCommand");
 import saveApiKeysCommand = require("commands/auth/saveApiKeysCommand");
 import apiKey = require("models/auth/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class apiKeys extends viewModelBase {
-    apiKeys = ko.observableArray<apiKey>().extend({ required: true });
-    static globalApiKeys: KnockoutObservableArray<apiKey>;
-    loadedApiKeys = ko.observableArray<apiKey>().extend({ required: true });
+    apiKeys = ko.observableArray<apiKey>();
+    loadedApiKeys = ko.observableArray<apiKey>();
     searchText = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
-    isForbidden = ko.observable<boolean>();
-    isReadOnly: KnockoutComputed<boolean>;
+    noResults = ko.observable<boolean>(false);
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     constructor() {
         super();
-
-        apiKeys.globalApiKeys = this.apiKeys;
         this.searchText.throttle(200).subscribe(value => this.filterKeys(value));
-
-        this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
-        this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
     }
 
     canActivate(args) {
         var deferred = $.Deferred();
 
-        if (this.isForbidden() === false) {
-            this.fetchApiKeys().done(() => deferred.resolve({ can: true }));
-        } else {
+        if (this.settingsAccess.isForbidden()) {
             deferred.resolve({ can: true });
+        } else {
+            this.fetchApiKeys().done(() => deferred.resolve({ can: true }));
         }
         
         return deferred;
@@ -39,16 +34,16 @@ class apiKeys extends viewModelBase {
         super.activate(args);
         this.updateHelpLink('9CGJ4Y');
         this.dirtyFlag = new ko.DirtyFlag([this.apiKeys]);
-        this.isSaveEnabled = ko.computed(() => this.isReadOnly() === false && this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
         super.compositionComplete();
-        if (this.isReadOnly()) {
-            $('form input').attr('readonly', 'readonly');
-            $('button').attr('disabled', 'true');
+        if (this.settingsAccess.isReadOnly()) {
+            $('#manageApiKeys form input:not(#apiKeysSearchInput)').attr('readonly', 'readonly');
+            $('#manageApiKeys button').attr('disabled', 'true');
         }
-        $("form").on("keypress", 'input[name="databaseName"]', (e) => e.which != 13);
+        $("#manageApiKeys form").on("keypress", 'input[name="databaseName"]', (e) => e.which !== 13);
     }
 
     private fetchApiKeys(): JQueryPromise<any> {
@@ -57,7 +52,6 @@ class apiKeys extends viewModelBase {
             .done((results: apiKey[]) => {
                 this.apiKeys(results);
                 this.saveLoadedApiKeys(results);
-                apiKeys.globalApiKeys(results);
                 this.apiKeys().forEach((key: apiKey) => {
                     this.subscribeToObservableKeyName(key);
                 });
@@ -71,17 +65,17 @@ class apiKeys extends viewModelBase {
 
     private subscribeToObservableKeyName(key: apiKey) {
         key.name.subscribe((previousApiKeyName) => {
-            var existingApiKeysExceptCurrent = this.apiKeys().filter((k: apiKey) => k !== key && k.name() == previousApiKeyName);
-            if (existingApiKeysExceptCurrent.length == 1) {
+            var existingApiKeysExceptCurrent = this.apiKeys().filter((k: apiKey) => k !== key && k.name() === previousApiKeyName);
+            if (existingApiKeysExceptCurrent.length === 1) {
                 existingApiKeysExceptCurrent[0].nameCustomValidity('');
             }
         }, this, "beforeChange");
         key.name.subscribe((newApiKeyName) => {
             var errorMessage: string = '';
-            var isApiKeyNameValid = newApiKeyName.indexOf("\\") == -1;
-            var existingApiKeys = this.apiKeys().filter((k: apiKey) => k !== key && k.name() == newApiKeyName);
+            var isApiKeyNameValid = newApiKeyName.indexOf("\\") === -1;
+            var existingApiKeys = this.apiKeys().filter((k: apiKey) => k !== key && k.name() === newApiKeyName);
 
-            if (isApiKeyNameValid == false) {
+            if (!isApiKeyNameValid) {
                 errorMessage = "API Key name cannot contain '\\'";
             } else if (existingApiKeys.length > 0) {
                 errorMessage = "API key name already exists!";
@@ -106,7 +100,7 @@ class apiKeys extends viewModelBase {
         this.apiKeys().forEach((key: apiKey) => key.setIdFromName());
 
         var apiKeysNamesArray: Array<string> = this.apiKeys().map((key: apiKey) => key.name());
-        var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => apiKeysNamesArray.contains(key.name()) == false);
+        var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => !apiKeysNamesArray.contains(key.name()));
         deletedApiKeys.forEach((key: apiKey) => key.setIdFromName());
 
         new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
@@ -130,11 +124,18 @@ class apiKeys extends viewModelBase {
 
     filterKeys(filter: string) {
         var filterLower = filter.toLowerCase().trim();
+        var matches = 0;
         this.apiKeys().forEach(k => {
             var isEmpty = filterLower.length === 0;
             var isMatch = k.name() != null && k.name().toLowerCase().indexOf(filterLower) !== -1;
-            k.visible(isEmpty || isMatch);
+            var visible = isEmpty || isMatch;
+            k.visible(visible);
+            if (visible) {
+                matches++;
+            }
         });
+
+        this.noResults(matches === 0);
     }
 }
 

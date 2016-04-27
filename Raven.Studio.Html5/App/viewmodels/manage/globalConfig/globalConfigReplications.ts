@@ -11,6 +11,7 @@ import saveAutomaticConflictResolutionDocumentCommand = require("commands/databa
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class globalConfigReplications extends viewModelBase {
 
@@ -25,6 +26,8 @@ class globalConfigReplications extends viewModelBase {
     
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     activated = ko.observable<boolean>(false);
 
@@ -47,7 +50,7 @@ class globalConfigReplications extends viewModelBase {
     private getIndexReplicationStatusForAllDestinations(): string {
         var countOfSkipIndexReplication: number = 0;
         ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
-            if (dest.skipIndexReplication() === true) {
+            if (dest.skipIndexReplication()) {
                 countOfSkipIndexReplication++;
             }
         });
@@ -62,31 +65,17 @@ class globalConfigReplications extends viewModelBase {
         return 'mixed';
     }
 
-    readFromAllAllowWriteToSecondaries = ko.computed(() => {
-        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
-    });
-
-    readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
-        var behaviour = this.replicationsSetup().clientFailoverBehaviour();
-        if (behaviour == null) {
-            return false;
-        }
-        var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
-    });
-
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db = appUrl.getSystemDatabase();
         if (db) {
-            $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
-                .done(() => deferred.resolve({ can: true }) )
-                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            if (this.settingsAccess.isForbidden()) {
+                deferred.resolve({ can: true });
+            } else {
+                $.when(this.fetchAutomaticConflictResolution(db), this.fetchReplications(db))
+                    .done(() => deferred.resolve({ can: true }))
+                    .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }));
+            }
         }
         return deferred;
     }
@@ -112,7 +101,7 @@ class globalConfigReplications extends viewModelBase {
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag([this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour, this.replicationsSetup().requestTimeSlaThreshold, this.replicationsSetup().showRequestTimeSlaThreshold]);
-        this.isSetupSaveEnabled = ko.computed(() => this.replicationsSetupDirtyFlag().isDirty());
+        this.isSetupSaveEnabled = ko.computed(() => !this.settingsAccess.isReadOnly() && this.replicationsSetupDirtyFlag().isDirty());
 
         var combinedFlag = ko.computed(() => {
             var f1 = this.replicationConfigDirtyFlag().isDirty();

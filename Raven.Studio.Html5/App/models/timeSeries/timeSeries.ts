@@ -5,7 +5,7 @@ import timeSeriesStatistics = require("models/timeSeries/timeSeriesStatistics");
 class timeSeries extends resource {
     statistics = ko.observable<timeSeriesStatistics>();
     static type = "timeSeries";
-    iconName = "fa fa-clock-o";
+    iconName = "fa fa-fw fa-clock-o";
 
     constructor(name: string, isAdminCurrentTenant: boolean = true, isDisabled: boolean = false, bundles: string[] = []) {
         super(name, TenantType.TimeSeries, isAdminCurrentTenant);

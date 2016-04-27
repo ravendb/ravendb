@@ -102,7 +102,7 @@ class adminLogs extends viewModelBase {
                     this.adminLogsConfig().singleAuthToken(tokenObject);
                     tokenDeferred.resolve();
                 })
-                .fail((e) => {
+                .fail(() => {
                     app.showMessage("You are not authorized to trace this resource", "Authorization error");
                 });
         } else {
@@ -188,7 +188,7 @@ class adminLogs extends viewModelBase {
 
     toggleKeepDown() {
         this.keepDown.toggle();
-        if (this.keepDown() == true) {
+        if (this.keepDown()) {
             var logsPre = document.getElementById('adminLogsPre');
             logsPre.scrollTop = logsPre.scrollHeight;
         }

@@ -7280,9 +7280,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #logsContainer .logRecord:hover .logName-actions-container {
   display: inline-block;
 }
-.settings-container {
-  margin-top: 10px;
-}
 .settings-container .api-key-card,
 .settings-container .win-auth-card {
   display: inline-block;
@@ -8352,9 +8349,6 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .quotas-settings-form .row {
   margin-bottom: 5px;
 }
-.quotas-settings-form .control-label {
-  text-align: left;
-}
 .quotas-settings-form input[type=number] {
   text-align: right;
 }
@@ -8547,6 +8541,9 @@ a.global_help_link:focus {
 }
 .padd-top-10 {
   padding-top: 10px;
+}
+.padd-left-10 {
+  padding-left: 10px;
 }
 .padd-right-10 {
   padding-right: 10px;
@@ -8963,4 +8960,41 @@ a.global_help_link:focus {
 }
 #shellFooter .partial-support {
   background-color: #7cbc85 !important;
+}
+.no-matches {
+  padding: 30px;
+  text-align: center;
+}
+.admin-settings-container li.disabled a {
+  pointer-events: none;
+}
+.bs-code-output {
+  position: relative;
+  margin: 10px;
+  padding: 28px 0 0;
+  background-color: white;
+  border: 1px solid #DDD;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+.bs-code-output pre {
+  border: 0;
+  margin-bottom: 0;
+  border-radius: 0 0 4px 4px;
+  border-top: 1px solid #ddd;
+}
+.bs-code-output::after {
+  content: attr(data-title);
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  right: -1px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: bold;
+  color: #9DA0A4;
+  -webkit-border-radius: 4px 0 4px 0;
+  -moz-border-radius: 4px 0 4px 0;
+  border-radius: 4px 0 4px 0;
 }
