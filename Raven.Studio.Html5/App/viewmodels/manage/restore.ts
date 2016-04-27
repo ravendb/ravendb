@@ -38,18 +38,19 @@ class resourceRestore {
 
     toggleKeepDown() {
         this.keepDown.toggle();
+        this.forceKeepDown();
+    }
+
+    forceKeepDown() {
         if (this.keepDown()) {
-            var logsPre = document.getElementById(this.type + "RestoreLogPre");
-            logsPre.scrollTop = logsPre.scrollHeight;
+            var body = document.getElementsByTagName("body")[0];
+            body.scrollTop = body.scrollHeight;
         }
     }
 
     updateRestoreStatus(newRestoreStatus: restoreStatusDto) {
         this.restoreStatusMessages(newRestoreStatus.Messages);
-        if (this.keepDown()) {
-            var logsPre = document.getElementById(this.type + "RestoreLogPre");
-            logsPre.scrollTop = logsPre.scrollHeight;
-        }
+        this.forceKeepDown();
         this.parent.isBusy(newRestoreStatus.State === "Running");
     }
 }

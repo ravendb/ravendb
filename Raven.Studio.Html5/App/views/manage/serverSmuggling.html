@@ -101,7 +101,7 @@
                             <tbody data-bind="foreach: resources">
                             <tr>
                                 <td class="text-center">
-                                    <button type="button" class="btn-link" data-bind="click: $root.toggleSelection.bind($root)">
+                                    <button type="button" class="btn-link" data-bind="click: $root.toggleSelection.bind($root), disable: $root.inProgress()">
                                         <img data-bind="checkbox: $root.isSelected($data)">
                                     </button>
                                 </td>
@@ -161,14 +161,10 @@
                     </div>
                 </div>
 
-
-                <hr/>
-                <div class="row">
-                    <div class="col-sm-offset-1 col-sm-10">
-                        <pre data-bind="visible: resultsVisible">
+                <div class="bs-code-output" data-title="Log" data-bind="visible: resultsVisible">
+                    <pre>
 <!-- ko foreach: $root.messages --><div data-bind="text: $data"></div><!-- /ko -->
-</pre>		
-                    </div>
+</pre>
                 </div>
             </div>
         </div>

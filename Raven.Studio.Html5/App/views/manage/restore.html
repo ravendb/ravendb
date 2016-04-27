@@ -86,13 +86,14 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                            <pre>
+<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>
+                        </div>
                     </div>
                 </div>
-                <div id="databaseRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-                    <pre data-bind="visible: dbRestoreOptions.restoreStatusMessages().length > 0" id="databaseRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
-<!-- ko foreach: dbRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-        </pre>
-                </div>
+                
             </form>
         </div>
         <div role="tabpanel" class="tab-pane" id="restoreFs">
@@ -149,14 +150,13 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                            <pre>
+<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>
+                        </div>
                     </div>
                 </div>
-                <div id="filesystemRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-                    <pre data-bind="visible: fsRestoreOptions.restoreStatusMessages().length > 0" id="filesystemRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
-<!-- ko foreach: fsRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-        </pre>
-                </div>
-
             </form>
         </div>
 
@@ -202,14 +202,13 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="bs-code-output" data-title="Log" data-bind="visible: restoreStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
+                            <pre>
+<!-- ko foreach: restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
+</pre>
+                        </div>
                     </div>
                 </div>
-                <div id="filesystemRestoreLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-                    <pre data-bind="visible: fsRestoreOptions.restoreStatusMessages().length > 0" id="filesystemRestoreLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
-<!-- ko foreach: fsRestoreOptions.restoreStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-        </pre>
-                </div>
-
             </form>
         </div>
     </div>

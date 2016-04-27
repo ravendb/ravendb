@@ -29,10 +29,10 @@ class resourceCompact {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            var foundRs = this.resources().first((rs: resource) => newResourceName == rs.name);
+            var foundRs = this.resources().first((rs: resource) => newResourceName === rs.name);
 
             if (!foundRs && newResourceName.length > 0) {
-                errorMessage = (this.type == database.type ? "Database" : "File system") + " name doesn't exist!";
+                errorMessage = (this.type === database.type ? "Database" : "File system") + " name doesn't exist!";
             }
 
             return errorMessage;
@@ -41,19 +41,20 @@ class resourceCompact {
 
     toggleKeepDown() {
         this.keepDown.toggle();
+        this.forceKeepDown();
+    }
+
+    forceKeepDown() {
         if (this.keepDown()) {
-            var logsPre = document.getElementById(this.type + 'CompactLogPre');
-            logsPre.scrollTop = logsPre.scrollHeight;
+            var body = document.getElementsByTagName("body")[0];
+            body.scrollTop = body.scrollHeight;
         }
     }
 
     updateCompactStatus(newCompactStatus: compactStatusDto) {
         this.compactStatusMessages(newCompactStatus.Messages);
         this.compactStatusLastUpdate(newCompactStatus.LastProgressMessage);
-        if (this.keepDown()) {
-            var logsPre = document.getElementById(this.type + 'CompactLogPre');
-            logsPre.scrollTop = logsPre.scrollHeight;
-        }
+        this.forceKeepDown();
         this.parent.isBusy(newCompactStatus.State === "Running");
     }
 

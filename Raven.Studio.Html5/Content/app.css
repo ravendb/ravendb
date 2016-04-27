@@ -8968,3 +8968,33 @@ a.global_help_link:focus {
 .admin-settings-container li.disabled a {
   pointer-events: none;
 }
+.bs-code-output {
+  position: relative;
+  margin: 10px;
+  padding: 28px 0 0;
+  background-color: white;
+  border: 1px solid #DDD;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+.bs-code-output pre {
+  border: 0;
+  margin-bottom: 0;
+  border-radius: 0 0 4px 4px;
+  border-top: 1px solid #ddd;
+}
+.bs-code-output::after {
+  content: attr(data-title);
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  right: -1px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: bold;
+  color: #9DA0A4;
+  -webkit-border-radius: 4px 0 4px 0;
+  -moz-border-radius: 4px 0 4px 0;
+  border-radius: 4px 0 4px 0;
+}

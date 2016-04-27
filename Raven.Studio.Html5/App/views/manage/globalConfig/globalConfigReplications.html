@@ -94,7 +94,9 @@
                 <div class="form-group">
                     <label class="col-sm-3 control-label">Skip index replication for all destinations</label>
                     <div class="col-sm-9">
-                        <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll, disable: $root.settingsAccess.isReadOnly()" />
+                        <button type="button" class="btn-link" data-bind="click: skipIndexReplicationForAll.bind($root, !skipIndexReplicationForAll()), disable: $root.settingsAccess.isReadOnly()">
+                            <img data-bind="checkbox: skipIndexReplicationForAll">
+                        </button>
                     </div>
                 </div>
 
@@ -211,7 +213,9 @@
                                             <div class="form-group">
                                                 <label class="col-sm-4 control-label">Skip Index Replication</label>
                                                 <div class="col-sm-7">
-                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplication, disable: $root.settingsAccess.isReadOnly()" />
+                                                    <button type="button" class="btn-link" data-bind="click: skipIndexReplication.bind($root, !skipIndexReplication()), disable: $root.settingsAccess.isReadOnly()">
+                                                        <img data-bind="checkbox: skipIndexReplication">
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div class="form-group">

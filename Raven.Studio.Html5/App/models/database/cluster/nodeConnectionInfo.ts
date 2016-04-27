@@ -70,7 +70,7 @@ class nodeConnectionInfo {
     useNoCredentials() {
         this.isUserCredentials(false);
         this.isApiKeyCredentials(false);
-        this.clearApiKeyCredentials()
+        this.clearApiKeyCredentials();
         this.clearUserCredentials();
     }
 
