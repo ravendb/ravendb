@@ -30,7 +30,7 @@ namespace Raven.Client.Document
         private readonly Func<ShardRequestData, IList<Tuple<string, IDatabaseCommands>>> getShardsToOperateOn;
         private readonly ShardStrategy shardStrategy;
         private List<QueryOperation> shardQueryOperations;
-        
+
         private IList<IDatabaseCommands> databaseCommands;
         private IList<IDatabaseCommands> ShardDatabaseCommands
         {
@@ -38,7 +38,7 @@ namespace Raven.Client.Document
             {
                 if (databaseCommands == null)
                 {
-                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData {EntityType = typeof (T), Query = IndexQuery, IndexName = indexName});
+                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery, IndexName = indexName });
                     databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
                 }
                 return databaseCommands;
@@ -58,9 +58,9 @@ namespace Raven.Client.Document
             : base(session
             , null
             , null
-            , indexName, 
+            , indexName,
             fieldsToFetch,
-            projectionFields, 
+            projectionFields,
             queryListeners,
             isMapReduce)
         {
@@ -91,7 +91,7 @@ namespace Raven.Client.Document
         {
             var documentQuery = new ShardedDocumentQuery<TProjection>(theSession,
                 getShardsToOperateOn,
-                shardStrategy, 
+                shardStrategy,
                 indexName,
                 fields,
                 projections,
@@ -112,7 +112,7 @@ namespace Raven.Client.Document
                 allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 transformResultsFunc = transformResultsFunc,
                 includes = new HashSet<string>(includes),
-                rootTypes = {typeof(T)},
+                rootTypes = { typeof(T) },
                 beforeQueryExecutionAction = beforeQueryExecutionAction,
                 afterQueryExecutedCallback = afterQueryExecutedCallback,
                 afterStreamExecutedCallback = afterStreamExecutedCallback,
@@ -138,7 +138,7 @@ namespace Raven.Client.Document
                 defaultOperator = defaultOperator,
                 highlighterKeyName = highlighterKeyName,
                 lastEquality = lastEquality
-                
+
             };
             return documentQuery;
         }
@@ -158,7 +158,7 @@ namespace Raven.Client.Document
                     using (queryOp.EnterQueryContext())
                     {
                         queryOp.LogQuery();
-                        var result = dbCmd.Query(indexName, queryOp.IndexQuery, includes.ToArray());
+                        var result = dbCmd.Query(indexName, queryOp.IndexQuery);
                         queryOp.EnsureIsAcceptable(result);
 
                         return result;
@@ -174,7 +174,7 @@ namespace Raven.Client.Document
 
             shardQueryOperations[0].ForceResult(mergedQueryResult);
             queryOperation = shardQueryOperations[0];
-            
+
             afterQueryExecutedCallback(mergedQueryResult);
         }
 
@@ -185,15 +185,15 @@ namespace Raven.Client.Document
             foreach (var shardQueryOperation in shardQueryOperations)
             {
                 var currentQueryResults = shardQueryOperation.CurrentQueryResults;
-                if(currentQueryResults == null)
+                if (currentQueryResults == null)
                     continue;
                 foreach (var include in currentQueryResults.Includes.Concat(currentQueryResults.Results))
                 {
                     var includeMetadata = include.Value<RavenJObject>(Constants.Metadata);
-                    if(includeMetadata == null)
+                    if (includeMetadata == null)
                         continue;
                     var id = includeMetadata.Value<string>("@id");
-                    if(id == null)
+                    if (id == null)
                         continue;
                     shardsPerId.GetOrAdd(id).Add(shardQueryOperation);
                 }
@@ -258,7 +258,7 @@ namespace Raven.Client.Document
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, ShardDatabaseCommands.First().OperationsHeaders);
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, ShardDatabaseCommands.First().OperationsHeaders);
             return lazyQueryOperation;
         }
 

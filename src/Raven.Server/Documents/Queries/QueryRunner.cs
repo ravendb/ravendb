@@ -46,12 +46,6 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("We don't support querying of static indexes for now");
             }
 
-            if (result.NotModified == false && includes.Count > 0)
-            {
-                var includeDocs = new IncludeDocumentsCommand(_database.DocumentsStorage, _documentsContext, includes);
-                includeDocs.Execute(result.Results, result.Includes);
-            }
-
             return result;
         }
 

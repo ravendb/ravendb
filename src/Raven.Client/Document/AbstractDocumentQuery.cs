@@ -464,7 +464,7 @@ namespace Raven.Client.Document
 
         IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude,distErrorPercent, radiusUnits);
+            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
             return this;
         }
 
@@ -477,7 +477,7 @@ namespace Raven.Client.Document
 
         IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent)
         {
-            GenerateSpatialQueryData(fieldName, shapeWKT, rel,distErrorPercent);
+            GenerateSpatialQueryData(fieldName, shapeWKT, rel, distErrorPercent);
             return this;
         }
 
@@ -611,7 +611,6 @@ namespace Raven.Client.Document
                                       theWaitForNonStaleResults,
                                       timeout,
                                       transformResultsFunc,
-                                      includes,
                                       disableEntitiesTracking);
         }
 
@@ -684,7 +683,7 @@ namespace Raven.Client.Document
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
-                var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
+                var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery);
                 queryOperation.EnsureIsAcceptable(result);
             }
 
@@ -731,7 +730,7 @@ namespace Raven.Client.Document
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
             return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
@@ -747,7 +746,7 @@ namespace Raven.Client.Document
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
             return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
@@ -765,8 +764,7 @@ namespace Raven.Client.Document
                 queryOperation = InitializeQueryOperation();
             }
 
-
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, GetOperationHeaders());
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
 
             return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
         }
@@ -887,8 +885,8 @@ namespace Raven.Client.Document
         public void AddMapReduceField(DynamicMapReduceField field)
         {
             isMapReduce = true;
-            
-            dynamicMapReduceFields = dynamicMapReduceFields.Concat(new [] { field }).ToArray();
+
+            dynamicMapReduceFields = dynamicMapReduceFields.Concat(new[] { field }).ToArray();
         }
 
         public DynamicMapReduceField[] GetGroupByFields()
@@ -1196,7 +1194,7 @@ If you really want to do in memory filtering on the data returned from the query
         public void WhereEquals(WhereParams whereParams)
         {
             EnsureValidFieldName(whereParams);
-            
+
             var transformToEqualValue = TransformToEqualValue(whereParams);
             lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
 
@@ -1829,7 +1827,7 @@ If you really want to do in memory filtering on the data returned from the query
             using (queryOperation.EnterQueryContext())
             {
                 queryOperation.LogQuery();
-                var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray()).ConfigureAwait(false);
+                var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery).ConfigureAwait(false);
 
                 queryOperation.EnsureIsAcceptable(result);
 
@@ -1878,7 +1876,8 @@ If you really want to do in memory filtering on the data returned from the query
                     TransformerParameters = transformerParameters,
                     DisableCaching = disableCaching,
                     ShowTimings = showQueryTimings,
-                    ExplainScores = shouldExplainScores
+                    ExplainScores = shouldExplainScores,
+                    Includes = includes.ToArray()
                 };
 
                 if (pageSize.HasValue)
@@ -1910,7 +1909,8 @@ If you really want to do in memory filtering on the data returned from the query
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 DisableCaching = disableCaching,
                 ShowTimings = showQueryTimings,
-                ExplainScores = shouldExplainScores
+                ExplainScores = shouldExplainScores,
+                Includes = includes.ToArray()
             };
 
             if (pageSize != null)

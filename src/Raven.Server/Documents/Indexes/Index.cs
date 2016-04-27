@@ -15,6 +15,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -749,8 +750,14 @@ namespace Raven.Server.Documents.Indexes
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
                             var totalResults = new Reference<int>();
+                            var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
+                            foreach (var document in reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch)))
+                            {
+                                result.Results.Add(document);
+                                includeDocumentsCommand.Gather(document);
+                            }
 
-                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch)).ToList();
+                            includeDocumentsCommand.Fill(result.Includes);
                             result.TotalResults = totalResults.Value;
                         }
 
@@ -811,8 +818,14 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
-                    result.Results = reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token).ToList();
-                    //result.Includes = null; // TODO [ppekrol]
+                    var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
+                    foreach (var document in reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token))
+                    {
+                        result.Results.Add(document);
+                        includeDocumentsCommand.Gather(document);
+                    }
+                    
+                    includeDocumentsCommand.Fill(result.Includes);
                 }
 
                 return result;

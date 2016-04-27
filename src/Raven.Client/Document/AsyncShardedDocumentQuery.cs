@@ -134,7 +134,7 @@ namespace Raven.Client.Document
                     var queryOp = shardQueryOperations[i];
 
                     var queryContext = queryOp.EnterQueryContext();
-                    return commands.QueryAsync(indexName, queryOp.IndexQuery, includes.ToArray())
+                    return commands.QueryAsync(indexName, queryOp.IndexQuery)
                         .ContinueWith(task =>
                     {
                         if (queryContext != null)

@@ -442,13 +442,9 @@ namespace Raven.Client.Connection
         /// </summary>
         /// <param name="index">name of an index to query</param>
         /// <param name="query">query definition containing all information required to query a specified index</param>
-        /// <param name="includes">
-        ///     an array of relative paths that specify related documents ids which should be included in a
-        ///     query result
-        /// </param>
         /// <param name="metadataOnly">true if returned documents should include only metadata without a document body.</param>
         /// <param name="indexEntriesOnly">true if query results should contain only index entries.</param>
-        QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
+        QueryResult Query(string index, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false);
 
         /// <summary>
         ///     Removes all indexing data from a server for a given index so the indexation can start from scratch for that index.

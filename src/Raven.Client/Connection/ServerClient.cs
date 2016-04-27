@@ -230,12 +230,12 @@ namespace Raven.Client.Connection
             return asyncServerClient.DirectPutIndexAsync(name, definition, overwrite, operationMetadata).Result;
         }
 
-        public QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false,
+        public QueryResult Query(string index, IndexQuery query, bool metadataOnly = false,
             bool indexEntriesOnly = false)
         {
             try
             {
-                return AsyncHelpers.RunSync(() => asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly));
+                return AsyncHelpers.RunSync(() => asyncServerClient.QueryAsync(index, query, metadataOnly, indexEntriesOnly));
             }
             catch (Exception e)
             {

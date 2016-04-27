@@ -129,13 +129,15 @@ namespace Raven.Server.Documents.Handlers
             var includes = HttpContext.Request.Query["include"];
             var documents = new List<Document>(ids.Count + (includes.Count * ids.Count));
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (string id in ids)
+            var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includes);
+            foreach (var id in ids)
             {
-                documents.Add(Database.DocumentsStorage.Get(context, id));
+                var document = Database.DocumentsStorage.Get(context, id);
+                documents.Add(document);
+                includeDocs.Gather(document);
             }
 
-            var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includes);
-            includeDocs.Execute(documents, documents);
+            includeDocs.Fill(documents);
 
             long actualEtag = ComputeEtagsFor(documents);
             if (GetLongFromHeaders("If-None-Match") == actualEtag)

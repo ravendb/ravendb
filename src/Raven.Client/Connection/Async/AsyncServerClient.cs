@@ -1240,20 +1240,20 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false, CancellationToken token = default(CancellationToken))
+        public Task<QueryResult> QueryAsync(string index, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false, CancellationToken token = default(CancellationToken))
         {
             var method = (query.Query == null || query.Query.Length <= convention.MaxLengthOfQueryUsingGetUrl)
                 ? HttpMethod.Get : HttpMethod.Post;
 
             if (method == HttpMethod.Post)
             {
-                return QueryAsyncAsPost(index, query, includes, metadataOnly, indexEntriesOnly, token);
+                return QueryAsyncAsPost(index, query, metadataOnly, indexEntriesOnly, token);
             }
 
-            return QueryAsyncAsGet(index, query, includes, metadataOnly, indexEntriesOnly, method, token);
+            return QueryAsyncAsGet(index, query, metadataOnly, indexEntriesOnly, method, token);
         }
 
-        private Task<QueryResult> QueryAsyncAsGet(string index, IndexQuery query, string[] includes, bool metadataOnly, bool indexEntriesOnly, HttpMethod method, CancellationToken token = default(CancellationToken))
+        private Task<QueryResult> QueryAsyncAsGet(string index, IndexQuery query, bool metadataOnly, bool indexEntriesOnly, HttpMethod method, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(method, async operationMetadata =>
             {
@@ -1264,11 +1264,6 @@ namespace Raven.Client.Connection.Async
                     path += "&metadata-only=true";
                 if (indexEntriesOnly)
                     path += "&debug=entries";
-                if (includes != null && includes.Length > 0)
-                {
-                    path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
-                }
-
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)) { AvoidCachingRequest = query.DisableCaching }.AddOperationHeaders(OperationsHeaders)))
                 {
@@ -1290,7 +1285,7 @@ namespace Raven.Client.Connection.Async
 
                         var docResults = queryResult.Results.Concat(queryResult.Includes);
                         return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () =>
-                            QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), conflictedResultId =>
+                            QueryAsync(index, query, metadataOnly, indexEntriesOnly, token), conflictedResultId =>
                                 new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase)) +
                                     ", conflict must be resolved before the document will be accessible")
                                 { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
@@ -1311,7 +1306,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        private async Task<QueryResult> QueryAsyncAsPost(string index, IndexQuery query, string[] includes, bool metadataOnly, bool indexEntriesOnly, CancellationToken token = default(CancellationToken))
+        private async Task<QueryResult> QueryAsyncAsPost(string index, IndexQuery query, bool metadataOnly, bool indexEntriesOnly, CancellationToken token = default(CancellationToken))
         {
             var stringBuilder = new StringBuilder();
             query.AppendQueryString(stringBuilder);
@@ -1320,10 +1315,6 @@ namespace Raven.Client.Connection.Async
                 stringBuilder.Append("&metadata-only=true");
             if (indexEntriesOnly)
                 stringBuilder.Append("&debug=entries");
-            if (includes != null && includes.Length > 0)
-            {
-                includes.ForEach(include => stringBuilder.Append("&include=").Append(include));
-            }
 
             try
             {
@@ -1342,7 +1333,7 @@ namespace Raven.Client.Connection.Async
 
                 var docResults = queryResult.Results.Concat(queryResult.Includes);
                 return await RetryOperationBecauseOfConflict(operationMetadataRef.Value, docResults, queryResult,
-                    () => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token),
+                    () => QueryAsync(index, query, metadataOnly, indexEntriesOnly, token),
                     conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase)) +
                             ", conflict must be resolved before the document will be accessible")
                     { ConflictedVersionIds = new[] { conflictedResultId } },

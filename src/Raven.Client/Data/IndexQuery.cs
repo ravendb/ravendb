@@ -192,6 +192,11 @@ namespace Raven.Client.Data
         public bool ShowTimings { get; set; }
 
         /// <summary>
+        /// An array of relative paths that specify related documents ids which should be included in a query result
+        /// </summary>
+        public string[] Includes { get; set; }
+
+        /// <summary>
         /// Gets the index query URL.
         /// </summary>
         public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
@@ -237,7 +242,6 @@ namespace Raven.Client.Data
             if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
                 path.Append("&pageSize=").Append(PageSize);
 
-
             if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
                 path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
 
@@ -250,6 +254,7 @@ namespace Raven.Client.Data
                 path.Append("&skipDuplicateChecking=true");
 
             FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
+            Includes.ApplyIfNotNull(include => path.AppendFormat("&include={0}", Uri.EscapeDataString(include)));
 
             DynamicMapReduceFields.ApplyIfNotNull(field => path.Append("&mapReduce=")
                         .Append(Uri.EscapeDataString(field.Name))

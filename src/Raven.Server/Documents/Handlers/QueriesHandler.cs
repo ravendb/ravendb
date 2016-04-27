@@ -193,6 +193,7 @@ namespace Raven.Server.Documents.Handlers
                 PageSize = maxPageSize
             };
 
+            HashSet<string> includes = null;
             foreach (var item in HttpContext.Request.Query)
             {
                 try
@@ -229,7 +230,12 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case "mapReduce":
                             result.DynamicMapReduceFields = ParseDynamicMapReduceFields(item.Value);
+                            break;
+                        case "include":
+                            if (includes == null)
+                                includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+                            includes.Add(item.Value[0]);
                             break;
                             // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
                             // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
@@ -241,6 +247,9 @@ namespace Raven.Server.Documents.Handlers
                     throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
                 }
             }
+
+            if (includes != null)
+                result.Includes = includes.ToArray();
 
             if (result.Query == null)
             {
