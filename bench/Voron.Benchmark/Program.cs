@@ -30,9 +30,6 @@ namespace Voron.Benchmark
 #endif
             _randomNumbers = InitRandomNumbers(Configuration.Transactions * Configuration.ItemsPerTransaction);
 
-            //var prefixTreeBench = new TableBench(_randomNumbers, TableIndexType.Compact);
-            //prefixTreeBench.Execute();
-
             var defaultBench = new TableBench(_randomNumbers, TableIndexType.BTree);
             defaultBench.Execute();
 

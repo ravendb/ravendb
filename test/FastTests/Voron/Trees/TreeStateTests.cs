@@ -8,12 +8,18 @@ using System;
 using System.Linq;
 using Xunit;
 using Voron;
+using Voron.Impl;
 
 namespace FastTests.Voron.Trees
 {
 	public class TreeStateTests : StorageTest
 	{
-		[Theory]
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            options.PageSize = 4 * Constants.Size.Kilobyte;
+        }
+
+        [Theory]
 		[InlineData(5, 2)]
 		[InlineData(35, 13)]
 		[InlineData(256, 32)]
