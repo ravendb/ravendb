@@ -146,6 +146,82 @@ namespace FastTests.Server.Documents.Queries.Dynamic
         }
 
         [Fact]
+        public async Task Sorting_by_nested_string_field()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Poland"} }, "orders/1");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Israel"} }, "orders/2");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "USA"} }, "orders/3");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Canada" } }, "orders/4");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.ShipTo.Country).ToList();
+
+                    Assert.Equal("orders/4", orders[0].Id);
+                    Assert.Equal("orders/2", orders[1].Id);
+                    Assert.Equal("orders/1", orders[2].Id);
+                    Assert.Equal("orders/3", orders[3].Id);
+
+                    orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderByDescending(x => x.ShipTo.Country).ToList();
+
+                    Assert.Equal("orders/3", orders[0].Id);
+                    Assert.Equal("orders/1", orders[1].Id);
+                    Assert.Equal("orders/2", orders[2].Id);
+                    Assert.Equal("orders/4", orders[3].Id);
+
+                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+
+                    Assert.Equal(1, indexes.Count);
+                    Assert.Equal("Auto/Orders/ByShipTo_CountrySortByShipTo_Country", indexes[0].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Sorting_by_nested_integer_field()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 3000 } }, "orders/1");
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 222 } }, "orders/2");
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 5599 } }, "orders/3");
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 111 } }, "orders/4");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.ShipTo.ZipCode).ToList();
+
+                    Assert.Equal("orders/4", orders[0].Id);
+                    Assert.Equal("orders/2", orders[1].Id);
+                    Assert.Equal("orders/1", orders[2].Id);
+                    Assert.Equal("orders/3", orders[3].Id);
+
+                    orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderByDescending(x => x.ShipTo.ZipCode).ToList();
+
+                    Assert.Equal("orders/3", orders[0].Id);
+                    Assert.Equal("orders/1", orders[1].Id);
+                    Assert.Equal("orders/2", orders[2].Id);
+                    Assert.Equal("orders/4", orders[3].Id);
+
+                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+
+                    Assert.Equal(1, indexes.Count);
+                    Assert.Equal("Auto/Orders/ByShipTo_ZipCodeSortByShipTo_ZipCode", indexes[0].Name);
+                }
+            }
+        }
+
+        [Fact]
         public async Task Sorting_by_strings()
         {
             using (var store = await GetDocumentStore())

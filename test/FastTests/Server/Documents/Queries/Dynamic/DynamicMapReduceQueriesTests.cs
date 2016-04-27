@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
@@ -12,7 +13,8 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic
 {
-    public class DynamicMapReduceTests : RavenTestBase
+    [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
+    public class DynamicMapReduceQueriesTests : RavenTestBase
     {
         [Fact]
         public async Task Group_by_string_calculate_count()
@@ -318,6 +320,127 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                 Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata)));
                 Assert.True(results.Results.Any(x => x.Value<string>("City") == "Torun"));
                 Assert.True(results.Results.Any(x => x.Value<string>("City") == "Hadera"));
+            }
+        }
+
+        [Fact]
+        public async Task Order_by_string_integer_and_decimal_fields()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Chair",
+                        Quantity = 1,
+                        PricePerUnit = 1.2m
+                    });
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Chair",
+                        Quantity = 3,
+                        PricePerUnit = 3.3m
+                    });
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Desk",
+                        Quantity = 2,
+                        PricePerUnit = 2.7m
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                // order by string
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = x.Key,
+                                    OrderedQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderBy(x => x.NameOfProduct)
+                            .ToList();
+
+                    Assert.Equal("Chair", items[0].NameOfProduct);
+                    Assert.Equal("Desk", items[1].NameOfProduct);
+
+                    items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = x.Key,
+                                    OrderedQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderByDescending(x => x.NameOfProduct)
+                            .ToList();
+
+                    Assert.Equal("Desk", items[0].NameOfProduct);
+                    Assert.Equal("Chair", items[1].NameOfProduct);
+                }
+
+                // order by int
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderBy(x => x.TotalQuantity)
+                            .ToList();
+
+                    Assert.Equal("Desk", items[0].NameOfProduct);
+                    Assert.Equal("Chair", items[1].NameOfProduct);
+
+                    items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderByDescending(x => x.TotalQuantity)
+                            .ToList();
+
+                    Assert.Equal("Chair", items[0].NameOfProduct);
+                    Assert.Equal("Desk", items[1].NameOfProduct);
+                }
+
+                // order by decimal
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalPricePerUnit = x.Sum(_ => _.PricePerUnit)
+                                })
+                            .OrderBy(x => x.TotalPricePerUnit)
+                            .ToList();
+
+                    Assert.Equal("Desk", items[0].NameOfProduct);
+                    Assert.Equal("Chair", items[1].NameOfProduct);
+
+                    items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalPricePerUnit = x.Sum(_ => _.PricePerUnit)
+                                })
+                            .OrderByDescending(x => x.TotalPricePerUnit)
+                            .ToList();
+
+                    Assert.Equal("Chair", items[0].NameOfProduct);
+                    Assert.Equal("Desk", items[1].NameOfProduct);
+                }
             }
         }
 

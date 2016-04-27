@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     sortOptions = SortOptions.NumericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
                 }
 
-                return new SortField(x.Field, (int)sortOptions, x.Descending);
+                return new SortField(IndexField.ReplaceInvalidCharactersInFieldName(x.Field), (int)sortOptions, x.Descending);
             }).ToArray());
         }
 

@@ -238,9 +238,9 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.NotNull(definition);
 
-                Assert.Equal(1, definition.GroupByFields.Length);
-                Assert.Equal("Location", definition.GroupByFields[0].Name);
-                Assert.Equal(SortOptions.String, definition.GroupByFields[0].SortOption);
+                Assert.Equal(1, definition.GroupByFields.Count);
+                Assert.Equal("Location", definition.GroupByFields["Location"].Name);
+                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
@@ -261,9 +261,9 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.NotNull(definition);
 
-                Assert.Equal(1, definition.GroupByFields.Length);
-                Assert.Equal("Location", definition.GroupByFields[0].Name);
-                Assert.Equal(SortOptions.String, definition.GroupByFields[0].SortOption);
+                Assert.Equal(1, definition.GroupByFields.Count);
+                Assert.Equal("Location", definition.GroupByFields["Location"].Name);
+                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);

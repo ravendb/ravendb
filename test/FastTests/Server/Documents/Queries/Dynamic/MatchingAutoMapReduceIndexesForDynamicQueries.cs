@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents;
@@ -10,12 +11,12 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic
 {
-    public class MatchingAutoMapReduceIndexesForDynamicMapReduceQueries : RavenLowLevelTestBase
+    public class MatchingAutoMapReduceIndexesForDynamicQueries : RavenLowLevelTestBase
     {
         private readonly DocumentDatabase _documentDatabase;
         private readonly DynamicQueryToIndexMatcher _sut;
 
-        public MatchingAutoMapReduceIndexesForDynamicMapReduceQueries()
+        public MatchingAutoMapReduceIndexesForDynamicQueries()
         {
             _documentDatabase = CreateDocumentDatabase();
 
@@ -46,7 +47,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
 
         [Fact]
-        public void Complete_match_for_single_matching_index()
+        public void Complete_match_for_single_matching_index_with_sort_options()
         {
             var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
             {
@@ -54,7 +55,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    SortOption = SortOptions.NumericDefault
                 },
             },
             new[]
@@ -63,6 +65,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
+                    SortOption = SortOptions.String
                 }
             });
 
@@ -83,6 +86,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                         Name = "Location",
                         IsGroupBy = true
                     }
+                },
+                SortedFields = new []
+                {
+                    new SortedField("Count_Range"),
+                    new SortedField("Location"),  
                 }
             });
 
@@ -385,6 +393,68 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(usersByCountAndTotalAgeGroupedByLocation.Name, result.IndexName);
+        }
+
+        [Fact]
+        public void Failure_when_sort_options_do_not_match()
+        {
+            var definition = new AutoMapReduceIndexDefinition(new []{ "LineItems" }, new[]
+            {
+                new IndexField
+                {
+                    Name = "Price",
+                    Highlighted = false,
+                    Storage = FieldStorage.Yes,
+                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    SortOption = SortOptions.String
+                },
+            }, new []
+            {
+                new IndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.Yes
+                }
+            });
+
+            add_index(definition);
+
+            var dynamicQuery = DynamicQueryMapping.Create("LineItems", new IndexQuery
+            {
+                Query = "Price:70",
+                SortedFields = new[] { new SortedField("Price_Range") },
+            });
+
+            var result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
+        }
+
+        [Fact]
+        public void Partial_match_when_sort_field_is_not_mapped()
+        {
+            var definition = new AutoMapIndexDefinition("Users", new[]
+            {
+                new IndexField
+                {
+                    Name = "Name",
+                    Highlighted = false,
+                    Storage = FieldStorage.No
+                },
+            });
+
+            add_index(definition);
+
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "Name:Arek",
+                SortedFields = new[] { new SortedField("Weight") },
+            });
+
+            var result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            Assert.Equal(definition.Name, result.IndexName);
         }
 
         private void add_index(IndexDefinitionBase definition)

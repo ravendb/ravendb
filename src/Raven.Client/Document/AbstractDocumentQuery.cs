@@ -1216,10 +1216,26 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 if (IsDynamicMapReduce)
                 {
-                    var renamedField = dynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == whereParams.FieldName);
+                    DynamicMapReduceField renamedField;
 
-                    if (renamedField != null)
-                        return whereParams.FieldName = renamedField.Name;
+                    if (whereParams.FieldName.EndsWith("_Range"))
+                    {
+                        var name = whereParams.FieldName.Substring(0, whereParams.FieldName.Length - 6);
+
+                        renamedField = dynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == name);
+
+                        if (renamedField != null)
+                        {
+                            return whereParams.FieldName = renamedField.Name + "_Range";
+                        }
+                    }
+                    else
+                    {
+                        renamedField = dynamicMapReduceFields.FirstOrDefault(x => x.ClientSideName == whereParams.FieldName);
+
+                        if (renamedField != null)
+                            return whereParams.FieldName = renamedField.Name;
+                    }
                 }
 
                 return whereParams.FieldName;

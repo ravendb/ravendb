@@ -37,13 +37,13 @@ namespace Raven.Server.Documents.Indexes
             
             var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
-            var sortOptions = fields.Where(x => x.SortOption != null).Select(x => x.Name).ToArray();
+            var sortOptions = fields.Where(x => x.SortOption != null).Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).ToArray();
             if (sortOptions.Length > 0)
             {
                 combinedFields = $"{combinedFields}SortBy{string.Join(string.Empty, sortOptions.OrderBy(x => x))}";
             }
 
-            var highlighted = fields.Where(x => x.Highlighted).Select(x => x.Name).ToArray();
+            var highlighted = fields.Where(x => x.Highlighted).Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).ToArray();
             if (highlighted.Length > 0)
             {
                 combinedFields = $"{combinedFields}Highlight{string.Join(string.Empty, highlighted.OrderBy(x => x))}";

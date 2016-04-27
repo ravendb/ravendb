@@ -187,13 +187,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            foreach (var indexField in Definition.GroupByFields)
+            foreach (var groupByFieldName in Definition.GroupByFields.Keys)
             {
                 object result;
-                _blittableTraverser.TryRead(document.Data, indexField.Name, out result);
+                _blittableTraverser.TryRead(document.Data, groupByFieldName, out result);
                 // explicitly adding this even if the value isn't there, as a null
-                mappedResult[indexField.Name] = result;
-                reduceKey[indexField.Name] = result;
+                mappedResult[groupByFieldName] = result;
+                reduceKey[groupByFieldName] = result;
             }
 
             ulong reduceHashKey;
