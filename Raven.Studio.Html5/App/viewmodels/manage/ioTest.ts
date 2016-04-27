@@ -51,7 +51,7 @@ class ioTest extends viewModelBase {
             return errorMessage;
         });
 
-        this.isForbidden(shell.isGlobalAdmin() === false);
+        this.isForbidden(!shell.isGlobalAdmin());
     }
 
     canActivate(args): any {

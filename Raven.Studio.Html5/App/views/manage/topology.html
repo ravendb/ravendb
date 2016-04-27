@@ -48,11 +48,11 @@
 
 </style>
 <section id="replicationTopologySection" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <div data-bind="visible: settingsAccess.isReadOnly" class="text-center">
+    <div data-bind="visible: !settingsAccess.canWrite()" class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
     <div>
-        <div class="panel-group" data-bind="visible: !$root.settingsAccess.isReadOnly()">
+        <div class="panel-group" data-bind="visible: settingsAccess.canWrite()">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <span data-bind="visible: !topology()">

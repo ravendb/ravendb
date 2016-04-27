@@ -90,21 +90,18 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Resources</label>
                             <div class="col-sm-9">
+                                
+                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add Resource">
+                                    <i class="fa fa-plus"></i> Add Resource
+                                </button>
                                 <table class="table table-striped table-hover">
                                     <thead>
                                     <tr class="database-header" data-bind="visible: databases().length > 0">
                                         <td>Name</td>
                                         <td>Type</td>
                                         <td>
-                                            <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: !$root.settingsAccess.isReadOnly()">
+                                            <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: !$root.settingsAccess.isReadOnly()">
                                                 <i class="fa fa-plus"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <tr data-bind="visible: databases().length == 0">
-                                        <td>
-                                            <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add Resource">
-                                                <i class="fa fa-plus"></i> Add Resource
                                             </button>
                                         </td>
                                     </tr>
@@ -144,7 +141,7 @@
                                     </tbody>
                                 </table>
                                 <div style="color: red" data-bind="visible: needToShowSystemDatabaseWarning">
-                                    *This API Key provides admin access to all resources but not to the System Database
+                                    * This API Key provides admin access to all resources but not to the System Database
                                 </div>
                             </div>
                         </div>

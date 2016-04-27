@@ -1,12 +1,12 @@
 <div class="panel panel-default form-horizontal" role="form">
     <div class="panel-heading">
-        Studio config
+        <span class="text-height-fix">Studio config</span>
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <div class="clearfix"></div>
     </div>
 
     <div class="panel-body">
-        <div data-bind="visible: isForbidden() == false">
+        <div data-bind="visible: !isForbidden()">
             <h4>Server-wide settings</h4>
             <hr />
             <div class="form-group">

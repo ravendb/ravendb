@@ -880,7 +880,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 .settings-container {
-    margin-top: 10px;
 
     .api-key-card, .win-auth-card {
         display: inline-block;
@@ -2107,10 +2106,6 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
         margin-bottom: 5px;
     }
 
-    .control-label {
-        text-align: left;
-    }
-
     input[type=number] {
         text-align: right;
     }
@@ -2894,4 +2889,8 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .no-matches {
     padding: 30px;
     text-align: center;
+}
+
+.admin-settings-container li.disabled a {
+    pointer-events: none;                     
 }

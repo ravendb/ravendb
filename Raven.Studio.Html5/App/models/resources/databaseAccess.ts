@@ -17,9 +17,9 @@ class databaseAccess {
 
     currentAccessType = ko.computed({
         read:()=> {
-            if (this.admin() === true) {
+            if (this.admin()) {
                 return databaseAccess.adminAccessType;
-            } else if (this.readOnly() === true) {
+            } else if (this.readOnly()) {
                 return databaseAccess.readOnlyAccessType;
             }
 
@@ -67,7 +67,7 @@ class databaseAccess {
             var resourceNames = shell.resources().map((rs: resource) => rs.name)
                             .concat("*")
                             .filter((x, i, c) => c.indexOf(x) == i);
-            var foundResource = resourceNames.first(name => newTenantId == name);
+            var foundResource = resourceNames.first(name => newTenantId === name);
 
             if (!foundResource && newTenantId.length > 0) {
                 errorMessage = "There is no database nor file system with such a name!";

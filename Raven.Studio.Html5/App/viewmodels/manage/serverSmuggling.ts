@@ -6,11 +6,14 @@ import performSmugglingCommand = require("commands/operations/performSmugglingCo
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import serverSmugglingLocalStorage = require("common/serverSmugglingLocalStorage");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class serverSmuggling extends viewModelBase {
     resources = ko.observableArray<serverSmugglingItem>([]);
     selectedResources = ko.observableArray<serverSmugglingItem>();
     targetServer = ko.observable<serverConnectionInfo>(new serverConnectionInfo());
+
+    settingsAccess = new settingsAccessAuthorizer();
 
     hasResources: KnockoutComputed<boolean>;
     noIncremental: KnockoutComputed<boolean>;

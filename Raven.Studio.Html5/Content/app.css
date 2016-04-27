@@ -7280,9 +7280,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 #logsContainer .logRecord:hover .logName-actions-container {
   display: inline-block;
 }
-.settings-container {
-  margin-top: 10px;
-}
 .settings-container .api-key-card,
 .settings-container .win-auth-card {
   display: inline-block;
@@ -8352,9 +8349,6 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .quotas-settings-form .row {
   margin-bottom: 5px;
 }
-.quotas-settings-form .control-label {
-  text-align: left;
-}
 .quotas-settings-form input[type=number] {
   text-align: right;
 }
@@ -8970,4 +8964,7 @@ a.global_help_link:focus {
 .no-matches {
   padding: 30px;
   text-align: center;
+}
+.admin-settings-container li.disabled a {
+  pointer-events: none;
 }

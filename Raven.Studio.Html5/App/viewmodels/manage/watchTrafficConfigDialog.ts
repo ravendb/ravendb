@@ -3,8 +3,6 @@ import dialog = require("plugins/dialog");
 import resource = require("models/resources/resource");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");
-import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
-import getFileSystemsCommand = require("commands/filesystem/getFileSystemsCommand");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import appUrl = require("common/appUrl");
 
@@ -19,7 +17,6 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
     allResourcesNames: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
     searchResults: KnockoutComputed<Array<string>>;
-    //resourcesNames: KnockoutComputed<string[]>;
 
     constructor() {
         super();

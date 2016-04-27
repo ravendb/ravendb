@@ -1,4 +1,7 @@
-<div class="panel panel-default">
+<div data-bind="visible: isForbidden" class="text-center">
+    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+</div>
+<div class="panel panel-default" data-bind="visible: !isForbidden()">
     <div class="panel-heading panel-info">
         Disk IO Viewer
     </div>

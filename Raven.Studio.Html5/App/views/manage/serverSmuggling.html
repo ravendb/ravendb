@@ -1,5 +1,8 @@
 <form class="form-horizontal" role="form" data-bind="submit: performMigration">
-    <div class="panel panel-default">
+    <div data-bind="visible: !settingsAccess.canWrite()" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+    <div class="panel panel-default" data-bind="visible: settingsAccess.canWrite()">
         <div class="panel-heading panel-info">
             Server Smuggling
         </div>
@@ -62,12 +65,12 @@
             </div>
             <div class="form-group">
                 <label class="col-sm-2 control-label">
-                    Select databases to migrate <br />
+                    Select databases to migrate <br/>
                 </label>
                 <div class="col-sm-9">
                     <div>
                         <table class="table table-condensed table-striped">
-                            <thead> 
+                            <thead>
                             <tr>
                                 <th class="text-center">
                                     <button type="button" class="btn-link" data-bind="click: toggleSelectAll, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
@@ -96,31 +99,31 @@
                             </tr>
                             </thead>
                             <tbody data-bind="foreach: resources">
-                                <tr>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="click: $root.toggleSelection.bind($root)">
-                                            <img data-bind="checkbox: $root.isSelected($data)">
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <span style="font-weight: normal" data-bind="text: resource.name"></span>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="click: $root.toggleIncremental.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
-                                            <img data-bind="checkbox: incremental, needOpacity: $root.isSelected($data) === false">
-                                        </button>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="visible: hasReplicationBundle, click: $root.toggleStripReplicationInformation.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
-                                            <img data-bind="checkbox: stripReplicationInformation, needOpacity: $root.isSelected($data) === false">
-                                        </button>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn-link" data-bind="visible: hasVersioningBundle, click: $root.toggleDisableVersioningBundle.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
-                                            <img data-bind="checkbox: shouldDisableVersioningBundle, needOpacity: $root.isSelected($data) === false">
-                                        </button>
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td class="text-center">
+                                    <button type="button" class="btn-link" data-bind="click: $root.toggleSelection.bind($root)">
+                                        <img data-bind="checkbox: $root.isSelected($data)">
+                                    </button>
+                                </td>
+                                <td>
+                                    <span style="font-weight: normal" data-bind="text: resource.name"></span>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn-link" data-bind="click: $root.toggleIncremental.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
+                                        <img data-bind="checkbox: incremental, needOpacity: $root.isSelected($data) === false">
+                                    </button>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn-link" data-bind="visible: hasReplicationBundle, click: $root.toggleStripReplicationInformation.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
+                                        <img data-bind="checkbox: stripReplicationInformation, needOpacity: $root.isSelected($data) === false">
+                                    </button>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn-link" data-bind="visible: hasVersioningBundle, click: $root.toggleDisableVersioningBundle.bind($root), disable: $root.inProgress() || $root.isSelected($data) === false">
+                                        <img data-bind="checkbox: shouldDisableVersioningBundle, needOpacity: $root.isSelected($data) === false">
+                                    </button>
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
@@ -147,7 +150,7 @@
                     <div class="form-group">
                         <label class="col-sm-2 control-label">Method</label>
                         <div class="col-sm-9">
-                            <input type="text" class="form-control" readonly="readonly" value="POST" />
+                            <input type="text" class="form-control" readonly="readonly" value="POST"/>
                         </div>
                     </div>
                     <div class="form-group">

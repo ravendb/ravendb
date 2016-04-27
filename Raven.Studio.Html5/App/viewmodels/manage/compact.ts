@@ -41,7 +41,7 @@ class resourceCompact {
 
     toggleKeepDown() {
         this.keepDown.toggle();
-        if (this.keepDown() == true) {
+        if (this.keepDown()) {
             var logsPre = document.getElementById(this.type + 'CompactLogPre');
             logsPre.scrollTop = logsPre.scrollHeight;
         }
@@ -54,7 +54,7 @@ class resourceCompact {
             var logsPre = document.getElementById(this.type + 'CompactLogPre');
             logsPre.scrollTop = logsPre.scrollHeight;
         }
-        this.parent.isBusy(newCompactStatus.State == "Running");
+        this.parent.isBusy(newCompactStatus.State === "Running");
     }
 
 }
@@ -77,8 +77,8 @@ class compact extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        $('form :input[name="databaseName"]').on("keypress", (e) => e.which != 13);
-        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which != 13);
+        $('form :input[name="databaseName"]').on("keypress", (e) => e.which !== 13);
+        $('form :input[name="filesystemName"]').on("keypress", (e) => e.which !== 13);
     }
 
     startDbCompact() {

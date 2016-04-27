@@ -67,23 +67,19 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-sm-3 control-label">Databases</label>
+                                <label class="col-sm-3 control-label">Resources</label>
                                 <div class="col-sm-9">
+                                    <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add resource">
+                                        <i class="fa fa-plus"></i> Add resource
+                                    </button>
                                     <table class="table table-striped table-hover">
                                         <thead>
                                         <tr class="database-header" data-bind="visible: databases().length > 0">
                                             <td>Name</td>
                                             <td>Type</td>
                                             <td>
-                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: $root.settingsAccess.isReadOnly() == false">
+                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: $root.settingsAccess.isReadOnly() == false">
                                                     <i class="fa fa-plus"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr data-bind="visible: databases().length == 0">
-                                            <td>
-                                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add database">
-                                                    <i class="fa fa-plus"></i> Add database
                                                 </button>
                                             </td>
                                         </tr>
@@ -115,7 +111,7 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <button type="button" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this database">
+                                                <button type="button" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this resource">
                                                     <i class="fa fa-times"></i>
                                                 </button>
                                             </td>
@@ -178,23 +174,19 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="col-sm-3 control-label">Databases</label>
+                                <label class="col-sm-3 control-label">Resources</label>
                                 <div class="col-sm-9">
+                                    <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add resource">
+                                        <i class="fa fa-plus"></i> Add resource
+                                    </button>
                                     <table class="table table-striped table-hover">
                                         <thead>
                                         <tr class="database-header" data-bind="visible: databases().length > 0">
                                             <td>Name</td>
                                             <td>Type</td>
                                             <td>
-                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: $root.settingsAccess.isReadOnly() == false">
+                                                <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: $root.settingsAccess.isReadOnly() == false">
                                                     <i class="fa fa-plus"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr data-bind="visible: databases().length == 0">
-                                            <td>
-                                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase" title="Add database">
-                                                    <i class="fa fa-plus"></i> Add database
                                                 </button>
                                             </td>
                                         </tr>
@@ -226,7 +218,7 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <button type="button" class="close" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this database">
+                                                <button type="button" class="close" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this resource">
                                                     <i class="fa fa-times"></i>
                                                 </button>
                                             </td>

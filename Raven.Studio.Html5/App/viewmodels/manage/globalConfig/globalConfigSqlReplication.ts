@@ -99,7 +99,7 @@ class globalConfigSqlReplication extends viewModelBase {
     }
 
     subscribeToSqlReplicationConnectionName(con: predefinedSqlConnection) {
-        con.name.subscribe((previousName: string) => {
+        con.name.subscribe(() => {
              //Get the previous value of 'name' here before it's set to newValue
              $("input[name=\"name\"]")
                 .each((index, inputField: any) => {
