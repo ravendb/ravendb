@@ -27,6 +27,7 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -352,7 +353,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.SuggestAsync(index, suggestionQuery));
         }
 
-        public LoadResult MoreLikeThis(MoreLikeThisQuery query)
+        public QueryResult MoreLikeThis(MoreLikeThisQuery query)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.MoreLikeThisAsync(query));
         }

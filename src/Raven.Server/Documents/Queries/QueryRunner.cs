@@ -1,15 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
 
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -63,6 +64,25 @@ namespace Raven.Server.Documents.Queries
                 return new TermsQueryResult { NotModified = true };
 
             return index.GetTerms(field, fromValue, pageSize, context, token);
+        }
+
+        public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(string indexName, MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        {
+            if (query == null)
+                throw new ArgumentNullException(nameof(query));
+
+            if (string.IsNullOrEmpty(query.DocumentId) && query.MapGroupFields.Count == 0)
+                throw new InvalidOperationException("The document id or map group fields are mandatory");
+
+            var index = GetIndex(indexName);
+
+            var etag = index.GetIndexEtag();
+            if (etag == existingResultEtag)
+                return new MoreLikeThisQueryResultServerSide { NotModified = true };
+
+            context.OpenReadTransaction();
+
+            return index.MoreLikeThisQuery(query, context, token);
         }
 
         public Task ExecuteDeleteQuery(string indexName, IndexQuery query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)

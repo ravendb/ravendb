@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Document.Async;
 using Raven.Client.Document.SessionOperations;
@@ -47,7 +47,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
             });
         }
 
-        public static T[] MoreLikeThis<TTransformer, T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, MoreLikeThisQuery parameters) 
+        public static T[] MoreLikeThis<TTransformer, T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, MoreLikeThisQuery parameters)
             where TIndexCreator : AbstractIndexCreationTask, new()
             where TTransformer : AbstractTransformerCreationTask, new()
         {
@@ -73,7 +73,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
             parameters.Transformer = transformer;
 
             // /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
-            var cmd = ((DocumentSession) advancedSession).DatabaseCommands;
+            var cmd = ((DocumentSession)advancedSession).DatabaseCommands;
 
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
@@ -85,7 +85,12 @@ namespace Raven.Client.Bundles.MoreLikeThis
                 loadOperation.LogOperation();
                 using (loadOperation.EnterLoadContext())
                 {
-                    loadResult = cmd.MoreLikeThis(parameters);
+                    var result = cmd.MoreLikeThis(parameters);
+                    loadResult = new LoadResult
+                    {
+                        Includes = result.Includes,
+                        Results = result.Results
+                    };
                 }
             } while (loadOperation.SetResult(loadResult));
 
@@ -165,7 +170,12 @@ namespace Raven.Client.Bundles.MoreLikeThis
                 loadOperation.LogOperation();
                 using (loadOperation.EnterLoadContext())
                 {
-                    loadResult = await cmd.MoreLikeThisAsync(parameters).ConfigureAwait(false);
+                    var result = await cmd.MoreLikeThisAsync(parameters).ConfigureAwait(false);
+                    loadResult = new LoadResult
+                    {
+                        Includes = result.Includes,
+                        Results = result.Results
+                    };
                 }
             } while (loadOperation.SetResult(loadResult));
 

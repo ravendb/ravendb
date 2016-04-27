@@ -24,6 +24,7 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Indexing;
@@ -348,7 +349,7 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="query">more like this query definition that will be executed</param>
         /// <param name="token">The cancellation token.</param>
-        Task<LoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
+        Task<QueryResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Perform a single POST request containing multiple nested GET requests

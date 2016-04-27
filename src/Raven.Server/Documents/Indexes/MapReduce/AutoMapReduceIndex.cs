@@ -218,9 +218,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, string[] fieldsToFetch)
         {
-            return new MapReduceQueryResultRetriever(indexContext, query);
+            return new MapReduceQueryResultRetriever(indexContext, fieldsToFetch);
         }
 
         private Table GetMapEntriesTable(Transaction tx)

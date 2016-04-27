@@ -2,6 +2,8 @@ using System;
 using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 

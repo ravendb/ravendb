@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
     public class QueriesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/queries/morelikethis/$", "GET")]
-        public async Task MoreLikeThis()
+        public Task MoreLikeThis()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -32,8 +33,28 @@ namespace Raven.Server.Documents.Handlers
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
+                var existingResultEtag = GetLongFromHeaders("If-None-Match");
+
                 var query = GetMoreLikeThisQuery(context);
+                var runner = new QueryRunner(Database, context);
+
+                var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
+
+                if (result.NotModified)
+                {
+                    HttpContext.Response.StatusCode = 304;
+                    return Task.CompletedTask;
+                }
+
+                HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteQueryResult(context, result);
+                }
             }
+
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/queries/$", "GET")]
@@ -63,48 +84,7 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(result.IndexName)));
-                    writer.WriteString(context.GetLazyString(result.IndexName));
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Results)));
-                    WriteDocuments(context, writer, result.Results);
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(result.TotalResults)));
-                    writer.WriteInteger(result.TotalResults);
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Includes)));
-                    WriteDocuments(context, writer, result.Includes);
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(result.IndexTimestamp)));
-                    writer.WriteString(context.GetLazyString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(result.LastQueryTime)));
-                    writer.WriteString(context.GetLazyString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite)));
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(result.IsStale)));
-                    writer.WriteBool(result.IsStale);
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(context.GetLazyString(nameof(result.ResultEtag)));
-                    writer.WriteInteger(result.ResultEtag);
-
-                    writer.WriteEndObject();
-                    writer.Flush();
+                    writer.WriteDocumentQueryResult(context, result);
                 }
             }
         }
@@ -169,12 +149,11 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        private MoreLikeThisRequest GetMoreLikeThisQuery(JsonOperationContext context)
+        private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context)
         {
-            var result = new MoreLikeThisRequest
+            var result = new MoreLikeThisQueryServerSide
             {
-                //IndexName = query.Get("index"),
-                Fields = GetStringValuesQueryString("fields"),
+                Fields = GetStringValuesQueryString("fields", required: false),
                 Boost = GetBoolValueQueryString("boost", required: false),
                 BoostFactor = GetFloatValueQueryString("boostFactor", required: false),
                 MaximumNumberOfTokensParsed = GetIntValueQueryString("maxNumTokens", required: false),
@@ -189,14 +168,14 @@ namespace Raven.Server.Documents.Handlers
                 AdditionalQuery = GetStringQueryString("query", required: false),
                 Includes = GetStringValuesQueryString("include", required: false),
                 DocumentId = GetStringQueryString("docId", required: false),
-                Transformer = GetStringValuesQueryString("transformer")
+                Transformer = GetStringValuesQueryString("transformer", required: false),
+                PageSize = GetPageSize(Database.Configuration.Core.MaxPageSize)
             };
 
             result.TransformerParameters = new Dictionary<string, object>();
             foreach (var tp in HttpContext.Request.Query.Where(x => x.Key.StartsWith("tp-", StringComparison.OrdinalIgnoreCase)))
             {
-                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(tp.Value))) // ??
-                    result.TransformerParameters[tp.Key.Substring(3)] = context.Read(stream, tp.Key);
+                throw new NotImplementedException();
             }
 
             result.MapGroupFields = new Dictionary<string, string>();
@@ -249,7 +228,7 @@ namespace Raven.Server.Documents.Handlers
                             result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
                             break;
                         case "mapReduce":
-                            result.DynamicMapReduceFields = ParseDynamicMapReduceFields(item.Value); ;
+                            result.DynamicMapReduceFields = ParseDynamicMapReduceFields(item.Value);
 
                             break;
                             // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct

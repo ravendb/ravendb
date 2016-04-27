@@ -22,6 +22,7 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Indexing;
@@ -329,7 +330,7 @@ namespace Raven.Client.Connection
         ///     Return a list of documents that based on the MoreLikeThisQuery.
         /// </summary>
         /// <param name="query">more like this query definition that will be executed</param>
-        LoadResult MoreLikeThis(MoreLikeThisQuery query);
+        QueryResult MoreLikeThis(MoreLikeThisQuery query);
 
         /// <summary>
         ///     Perform a single POST request containing multiple nested GET requests

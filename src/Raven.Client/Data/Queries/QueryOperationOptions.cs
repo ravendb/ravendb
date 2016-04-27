@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Client.Data
+namespace Raven.Client.Data.Queries
 {
     /// <summary>
     /// Holds different setting options for base operations.

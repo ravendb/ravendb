@@ -2,7 +2,6 @@
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
@@ -38,12 +37,12 @@ namespace Raven.Server.Documents.Queries.Results
 
         private readonly BlittableJsonTraverser _traverser;
 
-        public MapQueryResultRetriever(DocumentsStorage documentsStorage, DocumentsOperationContext context, IndexDefinitionBase indexDefinition, IndexQuery query)
+        public MapQueryResultRetriever(DocumentsStorage documentsStorage, DocumentsOperationContext context, IndexDefinitionBase indexDefinition, string[] fieldsToFetch)
         {
             _documentsStorage = documentsStorage;
             _context = context;
             _indexDefinition = indexDefinition;
-            _fieldsToFetch = GetFieldsToFetch(query.FieldsToFetch, out _canExtractFromIndex);
+            _fieldsToFetch = GetFieldsToFetch(fieldsToFetch, out _canExtractFromIndex);
             _traverser = _fieldsToFetch != null && _fieldsToFetch.Length > 0 ? new BlittableJsonTraverser() : null;
         }
 

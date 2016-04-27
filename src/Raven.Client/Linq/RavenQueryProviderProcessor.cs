@@ -14,6 +14,8 @@ using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json.Utilities;

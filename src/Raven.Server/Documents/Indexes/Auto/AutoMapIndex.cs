@@ -54,9 +54,9 @@ namespace Raven.Server.Documents.Indexes.Auto
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, string[] fieldsToFetch)
         {
-            return new MapQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext, Definition, query);
+            return new MapQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext, Definition, fieldsToFetch);
         }
     }
 }

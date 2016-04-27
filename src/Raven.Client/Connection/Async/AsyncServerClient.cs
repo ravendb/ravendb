@@ -42,6 +42,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 
 namespace Raven.Client.Connection.Async
@@ -860,18 +861,18 @@ namespace Raven.Client.Connection.Async
             return UpdateByIndexImpl(indexName, queryToUpdate, notNullOptions, requestData, token);
         }
 
-        public async Task<LoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken))
+        public Task<QueryResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken))
         {
             var requestUrl = query.GetRequestUri();
             EnsureIsNotNullOrEmpty(requestUrl, "url");
-            var result = await ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
+            return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)))
                 {
-                    return await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var json = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    return json.JsonDeserialization<QueryResult>();
                 }
-            }, token).ConfigureAwait(false);
-            return ((RavenJObject)result).Deserialize<LoadResult>(convention);
+            }, token);
         }
 
         public Task<long> NextIdentityForAsync(string name, CancellationToken token = default(CancellationToken))

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, string[] fieldsToFetch)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }

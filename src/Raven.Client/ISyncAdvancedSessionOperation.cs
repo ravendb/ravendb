@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;

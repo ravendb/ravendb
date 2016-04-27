@@ -12,6 +12,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -108,7 +109,11 @@ namespace Raven.Server.Documents.Handlers
             {
                 documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
             }
-            WriteDocuments(context, documents);
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteDocuments(context, documents);
+            }
         }
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids)
@@ -149,12 +154,12 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
 
-                WriteDocuments(context, writer, documents, 0, ids.Count);
+                writer.WriteDocuments(context, documents, 0, ids.Count);
 
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
 
-                WriteDocuments(context, writer, documents, ids.Count, documents.Count - ids.Count);
+                writer.WriteDocuments(context, documents, ids.Count, documents.Count - ids.Count);
 
                 writer.WriteEndObject();
             }

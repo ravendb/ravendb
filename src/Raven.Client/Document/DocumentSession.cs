@@ -19,7 +19,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
-
+using Raven.Client.Data.Queries;
 
 namespace Raven.Client.Document
 {

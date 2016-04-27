@@ -1,5 +1,7 @@
 using System;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Shard;
 
 namespace Raven.Client.Document.Batches

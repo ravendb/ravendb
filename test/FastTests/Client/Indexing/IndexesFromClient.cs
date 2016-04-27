@@ -3,13 +3,17 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
+using Lucene.Net.Analysis;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
@@ -538,6 +542,65 @@ namespace FastTests.Client.Indexing
 
                     Assert.Equal("Test", user1.LastName);
                     Assert.Equal("Test", user2.LastName);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task MoreLikeThis()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Post { Id = "posts/1", Title = "doduck", Desc = "prototype" });
+                    session.Store(new Post { Id = "posts/2", Title = "doduck", Desc = "prototype your idea" });
+                    session.Store(new Post { Id = "posts/3", Title = "doduck", Desc = "love programming" });
+                    session.Store(new Post { Id = "posts/4", Title = "We do", Desc = "prototype" });
+                    session.Store(new Post { Id = "posts/5", Title = "We love", Desc = "challange" });
+                    session.SaveChanges();
+
+                    var database = await Server
+                        .ServerStore
+                        .DatabasesLandlord
+                        .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0));
+
+                    var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
+                    {
+                        new IndexField
+                        {
+                            Name = "Title",
+                            Analyzer = typeof(SimpleAnalyzer).FullName,
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
+                        },
+                        new IndexField
+                        {
+                            Name = "Desc",
+                            Analyzer = typeof(SimpleAnalyzer).FullName,
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
+                        }
+                    }));
+
+                    var index = database.IndexStore.GetIndex(indexId);
+
+                    WaitForIndexing(store);
+
+                    var list = session.Advanced.MoreLikeThis<Post>(index.Name, null, new MoreLikeThisQuery
+                    {
+                        DocumentId = "posts/1",
+                        MinimumDocumentFrequency = 1,
+                        MinimumTermFrequency = 0
+                    });
+
+                    Assert.Equal(3, list.Length);
+                    Assert.Equal("doduck", list[0].Title);
+                    Assert.Equal("prototype your idea", list[0].Desc);
+                    Assert.Equal("doduck", list[1].Title);
+                    Assert.Equal("love programming", list[1].Desc);
+                    Assert.Equal("We do", list[2].Title);
+                    Assert.Equal("prototype", list[2].Desc);
                 }
             }
         }

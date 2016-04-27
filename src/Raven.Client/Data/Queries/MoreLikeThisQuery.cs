@@ -1,17 +1,28 @@
 using System;
 using System.Collections.Generic;
-
 using System.Text;
 
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Data
+namespace Raven.Client.Data.Queries
 {
-    public class MoreLikeThisQuery
+    public class MoreLikeThisQuery : MoreLikeThisQuery<RavenJToken>
     {
-        public MoreLikeThisQuery()
+    }
+
+    public abstract class MoreLikeThisQuery<T> 
+        where T : class
+    {
+        private int _pageSize;
+
+        private bool _pageSizeSet;
+
+        protected MoreLikeThisQuery()
         {
+            _pageSize = IndexQuery.DefaultPageSize;
+            _pageSizeSet = false;
+
             MapGroupFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -120,7 +131,20 @@ namespace Raven.Client.Data
         /// <summary>
         /// Parameters that will be passed to transformer.
         /// </summary>
-        public Dictionary<string, RavenJToken> TransformerParameters { get; set; }
+        public Dictionary<string, T> TransformerParameters { get; set; }
+
+        /// <summary>
+        /// Maximum number of records that will be retrieved.
+        /// </summary>
+        public int PageSize
+        {
+            get { return _pageSize; }
+            set
+            {
+                _pageSize = value;
+                _pageSizeSet = true;
+            }
+        }
 
         public string GetRequestUri()
         {
@@ -141,37 +165,42 @@ namespace Raven.Client.Data
             }
 
             if (string.IsNullOrWhiteSpace(AdditionalQuery) == false)
-                uri.Append("query=").Append(Uri.EscapeDataString(AdditionalQuery)).Append("&");
+                uri.Append("&query=").Append(Uri.EscapeDataString(AdditionalQuery));
             if (Boost != null && Boost != DefaultBoost)
-                uri.Append("boost=true&");
+                uri.Append("&boost=true&");
             if (BoostFactor != null && BoostFactor != DefaultBoostFactor)
-                uri.AppendFormat("boostFactor={0}&", BoostFactor);
+                uri.AppendFormat("&boostFactor={0}&", BoostFactor);
             if (MaximumQueryTerms != null && MaximumQueryTerms != DefaultMaximumQueryTerms)
-                uri.AppendFormat("maxQueryTerms={0}&", MaximumQueryTerms);
+                uri.AppendFormat("&maxQueryTerms={0}&", MaximumQueryTerms);
             if (MaximumNumberOfTokensParsed != null && MaximumNumberOfTokensParsed != DefaultMaximumNumberOfTokensParsed)
-                uri.AppendFormat("maxNumTokens={0}&", MaximumNumberOfTokensParsed);
+                uri.AppendFormat("&maxNumTokens={0}&", MaximumNumberOfTokensParsed);
             if (MaximumWordLength != null && MaximumWordLength != DefaultMaximumWordLength)
-                uri.AppendFormat("maxWordLen={0}&", MaximumWordLength);
+                uri.AppendFormat("&maxWordLen={0}&", MaximumWordLength);
             if (MinimumDocumentFrequency != null && MinimumDocumentFrequency != DefaultMinimumDocumentFrequency)
-                uri.AppendFormat("minDocFreq={0}&", MinimumDocumentFrequency);
+                uri.AppendFormat("&minDocFreq={0}&", MinimumDocumentFrequency);
             if (MaximumDocumentFrequency != null && MaximumDocumentFrequency != DefaultMaximumDocumentFrequency)
-                uri.AppendFormat("maxDocFreq={0}&", MaximumDocumentFrequency);
+                uri.AppendFormat("&maxDocFreq={0}&", MaximumDocumentFrequency);
             if (MaximumDocumentFrequencyPercentage != null)
-                uri.AppendFormat("maxDocFreqPct={0}&", MaximumDocumentFrequencyPercentage);
+                uri.AppendFormat("&maxDocFreqPct={0}&", MaximumDocumentFrequencyPercentage);
             if (MinimumTermFrequency != null && MinimumTermFrequency != DefaultMinimumTermFrequency)
-                uri.AppendFormat("minTermFreq={0}&", MinimumTermFrequency);
+                uri.AppendFormat("&minTermFreq={0}&", MinimumTermFrequency);
             if (MinimumWordLength != null && MinimumWordLength != DefaultMinimumWordLength)
-                uri.AppendFormat("minWordLen={0}&", MinimumWordLength);
+                uri.AppendFormat("&minWordLen={0}&", MinimumWordLength);
             if (StopWordsDocumentId != null)
-                uri.AppendFormat("stopWords={0}&", StopWordsDocumentId);
+                uri.AppendFormat("&stopWords={0}&", StopWordsDocumentId);
             if (string.IsNullOrEmpty(Transformer) == false)
                 uri.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
 
-            Fields.ApplyIfNotNull(f => uri.AppendFormat("field={0}", f));
+            if (_pageSizeSet)
+                uri.AppendFormat("&pageSize=" + PageSize);
+
+            Fields.ApplyIfNotNull(f => uri.AppendFormat("&field={0}", f));
             TransformerParameters.ApplyIfNotNull(tp => uri.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
             Includes.ApplyIfNotNull(i => uri.AppendFormat("&include={0}", i));
 
             return uri.ToString();
         }
     }
+
+
 }

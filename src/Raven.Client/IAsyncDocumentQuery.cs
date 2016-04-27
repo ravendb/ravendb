@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
 

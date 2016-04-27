@@ -21,6 +21,8 @@ namespace Raven.Client.Data
     /// </summary>
     public class IndexQuery : IEquatable<IndexQuery>
     {
+        public static int DefaultPageSize = 128;
+
         private int pageSize;
 
         /// <summary>
@@ -28,7 +30,7 @@ namespace Raven.Client.Data
         /// </summary>
         public IndexQuery()
         {
-            pageSize = 128;
+            pageSize = DefaultPageSize;
         }
 
         /// <summary>

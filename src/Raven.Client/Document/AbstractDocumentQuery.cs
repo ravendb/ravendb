@@ -29,6 +29,7 @@ using Raven.Client.Listeners;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Spatial;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
