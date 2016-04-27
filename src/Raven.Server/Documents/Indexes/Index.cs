@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : IDocumentTombstoneAware, IDisposable
     {
-        private long writeErrors;
+        private long _writeErrors;
 
         private const long WriteErrorsLimit = 10;
 
@@ -498,7 +498,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal void ResetWriteErrors()
         {
-            writeErrors = Interlocked.Exchange(ref writeErrors, 0);
+            _writeErrors = Interlocked.Exchange(ref _writeErrors, 0);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
@@ -508,9 +508,9 @@ namespace Raven.Server.Documents.Indexes
             if (iwe.InnerException is SystemException) // Don't count transient errors
                 return;
 
-            writeErrors = Interlocked.Increment(ref writeErrors);
+            _writeErrors = Interlocked.Increment(ref _writeErrors);
 
-            if (Priority.HasFlag(IndexingPriority.Error) || Interlocked.Read(ref writeErrors) < WriteErrorsLimit)
+            if (Priority.HasFlag(IndexingPriority.Error) || Interlocked.Read(ref _writeErrors) < WriteErrorsLimit)
                 return;
 
             SetPriority(IndexingPriority.Error);
@@ -811,7 +811,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
-                    result.Results = reader.MoreLikeThis(query, stopWords, GetQueryResultRetriever(documentsContext, indexContext, query.Fields), token.Token).ToList();
+                    result.Results = reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token).ToList();
                     //result.Includes = null; // TODO [ppekrol]
                 }
 

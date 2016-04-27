@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, IQueryResultRetriever retriever, CancellationToken token)
+        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<string[], IQueryResultRetriever> createRetriever, CancellationToken token)
         {
             var documentQuery = new BooleanQuery();
 
@@ -261,6 +261,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var baseDocId = td.ScoreDocs[0].Doc;
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var fieldsToFetch = string.IsNullOrWhiteSpace(query.DocumentId)
+                ? _searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray()
+                : null;
+
+            var retriever = createRetriever(fieldsToFetch);
+
             foreach (var hit in hits)
             {
                 if (hit.Doc == baseDocId)
