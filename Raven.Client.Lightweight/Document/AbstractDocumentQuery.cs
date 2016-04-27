@@ -2019,7 +2019,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             var type = TypeSystem.GetNonNullableType(whereParams.Value.GetType());
 
-            if (conventions.SaveEnumsAsIntegers && type.IsEnum)
+            if (conventions.SaveEnumsAsIntegers && type.IsEnum())
             {
                 return ((int) whereParams.Value).ToString();
             }
