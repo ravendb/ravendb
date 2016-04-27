@@ -266,11 +266,35 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage NewPage(FixedSizeTreePageFlags flags)
         {
-            var allocatePage = _tx.AllocatePage(1).ToFixedSizeTreePage();
+            FixedSizeTreePage allocatePage;
+
+            using (FreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : null)
+            {
+                // we cannot recursively call free space handling to ensure that we won't modify a section 
+                // relevant for a page which is currently being changed allocated
+
+                allocatePage = _tx.AllocatePage(1).ToFixedSizeTreePage();
+            }
+            
             allocatePage.Dirty = true;
             allocatePage.FixedTreeFlags = flags;
             allocatePage.Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
             return allocatePage;
+        }
+
+        private void FreePage(long pageNumber)
+        {
+            if (FreeSpaceTree)
+            {
+                // we cannot recursively call free space handling to ensure that we won't modify a section 
+                // relevant for a page which is currently being freed, so we will free it on tx commit
+
+                _tx.FreePageOnCommit(pageNumber);
+            }
+            else
+            {
+                _tx.FreePage(pageNumber);
+            }
         }
 
         public FixedSizeTreePage ModifyPage(FixedSizeTreePage page)
@@ -314,14 +338,6 @@ namespace Voron.Data.Fixed
                 newPage.NumberOfEntries = 0;
                 largePtr->PageCount++;
 
-                if (FreeSpaceTree)
-                {
-                    // we need to refresh the LastSearchPosition of the split page which is used by the free space handling
-                    // because the allocation of a new page called above could remove some sections
-                    // from the page that is being split
-                    BinarySearch(page, key);
-                }
-
                 // need to add past end of pageNum, optimized
                 if (page.LastSearchPosition >= page.NumberOfEntries)
                 {
@@ -353,13 +369,6 @@ namespace Voron.Data.Fixed
                 if (page.LastMatch > 0)
                     page.LastSearchPosition++;
 
-                if (FreeSpaceTree)
-                {
-                    // we need to refresh the LastSearchPosition of the split page which is used by the free space handling
-                    // because the allocation of a new page called above could remove some sections
-                    // from the page that is being split
-                    BinarySearch(page, key);
-                }
                 // need to add past end of pageNum, optimized
                 if (page.LastSearchPosition >= page.NumberOfEntries)
                 {
@@ -439,19 +448,11 @@ namespace Voron.Data.Fixed
                 {
                     // convert to large database
                     _type = RootObjectType.FixedSizeTree;
+
                     var allocatePage = NewPage(FixedSizeTreePageFlags.Leaf);
-                    if (FreeSpaceTree)
-                    {
-                        // allocating the new page might have come from the free space fixed size tree
-                        // which removed the page from the embedded entry we are trying to use, need to re-read it
-                        // before copying
-                        newEntriesCount = CopyEmbeddedContentToTempPage(key, tmp, out isNew, out newSize, out srcCopyStart);
-
-                        if (newEntriesCount <= _maxEmbeddedEntries) // TODO arek - debug purposes only
-                            throw new InvalidOperationException("Error in conversion to large tree - will result in inconsistent state of the fixed size tree");
-                    }
-
-                    var largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
+                    
+                    var largeHeader =
+                        (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                     largeHeader->NumberOfEntries = newEntriesCount;
                     largeHeader->ValueSize = _valSize;
                     largeHeader->Depth = 1;
@@ -837,8 +838,7 @@ namespace Voron.Data.Fixed
                 }
 
                 rangeRemoved = RemoveRangeFromPage(page, end, largeHeader);
-                if (_type == RootObjectType.FixedSizeTree)// we might have converted to embedded, in which case we can't use it
-                    largeHeader->NumberOfEntries -= rangeRemoved;
+                
                 entriesDeleted += rangeRemoved;
             }
             if (_type == RootObjectType.EmbeddedFixedSizeTree)
@@ -902,7 +902,10 @@ namespace Voron.Data.Fixed
                     ((page.NumberOfEntries - endPos - 1) * _entrySize)
                     );
             }
+
             page.NumberOfEntries -= (ushort)entriesDeleted;
+            largeHeader->NumberOfEntries -= (ushort)entriesDeleted;
+
             if (page.NumberOfEntries == 0)
             {
                 RemoveEntirePage(page, largeHeader);
@@ -948,7 +951,7 @@ namespace Voron.Data.Fixed
 
         private bool RemoveEntirePage(FixedSizeTreePage page, FixedSizeTreeHeader.Large* largeHeader)
         {
-            _tx.FreePage(page.PageNumber);
+            FreePage(page.PageNumber);
             largeHeader->PageCount--;
             if (_cursor.Count == 0) //remove the root page
             {
@@ -1027,7 +1030,7 @@ namespace Voron.Data.Fixed
                         page.Pointer + page.StartPosition,
                         (_entrySize * page.NumberOfEntries));
 
-                    _tx.FreePage(page.PageNumber);
+                    FreePage(page.PageNumber);
                 }
                 else if (page.IsBranch && page.NumberOfEntries == 1)
                 {
@@ -1039,7 +1042,7 @@ namespace Voron.Data.Fixed
                     if (largeTreeHeader != null)
                         largeTreeHeader->Depth--;
 
-                    _tx.FreePage(childPage);
+                    FreePage(childPage);
                     largeTreeHeader->PageCount--;
                 }
 
@@ -1086,7 +1089,7 @@ namespace Voron.Data.Fixed
                 // write the page value to the parent
                 SetSeparatorKeyAtPosition(parentPage, PageValueFor(page, 0), parentPage.LastSearchPosition);
                 // then delete the page
-                _tx.FreePage(page.PageNumber);
+                FreePage(page.PageNumber);
                 largeTreeHeader->PageCount--;
                 return parentPage;
             }
@@ -1121,7 +1124,7 @@ namespace Voron.Data.Fixed
                         );
                     page.NumberOfEntries += siblingPage.NumberOfEntries;
 
-                    _tx.FreePage(siblingNum);
+                    FreePage(siblingNum);
                     largeTreeHeader->PageCount--;
 
                     // now fix parent ref, in this case, just removing it is enough
@@ -1166,7 +1169,7 @@ namespace Voron.Data.Fixed
                         );
                     siblingPage.NumberOfEntries += page.NumberOfEntries;
 
-                    _tx.FreePage(page.PageNumber);
+                    FreePage(page.PageNumber);
                     largeTreeHeader->PageCount--;
 
                     // now fix parent ref, in this case, just removing it is enough

@@ -140,7 +140,9 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
             }
-
+            
+            var freeSpaceHandling = (FreeSpaceHandling) Env.FreeSpaceHandling;
+            
             for (int i = 0; i < numberOfFreedPages; i++)
             {
                 long pageToFree;
@@ -151,7 +153,7 @@ namespace FastTests.Voron.Trees
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, pageToFree);
+                    freeSpaceHandling.FreePage(tx.LowLevelTransaction, pageToFree);
 
                     tx.Commit();
                 }
@@ -159,11 +161,15 @@ namespace FastTests.Voron.Trees
 
             var alreadyReused = new List<long>();
 
+            var freedInternallyByFreeSpaceHandling = new HashSet<long>();
+
+            freeSpaceHandling.PageFreed += pageNumber => freedInternallyByFreeSpaceHandling.Add(pageNumber); // need to take into account pages freed by free space handling itself
+
             do
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    var page = Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 1);
+                    var page = freeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 1);
 
                     if (page == null)
                     {
@@ -171,7 +177,7 @@ namespace FastTests.Voron.Trees
                     }
 
                     Assert.False(alreadyReused.Contains(page.Value), "Free space handling returned a page number that has been already allocated. Page number: " + page);
-                    Assert.True(freedPages.Remove(page.Value));
+                    Assert.True(freedPages.Remove(page.Value) || freedInternallyByFreeSpaceHandling.Remove(page.Value));
 
                     alreadyReused.Add(page.Value);
 
