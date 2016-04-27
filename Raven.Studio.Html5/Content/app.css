@@ -8548,6 +8548,9 @@ a.global_help_link:focus {
 .padd-top-10 {
   padding-top: 10px;
 }
+.padd-left-10 {
+  padding-left: 10px;
+}
 .padd-right-10 {
   padding-right: 10px;
 }

@@ -7,14 +7,14 @@
 
             <div data-bind="with: targetServer">
                 <div class="form-group">
-                    <label class="col-sm-4 control-label">Destination server Url</label>
-                    <div class="col-sm-7">
+                    <label class="col-sm-2 control-label">Destination server Url</label>
+                    <div class="col-sm-9">
                         <input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="col-sm-4 control-label">Credentials</label>
-                    <div class="col-sm-7">
+                    <label class="col-sm-2 control-label">Credentials</label>
+                    <div class="col-sm-9">
                         <div class="btn-group">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
                                 <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
@@ -33,38 +33,38 @@
                 </div>
                 <div data-bind="if: isUserCredentials, visible: isUserCredentials">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">User Name</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">User Name</label>
+                        <div class="col-sm-9">
                             <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Password</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Password</label>
+                        <div class="col-sm-9">
                             <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Domain</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Domain</label>
+                        <div class="col-sm-9">
                             <input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                 </div>
                 <div data-bind="if: isApiKeyCredentials, visible: isApiKeyCredentials">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">API Key</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">API Key</label>
+                        <div class="col-sm-9">
                             <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-4 control-label">
+                <label class="col-sm-2 control-label">
                     Select databases to migrate <br />
                 </label>
-                <div class="col-sm-7">
+                <div class="col-sm-9">
                     <div>
                         <table class="table table-condensed table-striped">
                             <thead> 
@@ -127,7 +127,7 @@
                 </div>
 
                 <div class="form-group">
-                    <div class="col-sm-offset-4 col-sm-7">
+                    <div class="col-sm-offset-2 col-sm-9">
                         <button type="submit" class="btn btn-warning" data-bind="enable: submitEnabled"><span data-bind="visible: $root.inProgress()" class="fa fa-spinner fa-spin"></span> Run migration</button>
                         <button type="button" class="btn btn-default" data-bind="click: toggleJson, text: (showJsonRequest() ? 'Hide JSON' : 'Show JSON')"></button>
                         <button type="button" class="btn btn-default" data-bind="click: toggleCurl, text: (showCurlRequest() ? 'Hide curl' : 'Show curl')"></button>
@@ -136,8 +136,8 @@
 
                 <div data-bind="visible: showCurlRequest()">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Curl Command</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Curl Command</label>
+                        <div class="col-sm-9">
                             <pre data-bind="text: curlRequest"></pre>
                         </div>
                     </div>
@@ -145,14 +145,14 @@
 
                 <div data-bind="visible: showJsonRequest()">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Method</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Method</label>
+                        <div class="col-sm-9">
                             <input type="text" class="form-control" readonly="readonly" value="POST" />
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">Payload</label>
-                        <div class="col-sm-7">
+                        <label class="col-sm-2 control-label">Payload</label>
+                        <div class="col-sm-9">
                             <pre class="jsContent" data-bind="html: jsonRequest"></pre>
                         </div>
                     </div>

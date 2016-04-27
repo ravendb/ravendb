@@ -37,10 +37,11 @@
                             <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                         </div>
 
-                        <p>
-                            <i class="fa fa-warning text-warning"></i><span class="text-muted">Compaction takes database offline.</span>
-                        </p>
-
+                        <div class="form-group">
+                            <div class="col-sm-9 col-sm-offset-2">
+                                <i class="fa fa-warning text-warning"></i> <span class="text-muted">Compaction takes database offline.</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div id="databaseCompactLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
