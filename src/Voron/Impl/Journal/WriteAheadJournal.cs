@@ -135,7 +135,7 @@ namespace Voron.Impl.Journal
             var journalFiles = new List<JournalFile>();
             long lastSyncedTxId = -1;
             long lastSyncedJournal = logInfo.LastSyncedJournal;
-            uint lastShippedTxCrc = 0;
+            ulong lastShippedTxCrc = 0;
             for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
                 using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
@@ -162,7 +162,7 @@ namespace Voron.Impl.Journal
 
                         *txHeader = *lastReadHeaderPtr;
                         lastSyncedTxId = txHeader->TransactionId;
-                        lastShippedTxCrc = txHeader->Crc;
+                        lastShippedTxCrc = txHeader->Hash;
                         lastSyncedJournal = journalNumber;
                     }
 
@@ -376,11 +376,13 @@ namespace Voron.Impl.Journal
 
         public class JournalApplicator : IDisposable
         {
-            private const long DelayedDataFileSynchronizationBytesLimit = 2L * 1024 * 1024 * 1024;
+            private const long DelayedDataFileSynchronizationBytesLimit = 2L * Constants.Size.Gigabyte;
+
             private readonly TimeSpan _delayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
             private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
             private readonly object _flushingLock = new object();
             private readonly WriteAheadJournal _waj;
+
             private long _lastSyncedTransactionId;
             private long _lastSyncedJournal;
             private long _totalWrittenButUnsyncedBytes;
@@ -863,7 +865,7 @@ namespace Voron.Impl.Journal
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var count = txPage.NumberOfPages * pageSize;
-                Memory.BulkCopy(write, scratchPage, count);
+                Memory.Copy(write, scratchPage, count);
                 write += count;
             }
 
@@ -893,7 +895,7 @@ namespace Voron.Impl.Journal
                 pages[index + 1] = new IntPtr(compressionBuffer + (index * pageSize));
             }
 
-            txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages * pageSize);
+            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, compressedPages * pageSize);
 
             return pages;
         }

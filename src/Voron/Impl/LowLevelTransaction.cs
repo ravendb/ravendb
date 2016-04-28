@@ -78,9 +78,9 @@ namespace Voron.Impl
             get { return _state; }
         }
 
-        public uint Crc
+        public ulong Hash
         {
-            get { return _txHeader->Crc; }
+            get { return _txHeader->Hash; }
         }
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
@@ -154,7 +154,7 @@ namespace Voron.Impl
             _txHeader->NextPageNumber = _state.NextPageNumber;
             _txHeader->LastPageNumber = -1;
             _txHeader->PageCount = -1;
-            _txHeader->Crc = 0;
+            _txHeader->Hash = 0;
             _txHeader->TxMarker = TransactionMarker.None;
             _txHeader->Compressed = false;
             _txHeader->CompressedSize = 0;

@@ -127,7 +127,6 @@ CREATE TABLE [dbo].[Orders]
                             var readAllLines = File.ReadAllLines(path);
                             return $@"Data Source=ci1\sqlexpress;User Id={readAllLines[0]};Password={readAllLines[1]};Connection Timeout=1";
                         }
-
                         catch (Exception e)
                         {
                             throw new InvalidOperationException("Use a valid connection", e);

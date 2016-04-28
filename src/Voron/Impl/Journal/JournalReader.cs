@@ -227,8 +227,8 @@ namespace Voron.Impl.Journal
                 throw new InvalidDataException("Transaction id cannot be less than 0 (llt: " + current->TransactionId + " )");
             if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
                 throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
-                throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
+            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Hash == 0)
+                throw new InvalidDataException("Committed and not empty transaction hash can't be equal to 0");
             if (current->Compressed)
             {
                 if (current->CompressedSize <= 0)
@@ -247,12 +247,12 @@ namespace Voron.Impl.Journal
 
         private bool ValidatePagesCrc(StorageEnvironmentOptions options, int compressedPages, TransactionHeader* current)
         {
-            uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * options.PageSize);
+            ulong hash = Hashing.XXHash64.Calculate(_pager.AcquirePagePointer(_readingPage), compressedPages * options.PageSize);
 
-            if (crc != current->Crc)
+            if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId, null);
+                options.InvokeRecoveryError(this, "Invalid hash signature for transaction " + current->TransactionId, null);
 
                 return false;
             }

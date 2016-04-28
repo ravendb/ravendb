@@ -67,11 +67,11 @@ namespace Voron
             {
                 if (value > ushort.MaxValue)
                     throw new ArgumentOutOfRangeException(nameof(value), "PageSize must be less than " + ushort.MaxValue);
-                if (value < 4096)
-                    throw new ArgumentOutOfRangeException(nameof(value), "PageSize must be higher than 4096 bytes");
+                if (value < 4 * Constants.Size.Kilobyte)
+                    throw new ArgumentOutOfRangeException(nameof(value), $"PageSize must be higher than {4 * Constants.Size.Kilobyte} bytes");
+                if (value % Constants.Size.Sector != 0)
+                    throw new ArgumentException($"PageSize must be evenly divisible by {Constants.Size.Sector} (sector size)", nameof(value));
 
-                if (value % 512 != 0)
-                    throw new ArgumentException("PageSize must be evenly divisible by 512 (sector size)", nameof(value));
                 _pageSize = value;
             }
         }
@@ -335,7 +335,7 @@ namespace Voron
         {
             private static int _counter;
 
-            private readonly IVirtualPager _dataPager;
+            private readonly Lazy<IVirtualPager> _dataPager;            
 
             private readonly Dictionary<string, IJournalWriter> _logs =
                 new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
@@ -350,20 +350,17 @@ namespace Voron
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
 
-                if (RunningOnPosix)
+                _dataPager = new Lazy<IVirtualPager>(() =>
                 {
-                    _dataPager = new PosixTempMemoryMapPager(PageSize, Path.Combine(TempPath, filename), InitialFileSize);
-                }
-                else
-                {
-                    _dataPager = new Win32MemoryMapPager(PageSize, Path.Combine(TempPath, filename), InitialFileSize,
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
-                }
+                    if (RunningOnPosix)
+                        return new PosixTempMemoryMapPager(PageSize, Path.Combine(TempPath, filename), InitialFileSize);
+                    return new Win32MemoryMapPager(PageSize, Path.Combine(TempPath, filename), InitialFileSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                }, true);
             }
 
             public override IVirtualPager DataPager
             {
-                get { return _dataPager; }
+                get { return _dataPager.Value; }
             }
 
             public override string BasePath
@@ -387,7 +384,8 @@ namespace Voron
                 if (Disposed)
                     return;
                 Disposed = true;
-                _dataPager.Dispose();
+
+                _dataPager.Value.Dispose();
                 foreach (var virtualPager in _logs)
                 {
                     virtualPager.Value.Dispose();
@@ -397,6 +395,7 @@ namespace Voron
                 {
                     Marshal.FreeHGlobal(headerSpace.Value);
                 }
+
                 _headers.Clear();
             }
 
@@ -445,7 +444,6 @@ namespace Voron
 
                 if (RunningOnPosix)
                     return new PosixTempMemoryMapPager(PageSize, Path.Combine(TempPath, filename), InitialFileSize);
-
 
                 return new Win32MemoryMapPager(PageSize, Path.Combine(TempPath, filename), InitialFileSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);

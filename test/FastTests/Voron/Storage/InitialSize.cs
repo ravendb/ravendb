@@ -63,11 +63,14 @@ namespace FastTests.Voron.Storage
                 var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
 
-                if (StorageEnvironmentOptions.RunningOnPosix) {
+                if (StorageEnvironmentOptions.RunningOnPosix)
+                {
                     // on Linux, we use 4K as the allocation granularity
-                    Assert.Equal (GetExpectedInitialSize ()*2 +4096, new FileInfo (dataFile).Length);
-                    Assert.Equal (GetExpectedInitialSize ()*2  +4096, new FileInfo (scratchFile).Length);
-                } else {
+                    Assert.Equal (GetExpectedInitialSize ()*2 + 4096, new FileInfo (dataFile).Length);
+                    Assert.Equal (GetExpectedInitialSize ()*2 + 4096, new FileInfo (scratchFile).Length);
+                }
+                else
+                {
                     // on Windows, we use 64K as the allocation granularity
                     Assert.Equal (GetExpectedInitialSize () * 3, new FileInfo (dataFile).Length);
                     Assert.Equal (GetExpectedInitialSize () * 3, new FileInfo (scratchFile).Length);

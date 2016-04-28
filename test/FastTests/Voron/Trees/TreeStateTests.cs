@@ -20,7 +20,7 @@ namespace FastTests.Voron.Trees
         }
 
         [Theory]
-		[InlineData(5, 2)]
+        [InlineData(5, 2)]
 		[InlineData(35, 13)]
 		[InlineData(256, 32)]
 		public void TotalPageCountConsistsOfLeafBrancheAndOverflowPages(int regularItemsCount, int overflowsCount)

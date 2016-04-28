@@ -28,6 +28,8 @@ namespace Voron.Platform.Win32
         private int _segmentsSize;
         private NativeOverlapped* _nativeOverlapped;
 
+        private const int PhysicalPageSize = 4 * Constants.Size.Kilobyte;
+
         public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
         {
             _options = options;
@@ -37,7 +39,7 @@ namespace Voron.Platform.Win32
                 Win32NativeFileCreationDisposition.OpenAlways,
                 Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering | Win32NativeFileAttributes.Overlapped, IntPtr.Zero);
 
-            _pageSizeMultiplier = options.PageSize / (4 * Constants.Size.Kilobyte);
+            _pageSizeMultiplier = options.PageSize / PhysicalPageSize;
 
             if (_handle.IsInvalid)
                 throw new Win32Exception();
@@ -67,7 +69,7 @@ namespace Voron.Platform.Win32
           
             // WriteFileGather will only be able to write x pages of size GetSystemInfo().dwPageSize. Usually that is 4096 (4kb). If you are
             // having trouble with this method, ensure that this value havent changed for your environment. 
-            var operationCompleted = Win32NativeFileMethods.WriteFileGather(_handle, _segments, (uint)(physicalPages * 4096), IntPtr.Zero, _nativeOverlapped);
+            var operationCompleted = Win32NativeFileMethods.WriteFileGather(_handle, _segments, (uint)(physicalPages * PhysicalPageSize), IntPtr.Zero, _nativeOverlapped);
 
             uint lpNumberOfBytesWritten;
 
@@ -110,7 +112,7 @@ namespace Voron.Platform.Win32
             var pageLength = pages.Length*_pageSizeMultiplier;
             for (int step = 0; step < _pageSizeMultiplier; step++)
             {
-                int offset = step*4*Constants.Size.Kilobyte;
+                int offset = step * PhysicalPageSize;
                 for (int i = 0, ptr = step; i < pages.Length; i++, ptr += _pageSizeMultiplier)
                 {
                     if (IntPtr.Size == 4)
