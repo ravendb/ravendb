@@ -63,7 +63,7 @@ class trafficWatch extends viewModelBase {
     }
     
     activate(args) {
-        var widthUnit = 0.08;
+        var widthUnit = 0.075;
         this.columnWidths = [
             ko.observable<number>(100 * widthUnit),
             ko.observable<number>(100 * widthUnit),
