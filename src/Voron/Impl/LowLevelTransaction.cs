@@ -32,6 +32,7 @@ namespace Voron.Impl
         private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
+        readonly Stack<long> _pagesToFreeOnCommit = new Stack<long>();
         private readonly IFreeSpaceHandling _freeSpaceHandling;
 
         private int _allocatedPagesInTransaction;
@@ -430,12 +431,18 @@ namespace Voron.Impl
             }
         }
 
+        internal void FreePageOnCommit(long pageNumber)
+        {
+            _pagesToFreeOnCommit.Push(pageNumber);
+        }
+
         internal void FreePage(long pageNumber)
         {
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
             Debug.Assert(pageNumber >= 0);
+
             _freeSpaceHandling.FreePage(this, pageNumber);
 
             _freedPages.Add(pageNumber);
@@ -494,6 +501,10 @@ namespace Voron.Impl
             if (RolledBack)
                 throw new InvalidOperationException("Cannot commit rolled-back transaction.");
 
+            while (_pagesToFreeOnCommit.Count > 0)
+            {
+                FreePage(_pagesToFreeOnCommit.Pop());
+            }
 
             _txHeader->LastPageNumber = _state.NextPageNumber - 1;
             _txHeader->PageCount = _allocatedPagesInTransaction;
