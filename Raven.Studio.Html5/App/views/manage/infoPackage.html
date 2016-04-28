@@ -34,7 +34,7 @@ text.trace {
 
 <section id="infoPackageSection" data-bind="visible: !isForbidden()">
 
-    <div class="panel panel-default">
+    <div class="panel panel-default panel-wo-margin">
         <div class="panel-heading">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group" data-bind="visible: adminView()">
@@ -87,7 +87,7 @@ text.trace {
                 <div data-bind="visible: showMoreDetails(), text: fetchExceptionDetails"></div>
             </div>
 
-            <div id="stacksContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 40 }" style="width: 100%" class="with-3d-shadow with-transitions">
+            <div id="stacksContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#infoPackageSection' }" style="width: 100%" class="with-3d-shadow with-transitions">
                 <svg id="parallelStacks" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
             </div>
         </div>

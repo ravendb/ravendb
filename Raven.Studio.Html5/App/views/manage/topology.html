@@ -47,13 +47,13 @@
     }
 
 </style>
-<section id="replicationTopologySection" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+<section id="replicationTopologySection">
     <div data-bind="visible: !settingsAccess.canWrite()" class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
     <div>
-        <div class="panel-group" data-bind="visible: settingsAccess.canWrite()">
-            <div class="panel panel-default">
+        <div data-bind="visible: settingsAccess.canWrite()">
+            <div class="panel panel-default panel-wo-margin" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#replicationTopologySection' }">
                 <div class="panel-heading">
                     <span data-bind="visible: !topology()">
                         <button data-bind="click: fetchTopology" class="btn btn-primary"><i class="fa fa-sitemap"></i> Fetch topology</button>
