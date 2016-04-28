@@ -17,6 +17,10 @@ class adminLogsConfigEntry {
         return new adminLogsConfigEntry(null, null, false);
     }
 
+    toggleStackStace() {
+        this.includeStackTrace(!this.includeStackTrace());
+    }
+
     toDto(): adminLogsConfigEntryDto {
         return {
             category: this.category(),

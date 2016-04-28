@@ -68,7 +68,12 @@ class topology extends viewModelBase {
     createReplicationTopology() {
         var self = this;
 
-        this.height = 600;
+        var $replicationTopologSection = $("#replicationTopologySection");
+        var $replicationTopologySvg = $("svg#replicationTopology");
+
+        this.height = $replicationTopologSection.outerHeight() -
+            ($replicationTopologySvg.offset().top - $replicationTopologSection.offset().top) -
+            20;
 
         this.zoom = d3.behavior.zoom()
             .scaleExtent([0.2, 5])

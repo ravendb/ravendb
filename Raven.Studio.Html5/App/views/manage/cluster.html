@@ -7,6 +7,7 @@
         <div data-bind="if: !clusterMode()">
             <div class="panel panel-default" data-bind="visible: $root.canCreateCluster()">
                 <div class="panel-heading">
+                    <div class="pull-right text-warning" data-bind="visible: developerLicense">Enterprise feature</div>
                     Cluster configuration
                 </div>
                 <div class="panel-body">
@@ -15,7 +16,7 @@
                             This server is not part of cluster. <small data-bind="visible: !settingsAccess.isReadOnly()">Go ahead and <a href="#" data-bind="click: createCluster">create cluster</a>.</small>
                         </h3>
                     </div>
-                    <div class="pull-right text-warning" data-bind="visible: developerLicense">Enterprise feature</div>
+                    
                 </div>
             </div>
             <div class="panel panel-default" data-bind="visible: !$root.canCreateCluster()">

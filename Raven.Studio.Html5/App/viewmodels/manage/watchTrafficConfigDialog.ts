@@ -30,42 +30,23 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newResourceName = this.resourceName();
-            var foundResource = this.allResourcesNames().filter((name: string) => name === newResourceName);
-            if (!foundResource && newResourceName.length > 0) {
-                errorMessage = "Resource name doesn't exist!";
+
+            var isSingleResourceView = this.watchedResourceMode() === "SingleResourceView";
+            if (isSingleResourceView) {
+                if (!newResourceName) {
+                    errorMessage = "Resource name is required";
+                } else {
+                    var foundResource = this.allResourcesNames().first((name: string) => name === newResourceName);
+                    if (!foundResource) {
+                        errorMessage = "Resource name doesn't exist!";
+                    }
+                }
             }
+            
             return errorMessage;
         });
     }
 
-    /*canActivate() {
-        var loadDialogDeferred = $.Deferred();
-        var databasesLoadTask = new getDatabasesCommand()
-            .execute();
-        var fileSystemsLoadTask = new getFileSystemsCommand()
-            .execute();
-        $.when(databasesLoadTask, fileSystemsLoadTask)
-            .always((databases: resource[], filesystems: resource[]) => {
-                if (!!databases && databases.length > 0) {
-                    databases.forEach((x) => this.allResourcesNames.push(x));
-                }
-                if (!!filesystems && filesystems.length > 0) {
-                    filesystems.forEach((x) => {
-                        if (!this.allResourcesNames.first(y => y.name == x.name))
-                            this.allResourcesNames.push(x);
-                    });
-
-
-                }
-                loadDialogDeferred.resolve({ can: true });
-            });
-        return loadDialogDeferred;
-    }
-
-    activate(args) {
-      
-        
-    }*/
     bindingComplete() {
         document.getElementById("watchedResource").focus();
     }
@@ -94,18 +75,10 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
 
     confirmConfig() {
         var tracedResource: resource;
-        if ((!this.resourceName() || this.resourceName().trim() === "") && this.watchedResourceMode() === "SingleResourceView") {
-            app.showMessage("Resource name should be chosen", "Validation Error");
-            return;
-        }
-        if (this.watchedResourceMode() === "SingleResourceView" && !this.allResourcesNames().first((name: string) => name === this.resourceName())) {
-            app.showMessage("Resource name is not recognized", "Validation Error");
-            return;
-        }
         if (this.watchedResourceMode() === "SingleResourceView")
             tracedResource = shell.resources().first((rs: resource) => rs.name === this.resourceName());
 
-        tracedResource = !!tracedResource ? tracedResource : appUrl.getSystemDatabase();
+        tracedResource = tracedResource || appUrl.getSystemDatabase();
         var resourcePath = appUrl.forResourceQuery(tracedResource);
         
         var getTokenTask = new getSingleAuthTokenCommand(tracedResource, this.watchedResourceMode() === "AdminView").execute();

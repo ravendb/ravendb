@@ -809,8 +809,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
         .logRecords {
             max-height: 60vh;
-            max-width: 80vw;
-            width: 80vw;
             overflow-y: auto;
         }
 
@@ -2914,7 +2912,27 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     }
 }
 
-.bs-code-output::after
+.bs-status {
+    font-size: 12px;
+    font-weight: bold;
+    color:  #9DA0A4;
+}
+
+.bs-code-output .header {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: -1px;
+    padding: 0;
+    font-size: 12px;
+    font-weight: bold;
+    color: #9DA0A4;
+    -webkit-border-radius: 4px 0 4px 0;
+    -moz-border-radius: 4px 0 4px 0;
+    border-radius: 4px 0 4px 0;
+}
+
+.bs-code-output:not(.skip-header)::after
 {
     content: attr(data-title);
     position: absolute;
@@ -2929,3 +2947,8 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     -moz-border-radius: 4px 0 4px 0;
     border-radius: 4px 0 4px 0;
 }
+
+.panel.panel-wo-margin {
+    margin: 0;
+}
+
