@@ -8,9 +8,9 @@ using System;
 
 namespace Voron.Data.BTrees
 {
-    public class RecentlyFoundPages
+    public class RecentlyFoundTreePages
     {
-        public class FoundPage
+        public class FoundTreePage
         {
             public readonly long Number;
             public TreePage Page;
@@ -18,7 +18,7 @@ namespace Voron.Data.BTrees
             public readonly Slice LastKey;
             public readonly long[] CursorPath;
 
-            public FoundPage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath)
+            public FoundTreePage(long number, TreePage page, Slice firstKey, Slice lastKey, long[] cursorPath)
             {
                 Number = number;
                 Page = page;
@@ -28,19 +28,19 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private readonly FoundPage[] _cache;
+        private readonly FoundTreePage[] _cache;
 
         private readonly int _cacheSize;
 
         private int current = 0;
 
-        public RecentlyFoundPages(int cacheSize)
+        public RecentlyFoundTreePages(int cacheSize)
         {
-            _cache = new FoundPage[cacheSize];
+            _cache = new FoundTreePage[cacheSize];
             _cacheSize = cacheSize;
         }
 
-        public void Add(FoundPage page)
+        public void Add(FoundTreePage page)
         {
             int itemsLeft = _cacheSize;
             int position = current + _cacheSize;
@@ -62,7 +62,7 @@ namespace Voron.Data.BTrees
             _cache[current] = page;
         }
 
-        public FoundPage Find(Slice key)
+        public FoundTreePage Find(Slice key)
         {
             int position = current;
 

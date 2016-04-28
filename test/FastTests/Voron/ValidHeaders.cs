@@ -124,7 +124,7 @@ namespace FastTests.Voron
             ptr->TransactionId = (long)rnd.NextDouble();
             ptr->Compressed = true;
             ptr->CompressedSize = rnd.Next();
-            ptr->Crc = (uint)rnd.Next();
+            ptr->Hash = (ulong)rnd.Next();
             ptr->HeaderMarker = (ulong)rnd.NextDouble();
             ptr->NextPageNumber = (long)rnd.NextDouble();
             ptr->OverflowPageCount = rnd.Next();
@@ -147,7 +147,7 @@ namespace FastTests.Voron
             Assert.Equal(ptr->TransactionId, (long)rnd.NextDouble());
             Assert.Equal(ptr->Compressed, true);
             Assert.Equal(ptr->CompressedSize, rnd.Next());
-            Assert.Equal(ptr->Crc, (uint)rnd.Next());
+            Assert.Equal(ptr->Hash, (ulong)rnd.Next());
             Assert.Equal(ptr->HeaderMarker, (ulong)rnd.NextDouble());
             Assert.Equal(ptr->NextPageNumber, (long)rnd.NextDouble());
             Assert.Equal(ptr->OverflowPageCount, rnd.Next());

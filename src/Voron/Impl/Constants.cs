@@ -20,12 +20,14 @@ namespace Voron.Impl
             public const int Megabyte = 1024 * Kilobyte;
             public const int Gigabyte = 1024 * Megabyte;
             public const long Terabyte = 1024 * (long)Gigabyte;
+
+            public const int Sector = 512;
         }
 
 
         /// <summary>
         /// If there are less than 2 keys in a page, we no longer have a tree
-        /// This impacts the MakKeySize available
+        /// This impacts the MaxKeySize available
         /// </summary>
         public const int MinKeysInPage = 2;
 

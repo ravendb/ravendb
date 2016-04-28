@@ -19,10 +19,10 @@ namespace Voron.Data.BTrees
         public event Action<long> PageModified;
         public event Action<long> PageFreed;
 
-        private RecentlyFoundPages _recentlyFoundPages;
-        public RecentlyFoundPages RecentlyFoundPages
+        private RecentlyFoundTreePages _recentlyFoundPages;
+        public RecentlyFoundTreePages RecentlyFoundPages
         {
-            get { return _recentlyFoundPages ?? (_recentlyFoundPages = new RecentlyFoundPages(_llt.Flags == TransactionFlags.Read ? 8 : 2)); }
+            get { return _recentlyFoundPages ?? (_recentlyFoundPages = new RecentlyFoundTreePages(_llt.Flags == TransactionFlags.Read ? 8 : 2)); }
         }
 
         public string Name { get; set; }
@@ -478,7 +478,7 @@ namespace Voron.Data.BTrees
                 cur = cur.Next;
             }
 
-            var foundPage = new RecentlyFoundPages.FoundPage(p.PageNumber, p, firstKey, lastKey, cursorPath);
+            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, cursorPath);
 
             RecentlyFoundPages.Add(foundPage);
         }

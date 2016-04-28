@@ -6,6 +6,7 @@
 
 using Xunit;
 using Voron;
+using Voron.Impl;
 
 namespace FastTests.Voron.ScratchBuffer
 {
@@ -13,8 +14,9 @@ namespace FastTests.Voron.ScratchBuffer
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			base.Configure(options);
-			options.ManualFlushing = true;
+            options.PageSize = 4 * Constants.Size.Kilobyte;
+            options.ManualFlushing = true;
+            base.Configure(options);
 		}
 
 		[Fact]
