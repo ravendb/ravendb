@@ -404,12 +404,12 @@ namespace FastTests.Server.Documents.Indexing
                     var price = result["Lines_Price"] as LazyDoubleValue;
 
                     Assert.NotNull(price);
-                    Assert.Equal("63.6", price.Inner.ToString());
+                    Assert.Equal(63.6, price);
 
                     var quantity = result["Lines_Quantity"] as LazyDoubleValue;
 
                     Assert.NotNull(quantity);
-                    Assert.Equal("9.0", quantity.Inner.ToString());
+                    Assert.Equal(9.0, quantity);
                 }
             }
         }

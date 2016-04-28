@@ -7,8 +7,6 @@ namespace Sparrow.Json
         public readonly LazyStringValue Inner;
         private double? _val;
 
-        private double Val => _val.GetValueOrDefault();
-
         public LazyDoubleValue(LazyStringValue inner)
         {
             Inner = inner;
