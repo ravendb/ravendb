@@ -105,6 +105,11 @@ namespace Voron.Impl.Paging
             // do nothing
         }
 
+        public virtual void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        {
+            // do nothing
+        }
+
         public abstract byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
 
         public abstract void Sync();
@@ -254,5 +259,6 @@ namespace Voron.Impl.Paging
         }
 
         public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
+
     }
 }
