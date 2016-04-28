@@ -15,7 +15,8 @@ namespace FastTests.Voron.Bugs
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxScratchBufferSize = 1024*1024*1 + Constants.Storage.PageSize;
+            options.PageSize = 4 * Constants.Size.Kilobyte;
+            options.MaxScratchBufferSize = 1024 * 1024 * 1 + options.PageSize;
             options.ManualFlushing = true;
         }
 
