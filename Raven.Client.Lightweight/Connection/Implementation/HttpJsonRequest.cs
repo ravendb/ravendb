@@ -290,9 +290,10 @@ namespace Raven.Client.Connection.Implementation
                 {
                     throw;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    criticalError = true;
+                    if(e is OperationCanceledException == false)
+                        criticalError = true;
                     throw;
                 }
 

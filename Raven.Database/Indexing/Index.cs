@@ -534,6 +534,7 @@ namespace Raven.Database.Indexing
                     try
                     {
                         var stats = new IndexingWorkStats();
+                        shouldRecreateSearcher = false;
 
                         try
                         {
@@ -541,7 +542,7 @@ namespace Raven.Database.Indexing
                             {
                                 throw new InvalidOperationException(
                                     string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
-                                                                                  PublicName));
+                                        PublicName));
                             }
 
                             itemsInfo = action(indexWriter, searchAnalyzer, stats);
@@ -559,6 +560,11 @@ namespace Raven.Database.Indexing
                                     writePerformanceStats.Add(PerformanceStats.From(operation, extensionExecutionDuration.ElapsedMilliseconds));
                                 }
                             }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            //do not add error if this exception happens,
+                            //since this exception can happen during normal code-flow
                         }
                         catch (Exception e)
                         {

@@ -209,7 +209,7 @@ namespace Raven.Client.Document
                                         }
                                         else
                                         {
-                                            queue.Add((T)(object)jsonDoc);
+                                            queue.Add((T) (object) jsonDoc);
                                         }
 
                                         if (IsErroredBecauseOfSubscriber)
@@ -268,6 +268,10 @@ namespace Raven.Client.Document
                         }
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    //ignore this since it is expected
+                }
                 catch (ErrorResponseException e)
                 {
                     SubscriptionException subscriptionException;
@@ -325,6 +329,10 @@ namespace Raven.Client.Document
             try
             {
                 await pullingTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                //this exception is expected, so ignore if it happens
             }
             catch (Exception ex)
             {
@@ -574,7 +582,8 @@ namespace Raven.Client.Document
                         }
                         catch (AggregateException ae)
                         {
-                            if (ae.InnerException is OperationCanceledException == false)
+                            if (ae.InnerException is OperationCanceledException == false &&
+                                ae.InnerException is ObjectDisposedException == false)
                             {
                                 throw;
                             }
@@ -587,15 +596,23 @@ namespace Raven.Client.Document
             if (IsConnectionClosed)
                 return new CompletedTask();
 
-            return CloseSubscription();
+            return CloseSubscription(true);
         }
 
-        private async Task CloseSubscription()
+        private async Task CloseSubscription(bool ignoreOperationCanceledException = false)
         {
-            using (var closeRequest = CreateCloseRequest())
+            try
             {
-                await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
-                IsConnectionClosed = true;
+                using (var closeRequest = CreateCloseRequest())
+                {
+                    await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
+                    IsConnectionClosed = true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (!ignoreOperationCanceledException)
+                    throw;
             }
         }
     }
