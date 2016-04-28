@@ -378,6 +378,8 @@ namespace Voron.Platform.Win32
             var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
             for (int i = 0; i < entries.Length; i++)
             {
+                // We are prefetching 4 pages that with 4Kb pages is 32Kb but the idea is to really get a few consecutive pages to 
+                // exploit locality regardless of the page size.
                 entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
                 entries[i].VirtualAddress = AcquirePagePointer(pagesToPrefetch[i]);
             }

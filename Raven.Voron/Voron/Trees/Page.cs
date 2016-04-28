@@ -178,8 +178,11 @@ namespace Voron.Trees
             for ( int i = 0; i < NumberOfEntries; i++ )
             {
                 var nodeOffset = KeysOffsets[i];
+
+                // We will only select the nodes that have a valid Page pointer.
                 var nodeHeader = (NodeHeader*)(_base + nodeOffset);
-                results.Add(nodeHeader->PageNumber);
+                if ( nodeHeader->Flags == NodeFlags.PageRef)
+                    results.Add(nodeHeader->PageNumber);
             }
 
             return results;
