@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 
 namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
@@ -30,6 +31,11 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         public Stream CreateContent(string sigName)
         {
             var sigFileName = NameToPath(sigName);
+
+            var signatureDirectory = Path.GetDirectoryName(sigFileName);
+
+            IOExtensions.CreateDirectoryIfNotExists(signatureDirectory);
+
             var result = File.Create(sigFileName, 64 * 1024);
             log.Info("File {0} created", sigFileName);
             _createdFiles.Add(sigFileName, result);
@@ -49,10 +55,10 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 
         public DateTime? GetLastUpdate()
         {
-            var preResult = from item in GetSigFileNamesByFileName()
+            var preResult = (from item in GetSigFileNamesByFileName()
                             let lastWriteTime = new FileInfo(item).LastWriteTime
                             orderby lastWriteTime descending
-                            select lastWriteTime;
+                            select lastWriteTime).ToList();
             if (preResult.Any())
                 return preResult.First();
 
@@ -62,12 +68,20 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         public void Dispose()
         {
             CloseCreatedStreams();
-            Directory.Delete(_tempDirectory, true);
+            IOExtensions.DeleteDirectory(_tempDirectory);
         }
 
         private IEnumerable<string> GetSigFileNamesByFileName()
         {
-            return Directory.GetFiles(_tempDirectory, _fileName + "*.sig");
+            var fullPath = NameToPath(_fileName);
+            var directory = Path.GetDirectoryName(fullPath);
+
+            if (Directory.Exists(directory) == false)
+                return Enumerable.Empty<string>();
+
+            var fileName = Path.GetFileName(fullPath);
+
+            return Directory.GetFiles(directory, fileName + "*.sig");
         }
 
         private string NameToPath(string name)
@@ -85,7 +99,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         {
             foreach (var item in _createdFiles)
             {
-                item.Value.Close();
+                item.Value.Dispose();
             }
 
             _createdFiles.Clear();
