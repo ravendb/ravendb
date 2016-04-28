@@ -1369,6 +1369,7 @@ more responsive application.
         {
             includedDocumentsByKey[include.Key] = include;
         }
+
         public string CreateDynamicIndexName<T>()
         {
             var indexName = "dynamic";
@@ -1429,6 +1430,21 @@ more responsive application.
                     continue;
                 prop.SetValue(entity, prop.GetValue(newEntity));
             }
+        }
+
+        protected static T GetOperationResult<T>(object result)
+        {
+            if (result == null)
+                return default(T);
+
+            if (result is T)
+                return (T)result;
+
+            var results = result as T[];
+            if (results != null && results.Length > 0)
+                return results[0];
+
+            throw new InvalidCastException($"Unable to cast {result.GetType().Name} to {typeof(T).Name}");
         }
     }
 }

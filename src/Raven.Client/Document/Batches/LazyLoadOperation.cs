@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
@@ -39,18 +41,17 @@ namespace Raven.Client.Document.Batches
 
         public GetRequest CreateRequest()
         {
-            string query = "?";
-            if (includes != null && includes.Length > 0)
-            {
-                query += string.Join("&", includes.Select(x => "include=" + x.Key).ToArray());
-            }
-            query += "&" + string.Join("&", ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-            if (!string.IsNullOrEmpty(transformer))
-                query += "&transformer=" + transformer;
+            var queryBuilder = new StringBuilder("?");
+            includes.ApplyIfNotNull(include => queryBuilder.AppendFormat("&include={0}", include));
+            ids.ApplyIfNotNull(id => queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
+
+            if (string.IsNullOrEmpty(transformer) == false)
+                queryBuilder.AppendFormat("&transformer={0}", transformer);
+
             return new GetRequest
             {
                 Url = "/docs",
-                Query = query
+                Query = queryBuilder.ToString()
             };
         }
 
