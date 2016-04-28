@@ -171,6 +171,19 @@ namespace Voron.Trees
             }
         }
 
+        public List<long> GetAllOverflowPages()
+        {
+            var results = new List<long>(NumberOfEntries);
+            for ( int i = 0; i < NumberOfEntries; i++ )
+            {
+                var nodeOffset = KeysOffsets[i];
+                var nodeHeader = (NodeHeader*)(_base + nodeOffset);
+                results.Add(nodeHeader->PageNumber);
+            }
+
+            return results;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private NodeHeader* SearchPrefixed( MemorySlice key )
         {

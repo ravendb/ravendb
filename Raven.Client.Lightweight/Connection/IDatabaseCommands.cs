@@ -563,6 +563,12 @@ namespace Raven.Client.Connection
         long SeedIdentityFor(string name, long value);
 
         /// <summary>
+        ///     Seeds the next identities value on the server
+        /// </summary>
+        /// <param name="identities"></param>
+        void SeedIdentities(List<KeyValuePair<string, long>> identities);
+
+        /// <summary>
         ///     Retrieves documents for the specified key prefix.
         /// </summary>
         /// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>

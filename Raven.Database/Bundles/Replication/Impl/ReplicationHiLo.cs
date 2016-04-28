@@ -97,14 +97,18 @@ namespace Raven.Bundles.Replication.Impl
                     {
                         var minNextMax = currentMax.Value;
                         long max = 0;
-                        Database.TransactionalStorage.Batch(accessor =>
+                        using (Database.IdentityLock.Lock())
                         {
-                            var val = accessor.General.GetNextIdentityValue(RavenReplicationHilo, 0);
-                            var next = Math.Max(minNextMax, val);
-                            current = next + 1;
-                            max = next + capacity;
-                            accessor.General.SetIdentityValue(RavenReplicationHilo, max);
-                        });
+                            Database.TransactionalStorage.Batch(accessor =>
+                            {
+                                var val = accessor.General.GetNextIdentityValue(RavenReplicationHilo, 0);
+                                var next = Math.Max(minNextMax, val);
+                                current = next + 1;
+                                max = next + capacity;
+                                accessor.General.SetIdentityValue(RavenReplicationHilo, max);
+                            });
+                        }
+                       
                         return max;
                     }
                 }

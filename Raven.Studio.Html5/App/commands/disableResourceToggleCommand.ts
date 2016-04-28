@@ -5,7 +5,7 @@ import resource = require("models/resource");
 import counterStorage = require("models/counter/counterStorage");
 
 class disableResourceToggleCommand extends commandBase {
-    private oneDatabasePath = "/admin/databases/";
+    private oneDatabasePath = "/admin/databases-toggle-disable";
     private multipleDatabasesPath = "/admin/databases/batch-toggle-disable";
     private oneFileSystemPath = "/admin/fs/";
     private multipleFileSystemsPath = "/admin/fs/batch-toggle-disable";
@@ -37,13 +37,17 @@ class disableResourceToggleCommand extends commandBase {
         var resource = this.resources[0];
         this.reportInfo("Trying to " + action + " " + resource.name + "...");
 
-        var args = {
+        var args = (resource.type === database.type) ? {
+            id : resource.name,
+            isSettingDisabled: this.isSettingDisabled
+        } : {
             isSettingDisabled: this.isSettingDisabled
         };
 
-        var disableOneResourcePath = (resource.type == database.type) ? this.oneDatabasePath :
-            (resource.type == filesystem.type) ? this.oneFileSystemPath : this.oneCounterStoragePath;
-        var url = disableOneResourcePath + resource.name + this.urlEncodeArgs(args);
+        var disableOneResourcePath = (resource.type === database.type) ? this.oneDatabasePath :
+            (resource.type === filesystem.type) ? this.oneFileSystemPath : this.oneCounterStoragePath;
+        var resourceName = (resource.type === database.type) ? "" : resource.name; 
+        var url = disableOneResourcePath + resourceName + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
 
         toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + name));
@@ -55,9 +59,9 @@ class disableResourceToggleCommand extends commandBase {
     private disableMultipleResources(action: string): JQueryPromise<any> {
         this.reportInfo("Trying to " + action + " " + this.resources.length + " resources...");
 
-        var dbToToggle = this.resources.filter(r => r.type == database.type);
-        var fsToToggle = this.resources.filter(r => r.type == filesystem.type);
-        var cntToToggle = this.resources.filter(r => r.type == counterStorage.type);
+        var dbToToggle = this.resources.filter(r => r.type === database.type);
+        var fsToToggle = this.resources.filter(r => r.type === filesystem.type);
+        var cntToToggle = this.resources.filter(r => r.type === counterStorage.type);
 
         var toggleTasks:Array<JQueryPromise<resource[]>> = [];
 

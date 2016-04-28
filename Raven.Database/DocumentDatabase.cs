@@ -96,6 +96,7 @@ namespace Raven.Database
         {
             TimerManager = new ResourceTimerManager();
             DocumentLock = new PutSerialLock();
+            IdentityLock = new PutSerialLock();
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;
@@ -305,6 +306,8 @@ namespace Raven.Database
         public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
 
         internal PutSerialLock DocumentLock { get; private set; }
+
+        internal PutSerialLock IdentityLock { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
         public AttachmentActions Attachments { get; private set; }

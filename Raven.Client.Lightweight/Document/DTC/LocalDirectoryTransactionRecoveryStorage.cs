@@ -30,6 +30,10 @@ namespace Raven.Client.Document.DTC
 
         public void DeleteFile(string name)
         {
+            if (!Path.IsPathRooted(name))
+            {
+                name = Path.Combine(path, name);
+            }
             if (File.Exists(name) == false)
                 return;
             File.Delete(name);

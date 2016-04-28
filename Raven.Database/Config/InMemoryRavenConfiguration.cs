@@ -330,6 +330,7 @@ namespace Raven.Database.Config
             Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
             Indexing.DisableIndexingFreeSpaceThreshold = ravenSettings.Indexing.DisableIndexingFreeSpaceThreshold.Value;
             Indexing.DisableMapReduceInMemoryTracking = ravenSettings.Indexing.DisableMapReduceInMemoryTracking.Value;
+            Indexing.SkipRecoveryOnStartup = ravenSettings.Indexing.SkipRecoveryOnStartup.Value;
 
             TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
@@ -1535,6 +1536,8 @@ namespace Raven.Database.Config
             public int DisableIndexingFreeSpaceThreshold { get; set; }
 
             public bool DisableMapReduceInMemoryTracking { get; set; }
+
+            public bool SkipRecoveryOnStartup { get; set; }
         }
 
         public class WebSocketsConfiguration
