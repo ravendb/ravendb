@@ -499,7 +499,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal void ResetWriteErrors()
         {
-            _writeErrors = Interlocked.Exchange(ref _writeErrors, 0);
+            Interlocked.Exchange(ref _writeErrors, 0);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
@@ -509,9 +509,9 @@ namespace Raven.Server.Documents.Indexes
             if (iwe.InnerException is SystemException) // Don't count transient errors
                 return;
 
-            _writeErrors = Interlocked.Increment(ref _writeErrors);
+            var writeErrors = Interlocked.Increment(ref _writeErrors);
 
-            if (Priority.HasFlag(IndexingPriority.Error) || Interlocked.Read(ref _writeErrors) < WriteErrorsLimit)
+            if (Priority.HasFlag(IndexingPriority.Error) || writeErrors < WriteErrorsLimit)
                 return;
 
             SetPriority(IndexingPriority.Error);
