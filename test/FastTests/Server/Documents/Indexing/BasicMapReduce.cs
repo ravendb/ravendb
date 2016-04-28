@@ -44,7 +44,7 @@ namespace FastTests.Server.Documents.Indexing
                     var count = result["Count"] as LazyDoubleValue;
 
                     Assert.NotNull(count);
-                    Assert.Equal("2.0", count.Inner.ToString());
+                    Assert.Equal(2.0, count);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -88,13 +88,13 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(3, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal("34.0", ((LazyDoubleValue) results[0].Data["Count"]).Inner.ToString());
+                    Assert.Equal(34.0, ((LazyDoubleValue) results[0].Data["Count"]));
 
                     Assert.Equal("Israel", results[1].Data["Location"].ToString());
-                    Assert.Equal("33.0", ((LazyDoubleValue)results[1].Data["Count"]).Inner.ToString());
+                    Assert.Equal(33.0, ((LazyDoubleValue)results[1].Data["Count"]));
 
                     Assert.Equal("USA", results[2].Data["Location"].ToString());
-                    Assert.Equal("33.0", ((LazyDoubleValue)results[2].Data["Count"]).Inner.ToString());
+                    Assert.Equal(33.0, ((LazyDoubleValue)results[2].Data["Count"]));
                 }
             }
         }
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal("10.0", ((LazyDoubleValue)results[0].Data["Count"]).Inner.ToString());
+                    Assert.Equal(10.0, ((LazyDoubleValue)results[0].Data["Count"]));
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -142,7 +142,7 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal("9.0", ((LazyDoubleValue)results[0].Data["Count"]).Inner.ToString());
+                    Assert.Equal(9.0, ((LazyDoubleValue)results[0].Data["Count"]));
                 }
             }
         }
@@ -321,12 +321,12 @@ namespace FastTests.Server.Documents.Indexing
                     var count = result["Count"] as LazyDoubleValue;
 
                     Assert.NotNull(count);
-                    Assert.Equal("2.0", count.Inner.ToString());
+                    Assert.Equal(2.0, count);
 
                     var totalCount = result["TotalCount"] as LazyDoubleValue;
 
                     Assert.NotNull(totalCount);
-                    Assert.Equal("2.0", totalCount.Inner.ToString());
+                    Assert.Equal(2.0, totalCount);
 
                     var age = result["Age"] as LazyDoubleValue;
 
