@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
-                if (query.WaitForNonStaleResultsTimeout == null)
+                if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
             else

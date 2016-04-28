@@ -162,7 +162,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Timeout for this query
         /// </summary>
-        protected TimeSpan timeout;
+        protected TimeSpan? timeout;
         /// <summary>
         /// Should we wait for non stale results
         /// </summary>

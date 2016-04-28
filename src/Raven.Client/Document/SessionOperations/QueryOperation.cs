@@ -24,7 +24,7 @@ namespace Raven.Client.Document.SessionOperations
         private readonly IndexQuery indexQuery;
         private readonly bool waitForNonStaleResults;
         private bool disableEntitiesTracking;
-        private readonly TimeSpan timeout;
+        private readonly TimeSpan? timeout;
         private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
         private QueryResult currentQueryResults;
         private readonly string[] projectionFields;
@@ -48,7 +48,7 @@ namespace Raven.Client.Document.SessionOperations
         private Stopwatch sp;
 
         public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery,
-                              string[] projectionFields, bool waitForNonStaleResults, TimeSpan timeout,
+                              string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
                               Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
                               bool disableEntitiesTracking)
         {
