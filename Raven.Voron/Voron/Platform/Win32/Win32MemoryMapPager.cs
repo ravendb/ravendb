@@ -7,13 +7,11 @@ using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
-using Sparrow;
 
 namespace Voron.Platform.Win32
 {
@@ -26,6 +24,8 @@ namespace Voron.Platform.Win32
         private readonly SafeFileHandle _handle;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
+
+        private static readonly bool CanPrefetch = IsWindows8OrNewer();
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -156,6 +156,9 @@ namespace Voron.Platform.Win32
 
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
+
+            if (CanPrefetch == false)
+                return true; // not supported
 
             // We are asking to allocate pages. It is a good idea that they should be already in memory to only cause a single page fault (as they are continuous).
             Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
@@ -297,7 +300,7 @@ namespace Voron.Platform.Win32
                 throw new Win32Exception();
         }
 
-        private bool IsWindows8OrNewer()
+        private static bool IsWindows8OrNewer()
         {
             var os = Environment.OSVersion;
             return os.Platform == PlatformID.Win32NT &&
@@ -309,7 +312,7 @@ namespace Voron.Platform.Win32
             if (sortedPages.Count == 0)
                 return;
 
-            if (IsWindows8OrNewer() == false)
+            if (CanPrefetch == false)
                 return; // not supported
 
             var list = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>();
@@ -371,7 +374,7 @@ namespace Voron.Platform.Win32
 
         public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
         {
-            if (IsWindows8OrNewer() == false)
+            if (CanPrefetch == false)
                 return; // not supported
 
             if (pagesToPrefetch.Count == 0)
@@ -392,7 +395,7 @@ namespace Voron.Platform.Win32
 
         public override void TryPrefetchingWholeFile()
         {
-            if (IsWindows8OrNewer() == false)
+            if (CanPrefetch == false)
                 return; // not supported
 
             var entries = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[PagerState.AllocationInfos.Length];
