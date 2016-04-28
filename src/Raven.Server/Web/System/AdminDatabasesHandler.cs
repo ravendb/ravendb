@@ -127,7 +127,7 @@ namespace Raven.Server.Web.System
         public Task Delete()
         {
             var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var isHardDelete = GetBoolValueQueryString("isHardDelete");
+            var isHardDelete = GetBoolValueQueryString("isHardDelete", required: false) ?? false;
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -164,7 +164,7 @@ namespace Raven.Server.Web.System
             var names = HttpContext.Request.Query["name"];
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var isHardDelete = GetBoolValueQueryString("hard-delete");
+            var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))

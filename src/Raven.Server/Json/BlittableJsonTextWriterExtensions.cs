@@ -1,9 +1,14 @@
-﻿using Raven.Abstractions.Extensions;
+﻿using System.Collections.Generic;
+
+using Raven.Abstractions;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Queries;
 
 using Sparrow.Json;
 
@@ -11,6 +16,55 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTextWriterExtensions
     {
+        public static void WriteDocumentQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(result.TotalResults)));
+            writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WriteQueryResult(context, result, partial: true);
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<Document> result, bool partial = false)
+        {
+            if (partial == false)
+                writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(result.IndexName)));
+            writer.WriteString(context.GetLazyString(result.IndexName));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Results)));
+            writer.WriteDocuments(context, result.Results, metadataOnly: false);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Includes)));
+            writer.WriteDocuments(context, result.Includes, metadataOnly: false);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(result.IndexTimestamp)));
+            writer.WriteString(context.GetLazyString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(result.LastQueryTime)));
+            writer.WriteString(context.GetLazyString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite)));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(result.IsStale)));
+            writer.WriteBool(result.IsStale);
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(result.ResultEtag)));
+            writer.WriteInteger(result.ResultEtag);
+
+            if (partial == false)
+                writer.WriteEndObject();
+        }
+
         public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
         {
             writer.WriteStartObject();
@@ -698,6 +752,62 @@ namespace Raven.Server.Json
                 writer.WriteNull();
 
             writer.WriteEndObject();
+        }
+
+        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
+        {
+            writer.WriteStartArray();
+
+            bool first = true;
+            foreach (var document in documents)
+            {
+                if (document == null)
+                    continue;
+
+                using (document.Data)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    writer.WriteDocument(context, document, metadataOnly);
+                }
+            }
+
+            writer.WriteEndArray();
+        }
+
+        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, List<Document> documents, bool metadataOnly, int start, int count)
+        {
+            writer.WriteStartArray();
+
+            bool first = true;
+            for (int index = start, written = 0; written < count; index++, written++)
+            {
+                var document = documents[index];
+                if (document == null)
+                    continue;
+
+                using (document.Data)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    writer.WriteDocument(context, document, metadataOnly);
+                }
+            }
+
+            writer.WriteEndArray();
+        }
+
+        private static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
+        {
+            document.EnsureMetadata();
+            if (metadataOnly)
+                document.RemoveAllPropertiesExceptMetadata();
+
+            context.Write(writer, document.Data);
         }
     }
 }

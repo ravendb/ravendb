@@ -13,12 +13,15 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
@@ -45,7 +48,7 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : IDocumentTombstoneAware, IDisposable
     {
-        private long writeErrors;
+        private long _writeErrors;
 
         private const long WriteErrorsLimit = 10;
 
@@ -496,7 +499,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal void ResetWriteErrors()
         {
-            writeErrors = Interlocked.Exchange(ref writeErrors, 0);
+            _writeErrors = Interlocked.Exchange(ref _writeErrors, 0);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
@@ -506,9 +509,9 @@ namespace Raven.Server.Documents.Indexes
             if (iwe.InnerException is SystemException) // Don't count transient errors
                 return;
 
-            writeErrors = Interlocked.Increment(ref writeErrors);
+            _writeErrors = Interlocked.Increment(ref _writeErrors);
 
-            if (Priority.HasFlag(IndexingPriority.Error) || Interlocked.Read(ref writeErrors) < WriteErrorsLimit)
+            if (Priority.HasFlag(IndexingPriority.Error) || Interlocked.Read(ref _writeErrors) < WriteErrorsLimit)
                 return;
 
             SetPriority(IndexingPriority.Error);
@@ -709,10 +712,7 @@ namespace Raven.Server.Documents.Indexes
             using (MarkQueryAsRunning(query, token))
             using (_contextPool.AllocateOperationContext(out indexContext))
             {
-                var result = new DocumentQueryResult
-                {
-                    IndexName = Name
-                };
+                var result = new DocumentQueryResult();
 
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
@@ -726,9 +726,9 @@ namespace Raven.Server.Documents.Indexes
                         if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
                             query.CutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
 
-                        result.IsStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                        var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
 
-                        if (WillResultBeAcceptable(result.IsStale, query, wait) == false)
+                        if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.Reset();
                             indexContext.Reset();
@@ -742,11 +742,7 @@ namespace Raven.Server.Documents.Indexes
                             continue;
                         }
 
-                        var stats = ReadStats(indexTx);
-
-                        result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
-                        result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
-                        result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
+                        FillQueryResult(result, isStale, documentsContext, indexContext);
 
                         if (Type == IndexType.MapReduce || Type == IndexType.AutoMapReduce)
                             documentsContext.Reset(); // map reduce don't need to access documents storage
@@ -754,8 +750,14 @@ namespace Raven.Server.Documents.Indexes
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
                             var totalResults = new Reference<int>();
+                            var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
+                            foreach (var document in reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch)))
+                            {
+                                result.Results.Add(document);
+                                includeDocumentsCommand.Gather(document);
+                            }
 
-                            result.Results = reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query)).ToList();
+                            includeDocumentsCommand.Fill(result.Includes);
                             result.TotalResults = totalResults.Value;
                         }
 
@@ -784,6 +786,61 @@ namespace Raven.Server.Documents.Indexes
 
                 return result;
             }
+        }
+
+        public MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (var tx = indexContext.OpenReadTransaction())
+            {
+                HashSet<string> stopWords = null;
+                if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
+                {
+                    var stopWordsDoc = DocumentDatabase.DocumentsStorage.Get(documentsContext, query.StopWordsDocumentId);
+                    if (stopWordsDoc == null)
+                        throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId + " could not be found");
+
+                    BlittableJsonReaderArray value;
+                    if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out value) && value != null)
+                    {
+                        stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        for (var i = 0; i < value.Length; i++)
+                            stopWords.Add(value.GetStringByIndex(i));
+                    }
+                }
+
+                var result = new MoreLikeThisQueryResultServerSide();
+
+                var isStale = IsStale(documentsContext, indexContext);
+
+                FillQueryResult(result, isStale, documentsContext, indexContext);
+
+                using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                {
+                    var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
+                    foreach (var document in reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token))
+                    {
+                        result.Results.Add(document);
+                        includeDocumentsCommand.Gather(document);
+                    }
+                    
+                    includeDocumentsCommand.Fill(result.Includes);
+                }
+
+                return result;
+            }
+        }
+
+        private void FillQueryResult<T>(QueryResultBase<T> result, bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            var stats = ReadStats(indexContext.Transaction);
+
+            result.IndexName = Name;
+            result.IsStale = isStale;
+            result.IndexTimestamp = stats.LastIndexingTime ?? DateTime.MinValue;
+            result.LastQueryTime = stats.LastQueryingTime ?? DateTime.MinValue;
+            result.ResultEtag = CalculateIndexEtag(result.IsStale, documentsContext, indexContext);
         }
 
         private DisposableAction MarkQueryAsRunning(IndexQuery query, OperationCancelToken token)
@@ -897,6 +954,6 @@ namespace Raven.Server.Documents.Indexes
                 .ToArray();
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, IndexQuery query);
+        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, string[] fieldsToFetch);
     }
 }

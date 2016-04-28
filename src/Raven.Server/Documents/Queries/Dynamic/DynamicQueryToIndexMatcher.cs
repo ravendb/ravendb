@@ -158,22 +158,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     sortField = SortFieldHelper.CustomField(sortField).Name;
                 }
+                
+                if (sortField.EndsWith("_Range"))
+                    sortField = sortField.Substring(0, sortField.Length - "_Range".Length);
 
-                var normalizedFieldName = IndexField.ReplaceInvalidCharactersInFieldName(sortField);
-
-                if (normalizedFieldName.EndsWith("_Range"))
-                    normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
-
+                IndexField autoIndexField;
                 // if the field is not in the output, then we can't sort on it. 
-                if (definition.ContainsField(normalizedFieldName) == false)
+                if (definition.ContainsField(sortField) == false)
                 {
-                    explain(indexName,
-                            () => $"Rejected because index does not contains field '{normalizedFieldName}' which we need to sort on");
-                    currentBestState = DynamicQueryMatchType.Partial;
-                    continue;
+                    // for map-reduce queries try to get field from group by fields as well
+                    if (query.IsMapReduce == false || ((AutoMapReduceIndexDefinition)definition).GroupByFields
+                                                        .TryGetValue(sortField, out autoIndexField) == false)
+                    {
+                        explain(indexName, () => $"Rejected because index does not contains field '{sortField}' which we need to sort on");
+                        currentBestState = DynamicQueryMatchType.Partial;
+                        continue;
+                    }
                 }
-
-                var autoIndexField = definition.GetField(normalizedFieldName);
+                else
+                {
+                    autoIndexField = definition.GetField(sortField);
+                }
 
                 if (sortInfo.FieldType != autoIndexField.SortOption)
                 {
@@ -188,7 +193,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
 
                     explain(indexName, () =>
-                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{normalizedFieldName}' ({autoIndexField.SortOption})");
+                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortField}' ({autoIndexField.SortOption})");
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }
@@ -236,22 +241,22 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
             
-            if (query.GroupByFields.All(definition.ContainsGroupByField) == false)
+            if (query.GroupByFields.All(definition.GroupByFields.ContainsKey) == false)
             {
                 explain(indexName, () =>
                 {
-                    var missingFields = query.GroupByFields.Where(x => definition.ContainsGroupByField(x) == false);
+                    var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x) == false);
                     return $"The following group by fields are missing: {string.Join(", ", missingFields)}";
                 });
 
                 return false;
             }
 
-            if (query.GroupByFields.Length != definition.GroupByFields.Length)
+            if (query.GroupByFields.Length != definition.GroupByFields.Count)
             {
                 explain(indexName, () =>
                 {
-                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Contains(x.Name) == false);
+                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Contains(x.Key) == false);
                     return $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}";
                 });
 

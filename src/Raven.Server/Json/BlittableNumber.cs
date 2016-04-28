@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Globalization;
 using Sparrow.Json;
 
 namespace Raven.Server.Json
@@ -16,9 +15,10 @@ namespace Raven.Server.Json
                 return NumberParseResult.Long;
             }
 
-            if (value is LazyDoubleValue)
+            var lazyDouble = value as LazyDoubleValue;
+            if (lazyDouble != null)
             {
-                doubleResult = double.Parse(reader.GetStringFor(((LazyDoubleValue)value).Inner), CultureInfo.InvariantCulture);
+                doubleResult = lazyDouble;
                 longResult = long.MinValue;
 
                 return NumberParseResult.Double;

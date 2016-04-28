@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<NumericField>>(Comparer);
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
-
         
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 

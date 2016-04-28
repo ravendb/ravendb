@@ -38,6 +38,18 @@ namespace Raven.Tests.Core.Replication
         }
 
         [Fact]
+        public void ShouldResolveAttachmentConflictInFavorOfLocalVersion()
+        {
+            AttachmentConflictResolveTest(StraightforwardConflictResolution.ResolveToLocal);
+        }
+
+        [Fact]
+        public void ShouldResolveAttachmentConflictInFavorOfRemoteVersion()
+        {
+            AttachmentConflictResolveTest(StraightforwardConflictResolution.ResolveToRemote);
+        }
+
+        [Fact]
         public void ShouldResolveDocumentConflictInFavorOfLatestVersion()
         {
             using (var master = GetDocumentStore())
@@ -171,5 +183,49 @@ namespace Raven.Tests.Core.Replication
                 }
             }
         }
+
+        private void AttachmentConflictResolveTest(StraightforwardConflictResolution attachmentConflictResolution)
+        {
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                SetupReplication(master, destinations: slave);
+
+                using (var session = slave.OpenSession())
+                {
+                    session.Store(new ReplicationConfig()
+                    {
+                        AttachmentConflictResolution = attachmentConflictResolution
+                    }, Constants.RavenReplicationConfig);
+
+                    session.SaveChanges();
                 }
+
+                var local = new byte[] { 1, 2, 3, 4 };
+                var remote = new byte[] { 3, 2, 1 };
+
+                slave.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(local), new RavenJObject());
+
+                master.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(remote), new RavenJObject());
+
+                master.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(), new RavenJObject());
+
+                WaitForAttachment(slave, "marker");
+
+                Attachment attachment = slave.DatabaseCommands.GetAttachment("attach/1");
+
+                switch (attachmentConflictResolution)
+                {
+                    case StraightforwardConflictResolution.ResolveToLocal:
+                        Assert.Equal(local, attachment.Data().ReadData());
+                        break;
+                    case StraightforwardConflictResolution.ResolveToRemote:
+                        Assert.Equal(remote, attachment.Data().ReadData());
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("attachmentConflictResolution");
                 }
+            }
+        }
+    }
+}

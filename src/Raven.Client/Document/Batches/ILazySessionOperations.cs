@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Document.Batches

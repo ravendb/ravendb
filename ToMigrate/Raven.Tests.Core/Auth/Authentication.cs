@@ -20,7 +20,7 @@ namespace Raven.Tests.Core.Auth
         public void CanUseApiKeyAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
-            this.Server.Configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
                        "Raven/ApiKeys/CanUseApiKeyAuthentication",
                        null,
@@ -64,13 +64,13 @@ namespace Raven.Tests.Core.Auth
         {
             FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
             Raven.Database.Server.Security.Authentication.EnableOnce();
-            this.Server.Configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
-                "Raven/Authorization/WindowsSettings", 
+                "Raven/Authorization/WindowsSettings",
                 null,
                 RavenJObject.FromObject(new WindowsAuthDocument
-                    {
-                        RequiredUsers = new List<WindowsAuthData>
+                {
+                    RequiredUsers = new List<WindowsAuthData>
                             {
                                 new WindowsAuthData
                                     {
@@ -83,12 +83,12 @@ namespace Raven.Tests.Core.Auth
                                             }
                                     }
                             }
-                    }), new RavenJObject());
+                }), new RavenJObject(), null);
 
             using (var store = new DocumentStore
-                {
-                    Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.User.UserName, FactIfWindowsAuthenticationIsAvailable.User.Password, FactIfWindowsAuthenticationIsAvailable.User.Domain),
-                    Url = this.Server.SystemDatabase.ServerUrl
+            {
+                Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.User.UserName, FactIfWindowsAuthenticationIsAvailable.User.Password, FactIfWindowsAuthenticationIsAvailable.User.Domain),
+                Url = this.Server.SystemDatabase.ServerUrl
             })
             {
                 ConfigurationHelper.ApplySettingsToConventions(store.Conventions);

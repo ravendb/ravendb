@@ -16,6 +16,8 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 
 namespace Raven.Client.Linq
 {

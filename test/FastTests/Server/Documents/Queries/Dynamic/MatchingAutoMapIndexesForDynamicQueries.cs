@@ -177,7 +177,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
         }
 
         [Fact]
-        public void Complete_match_for_single_matching_index_with_simple_sort_option()
+        public void Complete_match_for_single_matching_index_with_default_string_sort_option()
         {
             var definition = new AutoMapIndexDefinition("Users", new[]
             {
@@ -195,6 +195,33 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             {
                 Query = "Name:Arek",
                 SortedFields = new[] { new SortedField("Name") },
+            });
+
+            var result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
+            Assert.Equal(definition.Name, result.IndexName);
+        }
+
+        [Fact]
+        public void Complete_match_for_single_matching_index_with_numeric_sort_option_for_nested_field()
+        {
+            var definition = new AutoMapIndexDefinition("Users", new[]
+            {
+                new IndexField
+                {
+                    Name = "Address.ZipCode",
+                    Highlighted = false,
+                    Storage = FieldStorage.No,
+                    SortOption = SortOptions.NumericDefault
+                },
+            });
+
+            add_index(definition);
+
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                SortedFields = new[] { new SortedField("Address.ZipCode_Range") },
             });
 
             var result = _sut.Match(dynamicQuery);

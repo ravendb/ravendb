@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
@@ -153,6 +154,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                         Name = "Location",
                         IsGroupBy = true
                     }
+                },
+                SortedFields = new[]
+                {
+                    new SortedField("Count_Range"),
                 }
             });
 
@@ -166,7 +171,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     new DynamicMapReduceField
                     {
                         Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
+                        OperationType = FieldMapReduceOperation.Count,
                     },
                     new DynamicMapReduceField
                     {
@@ -178,6 +183,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                         Name = "Location",
                         IsGroupBy = true
                     }
+                },
+                SortedFields = new []
+                {
+                    new SortedField("Age_Range"), 
                 }
             });
 
@@ -189,8 +198,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             Assert.Equal("Users", definition.Collections[0]);
             Assert.True(definition.ContainsField("Count"));
             Assert.True(definition.ContainsField("Age"));
-            Assert.True(definition.ContainsGroupByField("Location"));
-            Assert.Equal("Auto/Users/ByAgeAndCountReducedByLocation", definition.Name);
+            Assert.True(definition.GroupByFields.ContainsKey("Location"));
+
+            Assert.Equal(SortOptions.NumericDefault, definition.GetField("Count").SortOption);
+            Assert.Equal(SortOptions.NumericDefault, definition.GetField("Age").SortOption);
+
+            Assert.Equal("Auto/Users/ByAgeAndCountSortByAgeCountReducedByLocation", definition.Name);
         }
 
         private void create_dynamic_map_reduce_mapping_for_users_collection(string query, DynamicMapReduceField[] mapReduceFields)

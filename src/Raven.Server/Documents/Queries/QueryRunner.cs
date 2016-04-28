@@ -1,15 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
 
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -45,12 +46,6 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("We don't support querying of static indexes for now");
             }
 
-            if (result.NotModified == false && includes.Count > 0)
-            {
-                var includeDocs = new IncludeDocumentsCommand(_database.DocumentsStorage, _documentsContext, includes);
-                includeDocs.Execute(result.Results, result.Includes);
-            }
-
             return result;
         }
 
@@ -63,6 +58,25 @@ namespace Raven.Server.Documents.Queries
                 return new TermsQueryResult { NotModified = true };
 
             return index.GetTerms(field, fromValue, pageSize, context, token);
+        }
+
+        public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(string indexName, MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        {
+            if (query == null)
+                throw new ArgumentNullException(nameof(query));
+
+            if (string.IsNullOrEmpty(query.DocumentId) && query.MapGroupFields.Count == 0)
+                throw new InvalidOperationException("The document id or map group fields are mandatory");
+
+            var index = GetIndex(indexName);
+
+            var etag = index.GetIndexEtag();
+            if (etag == existingResultEtag)
+                return new MoreLikeThisQueryResultServerSide { NotModified = true };
+
+            context.OpenReadTransaction();
+
+            return index.MoreLikeThisQuery(query, context, token);
         }
 
         public Task ExecuteDeleteQuery(string indexName, IndexQuery query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)
@@ -94,26 +108,33 @@ namespace Raven.Server.Documents.Queries
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform delete operation. Query is stale.");
 
-            IEnumerable<Document> documents = results.Results;
-            if (options.MaxOpsPerSecond.HasValue)
-                documents = documents.LimitRate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1));
-
-            foreach (var document in documents)
+            using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
-                if (tx == null)
+                foreach (var document in results.Results)
                 {
-                    operations = 0;
-                    tx = context.OpenWriteTransaction();
+                    if (rateGate != null && rateGate.WaitToProceed(0) == false)
+                    {
+                        tx?.Commit();
+                        tx = null;
+
+                        rateGate.WaitToProceed();
+                    }
+
+                    if (tx == null)
+                    {
+                        operations = 0;
+                        tx = context.OpenWriteTransaction();
+                    }
+
+                    action(document.Key);
+                    operations++;
+
+                    if (operations < BatchSize)
+                        continue;
+
+                    tx.Commit();
+                    tx = null;
                 }
-
-                action(document.Key);
-                operations++;
-
-                if (operations < BatchSize)
-                    continue;
-
-                tx.Commit();
-                tx = null;
             }
 
             tx?.Commit();

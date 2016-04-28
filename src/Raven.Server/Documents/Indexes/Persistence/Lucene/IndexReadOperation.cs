@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 
@@ -15,10 +15,13 @@ using Raven.Client.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Indexing;
 
 using Voron.Impl;
+
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -177,7 +180,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     sortOptions = SortOptions.NumericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
                 }
 
-                return new SortField(x.Field, (int)sortOptions, x.Descending);
+                return new SortField(IndexField.ReplaceInvalidCharactersInFieldName(x.Field), (int)sortOptions, x.Descending);
             }).ToArray());
         }
 
@@ -209,6 +212,77 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             return results;
+        }
+
+        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<string[], IQueryResultRetriever> createRetriever, CancellationToken token)
+        {
+            var documentQuery = new BooleanQuery();
+
+            if (string.IsNullOrWhiteSpace(query.DocumentId) == false)
+                documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
+
+            foreach (var key in query.MapGroupFields.Keys)
+                documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
+
+            var td = _searcher.Search(documentQuery, 1);
+
+            // get the current Lucene docid for the given RavenDB doc ID
+            if (td.ScoreDocs.Length == 0)
+                throw new InvalidOperationException("Document " + query.DocumentId + " could not be found");
+
+            var ir = _searcher.IndexReader;
+            var mlt = new RavenMoreLikeThis(ir, query);
+
+            if (stopWords != null)
+                mlt.SetStopWords(stopWords);
+
+            var fieldNames = query.Fields ?? ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
+                                    .Where(x => x != Constants.DocumentIdFieldName && x != Constants.ReduceKeyFieldName)
+                                    .ToArray();
+
+            mlt.SetFieldNames(fieldNames);
+            mlt.Analyzer = _analyzer;
+
+            var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
+            var tsdc = TopScoreDocCollector.Create(query.PageSize, true);
+
+            if (string.IsNullOrWhiteSpace(query.AdditionalQuery) == false)
+            {
+                var additionalQuery = QueryBuilder.BuildQuery(query.AdditionalQuery, _analyzer);
+                mltQuery = new BooleanQuery
+                    {
+                        {mltQuery, Occur.MUST},
+                        {additionalQuery, Occur.MUST},
+                    };
+            }
+
+            _searcher.Search(mltQuery, tsdc);
+            var hits = tsdc.TopDocs().ScoreDocs;
+            var baseDocId = td.ScoreDocs[0].Doc;
+
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var fieldsToFetch = string.IsNullOrWhiteSpace(query.DocumentId)
+                ? _searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray()
+                : null;
+
+            var retriever = createRetriever(fieldsToFetch);
+
+            foreach (var hit in hits)
+            {
+                if (hit.Doc == baseDocId)
+                    continue;
+
+                var doc = _searcher.Doc(hit.Doc);
+                var id = doc.Get(Constants.DocumentIdFieldName) ?? doc.Get(Constants.ReduceKeyFieldName);
+                if (id == null)
+                    continue;
+
+                if (ids.Add(id) == false)
+                    continue;
+
+                yield return retriever.Get(doc);
+            }
         }
 
         public override void Dispose()

@@ -8,7 +8,6 @@ using System;
 using System.IO;
 
 using Raven.Database.Config;
-using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
@@ -24,18 +23,18 @@ namespace Raven.Tests.Core
 
         public TestServerFixture()
         {
-            var configuration = new AppSettingsBasedConfiguration();
+            var configuration = new RavenConfiguration();
 
-            ConfigurationHelper.ApplySettingsToConfiguration(new ConfigurationModification(configuration));
+            ConfigurationHelper.ApplySettingsToConfiguration(configuration);
 
-            configuration.Core.Port = Port;
-            configuration.Server.Name = ServerName;
-            configuration.Core.RunInMemory = true;
-            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
-            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
-            configuration.Storage.AllowOn32Bits = true;
+            configuration.Port = Port;
+            configuration.ServerName = ServerName;
+            configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            configuration.DataDirectory = Path.Combine(configuration.DataDirectory, "Tests");
+            configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 10;
+            configuration.Storage.Voron.AllowOn32Bits = true;
 
-            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
+            IOExtensions.DeleteDirectory(configuration.DataDirectory);
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port);
 

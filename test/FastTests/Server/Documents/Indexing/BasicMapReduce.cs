@@ -238,9 +238,9 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.NotNull(definition);
 
-                Assert.Equal(1, definition.GroupByFields.Length);
-                Assert.Equal("Location", definition.GroupByFields[0].Name);
-                Assert.Equal(SortOptions.String, definition.GroupByFields[0].SortOption);
+                Assert.Equal(1, definition.GroupByFields.Count);
+                Assert.Equal("Location", definition.GroupByFields["Location"].Name);
+                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Normal, indexes[0].Priority);
@@ -261,9 +261,9 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.NotNull(definition);
 
-                Assert.Equal(1, definition.GroupByFields.Length);
-                Assert.Equal("Location", definition.GroupByFields[0].Name);
-                Assert.Equal(SortOptions.String, definition.GroupByFields[0].SortOption);
+                Assert.Equal(1, definition.GroupByFields.Count);
+                Assert.Equal("Location", definition.GroupByFields["Location"].Name);
+                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexingPriority.Disabled, indexes[1].Priority);
@@ -404,12 +404,12 @@ namespace FastTests.Server.Documents.Indexing
                     var price = result["Lines_Price"] as LazyDoubleValue;
 
                     Assert.NotNull(price);
-                    Assert.Equal("63.6", price.Inner.ToString());
+                    Assert.Equal(63.6, price);
 
                     var quantity = result["Lines_Quantity"] as LazyDoubleValue;
 
                     Assert.NotNull(quantity);
-                    Assert.Equal("9.0", quantity.Inner.ToString());
+                    Assert.Equal(9.0, quantity);
                 }
             }
         }

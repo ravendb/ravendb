@@ -14,10 +14,10 @@ namespace Raven.Server.Documents.Queries.Results
 
         private readonly string[] _fieldsToFetch;
 
-        public MapReduceQueryResultRetriever(TransactionOperationContext indexContext, IndexQuery query)
+        public MapReduceQueryResultRetriever(TransactionOperationContext indexContext, string[] fieldsToFetch)
         {
             _indexContext = indexContext;
-            _fieldsToFetch = query.FieldsToFetch;
+            _fieldsToFetch = fieldsToFetch;
         }
 
         public Document Get(Lucene.Net.Documents.Document input)

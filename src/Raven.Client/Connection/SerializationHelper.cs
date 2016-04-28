@@ -16,6 +16,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 

@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var mapReduceDef = indexDefinition as AutoMapReduceIndexDefinition;
             if (mapReduceDef != null)
-                fields = fields.Union(mapReduceDef.GroupByFields);
+                fields = fields.Union(mapReduceDef.GroupByFields.Values);
 
             _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: type == IndexType.AutoMapReduce || type == IndexType.MapReduce);
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));

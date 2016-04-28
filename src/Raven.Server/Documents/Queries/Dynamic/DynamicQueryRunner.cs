@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Data;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -48,18 +48,22 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var collectionStats = _documents.GetCollection(collection, _context);
 
-                result.TotalResults = (int) collectionStats.Count;
+                result.TotalResults = (int)collectionStats.Count;
 
+                var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Includes);
                 foreach (var document in _documents.GetDocumentsAfter(_context, collection, 0, query.Start, query.PageSize))
                 {
                     _token.Token.ThrowIfCancellationRequested();
 
                     result.Results.Add(document);
+                    includeDocumentsCommand.Gather(document);
                 }
+
+                includeDocumentsCommand.Fill(result.Includes);
 
                 return new CompletedTask<DocumentQueryResult>(result);
             }
-            
+
             Index index;
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
@@ -68,7 +72,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
-                if (query.WaitForNonStaleResultsTimeout == null)
+                if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
             else
@@ -85,14 +89,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             query = EnsureValidQuery(query, map);
-            
+
             return index.Query(query, _context, _token);
         }
-        
+
         private bool TryMatchExistingIndexToQuery(DynamicQueryMapping map, out Index index)
         {
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(_indexStore);
-            
+
             var matchResult = dynamicQueryToIndex.Match(map);
 
             switch (matchResult.MatchType)
