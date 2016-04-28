@@ -859,7 +859,7 @@ namespace Raven.Client.Document
             var lazyValue = new Lazy<T>(() =>
             {
                 ExecuteAllPendingLazyOperations();
-                return GetOperationResult<T>(operation);
+                return GetOperationResult<T>(operation.Result);
             });
 
             if (onEval != null)
