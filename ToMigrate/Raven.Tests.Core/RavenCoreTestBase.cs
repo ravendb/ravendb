@@ -65,7 +65,7 @@ namespace Raven.Tests.Core
         }
 #endif
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null,
+        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null, 
             Action<DatabaseDocument> modifyDatabaseDocument = null)
         {
             var serverClient = (ServerClient)GetServerCommands().ForSystemDatabase();
@@ -101,16 +101,16 @@ namespace Raven.Tests.Core
 
             string url = documentStore.Url;
 
-            var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
-            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
+                var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
-            Process.Start(documentsPage); // start the server
+                Process.Start(documentsPage); // start the server
 
-            do
-            {
-                Thread.Sleep(100);
-            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
-        }
+                do
+                {
+                    Thread.Sleep(100);
+                } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+            }
 
         public static void WaitForIndexing(DocumentStore store, string db = null, TimeSpan? timeout = null)
         {
@@ -118,6 +118,9 @@ namespace Raven.Tests.Core
             if (db != null)
                 databaseCommands = databaseCommands.ForDatabase(db);
             var to = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
+
+            Assert.True(databaseCommands.GetIndexNames(0, 1).Length > 0, "Looks like you WaitForIndexing on database without indexes!");
+
             var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, to);
 
             if (spinUntil == false)
@@ -128,53 +131,21 @@ namespace Raven.Tests.Core
             }
         }
 
-        protected void WaitForBackup(IDatabaseCommands commands, bool checkError)
-        {
-            WaitForBackup(commands.Get, checkError);
-        }
-
-        private void WaitForBackup(Func<string, JsonDocument> getDocument, bool checkError)
-        {
-            var done = SpinWait.SpinUntil(() =>
-            {
-                // We expect to get the doc from database that we tried to backup
-                var jsonDocument = getDocument(BackupStatus.RavenBackupStatusDocumentKey);
-                if (jsonDocument == null)
-                    return false;
-
-                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
-                if (backupStatus.IsRunning == false)
-                {
-                    if (checkError)
-                    {
-                        var firstOrDefault =
-                            backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
-                        if (firstOrDefault != null)
-                            Assert.True(false, string.Format("{0}\n\nDetails: {1}", firstOrDefault.Message, firstOrDefault.Details));
-                    }
-
-                    return true;
-                }
-                return false;
-            }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            Assert.True(done);
-        }
-
         public static void WaitForRestore(IDatabaseCommands databaseCommands)
         {
             var systemDatabaseCommands = databaseCommands.ForSystemDatabase();
 
             var failureMessages = new[]
                                   {
-                                      "Esent Restore: Failure! Could not restore database!",
-                                      "Error: Restore Canceled",
+                                      "Esent Restore: Failure! Could not restore database!", 
+                                      "Error: Restore Canceled", 
                                       "Restore Operation: Failure! Could not restore database!"
                                   };
 
             var restoreFinishMessages = new[]
                                         {
-                                            "The new database was created",
-                                            "Esent Restore: Restore Complete",
+                                            "The new database was created", 
+                                            "Esent Restore: Restore Complete", 
                                             "Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
                                         };
 
@@ -253,7 +224,7 @@ namespace Raven.Tests.Core
             documentStore.Initialize();
 
             return documentStore;
-        }
+    }
 
         private IDatabaseCommands GetServerCommands()
         {
@@ -262,6 +233,6 @@ namespace Raven.Tests.Core
 #else
             return serverDocumentStore.DatabaseCommands;
 #endif
-        }
+}
     }
 }

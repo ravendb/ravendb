@@ -53,11 +53,11 @@ namespace Raven.Tests.Core.BulkInsert
                         });
                     }
                 }
+
                 Assert.Equal(20, bulkInsertStartsCounter);
-                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var count = session.Query<Node>().Count();
+                    var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
                     Assert.Equal(20, count);
                 }
             }
@@ -95,10 +95,9 @@ namespace Raven.Tests.Core.BulkInsert
                 }
 
                 Assert.Equal(1, bulkInsertStartsCounter);
-                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var count = session.Query<Node>().Count();
+                    var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
                     Assert.Equal(20, count);
                 }
             }
@@ -136,10 +135,9 @@ namespace Raven.Tests.Core.BulkInsert
                 }
 
                 Assert.Equal(20, bulkInsertStartsCounter);
-                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var count = session.Query<Node>().Count();
+                    var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
                     Assert.Equal(count, 20);
                 }
             }
@@ -180,10 +178,9 @@ namespace Raven.Tests.Core.BulkInsert
                 }
                 mre.Wait(1000);
                 Assert.Equal(1, bulkInsertStartsCounter);
-                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var count = session.Query<Node>().Count();
+                    var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
                     Assert.Equal(count, 20);
                 }
             }

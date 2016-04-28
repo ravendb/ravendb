@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <CopyNuGetImplementations>true</CopyNuGetImplementations>
@@ -18,7 +17,6 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>20b2bc30</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,6 +28,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -58,32 +57,6 @@
     <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FluentAssertions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-      <Private>True</Private>
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-      <Private>True</Private>
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-    </Reference>
     <Reference Include="Lucene.Net, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
     </Reference>
@@ -178,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Auth\Authentication.cs" />
+    <Compile Include="Auth\WindowsAuthenticationUserInfo.cs" />
     <Compile Include="BulkInsert\ChunkedBulkInsert.cs" />
     <Compile Include="Bundles\MoreLikeThis.cs" />
     <Compile Include="ChangesApi\ImplementingChangesClient.cs" />
@@ -209,6 +183,7 @@
     <Compile Include="Utils\Entities\ISearchable.cs" />
     <Compile Include="Utils\Indexes\MultiMapIndex.cs" />
     <Compile Include="Utils\Indexes\Posts_ByTitleAndContent.cs" />
+    <Compile Include="Utils\Indexes\Post_LoadAttachment.cs" />
     <Compile Include="Utils\Indexes\TShirtIndex.cs" />
     <Compile Include="Utils\Indexes\Users_CountByLastName.cs" />
     <Compile Include="Utils\Transformers\CompanyFullAddressTransformer.cs" />
@@ -227,7 +202,6 @@
     <Compile Include="Indexing\CustomAnalyzers.cs" />
     <Compile Include="Indexing\ResultTransformers.cs" />
     <Compile Include="Querying\Filtering.cs" />
-    <None Include="packages.config" />
     <None Include="Raven.Tests.Core.project.json" />
   </ItemGroup>
   <Choose>
@@ -239,10 +213,6 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
-      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
-      <Name>Raven.Abstractions.Database</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -282,6 +252,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="BulkInsert\SimpleBulkInsert.cs" />
+    <Compile Include="Commands\Attachments.cs" />
     <Compile Include="Commands\Documents.cs" />
     <Compile Include="Commands\Indexes.cs" />
     <Compile Include="Querying\Linq.cs" />
@@ -289,6 +260,7 @@
     <Compile Include="Querying\Projections.cs" />
     <Compile Include="Querying\Sorting.cs" />
     <Compile Include="Indexing\IndexDefinitionMethods.cs" />
+    <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\AutomaticConflictResolution.cs" />
     <Compile Include="Replication\DocumentReplication.cs" />
     <Compile Include="Replication\RavenReplicationCoreTest.cs" />

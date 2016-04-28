@@ -77,5 +77,39 @@ namespace Raven.Tests.Core.Replication
                 Assert.Null(destination.DatabaseCommands.Get("docs/1"));
             }
         }
+
+        [Fact]
+        public void ShouldCreateConflictThenResolveIt()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                source.DatabaseCommands.Put("docs/1", null, new RavenJObject() {{"Key", "Value"}}, new RavenJObject());
+                destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() {{"Key", "Value"}}, new RavenJObject());
+
+                SetupReplication(source, destinations: destination);
+
+                source.DatabaseCommands.Put("marker", null, new RavenJObject() {{"Key", "Value"}}, new RavenJObject());
+
+                var marker = WaitForDocument(destination, "marker");
+
+                Assert.NotNull(marker);
+
+                var conflictException = Assert.Throws<ConflictException>(() => destination.DatabaseCommands.Get("docs/1"));
+
+                Assert.Equal("Conflict detected on docs/1, conflict must be resolved before the document will be accessible", conflictException.Message);
+
+                Assert.True(conflictException.ConflictedVersionIds[0].StartsWith("docs/1/conflicts/"));
+                Assert.True(conflictException.ConflictedVersionIds[1].StartsWith("docs/1/conflicts/"));
+
+                // resolve by using first
+
+                var resolution = destination.DatabaseCommands.Get(conflictException.ConflictedVersionIds[0]);
+
+                destination.DatabaseCommands.Put("docs/1", null, resolution.DataAsJson, resolution.Metadata);
+
+                destination.DatabaseCommands.GetAttachment("docs/1");
+            }
+        }
     }
 }
