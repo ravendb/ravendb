@@ -642,9 +642,6 @@ namespace Voron.Impl.Journal
 
                     EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
-                    // Prefetch all pages that we are going to write to avoid paying the cost of the actual latency per write.
-                    _waj._dataPager.MaybePrefetchMemory(sortedPages);
-
                     long written = 0;
                     int index = 0;
                     foreach (var page in sortedPages)
