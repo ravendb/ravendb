@@ -173,7 +173,7 @@ namespace Raven.Client.Shard
                     loadOperation.LogOperation();
 
                     var loadContext = loadOperation.EnterLoadContext();
-                    return commands.GetAsync(id, token).ContinueWith(task =>
+                    return commands.GetAsync(id, token: token).ContinueWith(task =>
                     {
                         if (loadContext != null)
                             loadContext.Dispose();
@@ -643,7 +643,7 @@ namespace Raven.Client.Shard
 
             var results = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, async (dbCmd, i) =>
             {
-                var jsonDocument = await dbCmd.GetAsync(value.Key, token).ConfigureAwait(false);
+                var jsonDocument = await dbCmd.GetAsync(value.Key, token: token).ConfigureAwait(false);
                 if (jsonDocument == null)
                     return false;
 

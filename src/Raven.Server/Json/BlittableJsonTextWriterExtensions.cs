@@ -39,11 +39,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Results)));
-            writer.WriteDocuments(context, result.Results);
+            writer.WriteDocuments(context, result.Results, metadataOnly: false);
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(nameof(result.Includes)));
-            writer.WriteDocuments(context, result.Includes);
+            writer.WriteDocuments(context, result.Includes, metadataOnly: false);
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyString(nameof(result.IndexTimestamp)));
@@ -754,7 +754,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents)
+        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
         {
             writer.WriteStartArray();
 
@@ -769,15 +769,15 @@ namespace Raven.Server.Json
                     if (first == false)
                         writer.WriteComma();
                     first = false;
-                    document.EnsureMetadata();
-                    context.Write(writer, document.Data);
+
+                    writer.WriteDocument(context, document, metadataOnly);
                 }
             }
 
             writer.WriteEndArray();
         }
 
-        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, List<Document> documents, int start, int count)
+        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, List<Document> documents, bool metadataOnly, int start, int count)
         {
             writer.WriteStartArray();
 
@@ -793,12 +793,21 @@ namespace Raven.Server.Json
                     if (first == false)
                         writer.WriteComma();
                     first = false;
-                    document.EnsureMetadata();
-                    context.Write(writer, document.Data);
+
+                    writer.WriteDocument(context, document, metadataOnly);
                 }
             }
 
             writer.WriteEndArray();
+        }
+
+        private static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
+        {
+            document.EnsureMetadata();
+            if (metadataOnly)
+                document.RemoveAllPropertiesExceptMetadata();
+
+            context.Write(writer, document.Data);
         }
     }
 }

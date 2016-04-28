@@ -72,7 +72,7 @@ namespace Raven.Client.Indexes
             var documentId = GetScriptedIndexResultsDocumentId(indexName);
             scripts.Id = documentId;
 
-            var oldDocument = await asyncDatabaseCommands.GetAsync(documentId, token).ConfigureAwait(false);
+            var oldDocument = await asyncDatabaseCommands.GetAsync(documentId, token: token).ConfigureAwait(false);
             var newDocument = RavenJObject.FromObject(scripts);
             if (oldDocument != null && RavenJToken.DeepEquals(oldDocument.DataAsJson, newDocument))
                 return;

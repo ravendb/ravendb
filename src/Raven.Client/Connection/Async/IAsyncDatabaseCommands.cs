@@ -140,8 +140,9 @@ namespace Raven.Client.Connection.Async
         ///     Retrieve a single document for a specified key.
         /// </summary>
         /// <param name="key">key of the document you want to retrieve</param>
+        /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
         /// <param name="token">The cancellation token.</param>
-        Task<JsonDocument> GetAsync(string key, CancellationToken token = default(CancellationToken));
+        Task<JsonDocument> GetAsync(string key, bool metadataOnly = false, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the
@@ -315,14 +316,14 @@ namespace Raven.Client.Connection.Async
         Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Retrieves the document metadata for the specified document key.
+        ///     Retrieves the etag for the specified document.
         ///     <para>Returns:</para>
-        ///     <para>The document metadata for the specified document, or <c>null</c> if the document does not exist</para>
+        ///     <para>The document etag for the specified document, or <c>null</c> if the document does not exist</para>
         /// </summary>
-        /// <param name="key">key of a document to get metadata for</param>
+        /// <param name="key">key of a document to get etag for</param>
         /// <param name="token">The cancellation token.</param>
-        /// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
-        Task<JsonDocumentMetadata> HeadAsync(string key, CancellationToken token = default(CancellationToken));
+        /// <returns>The etag for the specified document, or null if the document does not exist</returns>
+        Task<long?> HeadAsync(string key, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Lets you check if the given index definition differs from the one on a server.

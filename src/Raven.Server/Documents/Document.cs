@@ -1,4 +1,6 @@
-﻿using Raven.Abstractions.Data;
+﻿using System;
+
+using Raven.Abstractions.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -29,6 +31,20 @@ namespace Raven.Server.Documents
 
             mutatedMetadata["@etag"] = Etag;
             mutatedMetadata["@id"] = Key;
+        }
+
+        public void RemoveAllPropertiesExceptMetadata()
+        {
+            foreach (var property in Data.GetPropertyNames())
+            {
+                if (string.Equals(property, Constants.Metadata, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (Data.Modifications == null)
+                    Data.Modifications = new DynamicJsonValue(Data);
+
+                Data.Modifications.Remove(property);
+            }
         }
     }
 }

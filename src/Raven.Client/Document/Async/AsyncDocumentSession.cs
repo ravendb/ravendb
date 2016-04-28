@@ -738,7 +738,7 @@ namespace Raven.Client.Document.Async
             loadOperation.LogOperation();
             using (loadOperation.EnterLoadContext())
             {
-                var result = await AsyncDatabaseCommands.GetAsync(id, token).ConfigureAwait(false);
+                var result = await AsyncDatabaseCommands.GetAsync(id, token: token).ConfigureAwait(false);
 
                 if (loadOperation.SetResult(result) == false)
                     return loadOperation.Complete<T>().FirstOrDefault();
@@ -1005,7 +1005,7 @@ namespace Raven.Client.Document.Async
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
-            var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key, token).ConfigureAwait(false);
+            var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key, token: token).ConfigureAwait(false);
             RefreshInternal(entity, jsonDocument, value);
         }
 

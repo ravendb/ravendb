@@ -127,7 +127,8 @@ namespace Raven.Client.Connection
         ///     Retrieve a single document for a specified key.
         /// </summary>
         /// <param name="key">key of the document you want to retrieve</param>
-        JsonDocument Get(string key);
+        /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
+        JsonDocument Get(string key, bool metadataOnly = false);
 
         /// <summary>
         ///     Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the
@@ -299,13 +300,13 @@ namespace Raven.Client.Connection
         void SetTransformerLock(string name, TransformerLockMode lockMode);
 
         /// <summary>
-        ///     Retrieves the document metadata for the specified document key.
+        ///     Retrieves the etag for the specified document.
         ///     <para>Returns:</para>
-        ///     <para>The document metadata for the specified document, or <c>null</c> if the document does not exist</para>
+        ///     <para>The document etag for the specified document, or <c>null</c> if the document does not exist</para>
         /// </summary>
-        /// <param name="key">key of a document to get metadata for</param>
-        /// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
-        JsonDocumentMetadata Head(string key);
+        /// <param name="key">key of a document to get etag for</param>
+        /// <returns>The etag for the specified document, or null if the document does not exist</returns>
+        long? Head(string key);
 
         /// <summary>
         ///     Lets you check if the given index definition differs from the one on a server.

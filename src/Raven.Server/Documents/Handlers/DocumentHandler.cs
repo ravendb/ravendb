@@ -29,14 +29,13 @@ namespace Raven.Server.Documents.Handlers
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-
                 var document = Database.DocumentsStorage.Get(context, ids[0]);
                 if (document == null)
                     HttpContext.Response.StatusCode = 404;
                 else
-                    HttpContext.Response.Headers["ETag"] = document.Etag.ToString();
+                    HttpContext.Response.Headers[Constants.MetadataEtagField] = document.Etag.ToString();
                 return Task.CompletedTask;
             }
         }
@@ -45,15 +44,16 @@ namespace Raven.Server.Documents.Handlers
         public Task Get()
         {
             var ids = HttpContext.Request.Query["id"];
+            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 if (ids.Count > 0)
-                    GetDocumentsById(context, ids);
+                    GetDocumentsById(context, ids, metadataOnly);
                 else
-                    GetDocuments(context);
+                    GetDocuments(context, metadataOnly);
 
                 return Task.CompletedTask;
             }
@@ -62,6 +62,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "POST", "/databases/{databaseName:string}/docs body{documentsIds:string[]}")]
         public async Task PostGet()
         {
+            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
@@ -74,11 +76,11 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 context.OpenReadTransaction();
-                GetDocumentsById(context, new StringValues(ids));
+                GetDocumentsById(context, new StringValues(ids), metadataOnly);
             }
         }
 
-        private void GetDocuments(DocumentsOperationContext context)
+        private void GetDocuments(DocumentsOperationContext context, bool metadataOnly)
         {
             // everything here operates on all docs
             var actualEtag = ComputeAllDocumentsEtag(context);
@@ -112,11 +114,11 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteDocuments(context, documents);
+                writer.WriteDocuments(context, documents, metadataOnly);
             }
         }
 
-        private void GetDocumentsById(DocumentsOperationContext context, StringValues ids)
+        private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, bool metadataOnly)
         {
             /* TODO: Call AddRequestTraceInfo
             AddRequestTraceInfo(sb =>
@@ -149,6 +151,8 @@ namespace Raven.Server.Documents.Handlers
             //TODO: Transformers
             //var transformer = HttpContext.Request.Query["transformer"];
 
+
+
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -156,12 +160,12 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Results"));
 
-                writer.WriteDocuments(context, documents, 0, ids.Count);
+                writer.WriteDocuments(context, documents, metadataOnly, 0, ids.Count);
 
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
 
-                writer.WriteDocuments(context, documents, ids.Count, documents.Count - ids.Count);
+                writer.WriteDocuments(context, documents, metadataOnly, ids.Count, documents.Count - ids.Count);
 
                 writer.WriteEndObject();
             }

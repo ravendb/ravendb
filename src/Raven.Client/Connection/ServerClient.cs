@@ -67,9 +67,9 @@ namespace Raven.Client.Connection
             set { asyncServerClient.OperationsHeaders = value; }
         }
 
-        public JsonDocument Get(string key)
+        public JsonDocument Get(string key, bool metadataOnly = false)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key));
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key, metadataOnly));
         }
 
         public IGlobalAdminDatabaseCommands GlobalAdmin => 
@@ -408,7 +408,7 @@ namespace Raven.Client.Connection
             return asyncServerClient.UrlFor(documentKey);
         }
 
-        public JsonDocumentMetadata Head(string key)
+        public long? Head(string key)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.HeadAsync(key));
         }

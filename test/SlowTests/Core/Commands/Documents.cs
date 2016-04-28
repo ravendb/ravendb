@@ -75,11 +75,14 @@ namespace SlowTests.Core.Commands
                 var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 25);
                 Assert.Equal(2, documents.Length);
 
-                WaitForUserToContinueTheTest(store);
-                var metadata = await store.AsyncDatabaseCommands.HeadAsync("companies/1");
+                var etag = await store.AsyncDatabaseCommands.HeadAsync("companies/1");
                 RavenJToken value = null;
-                Assert.NotNull(metadata);
-                Assert.True(metadata.Metadata.TryGetValue("SomeMetadataKey", out value));
+                Assert.NotNull(etag);
+
+                var document = await store.AsyncDatabaseCommands.GetAsync("companies/1", metadataOnly: true);
+                Assert.NotNull(document.DataAsJson);
+                Assert.Equal(0, document.DataAsJson.Count);
+                Assert.True(document.Metadata.TryGetValue("SomeMetadataKey", out value));
                 Assert.Equal("SomeMetadataValue", value);
 
                 await store.AsyncDatabaseCommands.DeleteAsync("companies/1", putResult.ETag);

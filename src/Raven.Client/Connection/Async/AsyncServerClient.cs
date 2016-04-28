@@ -628,13 +628,13 @@ namespace Raven.Client.Connection.Async
 
         public IAsyncAdminDatabaseCommands Admin => new AsyncAdminServerClient(this);
 
-        public Task<JsonDocument> GetAsync(string key, CancellationToken token = default(CancellationToken))
+        public Task<JsonDocument> GetAsync(string key, bool metadataOnly = false, CancellationToken token = default(CancellationToken))
         {
             EnsureIsNotNullOrEmpty(key, "key");
 
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, false, token).ConfigureAwait(false);
+                var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, metadataOnly, token).ConfigureAwait(false);
                 if (multiLoadResult.Results.Count == 0)
                     return null;
                 return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
@@ -716,22 +716,18 @@ namespace Raven.Client.Connection.Async
         private async Task<LoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
                                                            Dictionary<string, RavenJToken> transformerParameters, bool metadataOnly, CancellationToken token = default(CancellationToken))
         {
-            var path = operationMetadata.Url + "/docs?";
-            if (metadataOnly)
-                path += "&metadata-only=true";
-            if (includes != null && includes.Length > 0)
-            {
-                path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
-            }
-            if (string.IsNullOrEmpty(transformer) == false)
-                path += "&transformer=" + transformer;
+            var pathBuilder = new StringBuilder(operationMetadata.Url);
+            pathBuilder.Append("/docs?");
 
-            if (transformerParameters != null)
-            {
-                path = transformerParameters.Aggregate(path,
-                                             (current, transformerParam) =>
-                                             current + ("&" + string.Format("tp-{0}={1}", transformerParam.Key, transformerParam.Value)));
-            }
+            if (metadataOnly)
+                pathBuilder.Append("&metadata-only=true");
+
+            includes.ApplyIfNotNull(include => pathBuilder.AppendFormat("&include={0}", include));
+
+            if (string.IsNullOrEmpty(transformer) == false)
+                pathBuilder.AppendFormat("&transformer={0}", transformer);
+
+            transformerParameters.ApplyIfNotNull(tp => pathBuilder.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
 
             var uniqueIds = new HashSet<string>(keys);
             // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
@@ -740,10 +736,10 @@ namespace Raven.Client.Connection.Async
             var method = isGet ? HttpMethod.Get : HttpMethod.Post;
             if (isGet)
             {
-                path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
+                uniqueIds.ApplyIfNotNull(id => pathBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
             }
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, pathBuilder.ToString(), method, operationMetadata.Credentials, convention)
                 .AddOperationHeaders(OperationsHeaders))
                 .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
@@ -1563,7 +1559,7 @@ namespace Raven.Client.Connection.Async
             return requestExecuter.ForceReadFromMaster();
         }
 
-        public Task<JsonDocumentMetadata> HeadAsync(string key, CancellationToken token = default(CancellationToken))
+        public Task<long?> HeadAsync(string key, CancellationToken token = default(CancellationToken))
         {
             EnsureIsNotNullOrEmpty(key, "key");
             return ExecuteWithReplication(HttpMethod.Head, u => DirectHeadAsync(u, key, token), token);
@@ -1974,18 +1970,21 @@ namespace Raven.Client.Connection.Async
             return new WebSocketBulkInsertOperation(this, cts);
         }
 
-        private async Task<JsonDocumentMetadata> DirectHeadAsync(OperationMetadata operationMetadata, string key, CancellationToken token = default(CancellationToken))
+        private async Task<long?> DirectHeadAsync(OperationMetadata operationMetadata, string key, CancellationToken token = default(CancellationToken))
         {
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Doc(key), HttpMethod.Head, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url)).AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
                 try
                 {
-                    await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
+                    await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                    var etag = request.ResponseHeaders[Constants.MetadataEtagField];
+                    return HttpExtensions.EtagHeaderToEtag(etag);
                 }
                 catch (ErrorResponseException e)
                 {
-                    if (e.StatusCode == HttpStatusCode.NotFound) return null;
+                    if (e.StatusCode == HttpStatusCode.NotFound)
+                        return null;
+
                     if (e.StatusCode == HttpStatusCode.Conflict)
                     {
                         throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict") { Etag = e.Etag };
