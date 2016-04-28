@@ -17,7 +17,7 @@ namespace SlowTests.Core.Querying
 {
     public class Intersection : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Intersect queries - TODO [ppekrol]")]
         public async Task CanPerformIntersectQuery()
         {
             using (var store = await GetDocumentStore())
