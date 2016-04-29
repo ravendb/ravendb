@@ -30,16 +30,13 @@ class dynamicHeightBindingHandler {
 
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
-        if (valueAccessor().target) {
-            //element.style.overflowY = "auto";
-            element.style.overflowX = "hidden";
-        }
     }
 
     // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number; container?: string }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
         var bindingValue = valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
         if (bindingValue.target) {
+
             var newWindowHeight = bindingValue.resizeTrigger;
             var targetSelector = bindingValue.target || "footer";
             var bottomMargin = bindingValue.bottomMargin || 0;
@@ -55,13 +52,11 @@ class dynamicHeightBindingHandler {
         }
     }
 
-    static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number, container: string) {
+    static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number, container?: string) {
         var targetElement = $(targetSelector);
         if (targetSelector.length === 0) {
             throw new Error("Couldn't configure dynamic height because the target element isn't on the page. Target element: " + targetSelector);
         }
-
-        
 
         var $element = $(element);
         var isVisible = $element.is(":visible");

@@ -17,7 +17,8 @@
                             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                             <div class="btn-group">
                                 <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                    <i class="fa fa-cloud-upload"></i>
+                                    <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
+                                    <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
                                     <span>Start Database Backup</span>
                                 </button>
                             </div>
@@ -25,7 +26,7 @@
                         <div class="panel-body">
                             <div class="form-group">
                                 <label for="databaseName" class="col-sm-2 control-label">Database to backup</label>
-                                <div class="col-sm-3">
+                                <div class="col-sm-5">
                                     <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" id="databaseName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Database name to backup">
                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#databaseName', foreach: searchResults">
                                         <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
@@ -56,9 +57,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="progress progress-striped active" data-bind="visible: isBusy">
-                                <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
-                            </div>
                             <div class="bs-code-output" data-title="Log" data-bind="visible: backupStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
                                 <pre>
 <!-- ko foreach: backupStatusMessages --><div data-bind="css: { 'text-danger': Severity === 'Error' }, text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div><!-- /ko -->
@@ -76,7 +74,8 @@
                             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                             <div class="btn-group">
                                 <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                    <i class="fa fa-cloud-upload"></i>
+                                    <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
+                                    <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
                                     <span>Start File System Backup</span>
                                 </button>
                             </div>
@@ -84,7 +83,7 @@
                         <div class="panel-body">
                             <div class="form-group">
                                 <label for="filesystemName" class="col-sm-2 control-label">File System to backup</label>
-                                <div class="col-sm-3">
+                                <div class="col-sm-5">
                                     <input tabindex="2" autocomplete="off" required type="text" name="filesystemName" class="form-control" id="filesystemName" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to backup">
                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#filesystemName', foreach: searchResults">
                                         <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
@@ -115,9 +114,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="progress progress-striped active" data-bind="visible: isBusy">
-                                <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
-                            </div>
                             <div class="bs-code-output" data-title="Log" data-bind="visible: backupStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
                                 <pre>
 <!-- ko foreach: backupStatusMessages --><div data-bind="css: { 'text-danger': Severity === 'Error' }, text: '[' + Timestamp + ']\t' + Severity + ':\t' + Message"></div><!-- /ko -->
@@ -135,7 +131,8 @@
                             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                             <div class="btn-group">
                                 <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                    <i class="fa fa-cloud-upload"></i>
+                                    <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
+                                    <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
                                     <span>Start Counter Storage Backup</span>
                                 </button>
                             </div>
@@ -143,7 +140,7 @@
                         <div class="panel-body">
                             <div class="form-group">
                                 <label for="countersstoragename" class="col-sm-2 control-label">Counter Storage to backup</label>
-                                <div class="col-sm-3">
+                                <div class="col-sm-5">
                                     <input tabindex="2" autocomplete="off" required type="text" name="countersstoragename" class="form-control" id="countersstoragename" data-bind="value: resourceName, valueUpdate: 'afterkeydown', customValidity: nameCustomValidityError" placeholder="Filesystem name to backup">
                                     <ul class="dropdown-menu scrollable-resource-menu" role="menu" style="display: none;" data-bind="autoComplete: '#countersstoragename', foreach: searchResults">
                                         <li role="presentation" data-bind="click: $parent.resourceName.bind($parent, $data)">
@@ -173,9 +170,6 @@
                                         </label>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="progress progress-striped active" data-bind="visible: isBusy">
-                                <div class="progress-bar" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
                             </div>
                             <div class="bs-code-output" data-title="Log" data-bind="visible: backupStatusMessages().length, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: '10px' }">
                                 <pre>

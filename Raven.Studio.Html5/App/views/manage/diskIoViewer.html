@@ -1,13 +1,13 @@
-<div data-bind="visible: isForbidden" class="text-center">
+<div data-bind="visible: !settingsAccess.canReadOrWrite()" class="text-center">
     <h4 class="page-header text-info">You are not authorized to view this page!</h4>
 </div>
-<div class="panel panel-default panel-wo-margin" id="disk-io-viewer" data-bind="visible: !isForbidden()">
+<div class="panel panel-default panel-wo-margin" id="disk-io-viewer" data-bind="visible: settingsAccess.canReadOrWrite">
     <div class="panel-heading panel-info">
         Disk IO Viewer
     </div>
     <div class="panel-body">
-        <div data-bind="visible: performanceRuns().length == 0">
-            <span class="fa fa-info-circle"></span> There are no results to display. Use Raven.Monitor.exe to generate Disk IO Performance report.
+        <div class="text-center" data-bind="visible: performanceRuns().length == 0">
+            <h3 class="text-info">There are no results to display. <small>Use Raven.Monitor.exe to generate Disk IO Performance report. </small></h3>
         </div>
 
         <div class="form-inline">

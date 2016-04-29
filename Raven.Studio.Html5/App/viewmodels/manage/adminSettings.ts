@@ -44,27 +44,27 @@ class adminSettings extends viewModelBase {
         this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
         this.isSystemDatabaseForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
 
-        var canWrite = this.settingsAccess.canWrite();
         var canReadOrWrite = this.settingsAccess.canReadOrWrite();
+        var isGlobalAdmin = shell.isGlobalAdmin();
 
-        var licenseInformation = { route: 'licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation(), enabled: canWrite };
         var apiKeyRoute = { route: ['', 'apiKeys'], moduleId: 'viewmodels/manage/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys(), enabled: canReadOrWrite };
         var windowsAuthRoute = { route: 'windowsAuth', moduleId: 'viewmodels/manage/windowsAuth', title: 'Windows Authentication', nav: true, hash: appUrl.forWindowsAuth(), enabled: canReadOrWrite };
         var clusterRoute = { route: 'cluster', moduleId: "viewmodels/manage/cluster", title: "Cluster", nav: true, hash: appUrl.forCluster(), enabled: canReadOrWrite };
         var globalConfigRoute = { route: 'globalConfig*details', moduleId: 'viewmodels/manage/globalConfig/globalConfig', title: 'Global Configuration', nav: true, hash: appUrl.forGlobalConfig(), enabled: canReadOrWrite };
-        var serverSmuggling = { route: "serverSmuggling", moduleId: "viewmodels/manage/serverSmuggling", title: "Server Smuggling", nav: true, hash: appUrl.forServerSmugging(), enabled: canWrite };
-        var backupRoute = { route: 'backup', moduleId: 'viewmodels/manage/backup', title: 'Backup', nav: true, hash: appUrl.forBackup(), enabled: canWrite };
-        var compactRoute = { route: 'compact', moduleId: 'viewmodels/manage/compact', title: 'Compact', nav: true, hash: appUrl.forCompact(), enabled: canWrite };
-        var restoreRoute = { route: 'restore', moduleId: 'viewmodels/manage/restore', title: 'Restore', nav: true, hash: appUrl.forRestore(), enabled: canWrite };
-        var adminLogsRoute = { route: 'adminLogs', moduleId: 'viewmodels/manage/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs(), enabled: canWrite };
-        var topologyRoute = { route: 'topology', moduleId: 'viewmodels/manage/topology', title: 'Server topology', nav: true, hash: appUrl.forServerTopology(), enabled: canWrite };
-        var trafficWatchRoute = { route: 'trafficWatch', moduleId: 'viewmodels/manage/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch(), enabled: canWrite };
-        var debugInfoRoute = { route: 'debugInfo', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo(), enabled: canWrite };
-        var ioTestRoute = { route: 'ioTest', moduleId: 'viewmodels/manage/ioTest', title: 'IO Test', nav: true, hash: appUrl.forIoTest(), enabled: canWrite };
-        var diskIoViewerRoute = { route: 'diskIoViewer', moduleId: 'viewmodels/manage/diskIoViewer', title: 'Disk IO Viewer', nav: true, hash: appUrl.forDiskIoViewer(), enabled: canWrite };
-        var consoleRoute = { route: 'console', moduleId: "viewmodels/manage/console", title: "Administrator JS Console", nav: true, hash: appUrl.forAdminJsConsole(), enabled: canWrite };
+        var serverSmuggling = { route: "serverSmuggling", moduleId: "viewmodels/manage/serverSmuggling", title: "Server Smuggling", nav: true, hash: appUrl.forServerSmugging(), enabled: isGlobalAdmin };
+        var backupRoute = { route: 'backup', moduleId: 'viewmodels/manage/backup', title: 'Backup', nav: true, hash: appUrl.forBackup(), enabled: isGlobalAdmin };
+        var compactRoute = { route: 'compact', moduleId: 'viewmodels/manage/compact', title: 'Compact', nav: true, hash: appUrl.forCompact(), enabled: isGlobalAdmin };
+        var restoreRoute = { route: 'restore', moduleId: 'viewmodels/manage/restore', title: 'Restore', nav: true, hash: appUrl.forRestore(), enabled: isGlobalAdmin };
+        var adminLogsRoute = { route: 'adminLogs', moduleId: 'viewmodels/manage/adminLogs', title: 'Admin Logs', nav: true, hash: appUrl.forAdminLogs(), enabled: isGlobalAdmin };
+        var topologyRoute = { route: 'topology', moduleId: 'viewmodels/manage/topology', title: 'Server topology', nav: true, hash: appUrl.forServerTopology(), enabled: isGlobalAdmin };
+        var trafficWatchRoute = { route: 'trafficWatch', moduleId: 'viewmodels/manage/trafficWatch', title: 'Traffic Watch', nav: true, hash: appUrl.forTrafficWatch(), enabled: isGlobalAdmin };
+        var licenseInformation = { route: 'licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation(), enabled: canReadOrWrite };
+        var debugInfoRoute = { route: 'debugInfo', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: true, hash: appUrl.forDebugInfo(), enabled: isGlobalAdmin };
+        var ioTestRoute = { route: 'ioTest', moduleId: 'viewmodels/manage/ioTest', title: 'IO Test', nav: true, hash: appUrl.forIoTest(), enabled: isGlobalAdmin };
+        var diskIoViewerRoute = { route: 'diskIoViewer', moduleId: 'viewmodels/manage/diskIoViewer', title: 'Disk IO Viewer', nav: true, hash: appUrl.forDiskIoViewer(), enabled: canReadOrWrite };
+        var consoleRoute = { route: 'console', moduleId: "viewmodels/manage/console", title: "Administrator JS Console", nav: true, hash: appUrl.forAdminJsConsole(), enabled: isGlobalAdmin };
         var studioConfigRoute = { route: 'studioConfig', moduleId: 'viewmodels/manage/studioConfig', title: 'Studio Config', nav: true, hash: appUrl.forStudioConfig(), enabled: canReadOrWrite };
-        var hotSpareRoute = { route: 'hotSpare', moduleId: 'viewmodels/manage/hotSpare', title: 'Hot Spare', nav: true, hash: appUrl.forHotSpare(), enabled: canWrite };
+        var hotSpareRoute = { route: 'hotSpare', moduleId: 'viewmodels/manage/hotSpare', title: 'Hot Spare', nav: true, hash: appUrl.forHotSpare(), enabled: isGlobalAdmin };
 
         var routes = [
             apiKeyRoute,

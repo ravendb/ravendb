@@ -26,8 +26,8 @@
                 <h3 class="text-info">You don't have any API keys. <small>Go ahead and <a href="#" data-bind="click: createNewApiKey">create one now</a>.</small>
                 </h3>
             </div>
-            <div class="no-matches" data-bind="visible: noResults">
-                <i class="fa fa-info-circle"></i> No results found
+            <div class=text-center data-bind="visible: noResults">
+                <h3 class="text-info">No results found</h3>
             </div>
             <div data-bind="foreach: apiKeys">
                 <div class="panel api-key-card" data-bind="visible: visible, css: { 'panel-info': enabled() && isValid($index), 'panel-warning': !enabled() && isValid($index), 'panel-danger': !isValid($index) }">

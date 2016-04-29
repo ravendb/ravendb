@@ -17,7 +17,8 @@
                     <div class="panel-heading panel-info">
                         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download"></i>
+                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
+                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
                             <span>Restore Database</span>
                         </button>
                         <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
@@ -102,7 +103,8 @@
                     <div class="panel-heading panel-info">
                         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download"></i>
+                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
+                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
                             <span>Restore Filesystem</span>
                         </button>
                         <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
@@ -166,7 +168,8 @@
                     <div class="panel-heading panel-info">
                         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
                         <button type="submit" title="Start restore" class="btn btn-primary" data-bind="disable: $parent.isBusy">
-                            <i class="fa fa-cloud-download"></i>
+                            <i class="fa fa-cloud-download fa-fw" data-bind="visible: !$parent.isBusy()"></i>
+                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: $parent.isBusy"></i>
                             <span>Restore Counter Storage</span>
                         </button>
                         <button type="button" class="btn btn-default" data-bind="visible: $parent.isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>

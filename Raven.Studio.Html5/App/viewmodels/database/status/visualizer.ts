@@ -786,7 +786,8 @@ class visualizer extends viewModelBase {
     }
 
 
-    static visualizationCss = '* { box-sizing: border-box; }\n' +
+    static visualizationCss = 'svg { background-color: white; }\n' +
+        '* { box-sizing: border-box; }\n' +
     '.hidden { display: none !important; visibility: hidden !important; }\n' +
     'svg text { font-style: normal; font-variant: normal; font-weight: normal; font-size: 12px; line-height: normal; font-family: Arial; }\n' +
     '.nodeRect { stroke: rgb(119, 119, 119); stroke-width: 1.5px; fill-opacity: 0.4 !important; }\n' +
