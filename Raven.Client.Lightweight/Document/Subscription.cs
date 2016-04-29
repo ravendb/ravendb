@@ -268,10 +268,6 @@ namespace Raven.Client.Document
                         }
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    //ignore this since it is expected
-                }
                 catch (ErrorResponseException e)
                 {
                     SubscriptionException subscriptionException;
@@ -329,10 +325,6 @@ namespace Raven.Client.Document
             try
             {
                 await pullingTask.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                //this exception is expected, so ignore if it happens
             }
             catch (Exception ex)
             {
@@ -596,23 +588,15 @@ namespace Raven.Client.Document
             if (IsConnectionClosed)
                 return new CompletedTask();
 
-            return CloseSubscription(true);
+            return CloseSubscription();
         }
 
-        private async Task CloseSubscription(bool ignoreOperationCanceledException = false)
+        private async Task CloseSubscription()
         {
-            try
+            using (var closeRequest = CreateCloseRequest())
             {
-                using (var closeRequest = CreateCloseRequest())
-                {
-                    await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
-                    IsConnectionClosed = true;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                if (!ignoreOperationCanceledException)
-                    throw;
+                await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
+                IsConnectionClosed = true;
             }
         }
     }

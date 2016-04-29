@@ -538,7 +538,6 @@ namespace Raven.Tests.Subscriptions
 
         [Theory]
         [PropertyData("Storages")]
-
         public void CanFilterSubscriptionsWithSpecificPrefixes(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage:storage))
@@ -586,7 +585,6 @@ namespace Raven.Tests.Subscriptions
 
         [Theory]
         [PropertyData("Storages")]
-
         public void WillAcknowledgeEmptyBatches(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
