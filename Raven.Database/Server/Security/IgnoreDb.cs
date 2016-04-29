@@ -11,6 +11,7 @@ namespace Raven.Database.Server.Security
             "/databases",
             "/fs",
             "/license/status",
+            "/license/support",
             "/studio-tasks/server-configs"
         };
     }

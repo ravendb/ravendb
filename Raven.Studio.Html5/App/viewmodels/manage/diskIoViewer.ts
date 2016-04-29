@@ -8,15 +8,16 @@ import appUrl = require("common/appUrl");
 import listDiskPerformanceRunsCommand = require("commands/maintenance/listDiskPerformanceRunsCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import shell = require("viewmodels/shell");
+import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 
 class diskIoViewer extends viewModelBase {
 
     isoFormat = d3.time.format.iso;
 
-    isForbidden = ko.observable(!shell.isGlobalAdmin());
+    settingsAccess = new settingsAccessAuthorizer();
 
-    showChart = ko.observable<boolean>(true);
+    showChart = ko.observable<boolean>(false);
+    emptyReport = ko.observable<boolean>(false);
 
     performanceRuns = ko.observableArray<performanceRunItemDto>([]);
     currentPerformanceRun = ko.observable<performanceRunItemDto>();
@@ -63,7 +64,6 @@ class diskIoViewer extends viewModelBase {
     constructor() {
         super();
         this.currentPerformanceRun.subscribe(v => {
-            this.showChart(!!v);
             if (!v) {
                 this.perDbReports([]);
                 this.currentDbReport(undefined);
@@ -72,6 +72,8 @@ class diskIoViewer extends viewModelBase {
             new getDocumentWithMetadataCommand(v.documentId, appUrl.getSystemDatabase())
                 .execute()
                 .done((doc: diskIoPerformanceRunDto) => {
+                    this.emptyReport(doc.Databases.length === 0);
+                    this.showChart(doc.Databases.length > 0);
                     this.data = doc;
                     if (doc.Databases) {
                         this.perDbReports(doc.Databases);

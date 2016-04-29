@@ -2,33 +2,40 @@
     <h4 class="page-header text-info">You are not authorized to view this page!</h4>
 </div>
 
-<section id="logsContainer" style="width: 100%; position: relative" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }, visible: isForbidden() == false">
-    <div class="form-horizontal">
-        <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
-        <div class="form-group logButtons btn-group">
-            <div class="btn-group">
-                <button type="button" class="btn btn-primary" data-bind="click: configureConnection">Configure Connection</button>
-                <button type="button" class="btn btn-success" data-bind="click: reconnect">Reconnect</button>
-                <button type="button" class="btn btn-warning" data-bind="click: disconnect">Disconnect</button>
-            </div>
-            <div class="btn-group">
-                <button type="button" class="btn btn-default" data-bind="css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">Keep Down</button>
-                <button type="button" class="btn btn-default" data-bind="click: clearLogs">Clear</button>
-            </div>
-            <div class="btn-group">
-                <button type="button" class="btn btn-default" data-bind="click: exportLogs">Export</button>
-            </div>
-        </div>
-    </div>
-     <div class="form-group statsBar">
-            <strong class="col-sm-12">Stats:</strong>
-            <div class="small col-sm-offset-1 col-sm-11" data-bind="with: adminLogsConfig">
-                <strong>Status: </strong><label data-bind="text: ($root.connected() == true ? 'Connected' : 'Disconnected'), css: { 'text-danger': $root.connected() == false, 'text-success': $root.connected() == true }"></label>
-                <strong>; Entries: <label data-bind="text: $root.entriesCount()"></label></strong>
-                <strong>; Buffer Size: </strong><label data-bind="text: $root.adminLogsConfig().maxEntries"></label>
+<section id="logsContainer" style="width: 100%; position: relative" data-bind="visible: !isForbidden()">
+    <div class="panel panel-default panel-wo-margin">
+        <div class="panel-heading panel-info">
+            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+            <div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" data-bind="click: configureConnection">Configure Connection</button>
+                    <button type="button" class="btn btn-success" data-bind="click: reconnect">Reconnect</button>
+                    <button type="button" class="btn btn-warning" data-bind="click: disconnect">Disconnect</button>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default" data-bind="css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">Keep Down</button>
+                    <button type="button" class="btn btn-default" data-bind="click: clearLogs">Clear</button>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default" data-bind="click: exportLogs">Export</button>
+                </div>
             </div>
         </div>
-    <div id="rawLogsContainer" style="position: absolute; top: 100px; bottom: 10px; width: 100%;">
-        <pre id="adminLogsPre" style="word-wrap: normal; overflow: auto; height: 100%"></pre>
+        <div class="panel-body">
+            <div class="text-center" data-bind="visible: !adminLogsConfig()">
+                <h3 class="text-info">
+                    Click on 'Configure Connection' to start.
+                </h3>
+            </div>
+            <div id="rawLogsContainer" class="bs-code-output skip-header" data-bind="visible: adminLogsConfig, if: adminLogsConfig">
+                <pre id="adminLogsPre" style="overflow: auto" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#logsContainer'  }"></pre>
+                <div class="header small col-sm-11">
+                    <strong>Status: </strong><label data-bind="text: ($root.connected() == true ? 'Connected' : 'Disconnected'), css: { 'text-danger': $root.connected() == false, 'text-success': $root.connected() == true }"></label>
+                    <strong>; Entries: <label data-bind="text: $root.entriesCount()"></label></strong>
+                    <strong>; Buffer Size: </strong><label data-bind="text: $root.adminLogsConfig().maxEntries"></label>
+                </div>
+            </div>
+           
+        </div>
     </div>
 </section>

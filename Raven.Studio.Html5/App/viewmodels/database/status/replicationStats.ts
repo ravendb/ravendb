@@ -15,7 +15,8 @@ import dagre = require('dagre');
 
 class replicationStats extends viewModelBase {
 
-    static inlineCss = " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
+    static inlineCss = " svg { background-color: white; } " +
+                           " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
                            " path.link.error {  stroke: #df382c; } " +
                            " svg:not(.active):not(.ctrl) path.link { cursor: pointer; } " +
                            " path.link.hidden {  stroke-width: 0; } " +

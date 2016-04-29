@@ -7,10 +7,12 @@ import getGlobalReplicationTopology = require("commands/resources/getGlobalRepli
 import d3 = require('d3/d3');
 import dagre = require('dagre');
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import shell = require("viewmodels/shell");
 
 class topology extends viewModelBase {
 
-    static inlineCss = " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
+    static inlineCss = " svg { background-color: white; }" +
+                        " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
                         " path.link.error {  stroke: #df382c; } " +
 " svg:not(.active):not(.ctrl) path.link { cursor: pointer; } " +
 " path.link.hidden {  stroke-width: 0; } " +
@@ -27,9 +29,11 @@ class topology extends viewModelBase {
 
     fetchDb = ko.observable<boolean>(true);
     fetchFs = ko.observable<boolean>(true);
-    fetchCs = ko.observable<boolean>(true);
+    fetchCs = ko.observable<boolean>(shell.has40Features());
 
     showLoadingIndicator = ko.observable(false); 
+
+    showCsOption = shell.has40Features;
 
     width: number;
     height: number;
@@ -68,7 +72,12 @@ class topology extends viewModelBase {
     createReplicationTopology() {
         var self = this;
 
-        this.height = 600;
+        var $replicationTopologSection = $("#replicationTopologySection");
+        var $replicationTopologySvg = $("svg#replicationTopology");
+
+        this.height = $replicationTopologSection.outerHeight() -
+            ($replicationTopologySvg.offset().top - $replicationTopologSection.offset().top) -
+            20;
 
         this.zoom = d3.behavior.zoom()
             .scaleExtent([0.2, 5])
@@ -327,11 +336,26 @@ class topology extends viewModelBase {
     }
 
     saveAsPng() {
-        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', () => topology.inlineCss);
+        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', (svg) => {
+            this.removeIconsProcessor(svg);
+            return topology.inlineCss;
+        });
     }
 
     saveAsSvg() {
-        svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', () => topology.inlineCss);
+        svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', (svg) => {
+            this.removeIconsProcessor(svg);
+            return topology.inlineCss;
+        });
+    }
+
+    /*
+    * Since we are using FontAwesome icons and they won't be avaialable in downloaded
+    * svg, remove them from DOM
+    * Also this procedure should fix issue with converting utf-8 data with window.atob.
+    */
+    removeIconsProcessor(svg: Element) {
+        $("text.fa", svg).remove();
     }
 
     saveAsJson() {

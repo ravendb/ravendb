@@ -42,7 +42,9 @@
                             </select>
                         </td>
                         <td class="col-md-4">
-                            <input class="form-checkbox-control" type="checkbox" data-bind="checked: includeStackTrace" />
+                            <button type="button" class="btn-link" data-bind="click: toggleStackStace">
+                                <img data-bind="checkbox: includeStackTrace">
+                            </button>
                         </td>
                         <td class="col-md-2">
                             <div class="btn-group">

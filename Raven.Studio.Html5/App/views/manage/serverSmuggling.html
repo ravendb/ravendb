@@ -11,13 +11,13 @@
             <div data-bind="with: targetServer">
                 <div class="form-group">
                     <label class="col-sm-2 control-label">Destination server Url</label>
-                    <div class="col-sm-9">
+                    <div class="col-sm-5">
                         <input required type="text" class="form-control" data-bind="value: url, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="col-sm-2 control-label">Credentials</label>
-                    <div class="col-sm-9">
+                    <div class="col-sm-5">
                         <div class="btn-group">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.inProgress()">
                                 <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
@@ -37,19 +37,19 @@
                 <div data-bind="if: isUserCredentials, visible: isUserCredentials">
                     <div class="form-group">
                         <label class="col-sm-2 control-label">User Name</label>
-                        <div class="col-sm-9">
+                        <div class="col-sm-5">
                             <input required type="text" class="form-control" data-bind="value: username, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-2 control-label">Password</label>
-                        <div class="col-sm-9">
+                        <div class="col-sm-5">
                             <input required type="text" class="form-control" data-bind="value: password, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-2 control-label">Domain</label>
-                        <div class="col-sm-9">
+                        <div class="col-sm-5">
                             <input type="text" class="form-control" data-bind="value: domain, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>
@@ -57,7 +57,7 @@
                 <div data-bind="if: isApiKeyCredentials, visible: isApiKeyCredentials">
                     <div class="form-group">
                         <label class="col-sm-2 control-label">API Key</label>
-                        <div class="col-sm-9">
+                        <div class="col-sm-5">
                             <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown', disable: $root.inProgress()"/>
                         </div>
                     </div>

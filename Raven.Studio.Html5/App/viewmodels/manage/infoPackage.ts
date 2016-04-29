@@ -132,7 +132,7 @@ class infoPackage extends viewModelBase {
     }
 
     private splitAndCollateStacks(stacks: stackInfo[]): stackInfo[]{
-        if (stacks.length == 1) {
+        if (stacks.length === 1) {
             return stacks;
         }
         var grouped = d3.nest().key((d: stackInfo) => d.StackTrace[0]).entries(stacks);
@@ -146,7 +146,7 @@ class infoPackage extends viewModelBase {
             for (var depth = 0; depth < minDepth; depth++) {
                 var currentStack = sharedStacks[0].StackTrace[depth];
                 for (var i = 1; i < sharedStacks.length; i++) {
-                    if (currentStack != sharedStacks[i].StackTrace[depth]) {
+                    if (currentStack !== sharedStacks[i].StackTrace[depth]) {
                         break outer;
                     }
                 }
@@ -443,7 +443,8 @@ class infoPackage extends viewModelBase {
     }
     
 
-    static stacksCss = "* { box-sizing: border-box; }\n" +
+    static stacksCss = "svg { background-color: white; }\n" +
+        " * { box-sizing: border-box; }\n" +
         " svg text { font-style: normal; font-variant: normal; font-weight: normal; font-size: 12px; line-height: normal; font-family: Arial; }\n" +
         " * { box-sizing: border - box; }\n" +
         " .link { fill: none; stroke: rgb(204, 204, 204); stroke-width: 1.5px; }\n" +

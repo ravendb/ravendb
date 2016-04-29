@@ -47,16 +47,19 @@
     }
 
 </style>
-<section id="replicationTopologySection" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+<section id="replicationTopologySection">
     <div data-bind="visible: !settingsAccess.canWrite()" class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
     <div>
-        <div class="panel-group" data-bind="visible: settingsAccess.canWrite()">
-            <div class="panel panel-default">
+        <div data-bind="visible: settingsAccess.canWrite()">
+            <div class="panel panel-default panel-wo-margin" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#replicationTopologySection' }">
                 <div class="panel-heading">
                     <span data-bind="visible: !topology()">
-                        <button data-bind="click: fetchTopology" class="btn btn-primary"><i class="fa fa-sitemap"></i> Fetch topology</button>
+                        <button data-bind="click: fetchTopology" class="btn btn-primary">
+                            <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: showLoadingIndicator"></i>
+                            <i class="fa fa-sitemap fa-fw" data-bind="visible: !showLoadingIndicator()"></i> Fetch topology
+                        </button>
                         <i class="fa fa-warning text-warning padd-left-10"></i> <span class="text-muted"> This operation may be time consuming.</span>
                     </span>
 
@@ -289,7 +292,7 @@
                                                 <input type="checkbox" data-bind="checked: fetchFs"> File systems
                                             </label>
                                         </div>
-                                        <div class="checkbox">
+                                        <div class="checkbox" data-bind="visible: $root.showCsOption()">
                                             <label>
                                                 <input type="checkbox" data-bind="checked: fetchCs"> Counters
                                             </label>
@@ -297,15 +300,10 @@
                                     </div>
                                 </div>
                             </form>
-
-                            <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
-
-
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
     </div>
 </section>

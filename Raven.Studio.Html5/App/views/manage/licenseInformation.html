@@ -1,16 +1,16 @@
-<div data-bind="visible: isForbidden" class="text-center">
+<div data-bind="visible: !settingsAccess.canReadOrWrite()" class="text-center">
     <h4 class="page-header text-info">You are not authorized to view this page!</h4>
 </div>
 
-<div class="panel panel-default form-horizontal" role="form" data-bind="visible: isForbidden() == false">
+<div class="panel panel-default form-horizontal" role="form" data-bind="visible: settingsAccess.canReadOrWrite">
     <div class="panel-heading">
         License information
         <div class="clearfix"></div>
     </div>
     <div class="panel-body">
         <div class="form-group">
-            <div class="col-md-4 control-label">Connectivity status to license server</div>
-            <div class="col-md-8 text-height-fix">
+            <label class="col-md-3 control-label">Connectivity status to license server</label>
+            <div class="col-md-9 text-height-fix">
                 <span data-bind="visible: connectivityStatus() === 'pending'"><i class="fa fa-spin fa-spinner"></i> Checking...</span>
                 <span class="text-success" data-bind="visible: connectivityStatus() === 'success'"><i class="fa fa-check fa-fw"></i> Success</span>
                 <span class="text-success" data-bind="visible: connectivityStatus() === 'failure'"><i class="fa fa-bolt fa-fw"></i> Can't connect to licensing server</span>
@@ -18,7 +18,7 @@
             </div>
         </div>
         <div class="form-group">
-            <div class="col-md-8 col-md-offset-4 text-height-fix">
+            <div class="col-md-9 col-md-offset-3 text-height-fix">
                 <button data-bind="click: forceUpdate" class="btn btn-default"><i class="fa fa-bolt fa-fw"></i> Force license update</button>
             </div>
         </div>

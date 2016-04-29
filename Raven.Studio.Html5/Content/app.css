@@ -7221,28 +7221,21 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   overflow-y: auto;
   overflow-x: visible;
 }
-#watchTrafficContainer #logTableContainer .logHeaders {
-  max-width: 80vw;
-  width: 80vw;
-}
 #watchTrafficContainer #logTableContainer .logRecords {
   max-height: 60vh;
-  max-width: 80vw;
-  width: 80vw;
   overflow-y: auto;
 }
 #watchTrafficContainer #logTableContainer .logRecords-small {
   max-height: 30vh;
 }
 #watchTrafficContainer #logTableContainer .log-details {
-  max-height: 30vh;
-  height: 30vh;
+  max-height: 25vh;
+  height: 25vh;
   overflow-y: auto;
   border-top-width: 2px;
   margin-top: 1%;
   padding-top: 1%;
   border: thin dashed black;
-  width: 60vw;
   margin-left: 1%;
 }
 #logNotificationsContainer {
@@ -8178,10 +8171,9 @@ footer ul {
   color: #DF382C !important;
 }
 :invalid {
-  box-shadow: none;
-  /* FF */
   outline: 0;
   /* IE 10 */
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.075);
 }
 .versioning-inner-margin {
   margin-left: 25px;
@@ -8206,6 +8198,18 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
         color: #ac2925;
     }
 }*/
+.alert-danger .close .fa-times {
+  color: white;
+}
+.alert-info .close .fa-times {
+  color: white;
+}
+.panel-info > .panel-heading .close .fa-times {
+  color: white;
+}
+.panel-danger > .panel-heading .close .fa-times {
+  color: white;
+}
 .close .fa-times {
   color: #555555;
 }
@@ -8984,7 +8988,25 @@ a.global_help_link:focus {
   border-radius: 0 0 4px 4px;
   border-top: 1px solid #ddd;
 }
-.bs-code-output::after {
+.bs-status {
+  font-size: 12px;
+  font-weight: bold;
+  color: #9DA0A4;
+}
+.bs-code-output .header {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  right: -1px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: bold;
+  color: #9DA0A4;
+  -webkit-border-radius: 4px 0 4px 0;
+  -moz-border-radius: 4px 0 4px 0;
+  border-radius: 4px 0 4px 0;
+}
+.bs-code-output:not(.skip-header)::after {
   content: attr(data-title);
   position: absolute;
   top: 5px;
@@ -8997,4 +9019,7 @@ a.global_help_link:focus {
   -webkit-border-radius: 4px 0 4px 0;
   -moz-border-radius: 4px 0 4px 0;
   border-radius: 4px 0 4px 0;
+}
+.panel.panel-wo-margin {
+  margin: 0;
 }

@@ -40,10 +40,10 @@ class apiKeys extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         if (this.settingsAccess.isReadOnly()) {
-            $('#manageApiKeys form input:not(#apiKeysSearchInput)').attr('readonly', 'readonly');
+            $('#manageApiKeys input:not(#apiKeysSearchInput)').attr('readonly', 'readonly');
             $('#manageApiKeys button').attr('disabled', 'true');
         }
-        $("#manageApiKeys form").on("keypress", 'input[name="databaseName"]', (e) => e.which !== 13);
+        $("#manageApiKeys").on("keypress", 'input[name="databaseName"]', (e) => e.which !== 13);
     }
 
     private fetchApiKeys(): JQueryPromise<any> {

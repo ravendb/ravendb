@@ -30,31 +30,29 @@ class dynamicHeightBindingHandler {
 
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
-        if (valueAccessor().target) {
-            //element.style.overflowY = "auto";
-            element.style.overflowX = "hidden";
-        }
     }
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
+    update(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number; container?: string }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
         var bindingValue = valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
         if (bindingValue.target) {
+
             var newWindowHeight = bindingValue.resizeTrigger;
             var targetSelector = bindingValue.target || "footer";
             var bottomMargin = bindingValue.bottomMargin || 0;
+            var container = bindingValue.container;
 
             // Check what was the last dispatched height to this element.
             var lastWindowHeightKey = "ravenStudioLastDispatchedHeight";
             var lastWindowHeight: number = ko.utils.domData.get(element, lastWindowHeightKey);
             if (lastWindowHeight !== newWindowHeight) {
                 ko.utils.domData.set(element, lastWindowHeightKey, newWindowHeight);
-                dynamicHeightBindingHandler.stickToTarget(element, targetSelector, bottomMargin);
+                dynamicHeightBindingHandler.stickToTarget(element, targetSelector, bottomMargin, container);
             }
         }
     }
 
-    static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number) {
+    static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number, container?: string) {
         var targetElement = $(targetSelector);
         if (targetSelector.length === 0) {
             throw new Error("Couldn't configure dynamic height because the target element isn't on the page. Target element: " + targetSelector);
@@ -64,10 +62,19 @@ class dynamicHeightBindingHandler {
         var isVisible = $element.is(":visible");
 
         if (isVisible) {
+
+            var containerOffset = 0;
+
+            if (container) {
+                var $container = $(container);
+                var topOffsetDiff = $element.offset().top - $container.offset().top;
+                containerOffset = $container.outerHeight() - topOffsetDiff - $element.outerHeight();
+            }
+
             var elementTop = $element.offset().top;
-            var footerTop = $(targetSelector).position().top;
+            var footerTop = targetElement.position().top;
             var padding = 5 + bottomMargin;
-            var desiredElementHeight = footerTop - elementTop - padding;
+            var desiredElementHeight = footerTop - elementTop - padding - containerOffset;
             if ($(document).fullScreen()) {
                 var windowHeightKey = "ravenStudioLastDispatchedHeight";
                 var windowHeight: number = ko.utils.domData.get(element, windowHeightKey);
@@ -75,7 +82,7 @@ class dynamicHeightBindingHandler {
             }
             var minimumHeight = 100;
             if (desiredElementHeight >= minimumHeight) {
-                $element.height(desiredElementHeight);
+                $element.innerHeight(desiredElementHeight);
                 $element.trigger("DynamicHeightSet", desiredElementHeight);
             }
         }

@@ -37,10 +37,10 @@ class windowsAuth extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         if (this.settingsAccess.isReadOnly()) {
-            $('#manageWindowsAuth form input').attr('readonly', 'readonly');
+            $('#manageWindowsAuth input').attr('readonly', 'readonly');
             $('#manageWindowsAuth button').attr('disabled', 'true');
         }
-        $("#manageWindowsAuth form").on("keypress", 'input[name="databaseName"]', (e) => e.which !== 13);
+        $("#manageWindowsAuth").on("keypress", 'input[name="databaseName"]', (e) => e.which !== 13);
     }
 
     private fetchWindowsAuth(): JQueryPromise<any> {

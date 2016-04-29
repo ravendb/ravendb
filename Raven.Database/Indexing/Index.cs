@@ -2059,7 +2059,7 @@ namespace Raven.Database.Indexing
 
         private void ResetWriteErrors()
         {
-            writeErrors = Interlocked.Exchange(ref writeErrors, 0);
+            Interlocked.Exchange(ref writeErrors, 0);
         }
 
         internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
