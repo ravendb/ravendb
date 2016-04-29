@@ -1955,9 +1955,9 @@ namespace Raven.Database.Indexing
             if (e is SystemException) // Don't count transient errors
                 return;
 
-            writeErrors = Interlocked.Increment(ref writeErrors);
+            var errors = Interlocked.Increment(ref writeErrors);
 
-            if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error)
+            if (errors < WriteErrorsLimit || Priority == IndexingPriority.Error)
                 return;
 
             var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
@@ -2006,7 +2006,7 @@ namespace Raven.Database.Indexing
 
         private void ResetWriteErrors()
         {
-            writeErrors = Interlocked.Exchange(ref writeErrors, 0);
+            Interlocked.Exchange(ref writeErrors, 0);
         }
 
         internal class IndexByIdEqualityComparer : IEqualityComparer<Index>

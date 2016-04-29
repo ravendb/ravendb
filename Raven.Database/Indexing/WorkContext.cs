@@ -306,11 +306,11 @@ namespace Raven.Database.Indexing
 
         private void AddError(int index, string indexName, string key, string error, string component)
         {
-            errorsCounter = Interlocked.Increment(ref errorsCounter);
+            var increment = Interlocked.Increment(ref errorsCounter);
 
             var indexingError = new IndexingError
             {
-                Id = errorsCounter,
+                Id = increment,
                 Document = key,
                 Error = error,
                 Index = index,
