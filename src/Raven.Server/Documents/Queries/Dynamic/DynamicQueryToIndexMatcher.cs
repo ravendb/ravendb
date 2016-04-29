@@ -43,33 +43,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _indexStore = indexStore;
         }
 
-        private delegate void ExplainDelegate(string index, Func<string> rejectionReasonGenerator);
-
         public class Explanation
         {
-            public string Index { get; set; }
-            public string Reason { get; set; }
+            public Explanation(string index, string reason)
+            {
+                Index = index;
+                Reason = reason;
+            }
+
+            public string Index { get; private set; }
+            public string Reason { get; private set; }
         }
 
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
-            ExplainDelegate explain = (index, rejectionReason) => { };
-            if (explanations != null)
-            {
-                explain = (index, rejectionReason) => explanations.Add(new Explanation
-                {
-                    Index = index,
-                    Reason = rejectionReason()
-                });
-            }
-
             var definitions = _indexStore.GetIndexDefinitionsForCollection(query.ForCollection,
                 query.IsMapReduce ? IndexType.AutoMapReduce : IndexType.AutoMap); // let us work with auto indexes only for now
 
             if (definitions.Count == 0)
                 return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
 
-            var results = definitions.Select(definition => ConsiderUsageOfAutoIndex(query, definition, explain))
+            var results = definitions.Select(definition => ConsiderUsageOfAutoIndex(query, definition, explanations))
             .Where(result => result.MatchType != DynamicQueryMatchType.Failure)
                     .GroupBy(x => x.MatchType)
                     .ToDictionary(x => x.Key, x => x.ToArray());
@@ -82,10 +76,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     .ThenByDescending(x => x.NumberOfMappedFields)
                     .ToArray();
 
-                for (var i = 1; i < prioritizedResults.Length; i++)
+                if (explanations != null)
                 {
-                    explain(prioritizedResults[i].IndexName,
-                            () => "Wasn't the widest / most unstable index matching this query");
+                    for (var i = 1; i < prioritizedResults.Length; i++)
+                    {
+                        explanations.Add(new Explanation(prioritizedResults[i].IndexName, "Wasn't the widest / most unstable index matching this query"));
+                    }
                 }
 
                 return prioritizedResults[0];
@@ -99,7 +95,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMatchResult("", DynamicQueryMatchType.Failure);
         }
 
-        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, IndexDefinitionBase definition, ExplainDelegate explain)
+        private DynamicQueryMatchResult ConsiderUsageOfAutoIndex(DynamicQueryMapping query, IndexDefinitionBase definition, List<Explanation> explanations = null)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;
@@ -107,9 +103,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (definition.Collections.Contains(collection, StringComparer.OrdinalIgnoreCase) == false)
             {
                 if (definition.Collections.Length == 0)
-                    explain(indexName, () => "Query is specific for collection, but the index searches across all of them, may result in a different type being returned.");
+                    explanations?.Add(new Explanation(indexName, "Query is specific for collection, but the index searches across all of them, may result in a different type being returned."));
                 else
-                    explain(indexName, () => $"Index does not apply to collection '{collection}'");
+                    explanations?.Add(new Explanation(indexName, $"Index does not apply to collection '{collection}'"));
 
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
@@ -117,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.Collections.Length > 1) // we only allow indexes with a single entity name
                 {
-                    explain(indexName, () => "Index contains more than a single entity name, may result in a different type being returned.");
+                    explanations?.Add(new Explanation(indexName, "Index contains more than a single entity name, may result in a different type being returned."));
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }
@@ -129,7 +125,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (priority.HasFlag(IndexingPriority.Error) || priority.HasFlag(IndexingPriority.Disabled) || stats.IsInvalidIndex)
             {
-                explain(indexName, () => string.Format("Cannot do dynamic queries on disabled index or index with errors (index name = {0})", indexName));
+                explanations?.Add(new Explanation(indexName, $"Cannot do dynamic queries on disabled index or index with errors (index name = {indexName})"));
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
 
@@ -137,11 +133,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (query.MapFields.All(x => definition.ContainsField(x.Name)) == false)
             {
-                explain(indexName, () =>
+                if (explanations != null)
                 {
                     var missingFields = query.MapFields.Where(x => definition.ContainsField(x.Name) == false);
-                    return $"The following fields are missing: {string.Join(", ", missingFields)}";
-                });
+                    explanations.Add(new Explanation(indexName, $"The following fields are missing: {string.Join(", ", missingFields)}"));
+                }
 
                 currentBestState = DynamicQueryMatchType.Partial;
             }
@@ -158,7 +154,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     sortField = SortFieldHelper.CustomField(sortField).Name;
                 }
-                
+
                 if (sortField.EndsWith("_Range"))
                     sortField = sortField.Substring(0, sortField.Length - "_Range".Length);
 
@@ -170,7 +166,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (query.IsMapReduce == false || ((AutoMapReduceIndexDefinition)definition).GroupByFields
                                                         .TryGetValue(sortField, out autoIndexField) == false)
                     {
-                        explain(indexName, () => $"Rejected because index does not contains field '{sortField}' which we need to sort on");
+                        explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortField}' which we need to sort on"));
                         currentBestState = DynamicQueryMatchType.Partial;
                         continue;
                     }
@@ -192,8 +188,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         }
                     }
 
-                    explain(indexName, () =>
-                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortField}' ({autoIndexField.SortOption})");
+                    explanations?.Add(new Explanation(indexName,
+                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortField}' ({autoIndexField.SortOption})"));
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }
@@ -201,12 +197,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (currentBestState == DynamicQueryMatchType.Complete && priority.HasFlag(IndexingPriority.Idle))
             {
                 currentBestState = DynamicQueryMatchType.Partial;
-                explain(indexName, () => $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match");
+                explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match"));
             }
 
             if (currentBestState != DynamicQueryMatchType.Failure && query.IsMapReduce)
             {
-                if (AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explain) == false)
+                if (AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explanations) == false)
                 {
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
@@ -219,7 +215,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             };
         }
 
-        private bool AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState, ExplainDelegate explain)
+        private bool AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState, List<Explanation> explanations)
         {
             var indexName = definition.Name;
 
@@ -235,34 +231,34 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (field.MapReduceOperation != mapField.MapReduceOperation)
                 {
-                    explain(indexName, () => $"The following field {field.Name} has {field.MapReduceOperation} operation defined, while query required {mapField.MapReduceOperation}");
+                    explanations?.Add(new Explanation(indexName, $"The following field {field.Name} has {field.MapReduceOperation} operation defined, while query required {mapField.MapReduceOperation}"));
 
                     return false;
                 }
             }
-            
+
             if (query.GroupByFields.All(definition.GroupByFields.ContainsKey) == false)
             {
-                explain(indexName, () =>
+                if (explanations != null)
                 {
                     var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x) == false);
-                    return $"The following group by fields are missing: {string.Join(", ", missingFields)}";
-                });
+                    explanations?.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
+                }
 
                 return false;
             }
 
             if (query.GroupByFields.Length != definition.GroupByFields.Count)
             {
-                explain(indexName, () =>
+                if (explanations != null)
                 {
                     var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Contains(x.Key) == false);
-                    return $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}";
-                });
+                    explanations?.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
+                }
 
                 return false;
             }
-            
+
             return true;
         }
     }
