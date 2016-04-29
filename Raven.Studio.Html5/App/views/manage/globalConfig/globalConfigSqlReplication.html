@@ -26,12 +26,12 @@
             <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
         </div>
         <div class="panel-body" data-bind="with: connections">
-            <p data-bind="visible: !$root.activated()">
-                <i class="fa fa-info-circle text-info"></i> Global configuration for SQL Replication is not currently defined.
-            </p>
-            <p data-bind="visible: predefinedConnections().length === 0 && $root.activated()">
-                <i class="fa fa-warning text-warning"></i> You've got no SQL replication connections set up.
-            </p>
+            <div class="text-center" data-bind="visible: !$root.activated()">
+                <h3 class="text-info">Global configuration for SQL Replication is not currently defined.</h3>
+            </div>
+            <div class="text-center" data-bind="visible: predefinedConnections().length === 0 && $root.activated()">
+                <h3 class="text-info">You've got no SQL replication connections set up.</h3>
+            </div>
             <div data-bind="foreach: predefinedConnections">
                 <div class="col-sm-6">
                     <div class="sql-replication-connection-card panel panel-default">
@@ -64,8 +64,8 @@
                                 <div class="col-sm-7 col-sm-offset-4">
                                     <button type="button" class="btn btn-default" data-bind="enable: connectionTestState() === CONNECTION_STATE_STAND_BY, click: testConnection.bind($data, $root.activeDatabase)">Test connection</button>
                                     <br/>
-                                    <div class="progress progress-striped" data-bind="visible:connectionTestState() !== CONNECTION_STATE_STAND_BY">
-                                        <div class="progress-bar progress-bar-info" data-bind="css: {'active':connectionTestState() === CONNECTION_STATE_CONNECTING}" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float: left;">
+                                    <div class="progress progress-striped" >
+                                        <div class="progress-bar progress-bar-info" data-bind="css: {'active':true}" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float: left;">
                                             <span class="sr-only" data-bind="text:connectionTestState() === CONNECTION_STATE_CONNECTING?'Connecting':'Connected'"></span>
                                         </div>
                                     </div>

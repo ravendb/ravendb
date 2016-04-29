@@ -34,7 +34,6 @@ class trafficWatch extends viewModelBase {
     filterDuration = ko.observable<string>();
 
     enableTimingsTimer: number;
-    
 
     constructor() {
         super();

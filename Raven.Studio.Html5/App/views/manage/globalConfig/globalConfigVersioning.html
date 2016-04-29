@@ -27,9 +27,9 @@
                 <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
             </div>
             <div class="panel-body">
-                <p data-bind="visible: !activated()">
-                    <i class="fa fa-info-circle text-info"></i> Global configuration for Versioning is not currently defined.
-                </p>
+                <div class="text-center" data-bind="visible: !activated()">
+                    <h3 class="text-info">Global configuration for Versioning is not currently defined.</h3>
+                </div>
                 <div data-bind="foreach: versionings ">
                     <div class="panel versioning-card" data-bind="css: { 'panel-warning': disabled, 'panel-default': !disabled() }">
                         <div class="panel-heading">

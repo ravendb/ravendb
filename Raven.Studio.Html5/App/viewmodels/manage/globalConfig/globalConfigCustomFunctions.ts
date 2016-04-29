@@ -52,7 +52,6 @@ class globalConfigCustomFunctions extends viewModelBase {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
 
-        this.docEditor.resize();
         $("#customFunctionsEditor").on("DynamicHeightSet", () => this.docEditor.resize());
         this.fetchCustomFunctions();
     }

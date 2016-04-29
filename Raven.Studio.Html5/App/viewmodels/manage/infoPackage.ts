@@ -443,7 +443,8 @@ class infoPackage extends viewModelBase {
     }
     
 
-    static stacksCss = "* { box-sizing: border-box; }\n" +
+    static stacksCss = "svg { background-color: white; }\n" +
+        " * { box-sizing: border-box; }\n" +
         " svg text { font-style: normal; font-variant: normal; font-weight: normal; font-size: 12px; line-height: normal; font-family: Arial; }\n" +
         " * { box-sizing: border - box; }\n" +
         " .link { fill: none; stroke: rgb(204, 204, 204); stroke-width: 1.5px; }\n" +

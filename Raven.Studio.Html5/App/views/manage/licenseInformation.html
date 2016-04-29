@@ -1,8 +1,8 @@
-<div data-bind="visible: isForbidden" class="text-center">
+<div data-bind="visible: !settingsAccess.canReadOrWrite()" class="text-center">
     <h4 class="page-header text-info">You are not authorized to view this page!</h4>
 </div>
 
-<div class="panel panel-default form-horizontal" role="form" data-bind="visible: isForbidden() == false">
+<div class="panel panel-default form-horizontal" role="form" data-bind="visible: settingsAccess.canReadOrWrite">
     <div class="panel-heading">
         License information
         <div class="clearfix"></div>

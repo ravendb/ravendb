@@ -802,11 +802,6 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         overflow-y: auto;
         overflow-x: visible;
 
-        .logHeaders {
-            max-width: 80vw;
-            width: 80vw;
-        }
-
         .logRecords {
             max-height: 60vh;
             overflow-y: auto;
@@ -817,14 +812,13 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         }
 
         .log-details {
-            max-height: 30vh;
-            height: 30vh;
+            max-height: 25vh;
+            height: 25vh;
             overflow-y: auto;
             border-top-width: 2px;
             margin-top: 1%;
             padding-top: 1%;
             border: thin dashed black;
-            width: 60vw;
             margin-left: 1%;
         }
     }
@@ -1901,8 +1895,8 @@ footer {
 }
 
 :invalid {
-    box-shadow: none; /* FF */
     outline: 0; /* IE 10 */
+    box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.075);
 }
 
 .versioning-inner-margin {
@@ -1930,6 +1924,22 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
         color: #ac2925;
     }
 }*/
+
+.alert-danger .close .fa-times {
+    color: white;
+}
+
+.alert-info .close .fa-times {
+    color: white;
+}
+
+.panel-info > .panel-heading .close .fa-times {
+    color: white;
+}
+
+.panel-danger > .panel-heading .close .fa-times {
+    color: white;
+}
 
 .close {
     .fa-times {

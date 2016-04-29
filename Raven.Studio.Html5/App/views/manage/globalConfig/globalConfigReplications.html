@@ -25,9 +25,9 @@
             <div class="pull-right padd-top-10 text-warning" data-bind="visible: $root.developerLicense()">Enterprise feature</div>
         </div>
         <div class="panel-body">
-            <p data-bind="visible: !activated()">
-                <i class="fa fa-info-circle text-info"></i> Global configuration for Replication is not currently defined.
-            </p>
+            <div class="text-center" data-bind="visible: !activated()">
+                <h3 class="text-info">Global configuration for Replication is not currently defined.</h3>
+            </div>
             <div data-bind="if: activated()">
                 <div class="form-group">
                     <label class="col-sm-3 control-label">Client failover behaviour</label>
@@ -66,7 +66,7 @@
                                 <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
                                 <span class="input-group-addon">ms</span>
                             </div>
-                            
+
                         </div>
                     </div>
                 </div>

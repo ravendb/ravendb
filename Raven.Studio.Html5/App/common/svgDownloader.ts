@@ -10,6 +10,7 @@ class svgDownloader {
         var svgClone = <Element>svgElement.cloneNode(true);
 
         svgDownloader.fixAttributes(svgClone); 
+
         var svgContainer = document.createElement('div');
         svgContainer.appendChild(svgClone);
 
@@ -72,7 +73,7 @@ class svgDownloader {
         }
     }
 
-    static downloadSvg(svgElement: Element, filename: string, cssInliner:(svg: Element) => string) {
+    static downloadSvg(svgElement: Element, filename: string, cssInliner: (svg: Element) => string) {
         svgDownloader.cleanup();
         var textSvgData = svgDownloader.convertToData(svgElement, cssInliner);
         var encodedImage = window.btoa(textSvgData);
