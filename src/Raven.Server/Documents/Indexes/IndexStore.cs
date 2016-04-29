@@ -252,12 +252,12 @@ namespace Raven.Server.Documents.Indexes
 
         public void StartMapIndexes()
         {
-            StartIndexing(_indexes.Where(x => x.Type == IndexType.AutoMap || x.Type == IndexType.Map));
+            StartIndexing(_indexes.Where(x => x.Type.IsMap()));
         }
 
         public void StartMapReduceIndexes()
         {
-            StartIndexing(_indexes.Where(x => x.Type == IndexType.MapReduce));
+            StartIndexing(_indexes.Where(x => x.Type.IsMapReduce()));
         }
 
         private void StartIndexing(IEnumerable<Index> indexes)
@@ -295,12 +295,12 @@ namespace Raven.Server.Documents.Indexes
 
         public void StopMapIndexes()
         {
-            StopIndexing(_indexes.Where(x => x.Type == IndexType.AutoMap || x.Type == IndexType.Map));
+            StopIndexing(_indexes.Where(x => x.Type.IsMap()));
         }
 
         public void StopMapReduceIndexes()
         {
-            StopIndexing(_indexes.Where(x => x.Type == IndexType.MapReduce));
+            StopIndexing(_indexes.Where(x => x.Type.IsMapReduce()));
         }
 
         private void StopIndexing(IEnumerable<Index> indexes)

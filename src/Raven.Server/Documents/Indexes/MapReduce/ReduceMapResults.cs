@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
         private readonly AutoMapReduceIndexDefinition _indexDefinition;
+        private readonly IndexStorage _indexStorage;
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _indexingWorkContext;
 
@@ -35,9 +36,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, MetricsCountersManager metrics, MapReduceIndexingContext indexingWorkContext)
+        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext indexingWorkContext)
         {
             _indexDefinition = indexDefinition;
+            _indexStorage = indexStorage;
             _metrics = metrics;
             _indexingWorkContext = indexingWorkContext;
         }
@@ -61,6 +63,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var writer = writeOperation.Value;
 
             using (var reduceStats = stats.For("Reduce"))
+            {
                 foreach (var state in _indexingWorkContext.StateByReduceKeyHash)
                 {
                     var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)); // TODO arek - ToString()?
@@ -192,7 +195,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                     }
                 }
+            }
 
+            foreach (var lastEtag in _indexingWorkContext.LastEtags)
+            {
+                _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
+            }
+            
             return false;
         }
 

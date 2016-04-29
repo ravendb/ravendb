@@ -79,8 +79,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new ReduceMapResults(Definition, DocumentDatabase.Metrics, _indexingWorkContext)
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _indexingWorkContext),
+                new ReduceMapResults(Definition, _indexStorage, DocumentDatabase.Metrics, _indexingWorkContext)
             };
         }
         

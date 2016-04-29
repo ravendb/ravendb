@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes
                     statsTree.Add(Schema.CreatedTimestampSlice, new Slice((byte*)&binaryDate, sizeof(long)));
                 }
 
-                tx.InnerTransaction.CreateTree(Schema.EtagsMapTree);
+                tx.InnerTransaction.CreateTree(Schema.EtagsTree);
                 tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
 
                 _index.Definition.Persist(context, _environment.Options);
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes
                 stats.MapErrors = statsTree.Read(Schema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
                 stats.MapSuccesses = statsTree.Read(Schema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
 
-                if (_index.Type == IndexType.AutoMapReduce || _index.Type == IndexType.MapReduce)
+                if (_index.Type.IsMapReduce())
                 {
                     stats.ReduceAttempts = statsTree.Read(Schema.ReduceAttemptsSlice).Reader.ReadLittleEndianInt32();
                     stats.ReduceErrors = statsTree.Read(Schema.ReduceErrorsSlice).Reader.ReadLittleEndianInt32();
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Indexes
 
                 stats.LastIndexedEtags = new Dictionary<string, long>();
                 foreach (var collection in _index.Definition.Collections)
-                    stats.LastIndexedEtags[collection] = ReadLastMappedEtag(tx, collection);
+                    stats.LastIndexedEtags[collection] = ReadLastIndexedEtag(tx, collection);
             }
 
             return stats;
@@ -198,9 +198,9 @@ namespace Raven.Server.Documents.Indexes
             return ReadLastEtag(tx, Schema.EtagsTombstoneTree, collection);
         }
 
-        public long ReadLastMappedEtag(RavenTransaction tx, string collection)
+        public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, Schema.EtagsMapTree, collection);
+            return ReadLastEtag(tx, Schema.EtagsTree, collection);
         }
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
@@ -208,9 +208,9 @@ namespace Raven.Server.Documents.Indexes
             WriteLastEtag(tx, Schema.EtagsTombstoneTree, collection, etag);
         }
 
-        public void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
+        public void WriteLastIndexedEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsMapTree, collection, etag);
+            WriteLastEtag(tx, Schema.EtagsTree, collection, etag);
         }
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, string collection, long etag)
@@ -250,7 +250,7 @@ namespace Raven.Server.Documents.Indexes
                 statsTree.Increment(Schema.MapSuccessesSlice, stats.MapSuccesses);
                 statsTree.Increment(Schema.MapErrorsSlice, stats.MapErrors);
 
-                if (_index.Type == IndexType.AutoMapReduce || _index.Type == IndexType.MapReduce)
+                if (_index.Type.IsMapReduce())
                 {
                     statsTree.Increment(Schema.ReduceAttemptsSlice, stats.ReduceAttempts);
                     statsTree.Increment(Schema.ReduceSuccessesSlice, stats.ReduceSuccesses);
@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Indexes
         {
             public static readonly string StatsTree = "Stats";
 
-            public static readonly string EtagsMapTree = "Etags.Map";
+            public static readonly string EtagsTree = "Etags";
 
             public static readonly string EtagsTombstoneTree = "Etags.Tombstone";
 

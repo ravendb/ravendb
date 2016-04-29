@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 
@@ -14,13 +16,16 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         private readonly Index _index;
         private readonly IndexingConfiguration _configuration;
+        private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
 
-        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, 
+                            IndexingConfiguration configuration, MapReduceIndexingContext mapReduceContext)
         {
             _index = index;
             _configuration = configuration;
+            _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
         }
@@ -42,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Collection: {collection}.");
 
-                    var lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. LastMappedEtag: {lastMappedEtag}.");
@@ -93,16 +98,17 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (count == 0)
                         continue;
 
-                    if (lastEtag <= lastMappedEtag)
-                        continue;
-
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
-
-                    // TODO arek - for map reduce indexes we need to handle that differently since we don't have a distinction between last mapped and last reduce etag
-                    // we will relay on a single last indexed etag value
-                    _indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
+                    if (_index.Type.IsMap())
+                    {
+                        _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, collection, lastEtag);
+                    }
+                    else
+                    {
+                        _mapReduceContext.LastEtags[collection] = lastEtag;
+                    }
 
                     moreWorkFound = true;
                 }
