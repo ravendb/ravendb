@@ -23,7 +23,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         protected readonly ILog Log = LogManager.GetLogger(typeof(ReduceMapResults));
 
         private readonly List<BlittableJsonReaderObject> _aggregationBatch = new List<BlittableJsonReaderObject>();
-        private readonly LazyStringReader _lazyStringReader = new LazyStringReader();
         private readonly AutoMapReduceIndexDefinition _indexDefinition;
         private readonly MetricsCountersManager _metrics;
         private readonly MapReduceIndexingContext _indexingWorkContext;
@@ -234,7 +233,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 double doubleValue;
                                 long longValue;
 
-                                var numberType = BlittableNumber.Parse(value, _lazyStringReader, out doubleValue, out longValue);
+                                var numberType = BlittableNumber.Parse(value, out doubleValue, out longValue);
 
                                 PropertyResult aggregate;
                                 if (aggregatedResult.TryGetValue(propertyName, out aggregate) == false)
@@ -313,11 +312,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             public long LongSumValue = 0;
 
             public double DoubleSumValue = 0;
-        }
-
-        public void Dispose()
-        {
-            _lazyStringReader.Dispose();
         }
     }
 }

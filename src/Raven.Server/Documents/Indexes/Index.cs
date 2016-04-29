@@ -274,10 +274,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected virtual void DisposeInternal()
-        {
-        }
-
         public void Dispose()
         {
             lock (_locker)
@@ -303,17 +299,6 @@ namespace Raven.Server.Documents.Indexes
 
                 exceptionAggregator.Execute(() =>
                 {
-                    if (_indexWorkers != null)
-                    {
-                        foreach (var worker in _indexWorkers)
-                        {
-                            worker.Dispose();
-                        }
-                    }
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
                     _environment?.Dispose();
                     _environment = null;
                 });
@@ -329,9 +314,7 @@ namespace Raven.Server.Documents.Indexes
                     _contextPool?.Dispose();
                     _contextPool = null;
                 });
-
-                exceptionAggregator.Execute(DisposeInternal);
-
+                
                 exceptionAggregator.ThrowIfNeeded();
             }
         }

@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             double doubleValue;
             long longValue;
 
-            switch (BlittableNumber.Parse(value, cached.LazyStringReader, out doubleValue, out longValue))
+            switch (BlittableNumber.Parse(value, out doubleValue, out longValue))
             {
                 case NumberParseResult.Double:
                     yield return numericField.SetDoubleValue(doubleValue);
