@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -27,6 +28,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexReadOperation : IndexOperationBase
     {
+        private static readonly string[] IntersectSeparators = { Constants.IntersectSeparator };
+
         private const string _Range = "_Range";
 
         private static readonly ILog Log = LogManager.GetLogger(typeof(IndexReadOperation).FullName);
@@ -56,9 +59,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = query.PageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query);
+            var luceneQuery = GetLuceneQuery(query.Query, query);
             var returnedResults = 0;
-            var endOfResults = false;
+            bool endOfResults;
 
             do
             {
@@ -93,6 +96,82 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             } while (returnedResults < query.PageSize && endOfResults == false);
         }
 
+        public IEnumerable<Document> IntersectQuery(IndexQuery query, CancellationToken token, Reference<int> totalResults, IQueryResultRetriever retriever)
+        {
+            throw new NotImplementedException();
+
+            var subQueries = query.Query.Split(IntersectSeparators, StringSplitOptions.RemoveEmptyEntries);
+            if (subQueries.Length <= 1)
+                throw new InvalidOperationException("Invalid INTERSECT query, must have multiple intersect clauses.");
+
+            //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
+            //of the final result because we're doing an intersection query (but we might exclude some of them)
+            int pageSizeBestGuess = (query.Start + query.PageSize) * 2;
+            int intersectMatches, skippedResultsInCurrentLoop = 0;
+            int previousBaseQueryMatches = 0, currentBaseQueryMatches;
+
+            var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query);
+
+            //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
+            var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, query.SortedFields);
+            currentBaseQueryMatches = search.ScoreDocs.Length;
+            var intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
+
+            do
+            {
+                token.ThrowIfCancellationRequested();
+                if (skippedResultsInCurrentLoop > 0)
+                {
+                    // We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
+                    pageSizeBestGuess = pageSizeBestGuess * 2;
+
+                    search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, query.SortedFields);
+                    previousBaseQueryMatches = currentBaseQueryMatches;
+                    currentBaseQueryMatches = search.ScoreDocs.Length;
+                    intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
+                }
+
+                for (var i = 1; i < subQueries.Length; i++)
+                {
+                    var luceneSubQuery = GetLuceneQuery(subQueries[i], query);
+                    _searcher.Search(luceneSubQuery, null, intersectionCollector);
+                }
+
+                var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
+                intersectMatches = currentIntersectResults.Count;
+                skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
+            } while (intersectMatches < query.PageSize                      //stop if we've got enough results to satisfy the pageSize
+                    && currentBaseQueryMatches < search.TotalHits           //stop if increasing the page size wouldn't make any difference
+                    && previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
+
+            var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
+            //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
+            //because it's before the INTERSECTION has been applied, so only some of those results make it out.
+            //Trying to give an accurate answer is going to be too costly, so we aren't going to try.
+            totalResults.Value = search.TotalHits;
+            //query.SkippedResults.Value = skippedResultsInCurrentLoop; // TODO [ppekrol]
+
+            //Using the final set of results in the intersectionCollector
+            int returnedResults = 0;
+            for (int i = query.Start; i < intersectResults.Count && (i - query.Start) < pageSizeBestGuess; i++)
+            {
+                var document = retriever.Get(_searcher.Doc(intersectResults[i].LuceneId));
+                //IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]); // TODO [ppekrol]
+
+                //if (ShouldIncludeInResults(indexQueryResult) == false)
+                //{
+                //    //query.SkippedResults.Value++;
+                //    skippedResultsInCurrentLoop++;
+                //    continue;
+                //}
+
+                returnedResults++;
+                yield return document;
+                if (returnedResults == query.PageSize)
+                    yield break;
+            }
+        }
+
         private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, SortedField[] sortedFields)
         {
             if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
@@ -124,11 +203,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.Search(documentQuery, null, minPageSize);
         }
 
-        private Query GetLuceneQuery(IndexQuery query)
+        private Query GetLuceneQuery(string q, IndexQuery query)
         {
             Query documentQuery;
 
-            if (string.IsNullOrEmpty(query.Query))
+            if (string.IsNullOrEmpty(q))
             {
                 if (Log.IsDebugEnabled)
                     Log.Debug($"Issuing query on index {_indexName} for all documents");
@@ -138,9 +217,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             else
             {
                 if (Log.IsDebugEnabled)
-                    Log.Debug($"Issuing query on index {_indexName} for: {query.Query}");
+                    Log.Debug($"Issuing query on index {_indexName} for: {q}");
 
-                var toDispose = new List<Action>();
                 // RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
                 try
                 {
@@ -156,7 +234,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
 
-                    documentQuery = QueryBuilder.BuildQuery(query.Query, query, _analyzer);
+                    documentQuery = QueryBuilder.BuildQuery(q, query, _analyzer);
                 }
                 finally
                 {
@@ -169,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return documentQuery;
         }
 
-        private Sort GetSort(SortedField[] sortedFields)
+        private static Sort GetSort(SortedField[] sortedFields)
         {
             return new Sort(sortedFields.Select(x =>
             {

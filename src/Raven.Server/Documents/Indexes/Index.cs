@@ -750,8 +750,13 @@ namespace Raven.Server.Documents.Indexes
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
                             var totalResults = new Reference<int>();
+
+                            var documents = string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false 
+                                ? reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch)) 
+                                : reader.IntersectQuery(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch));
+
                             var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
-                            foreach (var document in reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch)))
+                            foreach (var document in documents)
                             {
                                 result.Results.Add(document);
                                 includeDocumentsCommand.Gather(document);
@@ -824,7 +829,7 @@ namespace Raven.Server.Documents.Indexes
                         result.Results.Add(document);
                         includeDocumentsCommand.Gather(document);
                     }
-                    
+
                     includeDocumentsCommand.Fill(result.Includes);
                 }
 
