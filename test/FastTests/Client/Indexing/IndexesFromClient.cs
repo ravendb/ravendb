@@ -155,9 +155,9 @@ namespace FastTests.Client.Indexing
                 Assert.True(stats.IsInMemory);
                 Assert.Equal(IndexType.AutoMap, stats.Type);
                 Assert.Equal(2, stats.EntriesCount);
-                Assert.Equal(2, stats.IndexingAttempts);
-                Assert.Equal(0, stats.IndexingErrors);
-                Assert.Equal(2, stats.IndexingSuccesses);
+                Assert.Equal(2, stats.MapAttempts);
+                Assert.Equal(0, stats.MapErrors);
+                Assert.Equal(2, stats.MapSuccesses);
                 Assert.Equal(1, stats.ForCollections.Length);
                 Assert.Equal(2 + 1, stats.LastIndexedEtags[stats.ForCollections[0]]); // +1 because of HiLo
                 Assert.True(stats.LastIndexingTime.HasValue);

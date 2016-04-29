@@ -56,9 +56,9 @@ namespace Raven.Server.Documents.Indexes
                     Started = StartTime,
                     Completed = StartTime.AddMilliseconds(_scope.Duration.TotalMilliseconds),
                     Details = _scope.ToIndexingPerformanceOperation("Indexing"),
-                    InputCount = _stats.IndexingAttempts,
-                    SuccessCount = _stats.IndexingSuccesses,
-                    FailedCount = _stats.IndexingErrors,
+                    InputCount = _stats.MapAttempts,
+                    SuccessCount = _stats.MapSuccesses,
+                    FailedCount = _stats.MapErrors,
                     OutputCount = _stats.IndexingOutputs,
                 };
             }
@@ -123,19 +123,24 @@ namespace Raven.Server.Documents.Indexes
             _stats.AddMapError(key, message);
         }
 
-        public void RecordIndexingAttempt()
+        public void AddReduceError(string message)
         {
-            _stats.IndexingAttempts++;
+            _stats.AddReduceError(message);
         }
 
-        public void RecordIndexingSuccess()
+        public void RecordMapAttempt()
         {
-            _stats.IndexingSuccesses++;
+            _stats.MapAttempts++;
         }
 
-        public void RecordIndexingError()
+        public void RecordMapSuccess()
         {
-            _stats.IndexingErrors++;
+            _stats.MapSuccesses++;
+        }
+
+        public void RecordMapError()
+        {
+            _stats.MapErrors++;
         }
 
         public void RecordIndexingOutput()
@@ -143,10 +148,27 @@ namespace Raven.Server.Documents.Indexes
             _stats.IndexingOutputs++;
         }
 
+        public void RecordReduceAttempts(int numberOfEntries)
+        {
+            _stats.ReduceAttempts += numberOfEntries;
+        }
+
+        public void RecordReduceSuccesses(int numberOfEntries)
+        {
+            _stats.ReduceSuccesses += numberOfEntries;
+        }
+
+        public void RecordReduceErrors(int numberOfEntries)
+        {
+            _stats.ReduceErrors += numberOfEntries;
+        }
+
         public IndexingPerformanceOperation ToIndexingPerformanceOperation(string name)
         {
-            var operation = new IndexingPerformanceOperation(_sw.Elapsed);
-            operation.Name = name;
+            var operation = new IndexingPerformanceOperation(_sw.Elapsed)
+            {
+                Name = name
+            };
 
             if (_scopes != null)
             {

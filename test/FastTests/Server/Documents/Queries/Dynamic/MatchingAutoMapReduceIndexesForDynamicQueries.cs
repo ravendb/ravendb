@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
@@ -457,9 +458,68 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             Assert.Equal(definition.Name, result.IndexName);
         }
 
+        [Fact]
+        public void Failure_if_matching_index_has_lot_of_errors()
+        {
+            var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+             {
+                new IndexField
+                {
+                    Name = "Count",
+                    Storage = FieldStorage.Yes,
+                    MapReduceOperation = FieldMapReduceOperation.Count,
+                },
+            },
+             new[]
+             {
+                new IndexField
+                {
+                    Name = "Location",
+                    Storage = FieldStorage.Yes,
+                }
+             });
+
+            add_index(definition);
+
+            get_index(definition.Name)._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
+            {
+                MapAttempts = 1000,
+                MapSuccesses = 1000,
+                ReduceAttempts = 1000,
+                ReduceErrors = 900
+            });
+
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "",
+                DynamicMapReduceFields = new[]
+                {
+                    new DynamicMapReduceField
+                    {
+                        Name = "Count",
+                        OperationType = FieldMapReduceOperation.Count
+                    },
+                    new DynamicMapReduceField
+                    {
+                        Name = "Location",
+                        IsGroupBy = true
+                    }
+                }
+            });
+
+            var result = _sut.Match(dynamicQuery);
+
+            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
+        }
+
         private void add_index(IndexDefinitionBase definition)
         {
             _documentDatabase.IndexStore.CreateIndex(definition);
+        }
+
+        private Index get_index(string name)
+        {
+            return _documentDatabase.IndexStore.GetIndex(name);
         }
     }
 }

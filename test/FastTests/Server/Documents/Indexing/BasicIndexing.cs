@@ -305,9 +305,9 @@ namespace FastTests.Server.Documents.Indexing
                         var scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
-                        Assert.Equal(2, batchStats.IndexingAttempts);
-                        Assert.Equal(2, batchStats.IndexingSuccesses);
-                        Assert.Equal(0, batchStats.IndexingErrors);
+                        Assert.Equal(2, batchStats.MapAttempts);
+                        Assert.Equal(2, batchStats.MapSuccesses);
+                        Assert.Equal(0, batchStats.MapErrors);
 
                         var now = SystemTime.UtcNow;
                         index._indexStorage.UpdateStats(now, batchStats);
@@ -320,9 +320,9 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
-                        Assert.Equal(2, stats.IndexingAttempts);
-                        Assert.Equal(0, stats.IndexingErrors);
-                        Assert.Equal(2, stats.IndexingSuccesses);
+                        Assert.Equal(2, stats.MapAttempts);
+                        Assert.Equal(0, stats.MapErrors);
+                        Assert.Equal(2, stats.MapSuccesses);
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(2, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
@@ -351,9 +351,9 @@ namespace FastTests.Server.Documents.Indexing
                         scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
                         Assert.Equal(3, index.GetLastMappedEtagsForDebug().Values.Min());
-                        Assert.Equal(1, batchStats.IndexingAttempts);
-                        Assert.Equal(1, batchStats.IndexingSuccesses);
-                        Assert.Equal(0, batchStats.IndexingErrors);
+                        Assert.Equal(1, batchStats.MapAttempts);
+                        Assert.Equal(1, batchStats.MapSuccesses);
+                        Assert.Equal(0, batchStats.MapErrors);
 
                         now = SystemTime.UtcNow;
                         index._indexStorage.UpdateStats(now, batchStats);
@@ -366,9 +366,9 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(3, stats.EntriesCount);
-                        Assert.Equal(3, stats.IndexingAttempts);
-                        Assert.Equal(0, stats.IndexingErrors);
-                        Assert.Equal(3, stats.IndexingSuccesses);
+                        Assert.Equal(3, stats.MapAttempts);
+                        Assert.Equal(0, stats.MapErrors);
+                        Assert.Equal(3, stats.MapSuccesses);
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);
@@ -387,9 +387,9 @@ namespace FastTests.Server.Documents.Indexing
                         scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
                         Assert.Equal(4, index.GetLastProcessedDocumentTombstonesPerCollection().Values.Min());
-                        Assert.Equal(0, batchStats.IndexingAttempts);
-                        Assert.Equal(0, batchStats.IndexingSuccesses);
-                        Assert.Equal(0, batchStats.IndexingErrors);
+                        Assert.Equal(0, batchStats.MapAttempts);
+                        Assert.Equal(0, batchStats.MapSuccesses);
+                        Assert.Equal(0, batchStats.MapErrors);
 
                         now = SystemTime.UtcNow;
                         index._indexStorage.UpdateStats(now, batchStats);
@@ -402,9 +402,9 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(stats.IsInMemory);
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
-                        Assert.Equal(3, stats.IndexingAttempts);
-                        Assert.Equal(0, stats.IndexingErrors);
-                        Assert.Equal(3, stats.IndexingSuccesses);
+                        Assert.Equal(3, stats.MapAttempts);
+                        Assert.Equal(0, stats.MapErrors);
+                        Assert.Equal(3, stats.MapSuccesses);
                         Assert.Equal(1, stats.ForCollections.Length);
                         Assert.Equal(3, stats.LastIndexedEtags[stats.ForCollections[0]]);
                         Assert.Equal(now, stats.LastIndexingTime);

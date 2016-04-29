@@ -174,9 +174,16 @@ namespace Raven.Server.Documents.Indexes
             if (lastIndexingTime != null)
             {
                 stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
-                stats.IndexingAttempts = statsTree.Read(Schema.IndexingAttemptsSlice).Reader.ReadLittleEndianInt32();
-                stats.IndexingErrors = statsTree.Read(Schema.IndexingErrorsSlice).Reader.ReadLittleEndianInt32();
-                stats.IndexingSuccesses = statsTree.Read(Schema.IndexingAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapAttempts = statsTree.Read(Schema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapErrors = statsTree.Read(Schema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapSuccesses = statsTree.Read(Schema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+
+                if (_index.Type == IndexType.AutoMapReduce || _index.Type == IndexType.MapReduce)
+                {
+                    stats.ReduceAttempts = statsTree.Read(Schema.ReduceAttemptsSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceErrors = statsTree.Read(Schema.ReduceErrorsSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceSuccesses = statsTree.Read(Schema.ReduceSuccessesSlice).Reader.ReadLittleEndianInt32();
+                }
 
                 stats.LastIndexedEtags = new Dictionary<string, long>();
                 foreach (var collection in _index.Definition.Collections)
@@ -239,9 +246,16 @@ namespace Raven.Server.Documents.Indexes
 
                 var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
 
-                statsTree.Increment(Schema.IndexingAttemptsSlice, stats.IndexingAttempts);
-                statsTree.Increment(Schema.IndexingSuccessesSlice, stats.IndexingSuccesses);
-                statsTree.Increment(Schema.IndexingErrorsSlice, stats.IndexingErrors);
+                statsTree.Increment(Schema.MapAttemptsSlice, stats.MapAttempts);
+                statsTree.Increment(Schema.MapSuccessesSlice, stats.MapSuccesses);
+                statsTree.Increment(Schema.MapErrorsSlice, stats.MapErrors);
+
+                if (_index.Type == IndexType.AutoMapReduce || _index.Type == IndexType.MapReduce)
+                {
+                    statsTree.Increment(Schema.ReduceAttemptsSlice, stats.ReduceAttempts);
+                    statsTree.Increment(Schema.ReduceSuccessesSlice, stats.ReduceSuccesses);
+                    statsTree.Increment(Schema.ReduceErrorsSlice, stats.ReduceErrors);
+                }
 
                 var binaryDate = indexingTime.ToBinary();
                 statsTree.Add(Schema.LastIndexingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
@@ -310,11 +324,17 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice CreatedTimestampSlice = "CreatedTimestamp";
 
-            public static readonly Slice IndexingAttemptsSlice = "IndexingAttempts";
+            public static readonly Slice MapAttemptsSlice = "MapAttempts";
 
-            public static readonly Slice IndexingSuccessesSlice = "IndexingSuccesses";
+            public static readonly Slice MapSuccessesSlice = "MapSuccesses";
 
-            public static readonly Slice IndexingErrorsSlice = "IndexingErrors";
+            public static readonly Slice MapErrorsSlice = "MapErrors";
+
+            public static readonly Slice ReduceAttemptsSlice = "ReduceAttempts";
+
+            public static readonly Slice ReduceSuccessesSlice = "ReduceSuccesses";
+
+            public static readonly Slice ReduceErrorsSlice = "ReduceErrors";
 
             public static readonly Slice LastIndexingTimeSlice = "LastIndexingTime";
 

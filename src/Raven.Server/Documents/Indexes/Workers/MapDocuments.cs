@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var collection in _index.Collections)
             {
-                using (var collectionScope = stats.For("Collection_" + collection))
+                using (var collectionStats = stats.For("Collection_" + collection))
                 {
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Collection: {collection}.");
@@ -65,24 +65,24 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (Log.IsDebugEnabled)
                                 Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {document.Key}.");
 
-                            collectionScope.RecordIndexingAttempt();
+                            collectionStats.RecordMapAttempt();
 
                             count++;
                             lastEtag = document.Etag;
 
                             try
                             {
-                                _index.HandleMap(document, indexWriter, indexContext, collectionScope);
+                                _index.HandleMap(document, indexWriter, indexContext, collectionStats);
 
-                                stats.RecordIndexingSuccess();
+                                collectionStats.RecordMapSuccess();
                             }
                             catch (Exception e)
                             {
-                                stats.RecordIndexingError();
+                                collectionStats.RecordMapError();
                                 if (Log.IsWarnEnabled)
                                     Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
 
-                                stats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
+                                collectionStats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
                             }
 
                             if (sw.Elapsed > timeoutProcessing)
@@ -99,6 +99,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processed {count} documents in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
+
+                    // TODO arek - for map reduce indexes we need to handle that differently since we don't have a distinction between last mapped and last reduce etag
+                    // we will relay on a single last indexed etag value
                     _indexStorage.WriteLastMappedEtag(indexContext.Transaction, collection, lastEtag);
 
                     moreWorkFound = true;

@@ -897,9 +897,6 @@ namespace Raven.Server.Documents.Indexes
                 indexEtagBytes[index++] = lastMappedEtag;
             }
 
-            // TODO arek - reduce etags
-            // TODO arek - index touches?
-
             unchecked
             {
                 fixed (long* buffer = indexEtagBytes)
