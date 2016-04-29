@@ -489,7 +489,7 @@ namespace Rachis.Storage
             {
                 var logs = tx.ReadTree(LogsTreeName);
 
-                using (var it = logs.Iterate())
+                using (var it = logs.Iterate(false))
                 {
                     var lastEntryIndex = it.Seek(Slice.AfterAllKeys) == false ?
                         0 :

@@ -123,11 +123,12 @@ namespace Voron.Trees
                         int high = numberOfEntries - 1;
                         int position = 0;
 
+                        ushort* keys = KeysOffsets;
                         while (low <= high)
                         {
                             position = (low + high) >> 1;
 
-                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
+                            var node = (NodeHeader*)(_base + keys[position]);
 
                             SetNodeKey(node, ref pageKey);
 
@@ -171,6 +172,22 @@ namespace Voron.Trees
             }
         }
 
+        public List<long> GetAllOverflowPages()
+        {
+            var results = new List<long>(NumberOfEntries);
+            for ( int i = 0; i < NumberOfEntries; i++ )
+            {
+                var nodeOffset = KeysOffsets[i];
+
+                // We will only select the nodes that have a valid Page pointer.
+                var nodeHeader = (NodeHeader*)(_base + nodeOffset);
+                if ( nodeHeader->Flags == NodeFlags.PageRef)
+                    results.Add(nodeHeader->PageNumber);
+            }
+
+            return results;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private NodeHeader* SearchPrefixed(MemorySlice key)
         {
@@ -204,11 +221,12 @@ namespace Voron.Trees
                         int high = numberOfEntries - 1;
                         int position = 0;
 
+                        ushort* keys = KeysOffsets;
                         while (low <= high)
                         {
                             position = (low + high) >> 1;
 
-                            var node = (NodeHeader*)(_base + KeysOffsets[position]);
+                            var node = (NodeHeader*)(_base + keys[position]);
 
                             SetNodeKey(node, ref pageKey);
 

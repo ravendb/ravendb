@@ -12,6 +12,9 @@ namespace Voron.Impl.Paging
 {
     public unsafe abstract class AbstractPager : IVirtualPager
     {
+        // Because this is known by the time the JIT would compile, it can be treated as a constant and act accordingly.
+        public static readonly bool CanPrefetch = IsWindows8OrNewer();
+
         protected int MinIncreaseSize { get { return 16 * PageSize; } } // 64 KB
         protected int MaxIncreaseSize { get { return 262144 * PageSize; } } // 1 GB
 
@@ -101,6 +104,11 @@ namespace Voron.Impl.Paging
         }
 
         public virtual void MaybePrefetchMemory(List<Page> sortedPages)
+        {
+            // do nothing
+        }
+
+        public virtual void MaybePrefetchMemory(List<long> pages)
         {
             // do nothing
         }
@@ -277,6 +285,14 @@ namespace Voron.Impl.Paging
                 return false;
 
             return true;
+        }
+
+
+        private static bool IsWindows8OrNewer()
+        {
+            var os = Environment.OSVersion;
+            return os.Platform == PlatformID.Win32NT &&
+                   (os.Version.Major > 6 || (os.Version.Major == 6 && os.Version.Minor >= 2));
         }
     }
 }
