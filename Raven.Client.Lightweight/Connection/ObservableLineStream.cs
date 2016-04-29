@@ -23,6 +23,7 @@ namespace Raven.Client.Connection
         private int posInBuffer;
         private readonly Action onDispose;
         private readonly object taskFaultedSyncObj = new object();
+        private bool onDisposeCalled;
 
         private readonly ConcurrentSet<IObserver<string>> subscribers = new ConcurrentSet<IObserver<string>>();
 
@@ -125,7 +126,11 @@ namespace Raven.Client.Connection
                 //since the stream has faulted, we will either
                 //reconnect or fail the Changes API with exception
                 //so in any case we need to cleanup things
-                onDispose();
+                if (onDisposeCalled == false)
+                {
+                    onDispose();
+                    onDisposeCalled = true;
+                }
 
                 var aggregateException = task.Exception;
                 var exception = aggregateException.ExtractSingleInnerException();
@@ -175,7 +180,17 @@ namespace Raven.Client.Connection
                 subscriber.OnCompleted();
             }
 
-            onDispose();
+            if (onDisposeCalled)
+                return;
+
+            lock (taskFaultedSyncObj)
+            {
+                if (onDisposeCalled)
+                    return;
+
+                onDispose();
+                onDisposeCalled = true;
+            }
         }
     }
 }
