@@ -274,10 +274,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected virtual void DisposeInternal()
-        {
-        }
-
         public void Dispose()
         {
             lock (_locker)
@@ -303,17 +299,6 @@ namespace Raven.Server.Documents.Indexes
 
                 exceptionAggregator.Execute(() =>
                 {
-                    if (_indexWorkers != null)
-                    {
-                        foreach (var worker in _indexWorkers)
-                        {
-                            worker.Dispose();
-                        }
-                    }
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
                     _environment?.Dispose();
                     _environment = null;
                 });
@@ -329,9 +314,7 @@ namespace Raven.Server.Documents.Indexes
                     _contextPool?.Dispose();
                     _contextPool = null;
                 });
-
-                exceptionAggregator.Execute(DisposeInternal);
-
+                
                 exceptionAggregator.ThrowIfNeeded();
             }
         }
@@ -353,7 +336,7 @@ namespace Raven.Server.Documents.Indexes
             foreach (var collection in Collections)
             {
                 var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
-                var lastProcessedDocEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+                var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                 if (cutoff == null)
                 {
@@ -386,7 +369,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (var tx = context.OpenReadTransaction())
                 {
-                    return _indexStorage.ReadLastMappedEtag(tx, collection);
+                    return _indexStorage.ReadLastIndexedEtag(tx, collection);
                 }
             }
         }
@@ -404,7 +387,7 @@ namespace Raven.Server.Documents.Indexes
                     var etags = new Dictionary<string, long>();
                     foreach (var collection in Collections)
                     {
-                        etags[collection] = _indexStorage.ReadLastMappedEtag(tx, collection);
+                        etags[collection] = _indexStorage.ReadLastIndexedEtag(tx, collection);
                     }
 
                     return etags;
@@ -744,7 +727,7 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(result, isStale, documentsContext, indexContext);
 
-                        if (Type == IndexType.MapReduce || Type == IndexType.AutoMapReduce)
+                        if (Type.IsMapReduce())
                             documentsContext.Reset(); // map reduce don't need to access documents storage
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
@@ -891,14 +874,11 @@ namespace Raven.Server.Documents.Indexes
             foreach (var collection in Collections)
             {
                 var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
-                var lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+                var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                 indexEtagBytes[index++] = lastDocEtag;
                 indexEtagBytes[index++] = lastMappedEtag;
             }
-
-            // TODO arek - reduce etags
-            // TODO arek - index touches?
 
             unchecked
             {

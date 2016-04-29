@@ -25,8 +25,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private readonly TableSchema _mapResultsSchema = new TableSchema();
 
-        private readonly LazyStringReader _lazyStringReader = new LazyStringReader();
-
         private readonly MapReduceIndexingContext _indexingWorkContext = new MapReduceIndexingContext();
 
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
@@ -81,8 +79,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return new IIndexingWork[]
             {
                 new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new ReduceMapResults(Definition, DocumentDatabase.Metrics, _indexingWorkContext)
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _indexingWorkContext),
+                new ReduceMapResults(Definition, _indexStorage, DocumentDatabase.Metrics, _indexingWorkContext)
             };
         }
         
@@ -150,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             double doubleValue;
                             long longValue;
 
-                            switch (BlittableNumber.Parse(item, _lazyStringReader, out doubleValue, out longValue))
+                            switch (BlittableNumber.Parse(item, out doubleValue, out longValue))
                             {
                                 case NumberParseResult.Double:
                                     if (totalDouble == null)
@@ -310,11 +308,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 var ptr = tvr.Read(0, out _);
                 LastMapResultEtag = IPAddress.NetworkToHostOrder(*(long*)ptr);
             }
-        }
-
-        protected override void DisposeInternal()
-        {
-            _lazyStringReader.Dispose();
         }
     }
 }

@@ -27,17 +27,32 @@ namespace Raven.Client.Data.Indexes
         /// <summary>
         /// Indicates how many times database tried to index documents (map) using this index.
         /// </summary>
-        public int IndexingAttempts { get; set; }
+        public int MapAttempts { get; set; }
 
         /// <summary>
         /// Indicates how many indexing attempts succeeded.
         /// </summary>
-        public int IndexingSuccesses { get; set; }
+        public int MapSuccesses { get; set; }
 
         /// <summary>
         /// Indicates how many indexing attempts failed.
         /// </summary>
-        public int IndexingErrors { get; set; }
+        public int MapErrors { get; set; }
+
+        /// <summary>
+        /// Indicates how many times database tried to index documents (reduce) using this index.
+        /// </summary>
+        public int? ReduceAttempts { get; set; }
+
+        /// <summary>
+        /// Indicates how many reducing attempts succeeded.
+        /// </summary>
+        public int? ReduceSuccesses { get; set; }
+
+        /// <summary>
+        /// Indicates how many reducing attempts failed.
+        /// </summary>
+        public int? ReduceErrors { get; set; }
 
         /// <summary>
         /// This value represents etag of last document indexed (using map) by this index.
@@ -102,7 +117,13 @@ namespace Raven.Client.Data.Indexes
         /// <summary>
         /// Determines if index is invalid. If more thant 15% of attemps (map or reduce) are errors then value will be <c>true</c>.
         /// </summary>
-        public bool IsInvalidIndex => IndexFailureInformation.CheckIndexInvalid(IndexingAttempts, IndexingErrors);
+        public bool IsInvalidIndex
+        {
+            get
+            {
+                return IndexFailureInformation.CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors);
+            }
+        }
     }
 
     public enum IndexingPriority

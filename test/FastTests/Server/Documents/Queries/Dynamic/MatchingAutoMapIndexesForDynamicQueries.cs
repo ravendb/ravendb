@@ -356,8 +356,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             index.SetPriority(IndexingPriority.Normal);
             index._indexStorage.UpdateStats(DateTime.UtcNow, new IndexingRunStats()
             {
-                IndexingAttempts = 1000,
-                IndexingErrors = 900
+                MapAttempts = 1000,
+                MapErrors = 900
             });
 
             result = _sut.Match(dynamicQuery);

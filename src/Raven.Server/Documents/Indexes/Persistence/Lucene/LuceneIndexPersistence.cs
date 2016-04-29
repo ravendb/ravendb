@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (mapReduceDef != null)
                 fields = fields.Union(mapReduceDef.GroupByFields.Values);
 
-            _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: type == IndexType.AutoMapReduce || type == IndexType.MapReduce);
+            _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: type.IsMapReduce());
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
         }
 

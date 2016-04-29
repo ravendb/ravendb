@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -44,7 +45,7 @@ namespace FastTests.Server.Documents.Indexing
                     var count = result["Count"] as LazyDoubleValue;
 
                     Assert.NotNull(count);
-                    Assert.Equal("2.0", count.Inner.ToString());
+                    Assert.Equal(2.0, count);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -66,15 +67,27 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
-        public async Task MultipleReduceKeys()
+        [Theory]
+        [InlineData(100, new[] { "Poland", "Israel", "USA" })]
+        //[InlineData(50000, new[] { "Canadaaaaaaaaaaaaaaaaaaaaaaaa", "Franceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" })] - TODO arek - bug
+        public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {
             using (var db = CreateDocumentDatabase())
             using (var mri = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
-                CreateUsers(db, 100, "Poland", "Israel", "USA");
-                
-                mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                CreateUsers(db, numberOfUsers, locations);
+
+                var batchStats = new IndexingRunStats();
+                var scope = new IndexingStatsScope(batchStats);
+
+                mri.DoIndexingWork(scope, CancellationToken.None);
+
+                Assert.Equal(numberOfUsers, batchStats.MapAttempts);
+                Assert.Equal(numberOfUsers, batchStats.MapSuccesses);
+                Assert.Equal(0, batchStats.MapErrors);
+                Assert.Equal(numberOfUsers, batchStats.ReduceAttempts);
+                Assert.Equal(numberOfUsers, batchStats.ReduceSuccesses);
+                Assert.Equal(0, batchStats.ReduceErrors);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
@@ -85,16 +98,15 @@ namespace FastTests.Server.Documents.Indexing
 
                     var results = queryResult.Results;
 
-                    Assert.Equal(3, results.Count);
+                    Assert.Equal(locations.Length, results.Count);
 
-                    Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal("34.0", ((LazyDoubleValue) results[0].Data["Count"]).Inner.ToString());
+                    for (int i = 0; i < locations.Length; i++)
+                    {
+                        Assert.Equal(locations[i], results[i].Data["Location"].ToString());
 
-                    Assert.Equal("Israel", results[1].Data["Location"].ToString());
-                    Assert.Equal("33.0", ((LazyDoubleValue)results[1].Data["Count"]).Inner.ToString());
-
-                    Assert.Equal("USA", results[2].Data["Location"].ToString());
-                    Assert.Equal("33.0", ((LazyDoubleValue)results[2].Data["Count"]).Inner.ToString());
+                        double expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
+                        Assert.Equal(expected, ((LazyDoubleValue)results[i].Data["Count"]));
+                    }
                 }
             }
         }
@@ -118,7 +130,7 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal("10.0", ((LazyDoubleValue)results[0].Data["Count"]).Inner.ToString());
+                    Assert.Equal(10.0, ((LazyDoubleValue)results[0].Data["Count"]));
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -142,7 +154,7 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal("9.0", ((LazyDoubleValue)results[0].Data["Count"]).Inner.ToString());
+                    Assert.Equal(9.0, ((LazyDoubleValue)results[0].Data["Count"]));
                 }
             }
         }
@@ -321,12 +333,12 @@ namespace FastTests.Server.Documents.Indexing
                     var count = result["Count"] as LazyDoubleValue;
 
                     Assert.NotNull(count);
-                    Assert.Equal("2.0", count.Inner.ToString());
+                    Assert.Equal(2.0, count);
 
                     var totalCount = result["TotalCount"] as LazyDoubleValue;
 
                     Assert.NotNull(totalCount);
-                    Assert.Equal("2.0", totalCount.Inner.ToString());
+                    Assert.Equal(2.0, totalCount);
 
                     var age = result["Age"] as LazyDoubleValue;
 
@@ -411,6 +423,27 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.NotNull(quantity);
                     Assert.Equal(9.0, quantity);
                 }
+            }
+        }
+
+        [Fact]
+        public void CanStoreAndReadReduceStats()
+        {
+            using (var db = CreateDocumentDatabase())
+            using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
+            {
+                index._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
+                {
+                    ReduceAttempts = 1000,
+                    ReduceSuccesses = 900,
+                    ReduceErrors = 100,
+                });
+
+                var stats = index.GetStats();
+
+                Assert.Equal(1000, stats.ReduceAttempts);
+                Assert.Equal(900, stats.ReduceSuccesses);
+                Assert.Equal(100, stats.ReduceErrors);
             }
         }
 

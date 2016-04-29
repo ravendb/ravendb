@@ -642,16 +642,16 @@ namespace Raven.Server.Json
             writer.WriteInteger(stats.Id);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.IndexingAttempts)));
-            writer.WriteInteger(stats.IndexingAttempts);
+            writer.WritePropertyName(context.GetLazyString(nameof(stats.MapAttempts)));
+            writer.WriteInteger(stats.MapAttempts);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.IndexingErrors)));
-            writer.WriteInteger(stats.IndexingErrors);
+            writer.WritePropertyName(context.GetLazyString(nameof(stats.MapErrors)));
+            writer.WriteInteger(stats.MapErrors);
             writer.WriteComma();
 
-            writer.WritePropertyName(context.GetLazyString(nameof(stats.IndexingSuccesses)));
-            writer.WriteInteger(stats.IndexingSuccesses);
+            writer.WritePropertyName(context.GetLazyString(nameof(stats.MapSuccesses)));
+            writer.WriteInteger(stats.MapSuccesses);
             writer.WriteComma();
 
             writer.WritePropertyName(context.GetLazyString(nameof(stats.ErrorsCount)));

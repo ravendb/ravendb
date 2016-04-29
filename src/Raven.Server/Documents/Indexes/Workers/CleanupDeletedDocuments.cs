@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing cleanup for '{_index.Name} ({_index.IndexId})'. Collection: {collection}.");
 
-                    var lastMappedEtag = _indexStorage.ReadLastMappedEtag(indexContext.Transaction, collection);
+                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                     var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (Log.IsDebugEnabled)
@@ -85,9 +85,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
-                    if (lastEtag <= lastTombstoneEtag)
-                        continue;
-
                     _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
 
                     moreWorkFound = true;
@@ -95,10 +92,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

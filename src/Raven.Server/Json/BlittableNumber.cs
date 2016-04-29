@@ -5,7 +5,7 @@ namespace Raven.Server.Json
 {
     public static class BlittableNumber
     {
-        public static NumberParseResult Parse(object value, LazyStringReader reader, out double doubleResult, out long longResult)
+        public static NumberParseResult Parse(object value, out double doubleResult, out long longResult)
         {
             if (value is long)
             {

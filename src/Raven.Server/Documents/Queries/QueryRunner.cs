@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Queries
         {
             var index = GetIndex(indexName);
 
-            if (index.Type == IndexType.AutoMapReduce || index.Type == IndexType.MapReduce)
+            if (index.Type.IsMapReduce())
                 throw new InvalidOperationException("Cannot execute Delete operation on Map-Reduce indexes.");
 
             query = ConvertToOperationQuery(query, options);

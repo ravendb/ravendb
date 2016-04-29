@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
-    public interface IIndexingWork : IDisposable
+    public interface IIndexingWork
     {
         string Name { get; }
 

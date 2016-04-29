@@ -14,23 +14,39 @@ namespace Raven.Abstractions.Data
         /// Indicates whether this is invalid index.
         /// </summary>
         /// <value><c>true</c> if this is invalid index; otherwise, <c>false</c>.</value>
-        public bool IsInvalidIndex
-        {
-            get
-            {
-                return CheckIndexInvalid(Attempts, Errors);
-            }
-        }
+        public bool IsInvalidIndex => CheckIndexInvalid(Attempts, Errors, ReduceAttempts, ReduceErrors);
 
-        public static bool CheckIndexInvalid(int attempts, int errors)
+        public static bool CheckIndexInvalid(int attempts, int errors, int? reduceAttempts, int? reduceErrors)
         {
-            if (attempts == 0 || errors == 0)
+            if ((attempts == 0 || errors == 0) && (reduceAttempts == null || reduceAttempts == 0))
                 return false;
+            if (reduceAttempts != null)
+            {
+                // we don't have enough attempts to make a useful determination
+                if (attempts + reduceAttempts < 100)
+                    return false;
+                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (reduceAttempts ?? 0)) > 0.15;
+            }
             // we don't have enough attempts to make a useful determination
             if (attempts < 100)
                 return false;
             return (errors / (float)attempts) > 0.15;
         }
+
+        /// <summary>
+        /// Number of reduce attempts.
+        /// </summary>
+        public int? ReduceAttempts { get; set; }
+
+        /// <summary>
+        /// Number of reduce errors.
+        /// </summary>
+        public int? ReduceErrors { get; set; }
+
+        /// <summary>
+        /// Number of reduce successes.
+        /// </summary>
+        public int? ReduceSuccesses { get; set; }
 
         /// <summary>
         /// Index id (internal).
