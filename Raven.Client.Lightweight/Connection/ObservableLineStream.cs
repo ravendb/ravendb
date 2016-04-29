@@ -24,6 +24,7 @@ namespace Raven.Client.Connection
         private readonly Action onDispose;
         private readonly object taskFaultedSyncObj = new object();
         private readonly ConcurrentSet<IObserver<string>> subscribers = new ConcurrentSet<IObserver<string>>();
+        private bool onDisposeCalled;
 
         public ObservableLineStream(Stream stream, Action onDispose)
         {
@@ -106,10 +107,11 @@ namespace Raven.Client.Connection
 
         private void DisposeAndSingalConnectionError(Task task)
         {
+            if (Monitor.TryEnter(taskFaultedSyncObj) == false)
+                return;
+
             try
             {
-                if (!Monitor.TryEnter(taskFaultedSyncObj))
-                    return;
                 try
                 {
                     stream.Dispose();
@@ -118,14 +120,19 @@ namespace Raven.Client.Connection
                 {
                     // explicitly ignoring this
                 }
-                
+
                 //make sure the existing connection is returned
                 //to http client cache
                 //since the stream has faulted, we will either
                 //reconnect or fail the Changes API with exception
                 //so in any case we need to cleanup things
-                onDispose();
 
+                if (onDisposeCalled == false)
+                {
+                    onDispose();
+                    onDisposeCalled = true;
+                }
+                
                 var aggregateException = task.Exception;
                 var exception = aggregateException.ExtractSingleInnerException();
                 if (exception is ObjectDisposedException)
@@ -174,7 +181,17 @@ namespace Raven.Client.Connection
                 subscriber.OnCompleted();
             }
 
-            onDispose();
+            if (onDisposeCalled)
+                return;
+
+            lock (taskFaultedSyncObj)
+            {
+                if (onDisposeCalled)
+                    return;
+
+                onDispose();
+                onDisposeCalled = true;
+            }
         }
     }
 }
