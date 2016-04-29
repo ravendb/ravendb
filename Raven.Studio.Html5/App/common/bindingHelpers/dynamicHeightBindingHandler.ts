@@ -55,7 +55,7 @@ class dynamicHeightBindingHandler {
         }
     }
 
-    static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number, container: string) {
+    static stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number, container?: string) {
         var targetElement = $(targetSelector);
         if (targetSelector.length === 0) {
             throw new Error("Couldn't configure dynamic height because the target element isn't on the page. Target element: " + targetSelector);
