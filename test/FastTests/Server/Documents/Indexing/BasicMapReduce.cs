@@ -69,29 +69,31 @@ namespace FastTests.Server.Documents.Indexing
 
         [Theory]
         [InlineData(100, new[] { "Poland", "Israel", "USA" })]
-        //[InlineData(50000, new[] { "Canadaaaaaaaaaaaaaaaaaaaaaaaa", "Franceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" })] - TODO arek - bug
+        [InlineData(50000, new[] { "Canadaaaaaaaaaaaaaaaaaaaaaaaa", "Franceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" })] // reduce key tree with depth 3
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {
             using (var db = CreateDocumentDatabase())
-            using (var mri = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
+            using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
+                Assert.True(db.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap >= numberOfUsers); // ensure all docs will be indexed in a singe run
+
                 CreateUsers(db, numberOfUsers, locations);
 
                 var batchStats = new IndexingRunStats();
                 var scope = new IndexingStatsScope(batchStats);
 
-                mri.DoIndexingWork(scope, CancellationToken.None);
+                index.DoIndexingWork(scope, CancellationToken.None);
 
                 Assert.Equal(numberOfUsers, batchStats.MapAttempts);
                 Assert.Equal(numberOfUsers, batchStats.MapSuccesses);
                 Assert.Equal(0, batchStats.MapErrors);
-                Assert.Equal(numberOfUsers, batchStats.ReduceAttempts);
-                Assert.Equal(numberOfUsers, batchStats.ReduceSuccesses);
-                Assert.Equal(0, batchStats.ReduceErrors);
+                Assert.Equal(numberOfUsers, (int) batchStats.ReduceAttempts);
+                Assert.Equal(numberOfUsers, (int) batchStats.ReduceSuccesses);
+                Assert.Equal(0, (int) batchStats.ReduceErrors);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await mri.Query(new IndexQuery()
+                    var queryResult = await index.Query(new IndexQuery()
                     {
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     }, context, OperationCancelToken.None);

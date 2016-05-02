@@ -671,7 +671,7 @@ namespace Voron.Data.BTrees
         {
             Lazy<TreeCursor> lazy;
             TreeNodeHeader* node;
-            var p = FindPageFor(page.GetNodeKey(0), out node, out lazy);
+            var p = FindPageFor(page.IsLeaf ? page.GetNodeKey(0) : page.GetNodeKey(1), out node, out lazy);
             if (p == null || p.LastMatch != 0)
                 return -1;
 
