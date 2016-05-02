@@ -901,13 +901,9 @@ namespace Voron.Impl.Journal
             // Copy the transaction header to the output buffer. 
             Memory.Copy(outputBuffer, txHeaderBase, sizeof(TransactionHeader));
             
-            byte* pageRef = outputBuffer;
             var pages = new IntPtr[compressedPages];
             for (int index = 0; index < compressedPages; index++)
-            {
-                pages[index] = new IntPtr(pageRef);
-                pageRef = pageRef + pageSize;
-            }            
+                pages[index] = new IntPtr(outputBuffer + (index * pageSize));
 
             return pages;
         }
