@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            var pageSize = _configuration.MaxNumberOfTombstonesToFetch;
+            var pageSize = _configuration.MaxNumberOfDocumentsToFetchForMap;
             var timeoutProcessing = Debugger.IsAttached == false ? _configuration.DocumentProcessingTimeout.AsTimeSpan : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
