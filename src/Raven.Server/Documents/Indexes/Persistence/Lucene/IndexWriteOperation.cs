@@ -94,17 +94,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 Log.Debug($"Indexed document for '{_name}'. Key: {document.Key} Etag: {document.Etag}. Output: {luceneDoc}.");
         }
 
-        public void Delete(string key)
+        public void Delete(string key, IndexingStatsScope stats)
         {
-            _writer.DeleteDocuments(_documentId.CreateTerm(key));
+            using (stats.For("Lucene_Delete"))
+                _writer.DeleteDocuments(_documentId.CreateTerm(key));
 
             if (Log.IsDebugEnabled)
                 Log.Debug($"Deleted document for '{_name}'. Key: {key}.");
         }
 
-        public void DeleteReduceResult(ulong reduceKeyHash)
+        public void DeleteReduceResult(ulong reduceKeyHash, IndexingStatsScope stats)
         {
-            _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash.ToString())); // TODO arek - ToString call
+            using (stats.For("Lucene_Delete"))
+                _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash.ToString())); // TODO arek - ToString call
 
             if (Log.IsDebugEnabled)
                 Log.Debug($"Deleted document for '{_name}'. Reduce key hash: {reduceKeyHash}.");

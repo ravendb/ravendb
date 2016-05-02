@@ -67,7 +67,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             foreach (var state in _indexingWorkContext.StateByReduceKeyHash)
             {
-                var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)); // TODO arek - ToString()?
+                var reduceKeyHash = state.Key;
+                var reduceKeyHashString = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)); // TODO arek - ToString()?
                 var modifiedState = state.Value;
 
                 foreach (var modifiedPage in modifiedState.ModifiedPages)
@@ -91,9 +92,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (parentPage == -1)
                             {
+                                writer.DeleteReduceResult(reduceKeyHash, stats);
+
                                 writer.IndexDocument(new Document
                                 {
-                                    Key = reduceKeyHash,
+                                    Key = reduceKeyHashString,
                                     Data = result
                                 }, stats);
 
@@ -151,6 +154,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         int aggregatedEntries = 0;
 
+                         //TODO arek - move to AggregateBranchPage method
                         for (int i = 0; i < page.NumberOfEntries; i++)
                         {
                             var childPageNumber = IPAddress.HostToNetworkOrder(page.GetNode(i)->PageNumber);
@@ -172,9 +176,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 if (parentPage == -1)
                                 {
+                                    writer.DeleteReduceResult(reduceKeyHash, stats);
+
                                     writer.IndexDocument(new Document
                                     {
-                                        Key = reduceKeyHash,
+                                        Key = reduceKeyHashString,
                                         Data = result
                                     }, stats);
 

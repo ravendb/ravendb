@@ -139,7 +139,7 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        db.DocumentsStorage.Delete(context, "users/1", null);
+                        db.DocumentsStorage.Delete(context, "users/0", null);
 
                         tx.Commit();
                     }
@@ -157,6 +157,22 @@ namespace FastTests.Server.Documents.Indexing
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
                     Assert.Equal(9.0, ((LazyDoubleValue)results[0].Data["Count"]));
+                }
+
+                CreateUsers(db, 1, "Poland");
+
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal("Poland", results[0].Data["Location"].ToString());
+                    Assert.Equal(10.0, ((LazyDoubleValue)results[0].Data["Count"]));
                 }
             }
         }
@@ -448,7 +464,7 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(100, stats.ReduceErrors);
             }
         }
-
+        
         private static void CreateUsers(DocumentDatabase db, int numberOfUsers, params string[] locations)
         {
             using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
