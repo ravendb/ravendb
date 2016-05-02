@@ -107,9 +107,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 var etag = mapEntry.Etag;
                 etagSlice.Set((byte*)&etag, sizeof(long));
+
                 state.Tree.Delete(etagSlice);
 
-                writer.DeleteReduceResult(mapEntry.ReduceKeyHash);
+                _indexingWorkContext.MapEntriesTable.Delete(mapEntry.StorageId);
+
+                writer.DeleteReduceResult(mapEntry.ReduceKeyHash, stats);
             }
         }
 
@@ -243,7 +246,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 { documentKey.Buffer, documentKey.Size },
                 { (byte*) &hashBigEndian, sizeof(ulong) }
             };
-
+            
             table.Insert(tvb);
             
             var pos = state.Tree.DirectAdd(new Slice((byte*) &etag, sizeof (long)), mappedResult.Size);
@@ -276,7 +279,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     result.Add(new MapEntry
                     {
                         Etag = etag,
-                        ReduceKeyHash = reduceKeyHash
+                        ReduceKeyHash = reduceKeyHash,
+                        StorageId = tvr.Id
                     });
                 }
             }
