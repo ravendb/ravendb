@@ -82,6 +82,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     if (page.IsLeaf == false)
                         continue;
 
+                    if (page.NumberOfEntries == 0)
+                    {
+                        if (page.PageNumber != modifiedState.Tree.State.RootPageNumber)
+                        {
+                            throw new InvalidOperationException($"Encountered empty page which isn't a root. Page #{page.PageNumber} in '{modifiedState.Tree.Name}' tree.");
+                        }
+
+                        writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                        var emptyPageNumber = page.PageNumber;
+                        table.DeleteByKey(new Slice((byte*)&emptyPageNumber, sizeof(long)));
+
+                        continue;
+                    }
+
                     var parentPage = modifiedState.Tree.GetParentPageOf(page);
 
                     stats.RecordReduceAttempts(page.NumberOfEntries);
