@@ -61,65 +61,63 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var parentPagesToAggregate = new Dictionary<long, Tree>();
 
             var writer = writeOperation.Value;
-
-            using (var reduceStats = stats.For("Reduce"))
+            
+            foreach (var state in _indexingWorkContext.StateByReduceKeyHash)
             {
-                foreach (var state in _indexingWorkContext.StateByReduceKeyHash)
+                var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)); // TODO arek - ToString()?
+                var modifiedState = state.Value;
+
+                foreach (var modifiedPage in modifiedState.ModifiedPages)
                 {
-                    var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)); // TODO arek - ToString()?
-                    var modifiedState = state.Value;
+                    token.ThrowIfCancellationRequested();
 
-                    foreach (var modifiedPage in modifiedState.ModifiedPages)
+                    if (modifiedState.FreedPages.Contains(modifiedPage))
+                        continue;
+
+                    var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
+                    if (page.IsLeaf == false)
+                        continue;
+
+                    var parentPage = modifiedState.Tree.GetParentPageOf(page);
+
+                    stats.RecordReduceAttempts(page.NumberOfEntries);
+
+                    try
                     {
-                        token.ThrowIfCancellationRequested();
-
-                        if (modifiedState.FreedPages.Contains(modifiedPage))
-                            continue;
-
-                        var page = lowLevelTransaction.GetPage(modifiedPage).ToTreePage();
-                        if (page.IsLeaf == false)
-                            continue;
-
-                        var parentPage = modifiedState.Tree.GetParentPageOf(page);
-
-                        reduceStats.RecordReduceAttempts(page.NumberOfEntries);
-
-                        try
+                        using (var result = AggregateLeafPage(page, lowLevelTransaction, modifiedPage, table, indexContext))
                         {
-                            using (var result = AggregateLeafPage(page, lowLevelTransaction, modifiedPage, table, indexContext))
-                            {
-                                if (parentPage == -1)
-                                {
-                                    writer.IndexDocument(new Document
-                                    {
-                                        Key = reduceKeyHash,
-                                        Data = result
-                                    }, reduceStats);
-
-                                    _metrics.MapReduceReducedPerSecond.Mark();
-
-                                    reduceStats.RecordReduceSuccesses(page.NumberOfEntries);
-                                }
-                                else
-                                {
-                                    parentPagesToAggregate[parentPage] = modifiedState.Tree;
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
-
-                            if (Log.IsWarnEnabled)
-                                Log.WarnException(message, e);
-
                             if (parentPage == -1)
                             {
-                                reduceStats.RecordReduceErrors(page.NumberOfEntries);
-                                reduceStats.AddReduceError(message + $" Message: {message}.");
+                                writer.IndexDocument(new Document
+                                {
+                                    Key = reduceKeyHash,
+                                    Data = result
+                                }, stats);
+
+                                _metrics.MapReduceReducedPerSecond.Mark();
+
+                                stats.RecordReduceSuccesses(page.NumberOfEntries);
+                            }
+                            else
+                            {
+                                parentPagesToAggregate[parentPage] = modifiedState.Tree;
                             }
                         }
                     }
+                    catch (Exception e)
+                    {
+                        var message = $"Failed to execute reduce function for reduce key '{modifiedState.Tree.Name}' on a leaf page #{page} of '{_indexDefinition.Name}' index.";
+
+                        if (Log.IsWarnEnabled)
+                            Log.WarnException(message, e);
+
+                        if (parentPage == -1)
+                        {
+                            stats.RecordReduceErrors(page.NumberOfEntries);
+                            stats.AddReduceError(message + $" Message: {message}.");
+                        }
+                    }
+                }
 
                     long tmp = 0;
                     Slice pageNumberSlice = new Slice((byte*)&tmp, sizeof(long));
@@ -170,11 +168,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                         {
                                             Key = reduceKeyHash,
                                             Data = result
-                                        }, reduceStats);
+                                        }, stats);
 
                                         _metrics.MapReduceReducedPerSecond.Mark();
 
-                                        reduceStats.RecordReduceSuccesses(1); // TODO arek - we don't know how much map results we reduced exactly
+                                        stats.RecordReduceSuccesses(1); // TODO arek - we don't know how much map results we reduced exactly
                                     }
                                     else
                                     {
@@ -189,13 +187,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 if (Log.IsWarnEnabled)
                                     Log.WarnException(message, e);
 
-                                reduceStats.RecordReduceErrors(1);  // TODO arek - we don't know how much map results we reduced exactly
-                                reduceStats.AddReduceError(message + $" Message: {message}.");
+                                stats.RecordReduceErrors(1);  // TODO arek - we don't know how much map results we reduced exactly
+                                stats.AddReduceError(message + $" Message: {message}.");
                             }
                         }
                     }
                 }
-            }
 
             foreach (var lastEtag in _indexingWorkContext.LastEtags)
             {
