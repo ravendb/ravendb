@@ -8,6 +8,7 @@ using System.IO;
 using Xunit;
 using Voron;
 using Voron.Impl;
+using Voron.Impl.Journal;
 
 namespace FastTests.Voron.Journal
 {
@@ -17,7 +18,7 @@ namespace FastTests.Voron.Journal
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.PageSize = 4 * Constants.Size.Kilobyte;
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 5 * options.PageSize;
         }
 
         [Fact]
