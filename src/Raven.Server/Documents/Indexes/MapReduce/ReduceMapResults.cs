@@ -67,8 +67,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             foreach (var state in _indexingWorkContext.StateByReduceKeyHash)
             {
-                var reduceKeyHash = state.Key;
-                var reduceKeyHashString = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture)); // TODO arek - ToString()?
+                var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture));
                 var modifiedState = state.Value;
 
                 foreach (var modifiedPage in modifiedState.ModifiedPages)
@@ -103,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     try
                     {
-                        using (var result = AggregateLeafPage(page, lowLevelTransaction, modifiedPage, table, indexContext))
+                        using (var result = AggregateLeafPage(page, lowLevelTransaction, table, indexContext))
                         {
                             if (parentPage == -1)
                             {
@@ -111,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                 writer.IndexDocument(new Document
                                 {
-                                    Key = reduceKeyHashString,
+                                    Key = reduceKeyHash,
                                     Data = result
                                 }, stats);
 
@@ -160,6 +159,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         var pageNumber = kvp.Key;
                         var tree = kvp.Value;
                         var page = lowLevelTransaction.GetPage(pageNumber).ToTreePage();
+
                         if (page.IsBranch == false)
                         {
                             throw new InvalidOperationException("Parent page was found that wasn't a branch, error at " + page.PageNumber);
@@ -168,26 +168,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         var parentPage = tree.GetParentPageOf(page);
 
                         int aggregatedEntries = 0;
-
-                         //TODO arek - move to AggregateBranchPage method
-                        for (int i = 0; i < page.NumberOfEntries; i++)
-                        {
-                            var childPageNumber = IPAddress.HostToNetworkOrder(page.GetNode(i)->PageNumber);
-                            var tvr = table.ReadByKey(new Slice((byte*)&childPageNumber, sizeof(long)));
-                            if (tvr == null)
-                            {
-                                throw new InvalidOperationException("Couldn't find pre-computed results for existing page " + childPageNumber);
-                            }
-
-                            int size;
-                            _aggregationBatch.Add(new BlittableJsonReaderObject(tvr.Read(1, out size), size, indexContext));
-
-                            aggregatedEntries += *(int*)tvr.Read(2, out size);
-                        }
-
+                        
                         try
                         {
-                            using (var result = AggregateBatchResults(pageNumber, aggregatedEntries, table, indexContext))
+                            using (var result = AggregateBranchPage(page, table, indexContext, out aggregatedEntries))
                             {
                                 if (parentPage == -1)
                                 {
@@ -195,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                     writer.IndexDocument(new Document
                                     {
-                                        Key = reduceKeyHashString,
+                                        Key = reduceKeyHash,
                                         Data = result
                                     }, stats);
 
@@ -231,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        private BlittableJsonReaderObject AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, long modifiedPage, Table table, TransactionOperationContext indexContext)
+        private BlittableJsonReaderObject AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext)
         {
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
@@ -240,7 +224,29 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _aggregationBatch.Add(reduceEntry);
             }
 
-            return AggregateBatchResults(modifiedPage, page.NumberOfEntries, table, indexContext);
+            return AggregateBatchResults(page.PageNumber, page.NumberOfEntries, table, indexContext);
+        }
+
+        private BlittableJsonReaderObject AggregateBranchPage(TreePage page, Table table, TransactionOperationContext indexContext, out int aggregatedEntries)
+        {
+            aggregatedEntries = 0;
+
+            for (int i = 0; i < page.NumberOfEntries; i++)
+            {
+                var childPageNumber = IPAddress.HostToNetworkOrder(page.GetNode(i)->PageNumber);
+                var tvr = table.ReadByKey(new Slice((byte*)&childPageNumber, sizeof(long)));
+                if (tvr == null)
+                {
+                    throw new InvalidOperationException("Couldn't find pre-computed results for existing page " + childPageNumber);
+                }
+
+                int size;
+                _aggregationBatch.Add(new BlittableJsonReaderObject(tvr.Read(1, out size), size, indexContext));
+
+                aggregatedEntries += *(int*)tvr.Read(2, out size);
+            }
+
+            return AggregateBatchResults(page.PageNumber, aggregatedEntries, table, indexContext);
         }
 
         private BlittableJsonReaderObject AggregateBatchResults(long modifiedPage, int aggregatedEntries, Table table, TransactionOperationContext indexContext)

@@ -103,10 +103,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 Log.Debug($"Deleted document for '{_name}'. Key: {key}.");
         }
 
-        public void DeleteReduceResult(ulong reduceKeyHash, IndexingStatsScope stats)
+        public void DeleteReduceResult(string reduceKeyHash, IndexingStatsScope stats)
         {
             using (stats.For("Lucene_Delete"))
-                _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash.ToString())); // TODO arek - ToString call
+                _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash));
 
             if (Log.IsDebugEnabled)
                 Log.Debug($"Deleted document for '{_name}'. Reduce key hash: {reduceKeyHash}.");

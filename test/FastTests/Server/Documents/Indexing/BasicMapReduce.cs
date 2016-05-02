@@ -87,9 +87,9 @@ namespace FastTests.Server.Documents.Indexing
                 Assert.Equal(numberOfUsers, batchStats.MapAttempts);
                 Assert.Equal(numberOfUsers, batchStats.MapSuccesses);
                 Assert.Equal(0, batchStats.MapErrors);
-                Assert.Equal(numberOfUsers, (int) batchStats.ReduceAttempts);
-                Assert.Equal(numberOfUsers, (int) batchStats.ReduceSuccesses);
-                Assert.Equal(0, (int) batchStats.ReduceErrors);
+                Assert.Equal(numberOfUsers, batchStats.ReduceAttempts);
+                Assert.Equal(numberOfUsers, batchStats.ReduceSuccesses);
+                Assert.Equal(0, batchStats.ReduceErrors);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
