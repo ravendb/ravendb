@@ -63,7 +63,11 @@ namespace Voron.Impl.Journal
             if (!TryReadAndValidateHeader(options, out current))
                 return false;
 
-            var transactionSize = GetNumberOfPagesFromSize(options, current->Compressed ? current->CompressedSize : current->UncompressedSize);
+            // Uncompressed transactions will respect boundaries between the TransactionHeader page and the data, so we move to the data page.
+            if (current->Compressed == false)                 
+                _readingPage++;
+
+            var transactionSize = GetNumberOfPagesFromSize(options, current->Compressed ? current->CompressedSize + sizeof(TransactionHeader) : current->UncompressedSize);
 
             if (current->TransactionId <= _lastSyncedTransactionId)
             {
@@ -72,21 +76,27 @@ namespace Voron.Impl.Journal
                 return true; // skipping
             }
 
-            if (checkCrc && !ValidatePagesCrc(options, transactionSize, current))
+            if (checkCrc && !ValidatePagesHash(options, current))
                 return false;
-
-            _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
-            var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
-
-            UnmanagedMemory.Set(dataPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
+           
+            byte* outputPage;           
             if (current->Compressed)
             {
-                if (TryDecompressTransactionPages(options, current, dataPage) == false)
+                _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount));
+                outputPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
+                UnmanagedMemory.Set(outputPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
+
+                // Compressed transactions will put the TransactionHeader in the same page of the data. 
+                if (TryDecompressTransactionPages(options, current, outputPage) == false)
                     return false;
             }
             else
             {
-                Memory.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
+                _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
+                outputPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
+                UnmanagedMemory.Set(outputPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
+
+                Memory.Copy(outputPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
             }
 
             var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();
@@ -143,11 +153,12 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        private unsafe bool TryDecompressTransactionPages(StorageEnvironmentOptions options, TransactionHeader* current, byte* dataPage)
+        private unsafe bool TryDecompressTransactionPages(StorageEnvironmentOptions options, TransactionHeader* current, byte* outputPage)
         {
             try
             {
-                LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
+                byte* dataPtr = _pager.AcquirePagePointer(_readingPage) + sizeof(TransactionHeader);
+                LZ4.Decode64(dataPtr, current->CompressedSize, outputPage, current->UncompressedSize, true);
             }
             catch (Exception e)
             {
@@ -217,7 +228,6 @@ namespace Voron.Impl.Journal
                 return false;
             }
 
-            _readingPage++;
             return true;
         }
 
@@ -245,10 +255,12 @@ namespace Voron.Impl.Journal
                                                ", got:" + current->TransactionId);
         }
 
-        private bool ValidatePagesCrc(StorageEnvironmentOptions options, int compressedPages, TransactionHeader* current)
+        private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
-            ulong hash = Hashing.XXHash64.Calculate(_pager.AcquirePagePointer(_readingPage), compressedPages * options.PageSize);
+            // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
+            byte* dataPtr = _pager.AcquirePagePointer(_readingPage) + (current->Compressed == true ? sizeof(TransactionHeader) : 0);
 
+            ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->Compressed == true ? current->CompressedSize : current->UncompressedSize);
             if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;
