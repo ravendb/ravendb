@@ -107,9 +107,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 var etag = mapEntry.Etag;
                 etagSlice.Set((byte*)&etag, sizeof(long));
+
                 state.Tree.Delete(etagSlice);
 
-                writer.DeleteReduceResult(mapEntry.ReduceKeyHash);
+                _indexingWorkContext.MapEntriesTable.Delete(mapEntry.StorageId);
             }
         }
 
@@ -231,7 +232,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, ReduceKeyState state, Table table, LazyStringValue documentKey, ulong reduceKeyHash)
         {
-            var etag = ++LastMapResultEtag;
+            var etag = ++LastMapResultEtag; // TODO arek - it seems that etag it useless
 
             var etagBigEndian = IPAddress.HostToNetworkOrder(etag);
 
@@ -243,6 +244,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 { documentKey.Buffer, documentKey.Size },
                 { (byte*) &hashBigEndian, sizeof(ulong) }
             };
+            
+            // TODO arek - need to handle updates
 
             table.Insert(tvb);
             
@@ -276,7 +279,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     result.Add(new MapEntry
                     {
                         Etag = etag,
-                        ReduceKeyHash = reduceKeyHash
+                        ReduceKeyHash = reduceKeyHash,
+                        StorageId = tvr.Id
                     });
                 }
             }

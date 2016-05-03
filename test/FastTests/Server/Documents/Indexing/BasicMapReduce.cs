@@ -69,18 +69,20 @@ namespace FastTests.Server.Documents.Indexing
 
         [Theory]
         [InlineData(100, new[] { "Poland", "Israel", "USA" })]
-        //[InlineData(50000, new[] { "Canadaaaaaaaaaaaaaaaaaaaaaaaa", "Franceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" })] - TODO arek - bug
+        [InlineData(50000, new[] { "Canadaaaaaaaaaaaaaaaaaaaaaaaa", "Franceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" })] // reduce key tree with depth 3
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {
             using (var db = CreateDocumentDatabase())
-            using (var mri = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
+            using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
+                Assert.True(db.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap >= numberOfUsers); // ensure all docs will be indexed in a singe run
+
                 CreateUsers(db, numberOfUsers, locations);
 
                 var batchStats = new IndexingRunStats();
                 var scope = new IndexingStatsScope(batchStats);
 
-                mri.DoIndexingWork(scope, CancellationToken.None);
+                index.DoIndexingWork(scope, CancellationToken.None);
 
                 Assert.Equal(numberOfUsers, batchStats.MapAttempts);
                 Assert.Equal(numberOfUsers, batchStats.MapSuccesses);
@@ -91,7 +93,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await mri.Query(new IndexQuery()
+                    var queryResult = await index.Query(new IndexQuery()
                     {
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     }, context, OperationCancelToken.None);
@@ -114,11 +116,15 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public async Task CanDelete()
         {
+            const int numberOfUsers = 10;
+
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
-                CreateUsers(db, 10, "Poland");
+
+                CreateUsers(db, numberOfUsers, "Poland");
                 
+                // index 10 users
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -130,19 +136,20 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(10.0, ((LazyDoubleValue)results[0].Data["Count"]));
+                    Assert.Equal(numberOfUsers, (double)(LazyDoubleValue)results[0].Data["Count"]);
                 }
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        db.DocumentsStorage.Delete(context, "users/1", null);
+                        db.DocumentsStorage.Delete(context, "users/0", null);
 
                         tx.Commit();
                     }
                 }
 
+                // one document deleted
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
@@ -154,7 +161,66 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(1, results.Count);
 
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
-                    Assert.Equal(9.0, ((LazyDoubleValue)results[0].Data["Count"]));
+                    Assert.Equal(numberOfUsers - 1, (double)(LazyDoubleValue)results[0].Data["Count"]);
+                }
+
+                CreateUsers(db, 1, "Poland");
+
+                // document added again
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal("Poland", results[0].Data["Location"].ToString());
+                    Assert.Equal(numberOfUsers, (double)(LazyDoubleValue)results[0].Data["Count"]);
+                }
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        for (int i = 0; i < numberOfUsers; i++)
+                        {
+                            db.DocumentsStorage.Delete(context, $"users/{i}", null);
+                        }
+
+                        tx.Commit();
+                    }
+                }
+
+                // all documents removed
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(0, results.Count);
+                }
+
+                CreateUsers(db, numberOfUsers, "Poland");
+
+                // documents added back
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal("Poland", results[0].Data["Location"].ToString());
+                    Assert.Equal(numberOfUsers, (double)(LazyDoubleValue)results[0].Data["Count"]);
                 }
             }
         }

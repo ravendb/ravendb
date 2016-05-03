@@ -43,8 +43,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public override void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            using (stats.For("Lucene_Delete"))
-                writer.Delete(tombstone.Key);
+            writer.Delete(tombstone.Key, stats);
         }
 
         public override void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
