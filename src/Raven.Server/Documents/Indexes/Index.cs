@@ -512,6 +512,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentsOperationContext databaseContext;
             TransactionOperationContext indexContext;
 
+            using (CultureHelper.EnsureInvariantCulture())
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
