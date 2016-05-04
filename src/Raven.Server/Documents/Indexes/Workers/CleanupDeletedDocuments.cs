@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 
@@ -16,11 +18,14 @@ namespace Raven.Server.Documents.Indexes.Workers
         private readonly IndexingConfiguration _configuration;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
+        private readonly MapReduceIndexingContext _mapReduceContext;
 
-        public CleanupDeletedDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+        public CleanupDeletedDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, 
+                                       IndexingConfiguration configuration, MapReduceIndexingContext mapReduceContext)
         {
             _index = index;
             _configuration = configuration;
+            _mapReduceContext = mapReduceContext;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
         }
@@ -85,7 +90,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (Log.IsDebugEnabled)
                         Log.Debug($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
-                    _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
+                    if (_index.Type.IsMap())
+                    {
+                        _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
+                    }
+                    else
+                    {
+                        _mapReduceContext.ProcessedTombstoneEtags[collection] = lastEtag;
+                    }
 
                     moreWorkFound = true;
                 }

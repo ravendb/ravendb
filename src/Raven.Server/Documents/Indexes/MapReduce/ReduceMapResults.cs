@@ -207,9 +207,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            foreach (var lastEtag in _indexingWorkContext.LastEtags)
+            foreach (var lastEtag in _indexingWorkContext.ProcessedDocEtags)
             {
                 _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
+            }
+
+            foreach (var lastEtag in _indexingWorkContext.ProcessedTombstoneEtags)
+            {
+                _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
             }
 
             return false;

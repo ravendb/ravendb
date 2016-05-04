@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     }
                     else
                     {
-                        _mapReduceContext.LastEtags[collection] = lastEtag;
+                        _mapReduceContext.ProcessedDocEtags[collection] = lastEtag;
                     }
 
                     moreWorkFound = true;

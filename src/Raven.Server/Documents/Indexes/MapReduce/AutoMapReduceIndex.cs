@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private readonly TableSchema _mapResultsSchema = new TableSchema();
 
-        private readonly MapReduceIndexingContext _indexingWorkContext = new MapReduceIndexingContext();
+        private readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
 
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
@@ -59,22 +59,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             return new IIndexingWork[]
             {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
-                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _indexingWorkContext),
-                new ReduceMapResults(Definition, _indexStorage, DocumentDatabase.Metrics, _indexingWorkContext)
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, _mapReduceWorkContext),
+                new ReduceMapResults(Definition, _indexStorage, DocumentDatabase.Metrics, _mapReduceWorkContext)
             };
         }
         
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            _indexingWorkContext.MapEntriesTable = GetMapEntriesTable(indexContext.Transaction.InnerTransaction);
+            _mapReduceWorkContext.MapEntriesTable = GetMapEntriesTable(indexContext.Transaction.InnerTransaction);
 
-            return _indexingWorkContext;
+            return _mapReduceWorkContext;
         }
 
         public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var mapEntry = GetMapEntryForDocument(_indexingWorkContext.MapEntriesTable, tombstone.Key);
+            var mapEntry = GetMapEntryForDocument(_mapReduceWorkContext.MapEntriesTable, tombstone.Key);
 
             if (mapEntry == null)
                 return;
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var storageId = mapEntry.StorageId;
  
             state.Tree.Delete(new Slice((byte*)&storageId, sizeof(long)));
-            _indexingWorkContext.MapEntriesTable.Delete(mapEntry.StorageId);
+            _mapReduceWorkContext.MapEntriesTable.Delete(mapEntry.StorageId);
         }
 
         public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
             {
-                PutMappedResult(mappedresult, document.Key, reduceHashKey, state, _indexingWorkContext.MapEntriesTable, indexContext);
+                PutMappedResult(mappedresult, document.Key, reduceHashKey, state, _mapReduceWorkContext.MapEntriesTable, indexContext);
             }
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private ReduceKeyState GetReduceKeyState(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)
         {
             ReduceKeyState state;
-            if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(reduceKeyHash, out state) == false)
+            if (_mapReduceWorkContext.StateByReduceKeyHash.TryGetValue(reduceKeyHash, out state) == false)
             {
                 //TODO: Need better way to handle tree names
                 Tree tree;
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 else
                     tree = indexContext.Transaction.InnerTransaction.ReadTree("TODO_" + reduceKeyHash);
 
-                _indexingWorkContext.StateByReduceKeyHash[reduceKeyHash] = state = new ReduceKeyState(tree);
+                _mapReduceWorkContext.StateByReduceKeyHash[reduceKeyHash] = state = new ReduceKeyState(tree);
             }
             return state;
         }
