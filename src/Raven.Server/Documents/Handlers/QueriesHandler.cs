@@ -237,6 +237,9 @@ namespace Raven.Server.Documents.Handlers
 
                             includes.Add(item.Value[0]);
                             break;
+                        case "distinct":
+                            result.IsDistinct = bool.Parse(item.Value[0]);
+                            break;
                             // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ResultsTransformer, TransformerParameters, ExplainScores, IsDistinct
                             // TODO: AllowMultipleIndexEntriesForSameDocumentToResultTransformer, ShowTimings and spatial stuff
                             // TODO: We also need to make sure that we aren't using headers

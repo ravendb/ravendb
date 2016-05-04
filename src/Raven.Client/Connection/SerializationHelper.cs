@@ -135,13 +135,13 @@ namespace Raven.Client.Connection
             //TODO arek
             var result = new QueryResult
             {
-                IsStale = Convert.ToBoolean(json[nameof(QueryResult.IsStale)].ToString()),
+                IsStale = json.Value<bool>(nameof(QueryResult.IsStale)),
                 IndexTimestamp = json.Value<DateTime>(nameof(QueryResult.IndexTimestamp)),
                 Includes = ((RavenJArray)json[nameof(QueryResult.Includes)]).Cast<RavenJObject>().ToList(),
-                TotalResults = Convert.ToInt32(json[nameof(QueryResult.TotalResults)].ToString()),
+                TotalResults = json.Value<int>(nameof(QueryResult.TotalResults)),
                 IndexName = json.Value<string>(nameof(QueryResult.IndexName)),
-                ResultEtag = long.Parse(json.Value<string>(nameof(QueryResult.ResultEtag))),
-                //SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
+                ResultEtag = json.Value<long>(nameof(QueryResult.SkippedResults)),
+                SkippedResults = json.Value<int>(nameof(QueryResult.SkippedResults)),
                 //Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
                 //    .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),
                 //ScoreExplanations = (json.Value<RavenJObject>("ScoreExplanations") ?? new RavenJObject())

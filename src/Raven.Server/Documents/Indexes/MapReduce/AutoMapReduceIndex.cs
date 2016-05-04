@@ -5,6 +5,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -184,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, string[] fieldsToFetch)
+        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
         {
             return new MapReduceQueryResultRetriever(indexContext, fieldsToFetch);
         }

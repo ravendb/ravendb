@@ -734,10 +734,12 @@ namespace Raven.Server.Documents.Indexes
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
                             var totalResults = new Reference<int>();
+                            var skippedResults = new Reference<int>();
 
-                            var documents = string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false 
-                                ? reader.Query(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch)) 
-                                : reader.IntersectQuery(query, token.Token, totalResults, GetQueryResultRetriever(documentsContext, indexContext, query.FieldsToFetch));
+                            var fieldsToFetch = new FieldsToFetch(query, Definition);
+                            var documents = string.IsNullOrWhiteSpace(query.Query) || query.Query.Contains(Constants.IntersectSeparator) == false
+                                ? reader.Query(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token)
+                                : reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults, GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token);
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
                             foreach (var document in documents)
@@ -748,6 +750,7 @@ namespace Raven.Server.Documents.Indexes
 
                             includeDocumentsCommand.Fill(result.Includes);
                             result.TotalResults = totalResults.Value;
+                            result.SkippedResults = skippedResults.Value;
                         }
 
                         return result;
@@ -808,7 +811,7 @@ namespace Raven.Server.Documents.Indexes
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
                     var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
-                    foreach (var document in reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, fieldsToFetch), token.Token))
+                    foreach (var document in reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(documentsContext, indexContext, new FieldsToFetch(fieldsToFetch, Definition)), token.Token))
                     {
                         result.Results.Add(document);
                         includeDocumentsCommand.Gather(document);
@@ -940,6 +943,6 @@ namespace Raven.Server.Documents.Indexes
                 .ToArray();
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, string[] fieldsToFetch);
+        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch);
     }
 }

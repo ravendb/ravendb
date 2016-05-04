@@ -13,6 +13,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
@@ -36,15 +37,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
         private readonly string _indexName;
+
+        private readonly IndexType _indexType;
+
         private readonly IndexSearcher _searcher;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
 
-        public IndexReadOperation(string indexName, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public IndexReadOperation(string indexName, IndexType indexType, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
         {
             _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
             _indexName = indexName;
+            _indexType = indexType;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher);
         }
@@ -54,49 +59,62 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<Document> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults, IQueryResultRetriever retriever)
+        public IEnumerable<Document> Query(IndexQuery query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
             var docsToGet = query.PageSize;
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(query.Query, query);
             var returnedResults = 0;
-            bool endOfResults;
 
-            do
+            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
             {
-                token.ThrowIfCancellationRequested();
-
-                var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, query.SortedFields);
-
-                totalResults.Value = search.TotalHits;
-
-                for (; position < search.ScoreDocs.Length && query.PageSize > 0; position++)
+                while (true)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var scoreDoc = search.ScoreDocs[position];
-                    var document = _searcher.Doc(scoreDoc.Doc);
+                    var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, query.SortedFields);
 
-                    returnedResults++;
+                    totalResults.Value = search.TotalHits;
 
-                    yield return retriever.Get(document);
+                    scope.RecordAlreadyPagedItemsInPreviousPage(search);
 
-                    if (returnedResults == query.PageSize)
-                        yield break;
+                    for (; position < search.ScoreDocs.Length && query.PageSize > 0; position++)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        var scoreDoc = search.ScoreDocs[position];
+                        var document = _searcher.Doc(scoreDoc.Doc);
+
+                        var result = retriever.Get(document);
+                        if (scope.ShouldIncludeInResults(result) == false)
+                        {
+                            skippedResults.Value++;
+                            continue;
+                        }
+
+                        returnedResults++;
+                        yield return result;
+
+                        if (returnedResults == query.PageSize)
+                            yield break;
+                    }
+
+                    //if (hasMultipleIndexOutputs)
+                    //    docsToGet += (pageSize - returnedResults) * maxNumberOfIndexOutputs;
+                    //else
+                    docsToGet += query.PageSize - returnedResults;
+
+                    if (search.TotalHits == search.ScoreDocs.Length)
+                        break;
+
+                    if (returnedResults >= query.PageSize)
+                        break;
                 }
-
-                //if (hasMultipleIndexOutputs)
-                //    docsToGet += (pageSize - returnedResults) * maxNumberOfIndexOutputs;
-                //else
-                docsToGet += (query.PageSize - returnedResults);
-
-                endOfResults = search.TotalHits == search.ScoreDocs.Length;
-
-            } while (returnedResults < query.PageSize && endOfResults == false);
+            }
         }
 
-        public IEnumerable<Document> IntersectQuery(IndexQuery query, CancellationToken token, Reference<int> totalResults, IQueryResultRetriever retriever)
+        public IEnumerable<Document> IntersectQuery(IndexQuery query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
             throw new NotImplementedException();
 

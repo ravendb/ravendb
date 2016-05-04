@@ -24,6 +24,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            writer.WritePropertyName(context.GetLazyString(nameof(result.SkippedResults)));
+            writer.WriteInteger(result.SkippedResults);
+            writer.WriteComma();
+
             writer.WriteQueryResult(context, result, partial: true);
 
             writer.WriteEndObject();
