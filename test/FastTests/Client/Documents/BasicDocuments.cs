@@ -11,7 +11,7 @@ namespace FastTests.Client.Documents
 {
     public class BasicDocuments : RavenTestBase
     {
-        [Fact(Skip = "Support metadataOnly")]
+        [Fact]
         public async Task GetAsync()
         {
             using (var store = await GetDocumentStore())
