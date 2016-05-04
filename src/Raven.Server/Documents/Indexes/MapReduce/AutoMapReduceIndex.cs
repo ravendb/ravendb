@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 
@@ -78,13 +79,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (mapEntry == null)
                 return;
 
-            ReduceKeyState state;
-            if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(mapEntry.ReduceKeyHash, out state) == false)
-            {
-                //TODO: Need better way to handle tree names
-                var tree = indexContext.Transaction.InnerTransaction.ReadTree("TODO_" + mapEntry.ReduceKeyHash);
-                _indexingWorkContext.StateByReduceKeyHash[mapEntry.ReduceKeyHash] = state = new ReduceKeyState(tree);
-            }
+            var state = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
 
             var storageId = mapEntry.StorageId;
  
@@ -179,13 +174,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 reduceHashKey = Hashing.XXHash64.Calculate(reduceKeyObject.BasePointer, reduceKeyObject.Size);
             }
 
-            ReduceKeyState state;
-            if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(reduceHashKey, out state) == false)
-            {
-                //TODO: Need better way to handle tree names
-                var tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + reduceHashKey);
-                _indexingWorkContext.StateByReduceKeyHash[reduceHashKey] = state = new ReduceKeyState(tree);
-            }
+            var state = GetReduceKeyState(reduceHashKey, indexContext, create: true);
 
             using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
             {
@@ -221,10 +210,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             long storageId;
             if (existingEntry == null)
                 storageId = mapEntriesTable.Insert(tvb);
+            else if (existingEntry.ReduceKeyHash == reduceKeyHash)
+            {
+                // no need to update record in table since we have the same entry already stored
+                storageId = existingEntry.StorageId;
+            }
             else
             {
-                // no need to update since we have the same entry already stored
+                var previousState = GetReduceKeyState(existingEntry.ReduceKeyHash, indexContext, create: false);
+
                 storageId = existingEntry.StorageId;
+
+                previousState.Tree.Delete(new Slice((byte*)&storageId, sizeof(long)));
+
+                storageId = mapEntriesTable.Update(existingEntry.StorageId, tvb);
             }
 
             var pos = state.Tree.DirectAdd(new Slice((byte*)&storageId, sizeof(long)), mappedResult.Size);
@@ -251,6 +250,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 ReduceKeyHash = *(ulong*)ptr,
                 StorageId = tvr.Id
             };
+        }
+
+        private ReduceKeyState GetReduceKeyState(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)
+        {
+            ReduceKeyState state;
+            if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(reduceKeyHash, out state) == false)
+            {
+                //TODO: Need better way to handle tree names
+                Tree tree;
+
+                if (create)
+                    tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + reduceKeyHash);
+                else
+                    tree = indexContext.Transaction.InnerTransaction.ReadTree("TODO_" + reduceKeyHash);
+
+                _indexingWorkContext.StateByReduceKeyHash[reduceKeyHash] = state = new ReduceKeyState(tree);
+            }
+            return state;
         }
     }
 }

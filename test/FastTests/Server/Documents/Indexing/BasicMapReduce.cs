@@ -591,6 +591,84 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
+        [Fact]
+        public async Task CanUpdateByChangingReduceKey()
+        {
+            using (var db = CreateDocumentDatabase())
+            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            {
+                new IndexField
+                {
+                    Name = "Age",
+                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Storage = FieldStorage.Yes
+                }
+            }, new[]
+            {
+                    new IndexField
+                    {
+                        Name = "Location",
+                        Storage = FieldStorage.Yes
+                    },
+            }), db))
+            {
+                CreateUsers(db, 2, "Poland");
+
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal("Poland", results[0].Data["Location"].ToString());
+                    Assert.Equal(41.0, (LazyDoubleValue)results[0].Data["Age"]);
+                }
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        using (var doc = context.ReadObject(new DynamicJsonValue
+                        {
+                            ["Name"] = "James",
+                            ["Location"] = "Israel",
+                            ["Age"] = 20,
+                            [Constants.Metadata] = new DynamicJsonValue
+                            {
+                                [Constants.RavenEntityName] = "Users"
+                            }
+                        }, "users/0"))
+                        {
+                            db.DocumentsStorage.Put(context, "users/0", null, doc);
+                        }
+
+                        tx.Commit();
+                    }
+                }
+
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(2, results.Count);
+
+                    Assert.Equal("Israel", results[0].Data["Location"].ToString());
+                    Assert.Equal(20.0, (LazyDoubleValue)results[0].Data["Age"]);
+
+                    Assert.Equal("Poland", results[1].Data["Location"].ToString());
+                    Assert.Equal(21.0, (LazyDoubleValue)results[1].Data["Age"]);
+                }
+            }
+        }
+
         private static void CreateOrders(DocumentDatabase db, int numberOfOrders, params string[] countries)
         {
             using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
