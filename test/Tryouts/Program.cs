@@ -10,6 +10,7 @@ using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.RawData;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 using Raven.Client.Platform;
 
 namespace Tryouts
@@ -27,9 +28,21 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var x = new BasicIndexing())
+            using (var x = new DocumentStore
             {
-                x.Errors2();
+                Url = "http://localhost:8080",
+                DefaultDatabase = "Foo"
+            })
+            {
+                x.Initialize();
+
+                using (var s = x.OpenSession())
+                {
+                   var q = s.Query<User>()
+                        .Where(u => !u.FirstName.In("Oren", "Ayende"))
+                        .ToString();
+                    Console.WriteLine(q);
+                }
             }
         }
 

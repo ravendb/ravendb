@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var mapEntry = GetMapEntryForDocument(_mapReduceWorkContext.MapEntriesTable, tombstone.Key);
+            var mapEntry = GetMapEntryForDocument(tombstone.Key);
 
             if (mapEntry == null)
                 return;
@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
             {
-                PutMappedResult(mappedresult, document.Key, reduceHashKey, state, _mapReduceWorkContext.MapEntriesTable, indexContext);
+                PutMappedResult(mappedresult, document.Key, reduceHashKey, state, indexContext);
             }
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return table;
         }
 
-        private unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, LazyStringValue documentKey, ulong reduceKeyHash, ReduceKeyState state, Table mapEntriesTable, TransactionOperationContext indexContext)
+        private unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, LazyStringValue documentKey, ulong reduceKeyHash, ReduceKeyState state, TransactionOperationContext indexContext)
         {
             var tvb = new TableValueBuilder
             {
@@ -206,11 +206,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 { (byte*) &reduceKeyHash, sizeof(ulong) }
             };
 
-            var existingEntry = GetMapEntryForDocument(mapEntriesTable, documentKey);
+            var existingEntry = GetMapEntryForDocument(documentKey);
 
             long storageId;
             if (existingEntry == null)
-                storageId = mapEntriesTable.Insert(tvb);
+                storageId = _mapReduceWorkContext.MapEntriesTable.Insert(tvb);
             else if (existingEntry.ReduceKeyHash == reduceKeyHash)
             {
                 // no need to update record in table since we have the same entry already stored
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 previousState.Tree.Delete(new Slice((byte*)&storageId, sizeof(long)));
 
-                storageId = mapEntriesTable.Update(existingEntry.StorageId, tvb);
+                storageId = _mapReduceWorkContext.MapEntriesTable.Update(existingEntry.StorageId, tvb);
             }
 
             var pos = state.Tree.DirectAdd(new Slice((byte*)&storageId, sizeof(long)), mappedResult.Size);
@@ -232,11 +232,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             mappedResult.CopyTo(pos);
         }
 
-        public unsafe MapEntry GetMapEntryForDocument(Table table, LazyStringValue documentKey)
+        public unsafe MapEntry GetMapEntryForDocument(LazyStringValue documentKey)
         {
             var documentKeySlice = new Slice(documentKey.Buffer, (ushort) documentKey.Size);
 
-            var seek = table.SeekForwardFrom(_mapResultsSchema.Indexes["DocumentKeys"], documentKeySlice).FirstOrDefault();
+            var seek = _mapReduceWorkContext.MapEntriesTable.SeekForwardFrom(_mapResultsSchema.Indexes["DocumentKeys"], documentKeySlice).FirstOrDefault();
 
             if (seek?.Key.Compare(documentKeySlice) != 0)
                 return null;
