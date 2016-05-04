@@ -75,7 +75,7 @@ namespace FastTests.Server.Documents.Indexing
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
-                Assert.True(db.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap >= numberOfUsers); // ensure all docs will be indexed in a singe run
+                Assert.True(db.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap >= numberOfUsers); // ensure all docs will be indexed in a single run
 
                 CreateUsers(db, numberOfUsers, locations);
 
@@ -93,10 +93,12 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery()
+                    var queryResult = await index.Query(new IndexQuery
                     {
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     }, context, OperationCancelToken.None);
+
+                    Assert.False(queryResult.IsStale);
 
                     var results = queryResult.Results;
 
@@ -222,33 +224,6 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal("Poland", results[0].Data["Location"].ToString());
                     Assert.Equal(numberOfUsers, (double)(LazyDoubleValue)results[0].Data["Count"]);
                 }
-            }
-        }
-
-        [Fact]
-        public void IndexLoadsEtagOfLastMapResultOnInitialize()
-        {
-            var path = NewDataPath();
-            using (var db = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
-            {
-                var id = db.IndexStore.CreateIndex(GetUsersCountByLocationIndexDefinition());
-
-
-                var index = (AutoMapReduceIndex) db.IndexStore.GetIndex(id);
-
-                Assert.Equal(-1, index.LastMapResultEtag);
-
-                CreateUsers(db, 10, "Poland");
-                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
-
-                Assert.Equal(9, index.LastMapResultEtag);
-            }
-
-            using (var db = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
-            {
-                var index = db.IndexStore.GetIndex(1);
-
-                Assert.Equal(9, ((AutoMapReduceIndex) index).LastMapResultEtag);
             }
         }
 
@@ -537,6 +512,81 @@ namespace FastTests.Server.Documents.Indexing
                     }
 
                     tx.Commit();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateByChangingValue()
+        {
+            using (var db = CreateDocumentDatabase())
+            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            {
+                new IndexField
+                {
+                    Name = "Age",
+                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Storage = FieldStorage.Yes
+                }
+            }, new[]
+                    {
+                new IndexField
+                {
+                    Name = "Location",
+                    Storage = FieldStorage.Yes
+                },
+            }), db))
+            {
+                CreateUsers(db, 2, "Poland");
+
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal("Poland", results[0].Data["Location"].ToString());
+                    Assert.Equal(41.0, (LazyDoubleValue)results[0].Data["Age"]);
+                }
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        using (var doc = context.ReadObject(new DynamicJsonValue
+                        {
+                            ["Name"] = "modified",
+                            ["Location"] = "Poland",
+                            ["Age"] = 30,
+                            [Constants.Metadata] = new DynamicJsonValue
+                            {
+                                [Constants.RavenEntityName] = "Users"
+                            }
+                        }, "users/0"))
+                        {
+                            db.DocumentsStorage.Put(context, "users/0", null, doc);
+                        }
+
+                        tx.Commit();
+                    }
+                }
+
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+
+                    var results = queryResult.Results;
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal("Poland", results[0].Data["Location"].ToString());
+                    Assert.Equal(51.0, (LazyDoubleValue)results[0].Data["Age"]);
                 }
             }
         }

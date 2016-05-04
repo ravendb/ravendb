@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected virtual void LoadValues()
+        private void LoadValues()
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))

@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
+using System.Linq;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -10,7 +9,6 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -30,30 +28,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
         {
-            _mapResultsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            _mapResultsSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef
             {
-                Name = "MapResultEtag",
                 StartIndex = 0,
                 Count = 1
             });
-
-            _mapResultsSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef
-            {
-                Name = "DocumentKeys",
-                Count = 1,
-                StartIndex = 1,
-                IsGlobal = true
-            });
-
-            _mapResultsSchema.DefineFixedSizeIndex("ReduceKeyHashes", new TableSchema.FixedSizeSchemaIndexDef
-            {
-                IsGlobal = true,
-                Name = "ReduceKeyHashes",
-                StartIndex = 2
-            });
         }
-
-        internal long LastMapResultEtag { get; private set; } = -1;
 
         public static AutoMapReduceIndex CreateNew(int indexId, AutoMapReduceIndexDefinition definition,
             DocumentDatabase documentDatabase)
@@ -93,25 +73,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var etagSlice = new Slice((byte*)null, sizeof(long));
+            var mapEntry = GetMapEntryForDocument(_indexingWorkContext.MapEntriesTable, tombstone.Key);
 
-            foreach (var mapEntry in GetMapEntriesForDocument(_indexingWorkContext.MapEntriesTable, tombstone.Key))
+            if (mapEntry == null)
+                return;
+
+            ReduceKeyState state;
+            if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(mapEntry.ReduceKeyHash, out state) == false)
             {
-                ReduceKeyState state;
-                if (_indexingWorkContext.StateByReduceKeyHash.TryGetValue(mapEntry.ReduceKeyHash, out state) == false)
-                {
-                    //TODO: Need better way to handle tree names
-                    var tree = indexContext.Transaction.InnerTransaction.CreateTree("TODO_" + mapEntry.ReduceKeyHash);
-                    _indexingWorkContext.StateByReduceKeyHash[mapEntry.ReduceKeyHash] = state = new ReduceKeyState(tree);
-                }
-
-                var etag = mapEntry.Etag;
-                etagSlice.Set((byte*)&etag, sizeof(long));
-
-                state.Tree.Delete(etagSlice);
-
-                _indexingWorkContext.MapEntriesTable.Delete(mapEntry.StorageId);
+                //TODO: Need better way to handle tree names
+                var tree = indexContext.Transaction.InnerTransaction.ReadTree("TODO_" + mapEntry.ReduceKeyHash);
+                _indexingWorkContext.StateByReduceKeyHash[mapEntry.ReduceKeyHash] = state = new ReduceKeyState(tree);
             }
+
+            var storageId = mapEntry.StorageId;
+ 
+            state.Tree.Delete(new Slice((byte*)&storageId, sizeof(long)));
+            _indexingWorkContext.MapEntriesTable.Delete(mapEntry.StorageId);
         }
 
         public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
@@ -211,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
             {
-                PutMappedResult(mappedresult, state, _indexingWorkContext.MapEntriesTable, document.Key, reduceHashKey);
+                PutMappedResult(mappedresult, document.Key, reduceHashKey, state, _indexingWorkContext.MapEntriesTable, indexContext);
             }
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
@@ -230,88 +208,49 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return table;
         }
 
-        public unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, ReduceKeyState state, Table table, LazyStringValue documentKey, ulong reduceKeyHash)
+        private unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, LazyStringValue documentKey, ulong reduceKeyHash, ReduceKeyState state, Table mapEntriesTable, TransactionOperationContext indexContext)
         {
-            var etag = ++LastMapResultEtag; // TODO arek - it seems that etag it useless
-
-            var etagBigEndian = IPAddress.HostToNetworkOrder(etag);
-
-            var hashBigEndian = Bits.SwapBytes(reduceKeyHash);
-
             var tvb = new TableValueBuilder
             {
-                { (byte*) &etagBigEndian , sizeof (long) },
                 { documentKey.Buffer, documentKey.Size },
-                { (byte*) &hashBigEndian, sizeof(ulong) }
+                { (byte*) &reduceKeyHash, sizeof(ulong) }
             };
-            
-            // TODO arek - need to handle updates
 
-            table.Insert(tvb);
-            
-            var pos = state.Tree.DirectAdd(new Slice((byte*) &etag, sizeof (long)), mappedResult.Size);
+            var existingEntry = GetMapEntryForDocument(mapEntriesTable, documentKey);
+
+            long storageId;
+            if (existingEntry == null)
+                storageId = mapEntriesTable.Insert(tvb);
+            else
+            {
+                // no need to update since we have the same entry already stored
+                storageId = existingEntry.StorageId;
+            }
+
+            var pos = state.Tree.DirectAdd(new Slice((byte*)&storageId, sizeof(long)), mappedResult.Size);
 
             mappedResult.CopyTo(pos);
         }
 
-        public unsafe List<MapEntry> GetMapEntriesForDocument(Table table, LazyStringValue documentKey)
+        public unsafe MapEntry GetMapEntryForDocument(Table table, LazyStringValue documentKey)
         {
-            var result = new List<MapEntry>();
-
             var documentKeySlice = new Slice(documentKey.Buffer, (ushort) documentKey.Size);
 
-            var seekForwardFrom = table.SeekForwardFrom(_mapResultsSchema.Indexes["DocumentKeys"], documentKeySlice);
+            var seek = table.SeekForwardFrom(_mapResultsSchema.Indexes["DocumentKeys"], documentKeySlice).FirstOrDefault();
 
-            foreach (var seek in seekForwardFrom)
+            if (seek?.Key.Compare(documentKeySlice) != 0)
+                return null;
+
+            var tvr = seek.Results.Single();
+
+            int _;
+            var ptr = tvr.Read(1, out _);
+
+            return new MapEntry
             {
-                if (seek.Key.Equals(documentKeySlice) == false)
-                    break;
-
-                foreach (var tvr in seek.Results)
-                {
-                    int _;
-                    var ptr = tvr.Read(0, out _);
-                    var etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
-
-                    ptr = tvr.Read(2, out _);
-                    var reduceKeyHash = Bits.SwapBytes(*(ulong*) ptr);
-
-                    result.Add(new MapEntry
-                    {
-                        Etag = etag,
-                        ReduceKeyHash = reduceKeyHash,
-                        StorageId = tvr.Id
-                    });
-                }
-            }
-
-            return result;
-        }
-
-        protected override unsafe void LoadValues()
-        {
-            base.LoadValues();
-
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenReadTransaction())
-            {
-                var tree = tx.InnerTransaction.ReadTree("MapResults");
-
-                if (tree == null)
-                    return;
-
-                var table = GetMapEntriesTable(tx.InnerTransaction);
-                
-                if (table.NumberOfEntries == 0)
-                    return;
-
-                var tvr = table.SeekLastByPrimaryKey();
-
-                int _;
-                var ptr = tvr.Read(0, out _);
-                LastMapResultEtag = IPAddress.NetworkToHostOrder(*(long*)ptr);
-            }
+                ReduceKeyHash = *(ulong*)ptr,
+                StorageId = tvr.Id
+            };
         }
     }
 }
