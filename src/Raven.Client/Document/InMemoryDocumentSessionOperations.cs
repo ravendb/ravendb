@@ -1137,7 +1137,7 @@ more responsive application.
         {
             var metadata = GetMetadataFor(entity);
 
-            metadata[Constants.Headers.RavenCreateVersion] = true;
+            metadata[Constants.Versioning.RavenEnableVersioning] = true;
         }
 
         /// <summary>
