@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexWriteOperation : IndexOperationBase
     {
-        private readonly ILog Log = LogManager.GetLogger(typeof(IndexWriteOperation));
+        private readonly ILog _log = LogManager.GetLogger(typeof(IndexWriteOperation));
 
         private readonly Term _documentId = new Term(Constants.DocumentIdFieldName, "Dummy");
         private readonly Term _reduceKeyHash = new Term(Constants.ReduceKeyFieldName, "Dummy");
@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly LuceneIndexWriter _writer;
         private readonly LuceneDocumentConverter _converter;
-        private readonly LuceneIndexPersistence _persistence;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
@@ -35,7 +34,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _name = name;
             _converter = converter;
-            _persistence = persistence;
 
             try
             {
@@ -50,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
 
-                _writer = _persistence.EnsureIndexWriter();
+                _writer = persistence.EnsureIndexWriter();
 
                 _locker = directory.MakeLock("writing-to-index.lock");
 
@@ -90,8 +88,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             stats.RecordIndexingOutput(); // TODO [ppekrol] in future we will have to support multiple index outputs from single document
 
-            if (Log.IsDebugEnabled)
-                Log.Debug($"Indexed document for '{_name}'. Key: {document.Key} Etag: {document.Etag}. Output: {luceneDoc}.");
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Indexed document for '{_name}'. Key: {document.Key} Etag: {document.Etag}. Output: {luceneDoc}.");
         }
 
         public void Delete(string key, IndexingStatsScope stats)
@@ -99,8 +97,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (stats.For("Lucene_Delete"))
                 _writer.DeleteDocuments(_documentId.CreateTerm(key));
 
-            if (Log.IsDebugEnabled)
-                Log.Debug($"Deleted document for '{_name}'. Key: {key}.");
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Deleted document for '{_name}'. Key: {key}.");
         }
 
         public void DeleteReduceResult(string reduceKeyHash, IndexingStatsScope stats)
@@ -108,8 +106,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (stats.For("Lucene_Delete"))
                 _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash));
 
-            if (Log.IsDebugEnabled)
-                Log.Debug($"Deleted document for '{_name}'. Reduce key hash: {reduceKeyHash}.");
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Deleted document for '{_name}'. Reduce key hash: {reduceKeyHash}.");
         }
     }
 }
