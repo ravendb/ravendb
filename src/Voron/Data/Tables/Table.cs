@@ -697,20 +697,20 @@ namespace Voron.Data.Tables
                 Delete(id);
         }
 
-        public void DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
+        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
         {
             if (numberOfEntriesToDelete < 0)
                 throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
 
             if (numberOfEntriesToDelete == 0)
-                return;            
+                return 0;            
 
             var toDelete = new List<long>();
             var tree = GetTree(index);
             using (var it = tree.Iterate())
             {
                 if (it.Seek(value) == false)
-                    return;
+                    return 0;
 
                 do
                 {
@@ -733,6 +733,7 @@ namespace Voron.Data.Tables
 
             foreach (var id in toDelete)
                 Delete(id);
+            return toDelete.Count;
         }
 
         public bool RequiresParticipation

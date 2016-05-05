@@ -18,6 +18,10 @@ namespace Raven.Server.Documents.Versioning
 
         private Document _versioningConfiguration;
 
+        // this is only modified by write transactions under lock
+        // no need to use thread safe ops
+        private long _lastEtag;
+
         public VersioningStorage(DocumentDatabase database)
         {
             _database = database;
@@ -25,12 +29,17 @@ namespace Raven.Server.Documents.Versioning
             // The documents schema is as follows
             // 4 fields (lowered key, etag, lazy string key, document)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
-            _docsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            _docsSchema.DefineIndex("KeyAndEtag", new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 2,
                 IsGlobal = true,
-                Name = "VersioningRevision"
+            });
+            _docsSchema.DefineIndex("Key", new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 1,
+                IsGlobal = true,
             });
             _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
@@ -108,7 +117,8 @@ namespace Raven.Server.Documents.Versioning
             return false;
         }
 
-        public void PutVersion(DocumentsOperationContext context, string collectionName, string key, BlittableJsonReaderObject document, TableValueReader oldValue, bool isSystemDocument)
+        public void PutVersion(DocumentsOperationContext context, string collectionName, string key, 
+            BlittableJsonReaderObject document, TableValueReader oldValue, bool isSystemDocument)
         {
             if (isSystemDocument)
                 return;
@@ -135,24 +145,19 @@ namespace Raven.Server.Documents.Versioning
             if (IsVersioningActive(collectionName, enableVersioning, out maxRevisions) == false)
                 return;
 
-            var revisionCounter = IncrementRevisionNumber(context, collectionName, key);
-            var revisionKey = key + "/revisions/" + revisionCounter;
+            var revisionsCount = IncrementCountOfRevisions(context, key, 1);
 
-            DeleteOldRevisions(context, collectionName, key, revisionCounter, maxRevisions);
+            var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
+            DeleteOldRevisions(context, table, key, maxRevisions, revisionsCount);
 
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentsStorage.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
-
-            /*  var versioned = new DynamicJsonValue(document);
-              versioned.Remove(Constants.RavenCreateVersion);
-              versioned.Remove(Constants.RavenIgnoreVersioning);
-              var versionedDocument = context.ReadObject(versioned, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);*/
 
             int size;
             var basePointer = oldValue.Read(3, out size);
@@ -165,28 +170,26 @@ namespace Raven.Server.Documents.Versioning
                 {basePointer, size}
             };
 
-            var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
             var insert = table.Insert(tbv);
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, string collectionName, string key, long revisionCounter, int? maxRevisions)
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string key, int? maxRevisions, long revisionsCount)
         {
-            if (maxRevisions.HasValue == false)
+            if (maxRevisions.HasValue == false || maxRevisions.Value == int.MaxValue)
                 return;
 
-            var latestRevisionToDelete = revisionCounter - maxRevisions.Value;
-            if (latestRevisionToDelete <= 0)
+            var numberOfRevisionsToDelete = revisionsCount - maxRevisions.Value;
+            if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
-            table.DeleteBackwardFromByPrimayKeyPrefix(key, maxRevisions, long.MaxValue);
+            var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key, numberOfRevisionsToDelete);
+            IncrementCountOfRevisions(context, key, -deletedRevisionsCount);
         }
 
-        private long IncrementRevisionNumber(DocumentsOperationContext context, string collectionName, string key)
+        private long IncrementCountOfRevisions(DocumentsOperationContext context, string key, long delta)
         {
-            var numbers = context.Transaction.InnerTransaction.ReadTree("VersioningRevisionNumbers");
-            var id = collectionName + key;
-            return numbers.Increment(id, 1);
+            var numbers = context.Transaction.InnerTransaction.ReadTree("VersioningRevisionsCount");
+            return numbers.Increment(key, delta);
         }
     }
 }
