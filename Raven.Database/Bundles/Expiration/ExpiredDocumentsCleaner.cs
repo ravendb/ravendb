@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
@@ -72,7 +71,6 @@ namespace Raven.Bundles.Expiration
 
             try
             {
-
                 DateTime currentTime = SystemTime.UtcNow;
                 string nowAsStr = currentTime.GetDefaultRavenFormat();
                 logger.Debug("Trying to find expired documents to delete");
@@ -108,6 +106,9 @@ namespace Raven.Bundles.Expiration
                         break;
 
                     start += pageSize;
+
+                    if (Database.Disposed)
+                        return false;
                 }
 
                 if (list.Count == 0)
@@ -119,6 +120,9 @@ namespace Raven.Bundles.Expiration
                 foreach (var id in list)
                 {
                     Database.Documents.Delete(id, null, null);
+
+                    if (Database.Disposed)
+                        return false;
                 }
             }
             catch (Exception e)
