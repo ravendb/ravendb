@@ -1,12 +1,12 @@
+/*
 //-----------------------------------------------------------------------
 // <copyright file="Tasks.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections.Generic;
+using System;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Database.Tasks;
 using Raven.Tests.Common;
 
@@ -24,7 +24,7 @@ namespace Raven.Tests.Storage
             {
                 tx.Batch(accessor => accessor.Indexing.AddIndex(test, false));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale(test, null, null)));
-                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask(test), SystemTime.UtcNow));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = test }, SystemTime.UtcNow));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale(test, null, null)));
             }
         }
@@ -36,15 +36,10 @@ namespace Raven.Tests.Storage
             {
                 tx.Batch(accessor => accessor.Indexing.AddIndex(test, false));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale(test, null, null)));
-                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask(test), SystemTime.UtcNow));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = test }, SystemTime.UtcNow));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale(test, null, null)));
 
-                tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                    x => MaxTaskIdStatus.Updated,
-                    x => { },
-                    new Reference<bool>(),
-                    new List<int>()
-                )));
+                tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>()));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale(test, null, null)));
             }
         }
@@ -61,7 +56,7 @@ namespace Raven.Tests.Storage
                     mutator.Indexing.AddIndex(test, false);
                     mutator.Indexing.UpdateLastIndexed(test, Etag.InvalidEtag, cutoff);
                 });
-                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask(test), SystemTime.UtcNow));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = test }, SystemTime.UtcNow));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale(test, null, null)));
                 tx.Batch(viewer => Assert.True(viewer.Staleness.IsIndexStale(test, cutoff.AddMinutes(1), null)));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale(test, cutoff.AddMinutes(-1), null)));
@@ -73,13 +68,8 @@ namespace Raven.Tests.Storage
         {
             using (var tx = NewTransactionalStorage())
             {
-                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask(test), SystemTime.UtcNow));
-                tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                    x => MaxTaskIdStatus.Updated,
-                    x => { },
-                    new Reference<bool>(),
-                    new List<int>()
-                )));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = test }, SystemTime.UtcNow));
+                tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>()));
             }
         }
 
@@ -88,19 +78,9 @@ namespace Raven.Tests.Storage
         {
             using (var tx = NewTransactionalStorage())
             {
-                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask(test), SystemTime.UtcNow));
-                tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                    x => MaxTaskIdStatus.Updated,
-                    x => { },
-                    new Reference<bool>(),
-                    new List<int>()
-                )));
-                tx.Batch(mutator => Assert.Null(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                    x => MaxTaskIdStatus.Updated,
-                    x => { },
-                    new Reference<bool>(),
-                    new List<int>()
-                )));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = test }, SystemTime.UtcNow));
+                tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>()));
+                tx.Batch(mutator => Assert.Null(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>()));
             }
         }
 
@@ -109,26 +89,11 @@ namespace Raven.Tests.Storage
         {
             using (var tx = NewTransactionalStorage())
             {
-                tx.Batch(mutator =>
-                {
-                    var removeFromIndexTask = new RemoveFromIndexTask(test);
-                    removeFromIndexTask.AddKey("a");
-                    mutator.Tasks.AddTask(removeFromIndexTask, SystemTime.UtcNow);
-                });
-                tx.Batch(mutator =>
-                {
-                    var removeFromIndexTask = new RemoveFromIndexTask(test);
-                    removeFromIndexTask.AddKey("b");
-                    mutator.Tasks.AddTask(removeFromIndexTask, SystemTime.UtcNow);
-                });
-
-                tx.Batch(mutator => Assert.Equal(2, mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                    x => MaxTaskIdStatus.Updated,
-                    x => { },
-                    new Reference<bool>(),
-                    new List<int>()
-                ).NumberOfKeys));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = test, Keys = {"a"}}, SystemTime.UtcNow));
+                tx.Batch(mutator => mutator.Tasks.AddTask(new RemoveFromIndexTask { Index = test, Keys = {"b"}}, SystemTime.UtcNow));
+                tx.Batch(mutator => Assert.Equal(2, mutator.Tasks.GetMergedTask<RemoveFromIndexTask>().Keys.Count));
             }
         }
     }
 }
+*/

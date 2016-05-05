@@ -3,6 +3,7 @@ using NLog.Config;
 using NLog.Targets;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Logging.LogProviders;
+using Raven.Tests.Common.Attributes;
 using Xunit;
 using LogLevel = NLog.LogLevel;
 using LogManager = NLog.LogManager;
@@ -19,6 +20,11 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
         public NLogLogProviderLoggingEnabledTests()
         {
+            if (PerTestLogger.ShouldEnablePerTestLog())
+            {
+                throw new SkipException("Unable to test NLogProvider when running in per test log mode.");
+            }
+
             NLogLogManager.ProviderIsAvailableOverride = true;
             var config = new LoggingConfiguration();
 

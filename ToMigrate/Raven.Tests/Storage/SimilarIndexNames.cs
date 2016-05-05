@@ -16,9 +16,9 @@ namespace Raven.Tests.Storage
 
         public SimilarIndexNames()
         {
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            db = new DocumentDatabase(new RavenConfiguration
             {
-                Core = { RunInMemory= true }
+                RunInMemory= true
             }, null);
         }
 

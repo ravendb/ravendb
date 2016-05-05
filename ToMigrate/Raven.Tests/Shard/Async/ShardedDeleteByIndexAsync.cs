@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client;
@@ -9,6 +11,7 @@ using Raven.Client.Shard;
 using Raven.Server;
 using Raven.Tests.Common;
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Xunit;
 
 
@@ -131,16 +134,15 @@ namespace Raven.Tests.Shard.Async
         [Fact]
         public async Task DeleteByIndexShardedAsync()
         {
-            using (var session = shardedDocumentStore.OpenAsyncSession())
+            using (var session = shardedDocumentStore.OpenSession())
             {
                 var persons = GetNewPersons();
-
-                foreach (var person in persons)
+                persons.ForEach((x) =>
                 {
-                    await session.StoreAsync(person);
-                }
-                
-                await session.SaveChangesAsync();
+                    session.Store(x);
+                });
+
+                session.SaveChanges();
             }
 
             new Person_ByName().Execute(shardedDocumentStore);
@@ -158,7 +160,7 @@ namespace Raven.Tests.Shard.Async
 
                 await session.SaveChangesAsync();
             }
-
+             
             using (var session = shardedDocumentStore.OpenAsyncSession())
             {
                 var persons = await session.Advanced.AsyncDocumentQuery<Person>().ToListAsync();

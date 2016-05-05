@@ -16,10 +16,11 @@ namespace Raven.Tests
         public void When_HostOnAppDisposing_key_not_exist_then_should_not_throw()
         {
             string path = NewDataPath();
-            var configuration = new RavenConfiguration();
-
-            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), path);
-            configuration.SetSetting(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine(path, "FileSystem"));
+            var configuration = new InMemoryRavenConfiguration { Settings =
+            {
+                { "Raven/DataDir", path },
+                { Constants.FileSystem.DataDirectory, Path.Combine(path, "FileSystem")}
+            } };
 
             configuration.Initialize();
 

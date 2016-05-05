@@ -413,7 +413,7 @@ namespace Raven.Tests.Replication
                     yetAnotherTransformer.TransformerName
                 };
                 expectedTransformerNames.Sort();
-                
+
                 // ReSharper disable once AccessToDisposedClosure
                 SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
 

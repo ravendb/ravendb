@@ -38,7 +38,7 @@ namespace Raven.Tests.Triggers
         {
             db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
-            Assert.Contains("\"name\":\"abc\"", db.Documents.Get("abc").ToJson().ToString(Formatting.None));
+            Assert.Contains("\"name\":\"abc\"", db.Documents.Get("abc", null).ToJson().ToString(Formatting.None));
         }
 
         [Fact]
@@ -46,7 +46,7 @@ namespace Raven.Tests.Triggers
         {
             db.Documents.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
-            var actualString = db.Documents.Get("abc").DataAsJson.ToString(Formatting.None);
+            var actualString = db.Documents.Get("abc", null).DataAsJson.ToString(Formatting.None);
             Assert.Contains("2010-02-13T18:26:48.5060000Z", actualString);
         }
 

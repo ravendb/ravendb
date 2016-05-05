@@ -81,7 +81,7 @@ select new {
         [Fact]
         public void DoesNotOverReduce() 
         {
-            db.Configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 512;
+            db.Configuration.MaxNumberOfItemsToReduceInSingleBatch = 512;
             for (int i = 0; i < 1024; i++) {
                 db.Documents.Put("docs/" + i, null, RavenJObject.Parse("{blog_id: " + i + ", comments: [{},{},{}]}"), new RavenJObject(), null);
             }

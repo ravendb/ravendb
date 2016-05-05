@@ -56,6 +56,32 @@ namespace Raven.Tests.Storage.Voron
 
         [Theory]
         [PropertyData("Storages")]
+        public void GetMostRecentAttachmentEtag(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Equal(Etag.Empty, accessor.Staleness.GetMostRecentAttachmentEtag()));
+
+                var etag1 = Etag.Parse("02000000-0000-0000-0000-000000000001");
+                var etag2 = Etag.Parse("02000000-0000-0000-0000-000000000002");
+                var etag3 = Etag.Parse("02000000-0000-0000-0000-000000000003");
+
+                storage.Batch(accessor => accessor.Attachments.AddAttachment("key1", etag1, StreamFor("123"), new RavenJObject()));
+
+                storage.Batch(accessor => Assert.Equal(etag1, accessor.Staleness.GetMostRecentAttachmentEtag()));
+
+                storage.Batch(accessor =>
+                {
+                    accessor.Attachments.AddAttachment("key2", etag2, StreamFor("123"), new RavenJObject());
+                    accessor.Attachments.AddAttachment("key3", etag3, StreamFor("123"), new RavenJObject());
+                });
+
+                storage.Batch(accessor => Assert.Equal(etag3, accessor.Staleness.GetMostRecentAttachmentEtag()));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
         public void GetMostRecentDocumentEtag(string requestedStorage)
         {
             using (var storage = NewTransactionalStorage(requestedStorage))

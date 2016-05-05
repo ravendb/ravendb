@@ -79,7 +79,7 @@ namespace Raven.Tests.Indexes
             {
                 Map = employees => from employee in employees
                                    let status = MetadataFor(employee)
-                                   where status.Value<string>("test") == "2"
+                                   where status.Value<string>("Test") == "2"
                                    select new
                                    {
                                        Count = 1

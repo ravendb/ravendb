@@ -42,10 +42,9 @@ namespace Raven.Tests.Indexes
             Assert.Equal(analyzedName, tokens.Single());
         }
         
-
         public void with_index_and_some_entities(Action<IDocumentSession> action)
         {
-            using (var store = NewDocumentStore())
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
                 var indexDefinition = new IndexDefinitionBuilder<Entity, EntityCount>()
                 {

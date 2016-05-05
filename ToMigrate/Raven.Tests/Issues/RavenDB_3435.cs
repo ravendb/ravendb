@@ -100,7 +100,7 @@ namespace Raven.Tests.Issues
                 //initial replication -> essentially create the doc in storeB
                 var initialReplicationRequestBody = RavenJArray.Parse("[{\"Max\":32,\"@metadata\":{\"Raven-Replication-Version\":2,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"Raven/Hilo/users\",\"Last-Modified\":\"2015-05-19T11:28:05.2198563Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2198563\",\"@etag\":\"01000000-0000-0002-0000-000000000003\"}},{\"Name\":\"John Doe A\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:05.2348669Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.2348669\",\"@etag\":\"01000000-0000-0002-0000-000000000004\"}}]");
                 var serverUrl = servers[0].DocumentStore.Url;
-                var serverPort = servers[0].Configuration.Core.Port;
+                var serverPort = servers[0].Configuration.Port;
                 var url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=2", serverUrl, serverPort, TestDatabaseName);
 
                 var replicateRequest = httpRavenRequestFactory.Create(url, HttpMethods.Post, new RavenConnectionStringOptions
