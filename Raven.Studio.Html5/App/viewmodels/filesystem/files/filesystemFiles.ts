@@ -41,6 +41,7 @@ class filesystemFiles extends viewModelBase {
     uploadQueue = ko.observableArray<uploadItem>();
     folderNotificationSubscriptions = {};
     hasFiles: KnockoutComputed<boolean>;
+    filesSelection: KnockoutComputed<checkbox>;
     hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
     isAnyFilesAutoSelected = ko.observable<boolean>(false);
@@ -102,6 +103,17 @@ class filesystemFiles extends viewModelBase {
         this.hasAllFilesSelected = ko.computed(() => {
             var filesCount = this.filesCount();
             return filesCount > 0 && filesCount === this.selectedFilesIndices().length;
+        });
+
+        this.filesSelection = ko.computed(() => {
+            var selected = this.selectedFilesIndices();
+            if (this.hasAllFilesSelected()) {
+                return checkbox.Checked;
+            }
+            if (selected.length > 0) {
+                return checkbox.SomeChecked;
+            }
+            return checkbox.UnChecked;
         });
     }
 

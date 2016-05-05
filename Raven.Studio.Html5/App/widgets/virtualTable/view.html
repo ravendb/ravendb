@@ -66,7 +66,10 @@
 </script>
 
 <script id="checkboxTemplate" type="text/template">
-    <img data-bind="visible: $parents[1].settings.selectionEnabled, click: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }, attr: { src: $parent.isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+    <div class="checkbox" data-bind="visible: $parents[1].settings.selectionEnabled">
+        <input type="checkbox" class="styled" data-bind="checked: $parent.isChecked, event: { change: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }}">
+        <label>&nbsp;</label>
+    </div>
 </script>
 
 <script id="idTemplate" type="text/template">

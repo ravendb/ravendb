@@ -59,14 +59,12 @@
                 <div class="form-group">
                     <div class="col-sm-offset-2 col-sm-5">
                         <div class="checkbox">
-                            <label>
-                                <input type="checkbox" data-bind="checked: stripReplicationInformation"> Strip replication information from documents metadata
-                            </label>
+                            <input type="checkbox" class="styled" id="strip_replicaton_info" data-bind="checked: stripReplicationInformation">
+                            <label for="strip_replicaton_info">Strip replication information from documents metadata</label>
                         </div>
                         <div class="checkbox">
-                            <label>
-                                <input type="checkbox" data-bind="checked: shouldDisableVersioningBundle"> Disable versioning bundle during import
-                            </label>
+                            <input type="checkbox" class="styled" id="disable_versioning" data-bind="checked: shouldDisableVersioningBundle">
+                            <label for="disable_versioning">Disable versioning bundle during import</label>
                         </div>
                     </div>
                 </div>

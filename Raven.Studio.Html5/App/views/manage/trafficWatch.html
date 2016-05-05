@@ -52,84 +52,86 @@
                     <strong>; Max Request Duration: </strong><label data-bind="text: $root.maxRequestDuration()"></label>
                     <strong>; Buffer Size: </strong><label data-bind="text: MaxEntries"></label>
                 </div>
-                <div class="form-group" id="logTableContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#watchTrafficContainer' }">
-                    <div class="form-group logHeaders">
-                        <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
-                            <span class="column-handle" column="0"></span>
-                            <span>Time</span>
-                        </div>
-                        <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
-                            <span class="column-handle" column="1"></span>
-                            <span>Duration</span>
-                        </div>
-                        <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
-                            <span class="column-handle" column="2"></span>
-                            <span>Resource</span>
-                        </div>
-                        <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
-                            <span class="column-handle" column="3"></span>
-                            <span>Method</span>
-                        </div>
-                        <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
-                            <span class="column-handle" column="4"></span>
-                            <span>Url</span>
-                        </div>
-                        <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
-                            <span class="column-handle" column="5"></span>
-                            <span>Has Additional Data</span>
-                        </div>
-                    </div>
-                    <div id="logRecords" class="form-group logRecords" style="white-space: nowrap" data-bind="foreach: recentEntries, delegatedHandler: 'click'">
-                        <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="'selected': $data === $parent.selectedLog(), visible: Visible">
-                            <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: TimeStampText, attr: {title:Time}"></div>
-                            <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Duration, attr: { title: Duration }"></div>
-                            <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: Resource, attr: { title: Resource }"></div>
-                            <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: Method, attr: { title: Method }"></div>
-                            <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: Url"></div>
-                            <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: !!CustomInfo?'Y':'N'"></div>
-                        </div>
-                    </div>
-                    <div class="form-group log-details panel panel-default" data-bind="visible: showLogDetails">
-                        <div class="col-md-11" data-bind="with: selectedLog">
-                            <div class="row">
-                                <label class="col-md-2 text-right control-label">Time</label>
-                                <div class="col-md-10">
-                                    <p class="form-control-static" data-bind="text: TimeStampText() +' ' + Time()"></p>
-                                </div>
+                <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#watchTrafficContainer' }" style="position: relative">
+                    <div class="form-group" id="logTableContainer" >
+                        <div class="form-group logHeaders">
+                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[0]() + '%' }">
+                                <span class="column-handle" column="0"></span>
+                                <span>Time</span>
                             </div>
-                            <div class="row">
-                                <label class="col-md-2 text-right control-label">Duration</label>
-                                <div class="col-md-10">
-                                    <p class="form-control-static" data-bind="text: Duration"></p>
-                                </div>
+                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[1]() + '%' }">
+                                <span class="column-handle" column="1"></span>
+                                <span>Duration</span>
                             </div>
-                            <div class="row">
-                                <label class="col-md-2 text-right control-label">Resource Name</label>
-                                <div class="col-md-10">
-                                    <p class="form-control-static" data-bind="text: Resource"></p>
-                                </div>
+                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + '%' }">
+                                <span class="column-handle" column="2"></span>
+                                <span>Resource</span>
                             </div>
-                            <div class="row">
-                                <label class="col-md-2 text-right control-label">Method</label>
-                                <div class="col-md-10">
-                                    <p class="form-control-static" data-bind="text: Method"></p>
-                                </div>
+                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[3]() + '%' }">
+                                <span class="column-handle" column="3"></span>
+                                <span>Method</span>
                             </div>
-                            <div class="row">
-                                <label class="col-md-2 text-right control-label">Url</label>
-                                <div class="col-md-10">
-                                    <p class="form-control-static" data-bind="text: Url"></p>
-                                </div>
+                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[4]() + '%' }">
+                                <span class="column-handle" column="4"></span>
+                                <span>Url</span>
                             </div>
-                            <div class="row">
-                                <label class="col-md-2 text-right control-label">Custom Info</label>
-                                <div class="col-md-10">
-                                    <p class="form-control-static" data-bind="html: !!CustomInfo ? CustomInfo : '-'"></p>
-                                </div>
+                            <div class="column column-header" data-bind="style: { width: $root.columnWidths[5]() + '%' }">
+                                <span class="column-handle" column="5"></span>
+                                <span>Has Additional Data</span>
                             </div>
                         </div>
-                        <div class="col-sm-1">
-                            <button class="btn btn-default" data-bind="click: function(){ this.showLogDetails(false) }">Hide</button>
+                        <div id="logRecords" class="form-group logRecords" style="white-space: nowrap" data-bind="foreach: recentEntries, delegatedHandler: 'click'">
+                            <div id="logRecordsContainer" style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectLog" data-bind="'selected': $data === $parent.selectedLog(), visible: Visible">
+                                <div class="column" data-bind="style: { width: $root.columnWidths[0]() + '%' }, text: TimeStampText, attr: {title:Time}"></div>
+                                <div class="column" data-bind="style: { width: $root.columnWidths[1]() + '%' }, text: Duration, attr: { title: Duration }"></div>
+                                <div class="column" data-bind="style: { width: $root.columnWidths[2]() + '%' }, text: Resource, attr: { title: Resource }"></div>
+                                <div class="column" data-bind="style: { width: $root.columnWidths[3]() + '%' }, text: Method, attr: { title: Method }"></div>
+                                <div class="column" data-bind="style: { width: $root.columnWidths[4]() + '%' }, text: Url"></div>
+                                <div class="column" data-bind="style: { width: $root.columnWidths[5]() + '%' }, text: !!CustomInfo?'Y':'N'"></div>
+                            </div>
+                        </div>
+                        <div class="form-group log-details panel panel-default panel-wo-margin" data-bind="visible: showLogDetails">
+                            <div class="col-md-11" data-bind="with: selectedLog">
+                                <div class="row">
+                                    <label class="col-md-2 text-right control-label">Time</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: TimeStampText() +' ' + Time()"></p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-2 text-right control-label">Duration</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Duration"></p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-2 text-right control-label">Resource Name</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Resource"></p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-2 text-right control-label">Method</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Method"></p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-2 text-right control-label">Url</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="text: Url"></p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-2 text-right control-label">Custom Info</label>
+                                    <div class="col-md-10">
+                                        <p class="form-control-static" data-bind="html: !!CustomInfo ? CustomInfo : '-'"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-1">
+                                <button class="btn btn-default" data-bind="click: function(){ this.showLogDetails(false) }">Hide</button>
+                            </div>
                         </div>
                     </div>
                 </div>

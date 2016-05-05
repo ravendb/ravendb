@@ -49,6 +49,7 @@ class documents extends viewModelBase {
     isSystemDocumentsCollection: KnockoutComputed<boolean>;
     isRegularCollection: KnockoutComputed<boolean>;
 
+    documentsSelection: KnockoutComputed<checkbox>;
     hasAnyDocumentsSelected: KnockoutComputed<boolean>;
     hasAllDocumentsSelected: KnockoutComputed<boolean>;
     isAnyDocumentsAutoSelected = ko.observable<boolean>(false);
@@ -83,6 +84,16 @@ class documents extends viewModelBase {
                 return numOfSelectedDocuments === this.selectedCollection().documentCount();
             }
             return false;
+        });
+        this.documentsSelection = ko.computed(() => {
+            var selected = this.selectedDocumentIndices();
+            if (this.hasAllDocumentsSelected()) {
+                return checkbox.Checked;
+            }
+            if (selected.length > 0) {
+                return checkbox.SomeChecked;
+            }
+            return checkbox.UnChecked;
         });
         this.canCopyAllSelected = ko.computed(() => {
             this.showLoadingIndicator(); //triggers computing the new cached selected items
@@ -544,7 +555,7 @@ class documents extends viewModelBase {
             var selectedItem = <Document>grid.getSelectedItems(1).first();
 
             var metadata = selectedItem["__metadata"];
-            var id = metadata["id"];
+            var id = metadata["id"]; 
             var generate = new generateClassCommand(this.activeDatabase(),id, "csharp");
             var deffered = generate.execute();
             deffered.done((code: JSON) => {

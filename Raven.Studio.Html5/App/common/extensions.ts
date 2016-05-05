@@ -441,38 +441,26 @@ class extensions {
             }
         };
 
-        ko.bindingHandlers["checkbox"] = {
-            update(element, valueAccessor, allBindings, viewModel, bindingContext) {
-                var checked: boolean = ko.unwrap(valueAccessor());
-                
-                var src = checked ? "content/images/checked.png" : "content/images/unchecked.png";
-                $(element).attr("src", src);
-                var needOpacity = ko.utils.unwrapObservable(allBindings().needOpacity);
-                var opactity = !!needOpacity ? 0.25 : 1;
-                $(element).css("opacity", opactity);
-            }
-        };
-
         ko.bindingHandlers["checkboxTriple"] = {
             update(element, valueAccessor, allBindings, viewModel, bindingContext) {
                 var checkboxValue: checkbox = ko.unwrap(valueAccessor());
-                var src;
                 switch (checkboxValue) {
-                    case checkbox.Checked:
-                        src = "content/images/checked.png";
-                        break;
-                    case checkbox.SomeChecked:
-                        src = "content/images/some-checked.png";
-                        break;
-                    case checkbox.UnChecked:
-                    default:
-                        src = "content/images/unchecked.png";
+                case checkbox.Checked:
+                    element.checked = true;
+                    element.readOnly = false;
+                    element.indeterminate = false;
+                    break;
+                case checkbox.SomeChecked:
+                    element.readOnly = true;
+                    element.indeterminate = true;
+                    element.checked = false;
+                    break;
+                case checkbox.UnChecked:
+                    element.checked = false;
+                    element.readOnly = false;
+                    element.indeterminate = false;
+                    break;
                 }
-
-                $(element).attr("src", src);
-                var needOpacity = ko.utils.unwrapObservable(allBindings().needOpacity);
-                var opactity = !!needOpacity ? 0.25 : 1;
-                $(element).css("opacity", opactity);
             }
         };
     }

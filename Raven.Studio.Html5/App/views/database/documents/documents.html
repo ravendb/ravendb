@@ -37,9 +37,10 @@
         <div class="btn-toolbar" role="toolbar">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group">
-                <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll, visible: hasDocuments" title="Select all or none">
-                    <img data-bind="attr: { src: hasAllDocumentsSelected() ? 'content/images/checked.png' : hasAnyDocumentsSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }"/>
-                </button>
+                <div class="checkbox">
+                    <input id="documents_all" class="styled" type="checkbox" data-bind="checkboxTriple: documentsSelection, event: { change: toggleSelectAll }, visible: hasDocuments" title="Select all or none">
+                    <label for="documents_all">&nbsp;</label>
+                </div>
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newDocument" title="Create new document (Alt+N)">

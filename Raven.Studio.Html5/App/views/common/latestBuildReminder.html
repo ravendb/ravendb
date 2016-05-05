@@ -16,11 +16,11 @@
         <div class="label label-danger">An error occured!</div>
         <div data-bind="text: latestServerBuildResult.Exception"></div>
         <!-- /ko -->
-        
+
         <div class="checkbox">
-            <label>
-                <input type="checkbox" data-bind="checked: mute"> Mute for a week
-            </label>
+            <input type="checkbox" class="styled" id="mute"
+                    data-bind="checked: mute">
+            <label for="mute">Mute for a week</label>
         </div>
     </div>
 </div>
