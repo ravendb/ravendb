@@ -79,31 +79,27 @@ namespace Raven.Server.Documents.Versioning
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
         }
 
-        private bool IsVersioningActive(string collectionName, bool explictEnableVersioning, out int? maxRevisions)
+        private bool IsVersioningActive(string collectionName, bool explictEnableVersioning, out BlittableJsonReaderObject configuration)
         {
-            maxRevisions = null;
-
+            configuration = null;
             if (_versioningConfiguration == null)
                 return false;
 
-            BlittableJsonReaderObject configuration;
             if (_versioningConfiguration.Data.TryGet(collectionName, out configuration))
             {
-                return IsVersioningActiveForCollection(configuration, explictEnableVersioning, out maxRevisions);
+                return IsVersioningActiveForCollection(configuration, explictEnableVersioning);
             }
 
             if (_versioningConfiguration.Data.TryGet("DefaultConfiguration", out configuration))
             {
-                return IsVersioningActiveForCollection(configuration, explictEnableVersioning, out maxRevisions);
+                return IsVersioningActiveForCollection(configuration, explictEnableVersioning);
             }
 
             return false;
         }
 
-        private static bool IsVersioningActiveForCollection(BlittableJsonReaderObject configuration, bool explictEnableVersioning, out int? maxRevisions)
+        private static bool IsVersioningActiveForCollection(BlittableJsonReaderObject configuration, bool explictEnableVersioning)
         {
-            configuration.TryGet("MaxRevisions", out maxRevisions);
-
             bool active;
             if (configuration.TryGet("Active", out active) && active)
                 return true;
@@ -118,14 +114,14 @@ namespace Raven.Server.Documents.Versioning
         }
 
         public void PutVersion(DocumentsOperationContext context, string collectionName, string key, 
-            BlittableJsonReaderObject document, TableValueReader oldValue, bool isSystemDocument)
+            BlittableJsonReaderObject document, BlittableJsonReaderObject oldDocument, bool isSystemDocument)
         {
             if (isSystemDocument)
                 return;
 
             bool enableVersioning = false;
             BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata, out metadata))
+            if (document != null && document.TryGet(Constants.Metadata, out metadata))
             {
                 if (metadata.TryGet(Constants.Versioning.RavenEnableVersioning, out enableVersioning))
                 {
@@ -141,13 +137,15 @@ namespace Raven.Server.Documents.Versioning
                 }
             }
 
-            int? maxRevisions;
-            if (IsVersioningActive(collectionName, enableVersioning, out maxRevisions) == false)
+            BlittableJsonReaderObject configuration;
+            if (IsVersioningActive(collectionName, enableVersioning, out configuration) == false)
                 return;
 
-            var revisionsCount = IncrementCountOfRevisions(context, key, 1);
-
             var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
+
+            int? maxRevisions;
+            configuration.TryGet("MaxRevisions", out maxRevisions);
+            var revisionsCount = IncrementCountOfRevisions(context, key, 1);
             DeleteOldRevisions(context, table, key, maxRevisions, revisionsCount);
 
             byte* lowerKey;
@@ -159,15 +157,12 @@ namespace Raven.Server.Documents.Versioning
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
 
-            int size;
-            var basePointer = oldValue.Read(3, out size);
-
             var tbv = new TableValueBuilder
             {
                 {lowerKey, lowerSize},
                 {(byte*)&newEtagBigEndian, sizeof(long)},
                 {keyPtr, keySize},
-                {basePointer, size}
+                {oldDocument.BasePointer, oldDocument.Size}
             };
 
             var insert = table.Insert(tbv);
@@ -190,6 +185,36 @@ namespace Raven.Server.Documents.Versioning
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree("VersioningRevisionsCount");
             return numbers.Increment(key, delta);
+        }
+
+        private void DeleteCountOfRevisions(DocumentsOperationContext context, string key)
+        {
+            var numbers = context.Transaction.InnerTransaction.ReadTree("VersioningRevisionsCount");
+            numbers.Delete(key);
+        }
+
+        public void Delete(DocumentsOperationContext context, string collectionName, string key, Document document, bool isSystemDocument)
+        {
+            if (isSystemDocument)
+                return;
+
+            BlittableJsonReaderObject configuration;
+            if (IsVersioningActive(collectionName, false, out configuration) == false)
+                return;
+
+            bool purgeOnDelete;
+            configuration.TryGet("PurgeOnDelete", out purgeOnDelete);
+
+            if (purgeOnDelete)
+            {
+                DeleteCountOfRevisions(context, key);
+                var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
+                table.DeleteByKey(key);
+            }
+            else
+            {
+                PutVersion(context, collectionName, key, null, document.Data, isSystemDocument);
+            }
         }
     }
 }
