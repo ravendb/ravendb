@@ -28,6 +28,8 @@ namespace Raven.Client.Linq
     /// </summary>
     public class RavenQueryProviderProcessor<T>
     {
+        private static readonly Regex ReplaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
+
         private readonly Action<IDocumentQueryCustomization> customizeQuery;
         /// <summary>
         /// The query generator
@@ -1535,7 +1537,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 FieldsToRename.Add(new RenamedField
                 {
                     NewField = groupByKey,
-                    OriginalField = groupByFields[0].Name
+                    OriginalField = ReplaceInvalidCharacterForFields.Replace(groupByFields[0].Name, "_")
                 });
 
                 groupByFields[0].ClientSideName = groupByKey;
@@ -1579,7 +1581,40 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (member == null)
                     member = elementSelectorPath;
 
-                mapReduceField = GetSelectPath(member);
+                if (member != null)
+                {
+                    mapReduceField = GetSelectPath(member);
+                }
+                else
+                {
+                    var methodCallExpression = lambdaExpression.Body as MethodCallExpression;
+
+                    if (methodCallExpression == null)
+                        throw new NotSupportedException("No idea how to handle this dynamic map-reduce query!");
+
+                    switch (methodCallExpression.Method.Name)
+                    {
+                        case "Sum":
+                        {
+                            if (mapReduceOperation != FieldMapReduceOperation.Sum)
+                                throw new NotSupportedException("Cannot use different aggregating functions for a single field");
+
+                            if (methodCallExpression.Arguments.Count != 2)
+                                throw new NotSupportedException($"Incompatible number of arguments of Sum function: {methodCallExpression.Arguments.Count}");
+
+                            var firstPart = GetMember(methodCallExpression.Arguments[0]);
+                            var secondPart = GetMember(methodCallExpression.Arguments[1]);
+
+                            mapReduceField = $"{firstPart.Path},{secondPart.Path}";
+
+                            break;
+                        }
+                        default:
+                        {
+                            throw new NotSupportedException("Method not supported: " + methodCallExpression.Method.Name);
+                        }
+                    }
+                }
             }
 
             if (mapReduceOperation == FieldMapReduceOperation.Count && mapReduceField != "Count")
@@ -1601,7 +1636,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 FieldsToRename.Add(new RenamedField
                 {
                     NewField = renamedField,
-                    OriginalField = mapReduceField
+                    OriginalField = ReplaceInvalidCharacterForFields.Replace(mapReduceField, "_")
                 });
 
                 dynamicMapReduceField.ClientSideName = renamedField;

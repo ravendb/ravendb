@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -440,6 +441,93 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
                     Assert.Equal("Chair", items[0].NameOfProduct);
                     Assert.Equal("Desk", items[1].NameOfProduct);
+                }
+            }
+        }
+
+        [Fact]  
+        public async Task Group_by_nested_field_sum_on_collection()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        ShipTo = new Address
+                        {
+                            Country = "Norway"
+                        },
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Quantity = 2
+                            },
+                            new OrderLine
+                            {
+                                Quantity = 2
+                            }
+                        }
+                    });
+
+                    session.Store(new Order
+                    {
+                        ShipTo = new Address
+                        {
+                            Country = "Norway"
+                        },
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Quantity = 1
+                            }
+                        }
+                    });
+
+                    session.Store(new Order
+                    {
+                        ShipTo = new Address
+                        {
+                            Country = "Sweden"
+                        },
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Quantity = 1
+                            }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => x.ShipTo.Country)
+                            .Select(x => new
+                            {
+                                Country = x.Key,
+                                OrderedQuantity = x.Sum(order => order.Lines.Sum(line => line.Quantity)),
+                                // TODO arek - to support queries like below we would need to distinguish between
+                                // map operation (Sum) and reduce operation (Average) for a single index field 
+                                //OrderedQuantity2 = x.Average(order => order.Lines.Sum(line => line.Quantity))
+                            })
+                            .OrderBy(x => x.Country)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal("Norway", orders[0].Country);
+                    Assert.Equal(5, orders[0].OrderedQuantity);
+
+                    Assert.Equal("Sweden", orders[1].Country);
+                    Assert.Equal(1, orders[1].OrderedQuantity);
                 }
             }
         }
