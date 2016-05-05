@@ -11,11 +11,14 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Bundles.MoreLikeThis;
+using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
+using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -575,6 +578,45 @@ namespace FastTests.Client.Indexing
                 var indexNames = store.DatabaseCommands.GetIndexNames(0, 10);
                 Assert.Equal(1, indexNames.Length);
                 Assert.Contains(indexName, indexNames);
+            }
+        }
+
+        [Fact]
+        public async Task CanExplain()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var users = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    users = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Age > 10)
+                        .ToList();
+                }
+
+                var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/queries/explain/dynamic/Users", HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+                var array = (RavenJArray)await request.ReadResponseJsonAsync();
+                var explanations = array.JsonDeserialization<DynamicQueryToIndexMatcher.Explanation>();
+
+                Assert.Equal(1, explanations.Length);
+                Assert.NotNull(explanations[0].Index);
+                Assert.NotNull(explanations[0].Reason);
             }
         }
 

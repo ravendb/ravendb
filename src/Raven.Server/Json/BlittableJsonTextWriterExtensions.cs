@@ -9,6 +9,7 @@ using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Dynamic;
 
 using Sparrow.Json;
 
@@ -16,6 +17,20 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTextWriterExtensions
     {
+        public static void WriteExplanation(this BlittableJsonTextWriter writer, JsonOperationContext context, DynamicQueryToIndexMatcher.Explanation explanation)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(explanation.Index)));
+            writer.WriteString(context.GetLazyString(explanation.Index));
+            writer.WriteComma();
+
+            writer.WritePropertyName(context.GetLazyString(nameof(explanation.Reason)));
+            writer.WriteString(context.GetLazyString(explanation.Reason));
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteDocumentQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result)
         {
             writer.WriteStartObject();
