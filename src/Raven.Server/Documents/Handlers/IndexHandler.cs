@@ -20,6 +20,36 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/indexes/source", "GET")]
+        public Task Source()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            var index = Database.IndexStore.GetIndex(names[0]);
+            if (index == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            throw new NotImplementedException(); // TODO [ppekrol] need static indexes
+        }
+
+        [RavenAction("/databases/*/indexes/debug", "GET")]
+        public Task Debug()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            var index = Database.IndexStore.GetIndex(names[0]);
+            if (index == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            throw new NotImplementedException(); // TODO [ppekrol] not sure yet what will be needed, let's wait for Studio
+        }
+
         [RavenAction("/databases/*/indexes", "GET")]
         public Task GetAll()
         {
@@ -66,10 +96,13 @@ namespace Raven.Server.Documents.Handlers
 
                     isFirst = false;
 
-                    if (namesOnly == false)
-                        writer.WriteIndexDefinition(context, indexDefinition);
-                    else
+                    if (namesOnly)
+                    {
                         writer.WriteString(context.GetLazyString(indexDefinition.Name));
+                        continue;
+                    }
+
+                    writer.WriteIndexDefinition(context, indexDefinition);
                 }
 
                 writer.WriteEndArray();
