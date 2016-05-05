@@ -69,7 +69,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int NodeEntryWithAnotherKey(TreeNodeHeader* other, Slice key)
         {
-            var keySize = key == null ? other->KeySize : key.Size;
+            var keySize = key.HasValue ? key.Size : other->KeySize;
             var sz = keySize + Constants.NodeHeaderSize;
             if (other->Flags == TreeNodeFlags.Data || other->Flags == TreeNodeFlags.MultiValuePageRef)
                 sz += other->DataSize;

@@ -1,11 +1,12 @@
 ﻿using System.IO;
 using Xunit;
 using Voron;
+using Voron.Data;
 
 namespace FastTests.Voron.Bugs
 {
     public class InvalidReleasesOfScratchPages : StorageTest
-	{
+    {
         [Fact]
         public void ReadTransactionCanReadJustCommittedValue()
         {
@@ -29,37 +30,37 @@ namespace FastTests.Voron.Bugs
         }
 
         protected override void Configure(StorageEnvironmentOptions options)
-		{
-			options.MaxScratchBufferSize *= 2;
-		}
+        {
+            options.MaxScratchBufferSize *= 2;
+        }
 
-		[Fact]
-		public void AllScratchPagesShouldBeReleased()
-		{
-			var options = StorageEnvironmentOptions.CreateMemoryOnly();
-			options.ManualFlushing = true;
-			using (var env = new StorageEnvironment(options))
-			{
-				using (var txw = env.WriteTransaction())
-				{
-					txw.CreateTree("test");
+        [Fact]
+        public void AllScratchPagesShouldBeReleased()
+        {
+            var options = StorageEnvironmentOptions.CreateMemoryOnly();
+            options.ManualFlushing = true;
+            using (var env = new StorageEnvironment(options))
+            {
+                using (var txw = env.WriteTransaction())
+                {
+                    txw.CreateTree("test");
 
-					txw.Commit();
-				}
+                    txw.Commit();
+                }
 
-				using (var txw = env.WriteTransaction())
-				{
-					var tree = txw.CreateTree("test");
+                using (var txw = env.WriteTransaction())
+                {
+                    var tree = txw.CreateTree("test");
 
-					tree.Add("key/1", new MemoryStream(new byte[100]));
-					tree.Add("key/1", new MemoryStream(new byte[200]));
-					txw.Commit();
-				}
+                    tree.Add("key/1", new MemoryStream(new byte[100]));
+                    tree.Add("key/1", new MemoryStream(new byte[200]));
+                    txw.Commit();
+                }
 
-				env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
+                env.FlushLogToDataFile(); // non read nor write transactions, so it should flush and release everything from scratch
 
-				Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0));
-			}
-		}
-	}
+                Assert.Equal(0, env.ScratchBufferPool.GetNumberOfAllocations(0));
+            }
+        }
+    }
 }

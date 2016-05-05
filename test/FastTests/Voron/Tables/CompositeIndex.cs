@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Text;
+using Voron;
 using Voron.Data.Tables;
 using Xunit;
 
@@ -79,7 +80,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                docs.DeleteByKey("users/1");
+                docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
 
                 tx.Commit();
             }

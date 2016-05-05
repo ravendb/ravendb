@@ -27,11 +27,11 @@ namespace Raven.Server.Indexing
 
         private int _size;
 
-        public VoronIndexInput(ThreadLocal<Transaction> transaction, Slice name)
+        public VoronIndexInput(ThreadLocal<Transaction> transaction, string name)
         {
+            _name = Slice.From(transaction.Value.Allocator, name, ByteStringType.Immutable); 
             _originalTransactionId = transaction.Value.LowLevelTransaction.Id;
             _currentTransaction = transaction;
-            _name = name;
 
             OpenInternal(this);
         }

@@ -36,7 +36,7 @@ namespace Voron.Data.BTrees
             var originalLastSearchPositionOfParent = _parentPage.LastSearchPosition;
 
             if (nodePos == null)
-                nodePos = _parentPage.NodePositionFor(separator); // select the appropriate place for this
+                nodePos = _parentPage.NodePositionFor(_tx, separator); // select the appropriate place for this
 
             if (_parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separator) + Constants.NodeOffsetSize) == false)
             {

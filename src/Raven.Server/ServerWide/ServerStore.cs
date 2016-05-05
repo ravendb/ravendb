@@ -13,6 +13,7 @@ using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Voron;
 using Voron.Data;
+using Sparrow;
 
 namespace Raven.Server.ServerWide
 {
@@ -119,7 +120,7 @@ namespace Raven.Server.ServerWide
             var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
             using (var it = dbs.Iterate())
             {
-                it.RequiredPrefix = prefix;
+                it.RequiredPrefix = Slice.From(ctx.Allocator, prefix, ByteStringType.Immutable);
                 if (it.Seek(it.RequiredPrefix) == false)
                     yield break;
 

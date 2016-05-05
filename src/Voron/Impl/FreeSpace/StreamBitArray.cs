@@ -80,16 +80,16 @@ namespace Voron.Impl.FreeSpace
             }
             return -1;
         }
-
+        
 
         // Code taken from http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn
-
         private static readonly int[] MultiplyDeBruijnBitPosition = 
             {
                 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
                 8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
             };
 
+        // TODO: Remove and use the version that is in Sparrow.
         private static int HighestBitSet(int v)
         {
 
@@ -180,9 +180,9 @@ namespace Voron.Impl.FreeSpace
             return tmpBuffer;
         }
 
-        public Slice ToSlice()
+        public Slice ToSlice(ByteStringContext context, ByteStringType type = ByteStringType.Mutable)
         {
-            return new Slice(ToBuffer());
+            return new Slice(context.From(ToBuffer(), type));
         }
     }
 }

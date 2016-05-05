@@ -92,7 +92,7 @@ namespace SlowTests.Voron.Bugs
                 var count = 0;
                 using (var iterator = keyByEtagTree.Iterate())
                 {
-                    iterator.Seek(Slice.BeforeAllKeys);
+                    iterator.Seek(Slices.BeforeAllKeys);
                     do
                     {
                         var etag = Guid.Parse(iterator.CurrentKey.ToString());

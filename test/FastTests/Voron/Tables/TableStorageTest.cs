@@ -1,3 +1,4 @@
+using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,15 +56,10 @@ namespace FastTests.Voron.Tables
                     continue;
                 }
 
-                var slice = o as Slice;
-                if (slice != null)
+                if (o is Slice)
                 {
-                    if (slice.Array == null)
-                        throw new NotSupportedException();
-
-                    gcHandle = GCHandle.Alloc(slice.Array, GCHandleType.Pinned);
-                    builder.Add((byte*)gcHandle.AddrOfPinnedObject(), slice.Array.Length);
-                    handles1.Add(gcHandle);
+                    var slice = (Slice)o;
+                    builder.Add(slice.Content.Ptr, slice.Content.Length);
 
                     continue;
                 }

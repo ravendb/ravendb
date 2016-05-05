@@ -20,9 +20,10 @@ namespace FastTests.Voron.FixedSize
         [Fact]
         public void DeleteRangeShouldModifyPage()
         {
+            var treeId = Slice.From(Allocator, "test");
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 128);
+                var fst = tx.FixedTreeFor(treeId, valSize: 128);
                 var bytes = new byte[128];
                 for (int i = 0; i < 100; i++)
                 {
@@ -35,7 +36,7 @@ namespace FastTests.Voron.FixedSize
 
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 128);
+                var fst = tx.FixedTreeFor(treeId, valSize: 128);
                 fst.DeleteRange(20, 70);
 
                 tx.Commit();
@@ -45,7 +46,7 @@ namespace FastTests.Voron.FixedSize
 
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 128);
+                var fst = tx.FixedTreeFor(treeId, valSize: 128);
                 Assert.False(fst.Contains(21));
                 tx.Commit();
             }

@@ -73,8 +73,7 @@ namespace Voron.Data.BTrees
                 }
 
                 var minKeys = page.IsBranch ? 2 : 1;
-                if ((page.UseMoreSizeThan(_tx.DataPager.PageMinSpace)) &&
-                    page.NumberOfEntries >= minKeys)
+                if ((page.UseMoreSizeThan(_tx.DataPager.PageMinSpace)) && page.NumberOfEntries >= minKeys)
                     return null; // above space/keys thresholds
 
                 Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
@@ -279,7 +278,7 @@ namespace Voron.Data.BTrees
 
                 if (implicitLeftNode == actualKeyNode)
                 {
-                    implicitLeftKeyToInsert = new Slice(actualKeyNode);
+                    implicitLeftKeyToInsert = TreeNodeHeader.ToSlicePtr(_tx.Allocator, actualKeyNode);
                 }
                 else
                 {
@@ -332,13 +331,13 @@ namespace Voron.Data.BTrees
         private Slice GetActualKey(TreePage page, int pos, out TreeNodeHeader* node)
         {
             node = page.GetNode(pos);
-            var key = page.GetNodeKey(node);
-            while (key.KeyLength == 0)
+            var key = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node);
+            while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyTreePage(node->PageNumber);
                 node = page.GetNode(0);
-                key = page.GetNodeKey(node);
+                key = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node);
             }
 
             return key;

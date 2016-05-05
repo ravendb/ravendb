@@ -245,20 +245,15 @@ namespace Voron.Impl.Paging
                 GetSourceName());
         }
 
-        public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
+        public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);        
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetMaxKeySize()
-        {
-            // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-            return 2038;
-        }
+        // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
+        public static readonly int MaxKeySize = 2038 - RequiredSpaceForNewNode;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsKeySizeValid(int keySize)
-        {
-           
-            if (keySize + RequiredSpaceForNewNode > GetMaxKeySize())
+        {           
+            if (keySize > MaxKeySize)
                 return false;
 
             return true;

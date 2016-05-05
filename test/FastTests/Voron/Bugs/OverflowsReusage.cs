@@ -1,5 +1,6 @@
 ﻿using System;
 using Voron;
+using Voron.Data;
 using Xunit;
 
 namespace FastTests.Voron.Bugs

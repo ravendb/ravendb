@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         writer.DeleteReduceResult(reduceKeyHash, stats);
 
                         var emptyPageNumber = page.PageNumber;
-                        table.DeleteByKey(new Slice((byte*)&emptyPageNumber, sizeof(long)));
+                        table.DeleteByKey(Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long)));
 
                         continue;
                     }
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
 
                 long tmp = 0;
-                Slice pageNumberSlice = new Slice((byte*)&tmp, sizeof(long));
+                var pageNumberSlice = Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long));
                 foreach (var freedPage in modifiedState.FreedPages)
                 {
                     tmp = freedPage;
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
                 var childPageNumber = IPAddress.HostToNetworkOrder(page.GetNode(i)->PageNumber);
-                var tvr = table.ReadByKey(new Slice((byte*)&childPageNumber, sizeof(long)));
+                var tvr = table.ReadByKey(Slice.External(indexContext.Allocator, (byte*)&childPageNumber, sizeof(long)));
                 if (tvr == null)
                 {
                     throw new InvalidOperationException("Couldn't find pre-computed results for existing page " + childPageNumber);

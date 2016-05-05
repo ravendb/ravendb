@@ -37,7 +37,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.ReadTransaction())
             {
                 var docs = new Table(DocsSchema, "docs", tx);
-                var handle = docs.ReadByKey("users/1");
+                var handle = docs.ReadByKey(Slice.From(tx.Allocator, "users/1"));
 
                 int size;
                 var read = handle.Read(3, out size);
@@ -75,7 +75,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.ReadTransaction())
             {
                 var docs = new Table(DocsSchema, "docs", tx);
-                var handle = docs.ReadByKey("users/1");
+                var handle = docs.ReadByKey(Slice.From(tx.Allocator, "users/1"));
 
                 int size;
                 var read = handle.Read(3, out size);
@@ -108,7 +108,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                docs.DeleteByKey("users/1");
+                docs.DeleteByKey(Slice.From(tx.Allocator, "users/1"));
 
                 tx.Commit();
             }
@@ -117,7 +117,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                Assert.Null(docs.ReadByKey("users/1"));
+                Assert.Null(docs.ReadByKey(Slice.From(tx.Allocator, "users/1")));
             }
         }
 

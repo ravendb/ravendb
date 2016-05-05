@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Data;
 
 namespace FastTests.Voron.Journal
 {
@@ -98,7 +99,7 @@ namespace FastTests.Voron.Journal
                 {
                     var tree = tx.CreateTree("foo");
                     var readKey = ReadKey(tx, tree, "items/" + i);
-                    Assert.Equal("values/" + i, readKey.Item2);
+                    Assert.Equal("values/" + i, readKey.Item2.ToString());
                 }
             }
         }

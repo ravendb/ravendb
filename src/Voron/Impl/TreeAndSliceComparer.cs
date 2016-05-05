@@ -16,7 +16,7 @@ namespace Voron.Impl
             if (x.Item1 != y.Item1)
                 return false;
 
-            return x.Item2.Compare(y.Item2) == 0;
+            return SliceComparer.Equals(x.Item2, y.Item2);
         }
 
         public int GetHashCode(Tuple<Tree, Slice> obj)

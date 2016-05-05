@@ -131,14 +131,14 @@ namespace Raven.Server.Documents.Expiration
                 {
                     using (var it = expirationTree.Iterate())
                     {
-                        if (it.Seek(Slice.BeforeAllKeys) == false)
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
                             break;
                         var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
                         if (entryTicks >= currentTicks)
                             break;
                         using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
                         {
-                            if (multiIt.Seek(Slice.BeforeAllKeys))
+                            if (multiIt.Seek(Slices.BeforeAllKeys))
                             {
                                 do
                                 {
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Expiration
                                         break;
                                     }
 
-                                    keysToDelete.Add(multiIt.CurrentKey.Clone());
+                                    keysToDelete.Add(multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator));
 
                                     var key = multiIt.CurrentKey.ToString();
                                     var document = _database.DocumentsStorage.Get(context, key);
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Expiration
                                 } while (multiIt.MoveNext());
                             }
                         }
-                        var treeKey = it.CurrentKey.Clone();
+                        var treeKey = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
                         foreach (var slice in keysToDelete)
                         {
                             expirationTree.MultiDelete(treeKey, slice);
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Expiration
             var ticksBigEndian = IPAddress.HostToNetworkOrder(date.Ticks);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);
-            tree.MultiAdd(new Slice((byte*)&ticksBigEndian, sizeof(long)), loweredKey);
+            tree.MultiAdd(Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long)), loweredKey);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace FastTests.Voron.Bugs
                 using (var snapshot = Env.ReadTransaction())
                 using (var iterator = snapshot.CreateTree(treeName).MultiRead("queue1"))
                 {
-                    Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+                    Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
                     Assert.Equal("queue1/07000000-0000-0000-0000-000000000001", iterator.CurrentKey.ToString());
                     Assert.True(iterator.MoveNext());
@@ -57,7 +57,7 @@ namespace FastTests.Voron.Bugs
                 using (var snapshot = Env.ReadTransaction())
                 using (var iterator = snapshot.CreateTree(treeName).MultiRead("etags"))
                 {
-                    Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+                    Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
                     for (int i = 0; i < numberOfEntries; i++)
                     {

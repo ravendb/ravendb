@@ -274,7 +274,7 @@ namespace Voron.Benchmark
                             var tree = tx.ReadTree("test");
                             using (var it = tree.Iterate())
                             {
-                                if (it.Seek(Slice.BeforeAllKeys))
+                                if (it.Seek(Slices.BeforeAllKeys))
                                 {
                                     do
                                     {

@@ -20,7 +20,7 @@ namespace FastTests.Voron.Bugs
             {
                 var treeIterator = tx.CreateTree("events").Iterate();
 
-                Assert.False(treeIterator.Seek(Slice.AfterAllKeys));
+                Assert.False(treeIterator.Seek(Slices.AfterAllKeys));
 
                 tx.Commit();
             }

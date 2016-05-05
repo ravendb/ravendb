@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
+using Sparrow;
 //using SubscriptionTable = Raven.Server.Documents.SubscriptionStorage.Schema.SubscriptionTable;
 
 namespace Raven.Server.Documents
@@ -111,7 +112,7 @@ namespace Raven.Server.Documents
             {
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, innerTransaction);
                 var subscriptionId = Bits.SwapBytes(id);
-                var oldValue = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof (long)));
+                var oldValue = table.ReadByKey(Slice.External(innerTransaction.Allocator, (byte*)&subscriptionId, sizeof (long)));
 
                 if (oldValue == null)
                     throw new ArgumentException($"Cannot update subscription with id {id}, because it was not found");
@@ -168,7 +169,7 @@ namespace Raven.Server.Documents
                     {(byte*)&now, sizeof (long)}
                 };
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-                var existingSubscription = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
+                var existingSubscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
                 table.Update(existingSubscription.Id, tvb);
                 tx.Commit();
             }
@@ -194,12 +195,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx = null)
+        private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx)
         {
             var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
             var subscriptionId = Bits.SwapBytes((ulong)id);
 
-            var config = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
+            var config = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long)));
 
             if (config == null)
                 throw new SubscriptionDoesNotExistException(
@@ -214,7 +215,7 @@ namespace Raven.Server.Documents
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
                 var subscriptionId = Bits.SwapBytes((ulong)id);
 
-                if (table.VerifyKeyExists(new Slice(&subscriptionId)) == false)
+                if (table.VerifyKeyExists(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong))) == false)
                     throw new SubscriptionDoesNotExistException(
                         "There is no subscription configuration for specified identifier (id: " + id + ")");
             }
@@ -228,12 +229,15 @@ namespace Raven.Server.Documents
             {
                 subscriptionConnectionState.EndConnection();
             }
+
             using (var tx = _environment.WriteTransaction())
             {
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-                var subscriptionId = id;
-                var subscription = table.ReadByKey(new Slice(&subscriptionId));
+
+                long subscriptionId = id;
+                TableValueReader subscription = table.ReadByKey(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(ulong)));
                 table.Delete(subscription.Id);
+
                 tx.Commit();
             }
         }
@@ -247,7 +251,7 @@ namespace Raven.Server.Documents
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
                 var seen = 0;
                 var taken = 0;
-                foreach (var subscriptionForKey in table.SeekByPrimaryKey(Slice.BeforeAllKeys))
+                foreach (var subscriptionForKey in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
                 {
                     if (seen < start)
                     {
@@ -272,7 +276,7 @@ namespace Raven.Server.Documents
 
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
 
-                foreach (var subscriptionsForKey in table.SeekForwardFrom(_subscriptionsSchema.Key, Slice.BeforeAllKeys))
+                foreach (var subscriptionsForKey in table.SeekForwardFrom(_subscriptionsSchema.Key, Slices.BeforeAllKeys))
                 {
                     foreach (var subscriptionForKey in subscriptionsForKey.Results)
                     {
@@ -341,7 +345,7 @@ namespace Raven.Server.Documents
         {
             public static readonly string IdsTree = "SubscriptionsIDs";
             public static readonly string SubsTree = "Subscriptions";
-            public static readonly Slice Id = "Id";
+            public static readonly Slice Id = Slice.From( StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable);
 
             public static class SubscriptionTable
             {

@@ -20,80 +20,80 @@ using Voron.Impl.Paging;
 
 namespace Voron.Debugging
 {
-	public class ReportInput
-	{
-		public long NumberOfAllocatedPages;
-		public long NumberOfFreePages;
-		public long NextPageNumber;
-		public List<Tree> Trees;
+    public class ReportInput
+    {
+        public long NumberOfAllocatedPages;
+        public long NumberOfFreePages;
+        public long NextPageNumber;
+        public List<Tree> Trees;
         public List<FixedSizeTree> FixedSizeTrees;
         public List<JournalFile> Journals;
-		public bool IsLightReport { get; set; }
-	}
+        public bool IsLightReport { get; set; }
+    }
 
-	public unsafe class StorageReportGenerator
-	{
-		public class TreeDensityInput
-		{
-			public readonly List<double> Densities = new List<double>();
-		}
+    public unsafe class StorageReportGenerator
+    {
+        public class TreeDensityInput
+        {
+            public readonly List<double> Densities = new List<double>();
+        }
 
-		private readonly LowLevelTransaction _tx;
+        private readonly LowLevelTransaction _tx;
 
         public StorageReportGenerator(LowLevelTransaction tx)
-		{
-			_tx = tx;
-		}
+        {
+            _tx = tx;
+        }
 
-		public StorageReport Generate(ReportInput input)
-		{
-			var unallocatedPagesAtEndOfFile = input.NumberOfAllocatedPages - input.NextPageNumber;
+        public StorageReport Generate(ReportInput input)
+        {
+            var unallocatedPagesAtEndOfFile = input.NumberOfAllocatedPages - input.NextPageNumber;
 
-			var dataFile = new DataFileReport
-			{
-				AllocatedSpaceInBytes = PagesToBytes(input.NumberOfAllocatedPages),
-				SpaceInUseInBytes = PagesToBytes(input.NextPageNumber - input.NumberOfFreePages),
-				FreeSpaceInBytes = PagesToBytes(input.NumberOfFreePages + unallocatedPagesAtEndOfFile)
-			};
+            var dataFile = new DataFileReport
+            {
+                AllocatedSpaceInBytes = PagesToBytes(input.NumberOfAllocatedPages),
+                SpaceInUseInBytes = PagesToBytes(input.NextPageNumber - input.NumberOfFreePages),
+                FreeSpaceInBytes = PagesToBytes(input.NumberOfFreePages + unallocatedPagesAtEndOfFile)
+            };
 
-			var trees = new List<TreeReport>();
+            var trees = new List<TreeReport>();
 
-			foreach (var tree in input.Trees)
-			{
-				List<double> densities = null;
+            foreach (var tree in input.Trees)
+            {
+                List<double> densities = null;
 
-				if (input.IsLightReport == false)
-				{
-					densities = GetPageDensities(tree);
-				}
+                if (input.IsLightReport == false)
+                {
+                    densities = GetPageDensities(tree);
+                }
 
-				MultiValuesReport multiValues = null;
+                MultiValuesReport multiValues = null;
 
-				if (tree.State.Flags == TreeFlags.MultiValueTrees)
-				{
-					multiValues = CreateMultiValuesReport(tree);
-				}
+                if (tree.State.Flags == TreeFlags.MultiValueTrees)
+                {
+                    multiValues = CreateMultiValuesReport(tree);
+                }
 
-				var state = tree.State;
-				var treeReport = new TreeReport
-				{
+                var state = tree.State;
+                var treeReport = new TreeReport
+                {
                     Type = RootObjectType.VariableSizeTree,
-					Name = tree.Name,
-					BranchPages = state.BranchPages,
-					Depth = state.Depth,
-					NumberOfEntries = state.NumberOfEntries,
-					LeafPages = state.LeafPages,
-					OverflowPages = state.OverflowPages,
-					PageCount = state.PageCount,
-					Density = densities == null ? 0 : CalculateTreeDensity(densities),
-					MultiValues = multiValues
-				};
+                    Name = tree.Name,
+                    BranchPages = state.BranchPages,
+                    Depth = state.Depth,
+                    NumberOfEntries = state.NumberOfEntries,
+                    LeafPages = state.LeafPages,
+                    OverflowPages = state.OverflowPages,
+                    PageCount = state.PageCount,
+                    Density = densities == null ? 0 : CalculateTreeDensity(densities),
+                    MultiValues = multiValues
+                };
 
-				trees.Add(treeReport);
-			}
+                trees.Add(treeReport);
+            }
 
-		    foreach (var fst in input.FixedSizeTrees)
-		    {
+            foreach (var fst in input.FixedSizeTrees)
+            {
                 List<double> densities = null;
 
                 if (input.IsLightReport == false)
@@ -118,27 +118,27 @@ namespace Voron.Debugging
                 trees.Add(treeReport);
             }
 
-			var journals = input.Journals.Select(journal => new JournalReport
-			{
-				Number = journal.Number,
-				AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocatedPages)
-			}).ToList();
+            var journals = input.Journals.Select(journal => new JournalReport
+            {
+                Number = journal.Number,
+                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocatedPages)
+            }).ToList();
 
-			return new StorageReport
-			{
-				DataFile = dataFile,
-				Trees = trees,
-				Journals = journals
-			};
-		}
+            return new StorageReport
+            {
+                DataFile = dataFile,
+                Trees = trees,
+                Journals = journals
+            };
+        }
 
-		private MultiValuesReport CreateMultiValuesReport(Tree tree)
-		{
+        private MultiValuesReport CreateMultiValuesReport(Tree tree)
+        {
             var multiValues = new MultiValuesReport();
 
             using (var multiTreeIterator = tree.Iterate())
             {
-                if (multiTreeIterator.Seek(Slice.BeforeAllKeys))
+                if (multiTreeIterator.Seek(Slices.BeforeAllKeys))
                 {
                     do
                     {
@@ -180,10 +180,10 @@ namespace Voron.Debugging
                 }
             }
             return multiValues;
-		}
+        }
 
-		private List<double> GetPageDensities(Tree tree)
-		{
+        private List<double> GetPageDensities(Tree tree)
+        {
             var densities = new List<double>();
             var allPages = tree.AllPages();
             var pageSize = tree.Llt.Environment.Options.PageSize;
@@ -235,21 +235,21 @@ namespace Voron.Debugging
         }
 
         private TreePage GetNestedMultiValuePage(byte* nestedPagePtr, TreeNodeHeader* currentNode)
-		{
-			var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort) TreeNodeHeader.GetDataSize(_tx, currentNode));
+        {
+            var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort) TreeNodeHeader.GetDataSize(_tx, currentNode));
 
-			Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
-			return nestedPage;
-		}
+            Debug.Assert(nestedPage.PageNumber == -1); // nested page marker
+            return nestedPage;
+        }
 
-		private long PagesToBytes(long pageCount)
-		{
-			return pageCount * _tx.Environment.Options.PageSize;
-		}
+        private long PagesToBytes(long pageCount)
+        {
+            return pageCount * _tx.Environment.Options.PageSize;
+        }
 
-		public static double CalculateTreeDensity(List<double> pageDensities)
-		{
-			return pageDensities.Sum(x => x) / pageDensities.Count;
-		}
-	}
+        public static double CalculateTreeDensity(List<double> pageDensities)
+        {
+            return pageDensities.Sum(x => x) / pageDensities.Count;
+        }
+    }
 }

@@ -11,7 +11,9 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -60,12 +62,12 @@ namespace Raven.Server.Documents.Indexes
                 var typeInt = (int)_index.Type;
 
                 var statsTree = tx.InnerTransaction.CreateTree(Schema.StatsTree);
-                statsTree.Add(Schema.TypeSlice, new Slice((byte*)&typeInt, sizeof(int)));
+                statsTree.Add(Schema.TypeSlice, Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int)));
 
                 if (statsTree.ReadVersion(Schema.CreatedTimestampSlice) == 0)
                 {
                     var binaryDate = SystemTime.UtcNow.ToBinary();
-                    statsTree.Add(Schema.CreatedTimestampSlice, new Slice((byte*)&binaryDate, sizeof(long)));
+                    statsTree.Add(Schema.CreatedTimestampSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
                 }
 
                 tx.InnerTransaction.CreateTree(Schema.EtagsTree);
@@ -85,7 +87,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
                 var priorityInt = (int)priority;
-                statsTree.Add(Schema.PrioritySlice, new Slice((byte*)&priorityInt, sizeof(int)));
+                statsTree.Add(Schema.PrioritySlice, Slice.External(context.Allocator, (byte*)&priorityInt, sizeof(int)));
 
                 tx.Commit();
             }
@@ -133,7 +135,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = new Table(_errorsSchema, "Errors", tx.InnerTransaction);
 
-                foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys))
+                foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slices.BeforeAllKeys))
                 {
                     foreach (var tvr in sr.Results)
                     {
@@ -195,34 +197,34 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, Schema.EtagsTombstoneTree, collection);
+            return ReadLastEtag(tx, Schema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, Schema.EtagsTree, collection);
+            return ReadLastEtag(tx, Schema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection));
         }
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsTombstoneTree, collection, etag);
+            WriteLastEtag(tx, Schema.EtagsTombstoneTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
         }
 
         public void WriteLastIndexedEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsTree, collection, etag);
+            WriteLastEtag(tx, Schema.EtagsTree, Slice.From(tx.InnerTransaction.Allocator, collection), etag);
         }
 
-        private unsafe void WriteLastEtag(RavenTransaction tx, string tree, string collection, long etag)
+        private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
             if (Log.IsDebugEnabled)
                 Log.Debug($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
-            statsTree.Add(collection, new Slice((byte*)&etag, sizeof(long)));
+            statsTree.Add(collection, Slice.External( tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long)));
         }
 
-        private static long ReadLastEtag(RavenTransaction tx, string tree, string collection)
+        private static long ReadLastEtag(RavenTransaction tx, string tree, Slice collection)
         {
             var statsTree = tx.InnerTransaction.CreateTree(tree);
             var readResult = statsTree.Read(collection);
@@ -258,7 +260,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 var binaryDate = indexingTime.ToBinary();
-                statsTree.Add(Schema.LastIndexingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
+                statsTree.Add(Schema.LastIndexingTimeSlice, Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long)));
 
                 if (stats.Errors != null)
                 {
@@ -293,7 +295,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             var numberOfEntriesToDelete = table.NumberOfEntries - MaxNumberOfKeptErrors;
-            table.DeleteForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slice.BeforeAllKeys, numberOfEntriesToDelete);
+            table.DeleteForwardFrom(_errorsSchema.Indexes["ErrorTimestamps"], Slices.BeforeAllKeys, numberOfEntriesToDelete);
         }
 
         public static IndexType ReadIndexType(int indexId, StorageEnvironment environment)
@@ -320,25 +322,25 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly string EtagsTombstoneTree = "Etags.Tombstone";
 
-            public static readonly Slice TypeSlice = "Type";
+            public static readonly Slice TypeSlice = Slice.From(StorageEnvironment.LabelsContext, "Type", ByteStringType.Immutable);
 
-            public static readonly Slice CreatedTimestampSlice = "CreatedTimestamp";
+            public static readonly Slice CreatedTimestampSlice = Slice.From(StorageEnvironment.LabelsContext, "CreatedTimestamp", ByteStringType.Immutable);
 
-            public static readonly Slice MapAttemptsSlice = "MapAttempts";
+            public static readonly Slice MapAttemptsSlice = Slice.From(StorageEnvironment.LabelsContext, "MapAttempts", ByteStringType.Immutable);
 
-            public static readonly Slice MapSuccessesSlice = "MapSuccesses";
+            public static readonly Slice MapSuccessesSlice = Slice.From(StorageEnvironment.LabelsContext, "MapSuccesses", ByteStringType.Immutable);
 
-            public static readonly Slice MapErrorsSlice = "MapErrors";
+            public static readonly Slice MapErrorsSlice = Slice.From(StorageEnvironment.LabelsContext, "MapErrors", ByteStringType.Immutable);
 
-            public static readonly Slice ReduceAttemptsSlice = "ReduceAttempts";
+            public static readonly Slice ReduceAttemptsSlice = Slice.From(StorageEnvironment.LabelsContext, "ReduceAttempts", ByteStringType.Immutable);
 
-            public static readonly Slice ReduceSuccessesSlice = "ReduceSuccesses";
+            public static readonly Slice ReduceSuccessesSlice = Slice.From(StorageEnvironment.LabelsContext, "ReduceSuccesses", ByteStringType.Immutable);
 
-            public static readonly Slice ReduceErrorsSlice = "ReduceErrors";
+            public static readonly Slice ReduceErrorsSlice = Slice.From(StorageEnvironment.LabelsContext, "ReduceErrors", ByteStringType.Immutable);
 
-            public static readonly Slice LastIndexingTimeSlice = "LastIndexingTime";
+            public static readonly Slice LastIndexingTimeSlice = Slice.From(StorageEnvironment.LabelsContext, "LastIndexingTime", ByteStringType.Immutable);
 
-            public static readonly Slice PrioritySlice = "Priority";
+            public static readonly Slice PrioritySlice = Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable);
         }
     }
 }

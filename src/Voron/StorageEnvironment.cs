@@ -1,4 +1,5 @@
-﻿using Sparrow.Collections;
+﻿using Sparrow;
+using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -25,6 +26,12 @@ namespace Voron
 {
     public class StorageEnvironment : IDisposable
     {
+        /// <summary>
+        /// This is the shared storage where we are going to store all the static constants for names. 
+        /// WARNING: This context will never be released, so only static constants should be added here.
+        /// </summary>
+        public static readonly ByteStringContext LabelsContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes);
+
         private readonly StorageEnvironmentOptions _options;
 
         private readonly ConcurrentSet<LowLevelTransaction> _activeTransactions = new ConcurrentSet<LowLevelTransaction>();
@@ -290,17 +297,17 @@ namespace Voron
             }
         }
 
-        public Transaction ReadTransaction()
+        public Transaction ReadTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.Read));
+            return new Transaction(NewLowLevelTransaction(TransactionFlags.Read, context));
         }
 
-        public Transaction WriteTransaction()
+        public Transaction WriteTransaction(ByteStringContext context = null)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, null));
+            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, context, null));
         }
 
-        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null)
+        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
@@ -337,7 +344,7 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling);
+                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling, context);
                 }
                 finally
                 {
@@ -425,25 +432,27 @@ namespace Voron
             var fixedSizeTrees = new List<FixedSizeTree>();
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate())
             {
-                if (rootIterator.Seek(Slice.BeforeAllKeys))
+                if (rootIterator.Seek(Slices.BeforeAllKeys))
                 {
                     do
                     {
-                        switch (tx.GetRootObjectType(rootIterator.CurrentKey))
+                        var curretKey = rootIterator.CurrentKey.Clone(tx.Allocator);
+                        switch (tx.GetRootObjectType(curretKey))
                         {
                             case RootObjectType.VariableSizeTree:
-                                var tree = tx.ReadTree(rootIterator.CurrentKey.ToString());
+                                var tree = tx.ReadTree(curretKey.ToString());
                                 trees.Add(tree);
                                 break;
                             case RootObjectType.EmbeddedFixedSizeTree:
                                 break;
                             case RootObjectType.FixedSizeTree:
-                                fixedSizeTrees.Add(tx.FixedTreeFor(rootIterator.CurrentKey, 0));
+                                fixedSizeTrees.Add(tx.FixedTreeFor(curretKey, 0));
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
-                    } while (rootIterator.MoveNext());
+                    }
+                    while (rootIterator.MoveNext());
                 }
             }
 

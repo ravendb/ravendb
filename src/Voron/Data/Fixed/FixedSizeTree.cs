@@ -50,13 +50,10 @@ namespace Voron.Data.Fixed
 
         public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize)
         {
-            if (treeName.Array == null)
-                throw new ArgumentException("Tree name must be immutable");
-
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
-            _treeName = treeName;
+            _treeName = treeName.Clone(_tx.Allocator);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = 512 / _entrySize;
@@ -109,26 +106,31 @@ namespace Voron.Data.Fixed
             return a;
         }
 
-        public bool Add(long key, Slice val = null)
+        public bool Add(long key)
         {
-            if (_valSize == 0 && (val != null && val.Size != 0))
+            return Add(key, default(Slice));
+        }
+
+        public bool Add(long key, Slice val)
+        {
+            if (_valSize == 0 && (val.HasValue && val.Size != 0))
                 throw new InvalidOperationException("When the value size is zero, no value can be specified");
-            if (_valSize != 0 && val == null)
+            if (_valSize != 0 && !val.HasValue)
                 throw new InvalidOperationException("When the value size is not zero, the value must be specified");
-            if (val != null && val.Size != _valSize)
-                throw new InvalidOperationException("The value size must be " + _valSize + " but was " + val.Size);
+            if (val.HasValue && val.Size != _valSize)
+                throw new InvalidOperationException($"The value size must be of size '{_valSize}' but was of size '{val.Size}'.");
 
             bool isNew;
             var pos = DirectAdd(key, out isNew);
-            if (val != null && val.Size != 0)
+            if (val.HasValue && val.Size != 0)
                 val.CopyTo(pos);
 
             return isNew;
         }
 
         public bool Add(long key, byte[] val)
-        {
-            return Add(key, new Slice(val));
+        {            
+            return Add(key, Slice.From(_tx.Allocator, val, ByteStringType.Immutable));
         }
 
         public byte* DirectAdd(long key, out bool isNew)
@@ -1246,19 +1248,22 @@ namespace Voron.Data.Fixed
             switch (_type)
             {
                 case null:
-                    return null;
+                    return new Slice();
+
                 case RootObjectType.EmbeddedFixedSizeTree:
                     var ptr = _parent.DirectRead(_treeName);
                     var header = (FixedSizeTreeHeader.Embedded*)ptr;
                     var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
                     var pos = BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
                     if (_lastMatch != 0)
-                        return null;
-                    return new Slice(dataStart + (pos * _entrySize) + sizeof(long), _valSize);
+                        return new Slice();
+
+                    return Slice.External(_tx.Allocator, dataStart + (pos * _entrySize) + sizeof(long), _valSize);
+
                 case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-                    var page = _tx.GetReadOnlyFixedSizeTreePage(largePtr->RootPageNumber);
 
+                    var page = _tx.GetReadOnlyFixedSizeTreePage(largePtr->RootPageNumber);
                     while (page.IsLeaf == false)
                     {
                         BinarySearch(page, key);
@@ -1271,8 +1276,10 @@ namespace Voron.Data.Fixed
 
                     BinarySearch(page, key);
                     if (_lastMatch != 0)
-                        return null;
-                    return new Slice(dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long), _valSize);
+                        return new Slice();
+
+                    return Slice.External(_tx.Allocator, dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long), _valSize);
+
                 default:
                     throw new ArgumentOutOfRangeException(_type.ToString());
             }

@@ -23,9 +23,11 @@ namespace SlowTests.Voron
         public void CanAdd_ALot_ForPageSplits(int count)
         {
             var bytes = new byte[48];
+            var treeId = Slice.From(Allocator, "test");
+
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -39,7 +41,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -60,14 +62,17 @@ namespace SlowTests.Voron
         public void CanCIterate_ALot_ForPageSplits(int count)
         {
             var bytes = new byte[48];
-            var slice = new Slice(bytes);
+
+            var treeId = Slice.From(Allocator, "test");
+
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    var slice = Slice.From(Allocator, bytes);
                     fst.Add(i, slice);
                 }
 
@@ -76,7 +81,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
                 var total = 0;
                 using (var it = fst.Iterate())
                 {
@@ -84,7 +89,8 @@ namespace SlowTests.Voron
                     do
                     {
                         Assert.Equal(total++, it.CreateReaderForCurrent().ReadLittleEndianInt64());
-                    } while (it.MoveNext());
+                    }
+                    while (it.MoveNext());
                 }
                 Assert.Equal(count, total);
                 tx.Commit();
@@ -99,10 +105,11 @@ namespace SlowTests.Voron
         public void CanRemove_ALot_ForPageSplits(int count)
         {
             var bytes = new byte[48];
-            var slice = new Slice(bytes);
+            var slice = Slice.From(Allocator, bytes);
+            var treeId = Slice.From(Allocator, "test");
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -115,7 +122,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -127,7 +134,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -144,17 +151,18 @@ namespace SlowTests.Voron
         [InlineData(1024 * 256)]
         public void CanDeleteRange(int count)
         {
-            var bytes = new byte[48];
-            var slice = new Slice(bytes);
-
+            var bytes = new byte[48];           
+            var treeId = Slice.From(Allocator, "test");
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
                     Assert.Equal(i - 1, fst.NumberOfEntries);
+
+                    var slice = Slice.From(Allocator, bytes);
                     fst.Add(i, slice);
                 }
 
@@ -164,13 +172,13 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
                 Assert.Equal(count, fst.NumberOfEntries);
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 var itemsRemoved = fst.DeleteRange(4, count - 3);
                 Assert.Equal(count - 6, itemsRemoved.NumberOfEntriesDeleted);
@@ -181,14 +189,14 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
                     if (i >= 4 && i <= count - 3)
                     {
                         Assert.False(fst.Contains(i), i.ToString());
-                        Assert.Null(fst.Read(i));
+                        Assert.False(fst.Read(i).HasValue);
                     }
                     else
                     {
@@ -208,15 +216,16 @@ namespace SlowTests.Voron
         public void CanDeleteAllRange(int count)
         {
             var bytes = new byte[48];
-            var slice = new Slice(bytes);
-
+           
+            var treeId = Slice.From(Allocator, "test");
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    var slice = Slice.From(Allocator, bytes);
                     fst.Add(i, slice);
                 }
 
@@ -225,7 +234,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 var itemsRemoved = fst.DeleteRange(0, DateTime.MaxValue.Ticks);
                 Assert.Equal(count, itemsRemoved.NumberOfEntriesDeleted);
@@ -236,12 +245,12 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
                     Assert.False(fst.Contains(i), i.ToString());
-                    Assert.Null(fst.Read(i));
+                    Assert.False(fst.Read(i).HasValue);
                 }
                 tx.Commit();
             }
@@ -255,17 +264,19 @@ namespace SlowTests.Voron
         public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
         {
             var bytes = new byte[48];
-            var slice = new Slice(bytes);
+     
             var status = new BitArray(count + 1);
-
+            var treeId = Slice.From(Allocator, "test");
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    var slice = Slice.From(Allocator, bytes);
                     fst.Add(i, slice);
+
                     status[i] = true;
                 }
 
@@ -282,7 +293,7 @@ namespace SlowTests.Voron
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    var fst = tx.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.FixedTreeFor(treeId, valSize: 48);
                     for (int j = (int) start; j <= (int) end; j++)
                     {
                         status[j] = false;
@@ -301,7 +312,7 @@ namespace SlowTests.Voron
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    var fst = tx.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.FixedTreeFor(treeId, valSize: 48);
                     if (fst.NumberOfEntries == 0)
                         break;
                     for (int j = start; j <= end; j++)
@@ -316,7 +327,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
                 for (int i = 0; i < count; i++)
                 {
                     if (status[i] != fst.Contains(i))
@@ -335,20 +346,19 @@ namespace SlowTests.Voron
         [InlineDataWithRandomSeed(1000000)]
         [InlineDataWithRandomSeed(2000000)]
         [InlineData(100000, 1684385375)]// reproduced a bug, do not remove
-        [InlineData(1000000, 288291468)]// reproduced a bug, do not remove
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             var bytes = new byte[48];
-            var slice = new Slice(bytes);
-
+            var treeId = Slice.From(Allocator, "test");
             var status = new BitArray(count + 1);
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 1; i <= count; i++)
                 {
                     EndianBitConverter.Little.CopyBytes(i, bytes, 0);
+                    var slice = Slice.From(Allocator, bytes);
                     fst.Add(i, slice);
                     status[i] = true;
                 }
@@ -364,7 +374,7 @@ namespace SlowTests.Voron
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    var fst = tx.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.FixedTreeFor(treeId, valSize: 48);
                     if (fst.NumberOfEntries == 0)
                         break;
                     for (int j = start; j <= end; j++)
@@ -378,7 +388,7 @@ namespace SlowTests.Voron
             }
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
                 for (int i = 0; i <= count; i++)
                 {
                     Assert.Equal(status[i], fst.Contains(i));
@@ -394,12 +404,12 @@ namespace SlowTests.Voron
         public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
             var bytes = new byte[48];
-            var slice = new Slice(bytes);
-
+            var slice = Slice.From(Allocator, bytes);
+            var treeId = Slice.From(Allocator, "test");
             var status = new BitArray(count * 3);
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
                 for (var i = 1; i < count; i++)
                 {
                     fst.Add(i*3, slice);
@@ -415,7 +425,7 @@ namespace SlowTests.Voron
                 var end = random.Next(start, status.Length);
                 using (var tx = Env.WriteTransaction())
                 {
-                    var fst = tx.FixedTreeFor("test", valSize: 48);
+                    var fst = tx.FixedTreeFor(treeId, valSize: 48);
                     if (fst.NumberOfEntries == 0)
                         break;
                     for (int j = start; j <= end; j++)
@@ -429,7 +439,7 @@ namespace SlowTests.Voron
             }
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -447,12 +457,12 @@ namespace SlowTests.Voron
         public void SeekToLast_ShouldWork(int count)
         {
             var bytes = new byte[48];
-            var slice = new Slice(bytes);
-
+            var slice = Slice.From(Allocator, bytes);
+            var treeId = Slice.From(Allocator, "test");
             int lastId = -1;
             using (var tx = Env.WriteTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
                 for (var i = 1; i < count; i++)
                 {
                     fst.Add(i, slice);
@@ -464,7 +474,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var fst = tx.FixedTreeFor("test", valSize: 48);
+                var fst = tx.FixedTreeFor(treeId, valSize: 48);
                 using (var it = fst.Iterate())
                 {
                     Assert.True(it.SeekToLast(), "Failed to seek to last");

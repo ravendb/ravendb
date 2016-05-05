@@ -1,3 +1,4 @@
+using Sparrow;
 using System;
 using System.Collections.Generic;
 using Voron.Data.BTrees;
@@ -14,12 +15,12 @@ namespace Voron.Data.Tables
         BTree = 0x01,
     }
 
-    public unsafe class TableSchema
+    public unsafe class TableSchema : IDisposable
     {
-        public static readonly Slice ActiveSectionSlice = "Active-Section";
-        public static readonly Slice InactiveSectionSlice = "Inactive-Section";
-        public static readonly Slice ActiveCandidateSection = "Active-Candidate-Section";
-        public static readonly Slice StatsSlice = "Stats";
+        public static readonly Slice ActiveSection = Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable);
+        public static readonly Slice InactiveSection = Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable);
+        public static readonly Slice ActiveCandidateSection = Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable);
+        public static readonly Slice Stats = Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable);
 
         public SchemaIndexDef Key => _pk;
 
@@ -42,7 +43,7 @@ namespace Voron.Data.Tables
 
             public bool IsGlobal;                        
 
-            public Slice GetSlice(TableValueReader value)
+            public Slice GetSlice(ByteStringContext context, TableValueReader value)
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
@@ -66,7 +67,7 @@ namespace Voron.Data.Tables
                 if (totalSize > ushort.MaxValue)
                     throw new ArgumentOutOfRangeException(nameof(totalSize), "Reading a slice that too big to be a slice");
 #endif
-                return new Slice(ptr, (ushort)totalSize);
+                return Slice.External(context, ptr, (ushort)totalSize);
             }
         }
 
@@ -93,7 +94,7 @@ namespace Voron.Data.Tables
 
         public TableSchema DefineIndex(string name, SchemaIndexDef index)
         {
-            index.NameAsSlice = name;
+            index.NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, name, ByteStringType.Immutable);
             _indexes[name] = index;
 
             return this;
@@ -102,7 +103,7 @@ namespace Voron.Data.Tables
 
         public TableSchema DefineFixedSizeIndex(string name, FixedSizeSchemaIndexDef index)
         {
-            index.NameAsSlice = name;
+            index.NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, name, ByteStringType.Immutable); ;
             _fixedSizeIndexes[name] = index;
 
             return this;
@@ -116,7 +117,7 @@ namespace Voron.Data.Tables
 
             if (string.IsNullOrWhiteSpace(_pk.Name))
                 _pk.Name = "PK";
-            _pk.NameAsSlice = _pk.Name;
+            _pk.NameAsSlice = Slice.From(StorageEnvironment.LabelsContext, _pk.Name, ByteStringType.Immutable);
 
             if (_pk.Count > 1)
                 throw new InvalidOperationException("Primary key must be a single field");
@@ -147,8 +148,11 @@ namespace Voron.Data.Tables
                 return; // this was already created
 
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name);
-            tableTree.Add(ActiveSectionSlice, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber));
-            var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
+
+            Slice pageNumber = Slice.From(tx.Allocator, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber), ByteStringType.Immutable);
+            tableTree.Add(ActiveSection, pageNumber);
+            
+            var stats = (TableSchemaStats*)tableTree.DirectAdd(Stats, sizeof(TableSchemaStats));
             stats->NumberOfEntries = 0;
 
             if (_pk != null)
@@ -179,5 +183,35 @@ namespace Voron.Data.Tables
                 }
             }
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // We will release all the labels allocated for indexes.
+                    foreach ( var item in _indexes )
+                        item.Value.NameAsSlice.Release(StorageEnvironment.LabelsContext);
+
+                    // We will release all the labels allocated for fixed size indexes.
+                    foreach (var item in _fixedSizeIndexes)
+                        item.Value.NameAsSlice.Release(StorageEnvironment.LabelsContext);
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+        }
+        #endregion
     }
 }

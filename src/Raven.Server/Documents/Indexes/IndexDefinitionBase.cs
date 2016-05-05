@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 using Voron;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
     {
         protected const string MetadataFileName = "metadata";
 
-        protected static readonly Slice DefinitionSlice = "Definition";
+        protected static readonly Slice DefinitionSlice = Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable); 
 
         private int? _cachedHashCode;
 
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Indexes
                 writer.Flush();
 
                 stream.Position = 0;
-                tree.Add(DefinitionSlice, stream.ToArray());
+                tree.Add(DefinitionSlice, Slice.From(context.Allocator, stream.ToArray()));
             }
         }
 

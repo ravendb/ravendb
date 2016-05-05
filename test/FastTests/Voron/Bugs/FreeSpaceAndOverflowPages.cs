@@ -6,6 +6,7 @@
 
 using Xunit;
 using Voron;
+using Voron.Data;
 
 namespace FastTests.Voron.Bugs
 {

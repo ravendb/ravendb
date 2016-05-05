@@ -37,11 +37,11 @@ namespace Voron.Impl
 
         public static readonly int NodeHeaderSize = sizeof(TreeNodeHeader);
 
-        public static int PageNumberSize = sizeof(long);
+        public const int PageNumberSize = sizeof(long);
 
-        public static int NodeOffsetSize = sizeof(ushort);
+        public const int NodeOffsetSize = sizeof(ushort);
 
-        public static ushort SizeOfUInt = sizeof(uint);
+        public const ushort SizeOfUInt = sizeof(uint);
 
         public const int CurrentVersion = 5;
 

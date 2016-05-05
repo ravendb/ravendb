@@ -11,6 +11,7 @@ using System.Linq;
 using Sparrow.Platform;
 using Xunit;
 using Voron;
+using Voron.Data;
 using Voron.Impl;
 
 namespace FastTests.Voron.Bugs
@@ -186,7 +187,7 @@ namespace FastTests.Voron.Bugs
                         {
                             using (var iterator = tx.CreateTree(tree).Iterate())
                             {
-                                if (!iterator.Seek(Slice.BeforeAllKeys))
+                                if (!iterator.Seek(Slices.BeforeAllKeys))
                                     continue;
 
                                 do

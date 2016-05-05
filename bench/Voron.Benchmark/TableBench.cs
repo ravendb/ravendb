@@ -63,15 +63,10 @@ namespace Voron.Benchmark
                     continue;
                 }
 
-                var slice = o as Slice;
-                if (slice != null)
+                if (o is Slice)
                 {
-                    if (slice.Array == null)
-                        throw new NotSupportedException();
-
-                    gcHandle = GCHandle.Alloc(slice.Array, GCHandleType.Pinned);
-                    builder.Add((byte*)gcHandle.AddrOfPinnedObject(), slice.Array.Length);
-                    handles1.Add(gcHandle);
+                    var slice = (Slice)o;
+                    builder.Add(slice.Content.Ptr, slice.Content.Length);
 
                     continue;
                 }
@@ -349,7 +344,7 @@ namespace Voron.Benchmark
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                var tableReader = docs.ReadByKey(key);
+                                var tableReader = docs.ReadByKey(Slice.From(tx.Allocator, key));
 
                                 int size;
                                 byte* buffer = tableReader.Read(1, out size);
@@ -397,7 +392,7 @@ namespace Voron.Benchmark
                         {
                             var docs = new Table(docsSchema, "docs", tx);
 
-                            foreach (var reader in docs.SeekByPrimaryKey(Slice.BeforeAllKeys) )
+                            foreach (var reader in docs.SeekByPrimaryKey(Slices.BeforeAllKeys) )
                             {
                                 int size;
                                 reader.Read(0, out size);
@@ -431,7 +426,7 @@ namespace Voron.Benchmark
                     for (int i = 0; i < Configuration.Transactions * Configuration.ItemsPerTransaction; i++)
                     {
                         var key = i.ToString("0000000000000000");
-                        var tableReader = docs.ReadByKey(key);
+                        var tableReader = docs.ReadByKey(Slice.From(tx.Allocator, key));
 
                         int size;
                         byte* buffer = tableReader.Read(1, out size);

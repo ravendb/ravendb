@@ -19,14 +19,14 @@ namespace FastTests.Voron.Trees
             {
                 var tree = tx.ReadTree("foo");
                 var iterator = tree.Iterate();
-                Assert.False(iterator.Seek(Slice.BeforeAllKeys));
+                Assert.False(iterator.Seek(Slices.BeforeAllKeys));
             }
 
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
                 var iterator = tree.Iterate();
-                Assert.False(iterator.Seek(Slice.AfterAllKeys));
+                Assert.False(iterator.Seek(Slices.AfterAllKeys));
             }
         }
 
@@ -52,16 +52,16 @@ namespace FastTests.Voron.Trees
             {
                 var tree = tx.ReadTree("foo");
                 var iterator = tree.Iterate();
-                Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+                Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
                 for (int i = 0; i < 24; i++)
                 {
-                    Assert.Equal(i.ToString("0000"), iterator.CurrentKey);
+                    Assert.Equal(i.ToString("0000"), iterator.CurrentKey.ToString());
 
                     Assert.True(iterator.MoveNext());
                 }
 
-                Assert.Equal(24.ToString("0000"), iterator.CurrentKey);
+                Assert.Equal(24.ToString("0000"), iterator.CurrentKey.ToString());
                 Assert.False(iterator.MoveNext());
             }
         }

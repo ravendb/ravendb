@@ -129,7 +129,7 @@ namespace Sparrow.Json
             return new UnmanagedWriteBuffer(this, GetMemory(_lastStreamSize));
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (_disposed)
                 return;

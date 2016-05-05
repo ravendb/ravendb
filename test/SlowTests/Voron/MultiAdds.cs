@@ -7,8 +7,8 @@ using Xunit;
 namespace SlowTests.Voron
 {
     public class MultiAdds
-	{
-		readonly Random _random = new Random(1234);
+    {
+        readonly Random _random = new Random(1234);
 
         private string RandomString(int size)
         {
@@ -21,51 +21,51 @@ namespace SlowTests.Voron
             return builder.ToString();
         }
 
-		[Theory]
-		[InlineData(0500)]
-		[InlineData(1000)]
-		[InlineData(2000)]
-		[InlineData(3000)]
-		[InlineData(4000)]
-		[InlineData(5000)]
-		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
-		{
-			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-			{
-				var inputData = new List<byte[]>();
-				for (int i = 0; i < size; i++)
-				{
+        [Theory]
+        [InlineData(0500)]
+        [InlineData(1000)]
+        [InlineData(2000)]
+        [InlineData(3000)]
+        [InlineData(4000)]
+        [InlineData(5000)]
+        public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
+        {
+            using (var Env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            {
+                var inputData = new List<byte[]>();
+                for (int i = 0; i < size; i++)
+                {
                     inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
-				}
+                }
 
-				using (var tx = Env.WriteTransaction())
-				{
-					tx.CreateTree( "foo");
-					tx.Commit();
-				}
+                using (var tx = Env.WriteTransaction())
+                {
+                    tx.CreateTree( "foo");
+                    tx.Commit();
+                }
 
-				using (var tx = Env.WriteTransaction())
-				{
-					var tree = tx.CreateTree("foo");
-					foreach (var buffer in inputData)
-					{						
-						tree.MultiAdd("ChildTreeKey", new Slice(buffer));
-					}
-					tx.Commit();
-				}
-				
-				using (var tx = Env.WriteTransaction())
-				{
-					var tree = tx.CreateTree("foo");
-					for (int i = 0; i < inputData.Count; i++)
-					{
-						var buffer = inputData[i];
-						tree.MultiDelete("ChildTreeKey", new Slice(buffer));
-					}
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("foo");
+                    foreach (var buffer in inputData)
+                    {						
+                        tree.MultiAdd("ChildTreeKey", Slice.From(tx.Allocator, buffer));
+                    }
+                    tx.Commit();
+                }
+                
+                using (var tx = Env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("foo");
+                    for (int i = 0; i < inputData.Count; i++)
+                    {
+                        var buffer = inputData[i];
+                        tree.MultiDelete("ChildTreeKey", Slice.From(tx.Allocator, buffer));
+                    }
 
-					tx.Commit();
-				}
-			}
-		}
-	}
+                    tx.Commit();
+                }
+            }
+        }
+    }
 }
