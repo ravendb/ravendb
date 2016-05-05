@@ -285,6 +285,7 @@
     <Compile Include="Counters\Replication\CountersReplicationTopologyNode.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopology.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopologyDiscoverer.cs" />
+    <Compile Include="DocumentConflictResolver.cs" />
     <Compile Include="FileSystem\Controllers\BaseAdminFileSystemApiController.cs" />
     <Compile Include="FileSystem\Controllers\SynchronizationTopologyController.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopologyNode.cs" />

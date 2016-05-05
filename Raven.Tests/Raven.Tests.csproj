@@ -263,6 +263,7 @@
     <Compile Include="Bugs\MapRedue\LargeKeysInVoron.cs" />
     <Compile Include="Bugs\NoTracking.cs" />
     <Compile Include="Bugs\SortingAsMaxInt.cs" />
+    <Compile Include="Conflicts\ConflictDocumentResolverTest.cs" />
     <Compile Include="DistinctFacets\DistinctAndFacets.cs" />
     <Compile Include="DistinctFacets\FromUser.cs" />
     <Compile Include="Faceted\LargeFacets.cs" />
