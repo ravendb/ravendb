@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Versioning
             int? maxRevisions;
             configuration.TryGet("MaxRevisions", out maxRevisions);
             var revisionsCount = IncrementCountOfRevisions(context, key, 1);
-            DeleteOldRevisions(context, table, key, maxRevisions, revisionsCount);
+            DeleteOldRevisions(context, table, collectionName, key, maxRevisions, revisionsCount);
 
             byte* lowerKey;
             int lowerSize;
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Versioning
             var insert = table.Insert(tbv);
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string key, int? maxRevisions, long revisionsCount)
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string collectionName, string key, int? maxRevisions, long revisionsCount)
         {
             if (maxRevisions.HasValue == false || maxRevisions.Value == int.MaxValue)
                 return;
@@ -178,19 +178,24 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key, numberOfRevisionsToDelete);
-            IncrementCountOfRevisions(context, key, -deletedRevisionsCount);
+            IncrementCountOfRevisions(context, collectionName, key, -deletedRevisionsCount);
         }
 
-        private long IncrementCountOfRevisions(DocumentsOperationContext context, string key, long delta)
+        private long IncrementCountOfRevisions(DocumentsOperationContext context, string collectionName, string key, long delta)
         {
-            var numbers = context.Transaction.InnerTransaction.ReadTree("VersioningRevisionsCount");
+            var numbers = context.Transaction.InnerTransaction.ReadTree(collectionName + "_VersioningRevisionsCount");
             return numbers.Increment(key, delta);
         }
 
-        private void DeleteCountOfRevisions(DocumentsOperationContext context, string key)
+        private void DeleteCountOfRevisions(DocumentsOperationContext context, string collectionName, string key)
         {
-            var numbers = context.Transaction.InnerTransaction.ReadTree("VersioningRevisionsCount");
+            var numbers = context.Transaction.InnerTransaction.ReadTree(collectionName + "_VersioningRevisionsCount");
             numbers.Delete(key);
+        }
+
+        private void DeleteCollectionCountOfRevisions(DocumentsOperationContext context, string collectionName)
+        {
+            context.Transaction.InnerTransaction.DeleteTree(collectionName + "_VersioningRevisionsCount");
         }
 
         public void Delete(DocumentsOperationContext context, string collectionName, string key, Document document, bool isSystemDocument)
@@ -207,13 +212,45 @@ namespace Raven.Server.Documents.Versioning
 
             if (purgeOnDelete)
             {
-                DeleteCountOfRevisions(context, key);
+                DeleteCountOfRevisions(context, collectionName, key);
                 var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
                 table.DeleteByKey(key);
             }
             else
             {
                 PutVersion(context, collectionName, key, null, document.Data, isSystemDocument);
+            }
+        }
+
+        public void DeleteCollection(DocumentsOperationContext context, string collectionName)
+        {
+            BlittableJsonReaderObject configuration;
+            if (IsVersioningActive(collectionName, false, out configuration) == false)
+                return;
+
+            bool purgeOnDelete;
+            configuration.TryGet("PurgeOnDelete", out purgeOnDelete);
+
+            if (purgeOnDelete)
+            {
+                using (context.OpenWriteTransaction())
+                {
+                    DeleteCollectionCountOfRevisions(context, collectionName);
+                    context.Transaction.InnerTransaction.DeleteTree("_revisions/" + collectionName);
+                    context.Transaction.Commit();
+                }
+            }
+            else
+            {
+                using (context.OpenWriteTransaction())
+                {
+                    /* TODO: 
+                        Discuss what to do in this case. Should we version also the inserts to avoid slow method here
+                        or should we load all the data and version it here?
+                    */
+                    // Load in a loop and commit as we do in the calling method
+                    context.Transaction.Commit();
+                }
             }
         }
     }

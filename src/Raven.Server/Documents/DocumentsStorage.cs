@@ -670,6 +670,8 @@ namespace Raven.Server.Documents
 
         public void DeleteCollection(DocumentsOperationContext context, string name, BlittableJsonTextWriter writer)
         {
+            _versioningStorage.DeleteCollection(context, name);
+
             name = "@" + name; //todo: avoid this allocation
 
             var deletedList = new List<long>();
