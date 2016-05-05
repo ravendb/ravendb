@@ -58,7 +58,11 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="xunit">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\SharedLibs\xunit\xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.extensions">
+      <HintPath>..\..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -66,7 +70,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <ProjectReference Include="..\Sparrow\Sparrow.csproj">
       <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
