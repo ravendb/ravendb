@@ -668,11 +668,45 @@ namespace Raven.Server.Documents
             table.Insert(tbv);
         }
 
-        public bool DeleteCollection(DocumentsOperationContext context, string name, List<long> deletedList, long untilEtag)
+        public void DeleteCollection(DocumentsOperationContext context, string name, BlittableJsonTextWriter writer)
         {
             name = "@" + name; //todo: avoid this allocation
-            var table = new Table(_docsSchema, name, context.Transaction.InnerTransaction);
-            return table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, untilEtag);
+
+            var deletedList = new List<long>();
+            long totalDocsDeletes = 0;
+            long maxEtag = -1;
+            while (true)
+            {
+                bool isAllDeleted;
+                using (context.OpenWriteTransaction())
+                {
+                    if (maxEtag == -1)
+                        maxEtag = ReadLastEtag(context.Transaction.InnerTransaction);
+
+                    var table = new Table(_docsSchema, name, context.Transaction.InnerTransaction);
+
+                    isAllDeleted = table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, maxEtag);
+                    context.Transaction.Commit();
+                }
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["BatchSize"] = deletedList.Count
+                });
+                writer.WriteComma();
+                writer.WriteNewLine();
+                writer.Flush();
+
+                totalDocsDeletes += deletedList.Count;
+
+                if (isAllDeleted)
+                    break;
+
+                deletedList.Clear();
+            }
+            context.Write(writer, new DynamicJsonValue
+            {
+                ["TotalDocsDeleted"] = totalDocsDeletes
+            });
         }
 
         public PutResult Put(DocumentsOperationContext context, string key, long? expectedEtag,

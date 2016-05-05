@@ -56,9 +56,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/docs", "DELETE", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}")]
         public Task DeleteCollectionDocuments()
         {
-            var deletedList = new List<long>();
-            long totalDocsDeletes = 0;
-            long maxEtag = -1;
             DocumentsOperationContext context;
             var collection = GetStringQueryString("name");
             using (ContextPool.AllocateOperationContext(out context))
@@ -66,36 +63,8 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartArray();
-                    while (true)
-                    {
-                        bool isAllDeleted;
-                        using (context.OpenWriteTransaction())
-                        {
-                            if (maxEtag == -1)
-                                maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-
-                            isAllDeleted = Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
-                            context.Transaction.Commit();
-                        }
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["BatchSize"] = deletedList.Count
-                        });
-                        writer.WriteComma();
-                        writer.WriteNewLine();
-                        writer.Flush();
-                        
-                        totalDocsDeletes += deletedList.Count;
-
-                        if (isAllDeleted)
-                            break;
-
-                        deletedList.Clear();
-                    }
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["TotalDocsDeleted"] = totalDocsDeletes
-                    });
+                    Database.DocumentsStorage.DeleteCollection(context, collection, writer);
+                    
                     writer.WriteNewLine();
                     writer.WriteEndArray();
                 }
