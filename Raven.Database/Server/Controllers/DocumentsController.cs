@@ -97,7 +97,6 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/docs")]
         public async Task<HttpResponseMessage> DocsPost()
         {
-
             RavenJObject json;
             try
             {
@@ -105,7 +104,7 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize document request." , e);
+                Log.DebugException("Failed to read json document." , e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -114,7 +113,7 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize document request." , e);
+                Log.DebugException("Failed to read json document.", e);
                 return GetMessageWithObject(new
                 {
                     e.Message

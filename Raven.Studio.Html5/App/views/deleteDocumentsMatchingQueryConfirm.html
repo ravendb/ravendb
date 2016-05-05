@@ -6,8 +6,13 @@
         <h4 class="modal-title">Delete docs matching query?</h4>
     </div>
     <div class="modal-body">
-        <p>You're deleting <strong data-bind="text: totalDocCount"></strong> <span data-bind="visible: totalDocCount === 1">document.</span> <span data-bind="visible: totalDocCount !== 1">documents.</span></p>
-        <br />
+        <p>
+            <span>You're deleting </span>
+            <strong data-bind="text: totalDocCount.toLocaleString()"></strong>
+            <span data-bind="visible: totalDocCount > 1, text: ' documents'"></span>
+            <span data-bind="visible: totalDocCount == 1, text: ' document'"></span>
+        </p>
+
         <p class="text-muted">These are all the docs in <strong data-bind="text: indexName"></strong> <span data-bind="visible: queryText">matching <pre data-bind="text: queryText, visible: queryText"></pre></span></p>
     </div>
     <div class="modal-footer">
