@@ -14,11 +14,30 @@ namespace Raven.Server.Documents.Versioning
         private readonly ILog Log = LogManager.GetLogger(typeof(VersioningStorage));
 
         private readonly DocumentDatabase _database;
+        private readonly TableSchema _docsSchema = new TableSchema();
+
         private Document _versioningConfiguration;
 
         public VersioningStorage(DocumentDatabase database)
         {
             _database = database;
+
+            // The documents schema is as follows
+            // 4 fields (lowered key, etag, lazy string key, document)
+            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
+            _docsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 2,
+                IsGlobal = true,
+                Name = "VersioningRevision"
+            });
+            _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = 1,
+                IsGlobal = true
+            });
+
             _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
             LoadConfigurations();
         }
@@ -51,67 +70,50 @@ namespace Raven.Server.Documents.Versioning
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
         }
 
-        public bool IsChangesToRevisionsAllowed(string collectionName)
+        private bool IsVersioningActive(string collectionName, bool explictEnableVersioning, out int? maxRevisions)
         {
-            return IsConfigurationPropertyTrue("ChangesToRevisionsAllowed", collectionName);
-        }
+            maxRevisions = null;
 
-        public bool IsVersioningActive(string collectionName)
-        {
-            return IsConfigurationPropertyTrue("Active", collectionName);
-        }
-
-        public bool IsConfigurationPropertyTrue(string propertyName, string collectionName)
-        {
             if (_versioningConfiguration == null)
                 return false;
 
             BlittableJsonReaderObject configuration;
             if (_versioningConfiguration.Data.TryGet(collectionName, out configuration))
             {
-                bool active;
-                if (configuration.TryGet(propertyName, out active))
-                    return active;
-
-                return false;
+                return IsVersioningActiveForCollection(configuration, explictEnableVersioning, out maxRevisions);
             }
 
             if (_versioningConfiguration.Data.TryGet("DefaultConfiguration", out configuration))
             {
-                bool active;
-                if (configuration.TryGet(propertyName, out active))
-                    return active;
-
-                return false;
+                return IsVersioningActiveForCollection(configuration, explictEnableVersioning, out maxRevisions);
             }
 
             return false;
         }
 
-        /*public void AssertAllowPut(string collectionName, string key, BlittableJsonReaderObject document)
+        private static bool IsVersioningActiveForCollection(BlittableJsonReaderObject configuration, bool explictEnableVersioning, out int? maxRevisions)
         {
-            if (IsVersioningActive(collectionName) == false)
-                return;
+            configuration.TryGet("MaxRevisions", out maxRevisions);
 
-            BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata, out metadata))
+            bool active;
+            if (configuration.TryGet("Active", out active) && active)
+                return true;
+
+            bool activeIfExplicit;
+            if (configuration.TryGet("ActiveIfExplicit", out activeIfExplicit) && activeIfExplicit && explictEnableVersioning)
             {
-                bool ignoreVersioning;
-                if (metadata.TryGet(Constants.Versioning.RavenIgnoreVersioning, out ignoreVersioning))
-                {
-                    metadata.Modifications.Remove(Constants.Versioning.RavenIgnoreVersioning);
-                    if (ignoreVersioning)
-                        return;
-                }
+                return true;
             }
-        }*/
+
+            return false;
+        }
 
         public void PutVersion(DocumentsOperationContext context, string collectionName, string key, BlittableJsonReaderObject document, TableValueReader oldValue, bool isSystemDocument)
         {
             if (isSystemDocument)
                 return;
 
-            bool enableVersioning;
+            bool enableVersioning = false;
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Metadata, out metadata))
             {
@@ -129,13 +131,14 @@ namespace Raven.Server.Documents.Versioning
                 }
             }
 
-            if (IsVersioningActive(collectionName) == false)
+            int? maxRevisions;
+            if (IsVersioningActive(collectionName, enableVersioning, out maxRevisions) == false)
                 return;
 
-
-
             var revisionCounter = IncrementRevisionNumber(context, collectionName, key);
-            key += "/revisions/" + revisionCounter;
+            var revisionKey = key + "/revisions/" + revisionCounter;
+
+            DeleteOldRevisions(context, collectionName, key, revisionCounter, maxRevisions);
 
             byte* lowerKey;
             int lowerSize;
@@ -164,6 +167,26 @@ namespace Raven.Server.Documents.Versioning
 
             var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
             var insert = table.Insert(tbv);
+        }
+
+        private void DeleteOldRevisions(DocumentsOperationContext context, string collectionName, string key, long revisionCounter, int? maxRevisions)
+        {
+            if (maxRevisions.HasValue == false)
+                return;
+
+            var latestRevisionToDelete = revisionCounter - maxRevisions.Value;
+            if (latestRevisionToDelete <= 0)
+                return;
+
+            var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
+            table.DeleteBackwardFromByPrimayKeyPrefix(key, maxRevisions, long.MaxValue);
+        }
+
+        private long IncrementRevisionNumber(DocumentsOperationContext context, string collectionName, string key)
+        {
+            var numbers = context.Transaction.InnerTransaction.ReadTree("VersioningRevisionNumbers");
+            var id = collectionName + key;
+            return numbers.Increment(id, 1);
         }
     }
 }
