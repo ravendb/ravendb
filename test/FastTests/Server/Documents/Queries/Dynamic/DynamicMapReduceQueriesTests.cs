@@ -529,6 +529,29 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     Assert.Equal("Sweden", orders[1].Country);
                     Assert.Equal(1, orders[1].OrderedQuantity);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => x.ShipTo.Country, x => x.Lines.Sum(line => line.Quantity))
+                            .Select((group, i) => new
+                            {
+                                Country = group.Key,
+                                OrderedQuantity = group.Sum(x => x)
+                            })
+                            .OrderBy(x => x.Country)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal("Norway", orders[0].Country);
+                    Assert.Equal(5, orders[0].OrderedQuantity);
+
+                    Assert.Equal("Sweden", orders[1].Country);
+                    Assert.Equal(1, orders[1].OrderedQuantity);
+                }
             }
         }
 

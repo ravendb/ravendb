@@ -46,7 +46,7 @@ namespace Raven.Client.Linq
         private int subClauseDepth;
         private string resultsTransformer;
         private readonly Dictionary<string, RavenJToken> transformerParameters;
-        private MemberExpression groupByElementSelector = null;
+        private Expression groupByElementSelector = null;
 
         private LinqPathProvider linqPathProvider;
         /// <summary>
@@ -1302,9 +1302,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (lambdaExpression == null)
                             throw new NotSupportedException("Expected lambda expression as a element selector in GroupBy statement");
 
-                        var lambdaBody = lambdaExpression.Body;
+                        Expression elementSelector = lambdaExpression.Body as MemberExpression;
 
-                        var elementSelector = lambdaBody as MemberExpression;
+                        if (elementSelector == null)
+                            elementSelector = lambdaExpression.Body as MethodCallExpression;
 
                         if (expression.Arguments.Count == 3) // GroupBy(x => keySelector, x => elementSelector)
                             groupByElementSelector = elementSelector;
@@ -1438,7 +1439,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void VisitSelectAfterGroupBy(Expression operand, MemberExpression elementSelectorPath)
+        private void VisitSelectAfterGroupBy(Expression operand, Expression elementSelectorPath)
         {
             if (documentQuery.IsDynamicMapReduce == false)
                 throw new NotSupportedException("Expected a query to be a dynamic map reduce query");
@@ -1544,7 +1545,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void AddMapReduceField(MethodCallExpression mapReduceOperationCall, MemberInfo memberInfo, MemberExpression elementSelectorPath)
+        private void AddMapReduceField(MethodCallExpression mapReduceOperationCall, MemberInfo memberInfo, Expression elementSelectorPath)
         {
             if (mapReduceOperationCall.Method.DeclaringType != typeof (Enumerable))
                 throw new NotSupportedException(
@@ -1563,7 +1564,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     mapReduceField = GetSelectPath(memberInfo);
                 else
                 {
-                    mapReduceField = GetSelectPath(elementSelectorPath);
+                    mapReduceField = GetSelectPath(elementSelectorPath as MemberExpression);
                     renamedField = GetSelectPath(memberInfo);
                 }
             }
@@ -1579,7 +1580,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 var member = lambdaExpression.Body as MemberExpression;
 
                 if (member == null)
-                    member = elementSelectorPath;
+                    member = elementSelectorPath as MemberExpression;
 
                 if (member != null)
                 {
@@ -1588,6 +1589,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 else
                 {
                     var methodCallExpression = lambdaExpression.Body as MethodCallExpression;
+
+                    if (methodCallExpression == null)
+                        methodCallExpression = elementSelectorPath as MethodCallExpression;
 
                     if (methodCallExpression == null)
                         throw new NotSupportedException("No idea how to handle this dynamic map-reduce query!");
