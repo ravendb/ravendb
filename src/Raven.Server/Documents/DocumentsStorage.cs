@@ -95,8 +95,6 @@ namespace Raven.Server.Documents
                 StartIndex = 2,
                 IsGlobal = false
             });
-
-            _versioningStorage = new VersioningStorage(documentDatabase);
         }
 
         public StorageEnvironment Environment { get; private set; }
@@ -107,20 +105,26 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
-            _unmanagedBuffersPool?.Dispose();
-            _unmanagedBuffersPool = null;
+                _versioningStorage?.Dispose();
+                _versioningStorage = null;
             });
 
             exceptionAggregator.Execute(() =>
             {
-            ContextPool?.Dispose();
-            ContextPool = null;
+                _unmanagedBuffersPool?.Dispose();
+                _unmanagedBuffersPool = null;
             });
 
             exceptionAggregator.Execute(() =>
             {
-            Environment?.Dispose();
-            Environment = null;
+                ContextPool?.Dispose();
+                ContextPool = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                Environment?.Dispose();
+                Environment = null;
             });
 
             exceptionAggregator.ThrowIfNeeded();
@@ -167,6 +171,8 @@ namespace Raven.Server.Documents
 
                     tx.Commit();
                 }
+
+                _versioningStorage = new VersioningStorage(_documentDatabase);
             }
             catch (Exception e)
             {
