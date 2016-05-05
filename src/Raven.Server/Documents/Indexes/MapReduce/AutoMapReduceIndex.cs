@@ -33,10 +33,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             : base(indexId, IndexType.AutoMapReduce, definition)
         {
             // map entries schema is as follows
-            // 2 fields (document key, hash of reduce key)
-            // they are used to keep track of map entries to handle updates / deletes
-
-            // the actual map results are stored in separate trees, one tree per a reduce key
+            // 3 fields (document key, hash of reduce key, map result)
 
             _mapEntriesSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef
             {
@@ -213,33 +210,32 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var tvb = new TableValueBuilder
             {
                 { documentKey.Buffer, documentKey.Size },
-                { (byte*) &reduceKeyHash, sizeof(ulong) }
+                { (byte*) &reduceKeyHash, sizeof(ulong) },
+                { mappedResult.BasePointer, mappedResult.Size }
             };
 
             var existingEntry = GetMapEntryForDocument(documentKey);
 
             long storageId;
             if (existingEntry == null)
+            {
                 storageId = _mapReduceWorkContext.MapEntriesTable.Insert(tvb);
-            else if (existingEntry.ReduceKeyHash == reduceKeyHash) // update - reduce key the same
-            {
-                // no need to update record in table since we have the same entry already stored
-                storageId = existingEntry.StorageId;
             }
-            else // update - reduce key changed
+            else
             {
-                var previousState = GetReduceKeyState(existingEntry.ReduceKeyHash, indexContext, create: false);
+                if (existingEntry.ReduceKeyHash != reduceKeyHash)
+                {
+                    // reduce key changed - need to remove record in related reduce tree
 
-                storageId = existingEntry.StorageId;
-
-                previousState.Tree.Delete(new Slice((byte*)&storageId, sizeof(long)));
-
+                    var previousState = GetReduceKeyState(existingEntry.ReduceKeyHash, indexContext, create: false);
+                    var previousStorageId = existingEntry.StorageId;
+                    previousState.Tree.Delete(new Slice((byte*)&previousStorageId, sizeof(long)));
+                }
+                
                 storageId = _mapReduceWorkContext.MapEntriesTable.Update(existingEntry.StorageId, tvb);
             }
            
-            var pos = state.Tree.DirectAdd(new Slice((byte*)&storageId, sizeof(long)), mappedResult.Size);
-
-            mappedResult.CopyTo(pos);
+            state.Tree.DirectAdd(new Slice((byte*)&storageId, sizeof(long)), mappedResult.Size);
         }
 
         public unsafe MapEntry GetMapEntryForDocument(LazyStringValue documentKey)

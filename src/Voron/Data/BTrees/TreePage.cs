@@ -521,9 +521,13 @@ namespace Voron.Data.BTrees
             return GetNodeKey(node);
         }
 
-        public Slice GetNodeKey(TreeNodeHeader* node)
+        public Slice GetNodeKey(TreeNodeHeader* node, bool canBeMutable = false)
         {
             var keySize = node->KeySize;
+
+            if (canBeMutable)
+                return new Slice((byte*)node + Constants.NodeHeaderSize, keySize);
+
             var key = new byte[keySize];
 
             fixed (byte* ptr = key)

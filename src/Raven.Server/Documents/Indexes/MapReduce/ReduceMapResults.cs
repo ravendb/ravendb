@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly AutoMapReduceIndexDefinition _indexDefinition;
         private readonly IndexStorage _indexStorage;
         private readonly MetricsCountersManager _metrics;
-        private readonly MapReduceIndexingContext _indexingWorkContext;
+        private readonly MapReduceIndexingContext _mapReduceContext;
 
         private readonly TableSchema _reduceResultsSchema = new TableSchema()
             .DefineKey(new TableSchema.SchemaIndexDef
@@ -39,12 +39,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext indexingWorkContext)
+        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
         {
             _indexDefinition = indexDefinition;
             _indexStorage = indexStorage;
             _metrics = metrics;
-            _indexingWorkContext = indexingWorkContext;
+            _mapReduceContext = mapReduceContext;
         }
 
         public string Name => "Reduce";
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
-            if (_indexingWorkContext.StateByReduceKeyHash.Count == 0)
+            if (_mapReduceContext.StateByReduceKeyHash.Count == 0)
                 return false;
 
             _aggregationBatch.Clear();
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var writer = writeOperation.Value;
 
-            foreach (var state in _indexingWorkContext.StateByReduceKeyHash)
+            foreach (var state in _mapReduceContext.StateByReduceKeyHash)
             {
                 var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture));
                 var modifiedState = state.Value;
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     try
                     {
-                        using (var result = AggregateLeafPage(page, lowLevelTransaction, table, indexContext))
+                        using (var result = AggregateLeafPage(page, table, indexContext))
                         {
                             if (parentPage == -1)
                             {
@@ -207,12 +207,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            foreach (var lastEtag in _indexingWorkContext.ProcessedDocEtags)
+            foreach (var lastEtag in _mapReduceContext.ProcessedDocEtags)
             {
                 _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
             }
 
-            foreach (var lastEtag in _indexingWorkContext.ProcessedTombstoneEtags)
+            foreach (var lastEtag in _mapReduceContext.ProcessedTombstoneEtags)
             {
                 _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
             }
@@ -220,12 +220,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        private BlittableJsonReaderObject AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext)
+        private BlittableJsonReaderObject AggregateLeafPage(TreePage page, Table table, TransactionOperationContext indexContext)
         {
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
-                var valueReader = TreeNodeHeader.Reader(lowLevelTransaction, page.GetNode(i));
-                var reduceEntry = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, indexContext);
+                int size;
+                var mapEntryInternalId = page.GetNodeKey(page.GetNode(i), canBeMutable: true).CreateReader().ReadLittleEndianInt64();
+                
+                var mapEntry = new TableValueReader(_mapReduceContext.MapEntriesTable.DirectRead(mapEntryInternalId, out size), size);
+
+                var reduceEntry = new BlittableJsonReaderObject(mapEntry.Read(2, out size), size, indexContext);
                 _aggregationBatch.Add(reduceEntry);
             }
 
