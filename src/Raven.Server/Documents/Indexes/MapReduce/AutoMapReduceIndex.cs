@@ -23,18 +23,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     {
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
-        private readonly TableSchema _mapResultsSchema = new TableSchema();
+        private readonly TableSchema _mapEntriesSchema = new TableSchema();
 
         private readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
+
+        private readonly TableSchema.SchemaIndexDef _byDocumentKeysIndex;
 
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
         {
-            _mapResultsSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef
+            // map entries schema is as follows
+            // 2 fields (document key, hash of reduce key)
+            // they are used to keep track of map entries to handle updates / deletes
+
+            // the actual map results are stored in separate trees, one tree per a reduce key
+
+            _mapEntriesSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1
             });
+
+            _byDocumentKeysIndex = _mapEntriesSchema.Indexes["DocumentKeys"];
         }
 
         public static AutoMapReduceIndex CreateNew(int indexId, AutoMapReduceIndexDefinition definition,
@@ -83,9 +93,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var state = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
 
             var storageId = mapEntry.StorageId;
- 
-            state.Tree.Delete(new Slice((byte*)&storageId, sizeof(long)));
-            _mapReduceWorkContext.MapEntriesTable.Delete(mapEntry.StorageId);
+
+            _mapReduceWorkContext.MapEntriesTable.Delete(storageId);
+            state.Tree.Delete(new Slice((byte*)&storageId, sizeof(long))); 
         }
 
         public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
@@ -192,8 +202,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private Table GetMapEntriesTable(Transaction tx)
         {
-            _mapResultsSchema.Create(tx, "MapResults");
-            var table = new Table(_mapResultsSchema, "MapResults", tx);
+            _mapEntriesSchema.Create(tx, "MapResults");
+            var table = new Table(_mapEntriesSchema, "MapResults", tx);
 
             return table;
         }
@@ -211,12 +221,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             long storageId;
             if (existingEntry == null)
                 storageId = _mapReduceWorkContext.MapEntriesTable.Insert(tvb);
-            else if (existingEntry.ReduceKeyHash == reduceKeyHash)
+            else if (existingEntry.ReduceKeyHash == reduceKeyHash) // update - reduce key the same
             {
                 // no need to update record in table since we have the same entry already stored
                 storageId = existingEntry.StorageId;
             }
-            else
+            else // update - reduce key changed
             {
                 var previousState = GetReduceKeyState(existingEntry.ReduceKeyHash, indexContext, create: false);
 
@@ -226,7 +236,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 storageId = _mapReduceWorkContext.MapEntriesTable.Update(existingEntry.StorageId, tvb);
             }
-
+           
             var pos = state.Tree.DirectAdd(new Slice((byte*)&storageId, sizeof(long)), mappedResult.Size);
 
             mappedResult.CopyTo(pos);
@@ -236,7 +246,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             var documentKeySlice = new Slice(documentKey.Buffer, (ushort) documentKey.Size);
 
-            var seek = _mapReduceWorkContext.MapEntriesTable.SeekForwardFrom(_mapResultsSchema.Indexes["DocumentKeys"], documentKeySlice).FirstOrDefault();
+            var seek = _mapReduceWorkContext.MapEntriesTable.SeekForwardFrom(_byDocumentKeysIndex, documentKeySlice).FirstOrDefault();
 
             if (seek?.Key.Compare(documentKeySlice) != 0)
                 return null;
