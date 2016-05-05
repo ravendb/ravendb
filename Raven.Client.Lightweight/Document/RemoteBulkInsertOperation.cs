@@ -102,13 +102,25 @@ namespace Raven.Client.Document
             using (ConnectionOptions.Expect100Continue(operationClient.Url))
             {
                 var operationUrl = CreateOperationUrl(options);
-                var token = await GetToken().ConfigureAwait(false);
+                string token;
+
+                try
+                {
+                    token = await GetToken().ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    queue.CompleteAdding();
+                    throw new InvalidOperationException("Could not get token for bulk insert", e);
+                }
+
                 try
                 {
                     token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
+                    queue.CompleteAdding();
                     throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
                 }
 
