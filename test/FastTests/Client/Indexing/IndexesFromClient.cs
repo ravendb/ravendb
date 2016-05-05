@@ -547,6 +547,38 @@ namespace FastTests.Client.Indexing
         }
 
         [Fact]
+        public async Task GetIndexNames()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
+
+                var indexNames = store.DatabaseCommands.GetIndexNames(0, 10);
+                Assert.Equal(1, indexNames.Length);
+                Assert.Contains(indexName, indexNames);
+            }
+        }
+
+        [Fact]
         public async Task MoreLikeThis()
         {
             using (var store = await GetDocumentStore())

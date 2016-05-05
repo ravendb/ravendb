@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Handlers
 
             var start = GetStart();
             var pageSize = GetPageSize();
+            var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -64,7 +65,11 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteComma();
 
                     isFirst = false;
-                    writer.WriteIndexDefinition(context, indexDefinition);
+
+                    if (namesOnly == false)
+                        writer.WriteIndexDefinition(context, indexDefinition);
+                    else
+                        writer.WriteString(context.GetLazyString(indexDefinition.Name));
                 }
 
                 writer.WriteEndArray();
