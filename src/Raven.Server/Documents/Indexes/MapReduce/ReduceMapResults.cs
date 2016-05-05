@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using Raven.Abstractions.Indexing;
@@ -16,7 +15,6 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
-using Voron.Debugging;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
