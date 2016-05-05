@@ -622,6 +622,7 @@ namespace Raven.Server.Documents
 
             CreateTombstone(context, table, doc, originalCollectionName);
 
+            _versioningStorage.Delete(context, collectionName, key, doc, isSystemDocument);
             table.Delete(doc.StorageId);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -738,7 +739,7 @@ namespace Raven.Server.Documents
                         $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
                         $"Delete the document and recreate the document {key}.");
 
-                _versioningStorage.PutVersion(context, collectionName, key, document, oldValue, isSystemDocument);
+                _versioningStorage.PutVersion(context, collectionName, key, document, oldDoc, isSystemDocument);
 
                 table.Update(oldValue.Id, tbv);
             }
