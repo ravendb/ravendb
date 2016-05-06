@@ -1,5 +1,7 @@
+using DotNetCross.Memory;
 using Sparrow.Platform;
 using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Security;
 
@@ -7,26 +9,63 @@ namespace Sparrow
 {
     public unsafe static class Memory
     {
-        [SecurityCritical]
-        
         public static int Compare(byte* p1, byte* p2, int size)
         {
+            if (size >= 256)
+                return UnmanagedMemory.Compare(p1, p2, size);
+
             return CompareInline(p1, p2, size);
         }
 
-        [SecurityCritical]
         public static int Compare(byte* p1, byte* p2, int size, out int position)
         {
             return CompareInline(p1, p2, size, out position);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int CompareInline(byte* p1, byte* p2, int size)
-        {
-            byte* bpx = p1, bpy = p2;
-            int l = size;
+        private static readonly int Inc = Unsafe.SizeOf<Vector<byte>>();
 
-            int last = 0;
+        private static int CompareBulk(void* p1, void* p2, int size)
+        {
+            byte* bpx = (byte*)p1, bpy = (byte*)p2;
+
+            int inc = Inc;
+            int inc2 = Inc * 2;
+            int inc3 = Inc * 3;
+            int inc4 = Inc * 4;
+
+            int last;
+            int l = size;
+            int l4 = l / inc4;
+            for (int i = 0; i < l4; i++, bpx += inc4, bpy += inc4)
+            {
+                var vbpx1 = Unsafe.Read<Vector<long>>(bpx);
+                var vbpy1 = Unsafe.Read<Vector<long>>(bpy);
+                var vbpx2 = Unsafe.Read<Vector<long>>(bpx + inc);
+                var vbpy2 = Unsafe.Read<Vector<long>>(bpy + inc);
+
+                int ebp1 = !Vector.EqualsAll(vbpx1, vbpy1) ? 0 : int.MaxValue;
+                int ebp2 = !Vector.EqualsAll(vbpx2, vbpy2) ? 1 : int.MaxValue;
+
+                var vbpx3 = Unsafe.Read<Vector<long>>(bpx + inc2);
+                var vbpy3 = Unsafe.Read<Vector<long>>(bpy + inc2);
+                var vbpx4 = Unsafe.Read<Vector<long>>(bpx + inc3);
+                var vbpy4 = Unsafe.Read<Vector<long>>(bpy + inc3);
+
+                int ebp3 = !Vector.EqualsAll(vbpx3, vbpy3) ? 2 : int.MaxValue;
+                int ebp4 = !Vector.EqualsAll(vbpx4, vbpy4) ? 3 : int.MaxValue;
+
+                int idx = Math.Min(Math.Min(ebp1, ebp2), Math.Min(ebp3, ebp4));
+                if (idx != int.MaxValue)
+                {
+                    bpx += idx * inc;
+                    bpy += idx * inc;
+                    last = inc;
+                    goto TAIL;
+                }
+            }
+
+            l -= l4 * inc4;
+
             for (int i = 0; i < l / 8; i++, bpx += 8, bpy += 8)
             {
                 if (*((long*)bpx) != *((long*)bpy))
@@ -44,8 +83,9 @@ namespace Sparrow
                     goto TAIL;
                 }
                 bpx += 4;
-                bpy += 4;                
+                bpy += 4;
             }
+
             if ((l & 2) != 0)
             {
                 if (*((short*)bpx) != *((short*)bpy))
@@ -56,7 +96,7 @@ namespace Sparrow
 
                 bpx += 2;
                 bpy += 2;
-            }            
+            }
 
             if ((l & 1) != 0)
             {
@@ -65,7 +105,71 @@ namespace Sparrow
 
             return 0;
 
-        TAIL:
+            TAIL:
+            while (last > 0)
+            {
+                if (*((byte*)bpx) != *((byte*)bpy))
+                    return *bpx - *bpy;
+
+                bpx++;
+                bpy++;
+                last--;
+            }
+
+            return 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline(void* p1, void* p2, int size)
+        {
+            // If we use an unmanaged bulk version with an inline compare the caller site does not get optimized properly.
+            // If you know you will be comparing big memory chunks do not use the inline version. 
+            int l = size;
+            if (size >= 256) 
+                return CompareBulk(p1, p2, l);
+       
+            byte* bpx = (byte*)p1, bpy = (byte*)p2;
+            int last;
+            for (int i = 0; i < l / 8; i++, bpx += 8, bpy += 8)
+            {
+                if (*((long*)bpx) != *((long*)bpy))
+                {
+                    last = 8;
+                    goto TAIL;
+                }
+            }
+
+            if ((l & 4) != 0)
+            {
+                if (*((int*)bpx) != *((int*)bpy))
+                {
+                    last = 4;
+                    goto TAIL;
+                }
+                bpx += 4;
+                bpy += 4;
+            }
+
+            if ((l & 2) != 0)
+            {
+                if (*((short*)bpx) != *((short*)bpy))
+                {
+                    last = 2;
+                    goto TAIL;
+                }
+
+                bpx += 2;
+                bpy += 2;
+            }
+
+            if ((l & 1) != 0)
+            {
+                return (*((byte*)bpx) - *((byte*)bpy));
+            }
+
+            return 0;
+
+            TAIL:
             while (last > 0)
             {
                 if (*((byte*)bpx) != *((byte*)bpy))

@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "4.0.0-*",
   "compilationOptions": {
     "allowUnsafe": true,
@@ -23,5 +23,7 @@
     }
   },
   "dependencies": {
+    "DotNetCross.Memory.Unsafe": "0.2.3",
+    "System.Numerics.Vectors": "4.1.1-beta-23516"
   }
 }
