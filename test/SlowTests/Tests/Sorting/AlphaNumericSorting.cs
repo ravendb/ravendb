@@ -15,7 +15,7 @@ namespace SlowTests.Tests.Sorting
 {
     public class AlphaNumericSorting : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task basic_alphanumeric_sort()
         {
             var titles = new List<string>
@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task number_and_decimal_alphanumeric_sort()
         {
             var titles = new List<string> { ".303-inch machine guns", "3 point 2 and what goes with it", "0.25 mm", "3.1416 and all that", ".300 Vickers machine gun", "1-4-5 boogie-woogie" };
@@ -107,7 +107,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task basic_sequence_of_characters()
         {
             var titles = new List<string>
@@ -155,7 +155,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task order_by_two_parameters_alphanumeric()
         {
             var localTracks = new List<Track>();
@@ -203,7 +203,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task order_by_two_parameters_first_alphanumeric_than_long()
         {
             var localTracks = new List<Track>();
@@ -252,7 +252,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task order_by_two_parameters_first_long_than_alphanumeric()
         {
             var localTracks = new List<Track>();
@@ -301,7 +301,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task random_words()
         {
             var localTracks = new List<Track>();
@@ -354,7 +354,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task random_words_using_document_query()
         {
             var localTracks = new List<Track>();
@@ -407,7 +407,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task random_words_using_document_query_async()
         {
             var localTracks = new List<Track>();
