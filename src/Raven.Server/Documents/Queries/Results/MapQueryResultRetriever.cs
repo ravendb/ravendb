@@ -64,8 +64,19 @@ namespace Raven.Server.Documents.Queries.Results
                 result[_traverser.GetNameFromPath(fieldToFetch.Name.Value)] = value;
             }
 
-            doc.Data.Dispose();
-            doc.Data = _context.ReadObject(result, doc.Key);
+            var newData = _context.ReadObject(result, doc.Key);
+
+            try
+            {
+                doc.Data.Dispose();
+            }
+            catch (Exception)
+            {
+                newData.Dispose();
+                throw;
+            }
+
+            doc.Data = newData;
 
             return doc;
         }

@@ -19,6 +19,8 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Sorting;
+using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Indexing;
 
 using Voron.Impl;
@@ -272,6 +274,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return new Sort(sortedFields.Select(x =>
             {
                 var sortOptions = SortOptions.String;
+
+                if (InvariantCompare.IsPrefix(x.Field, Constants.AlphaNumericFieldName, CompareOptions.None))
+                {
+                    var customField = SortFieldHelper.CustomField(x.Field);
+                    if (string.IsNullOrEmpty(customField.Name))
+                        throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
+
+                    var anSort = new AlphaNumericComparatorSource();
+                    return new SortField(customField.Name, anSort, x.Descending);
+                }
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {

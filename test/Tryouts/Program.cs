@@ -13,6 +13,8 @@ using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Client.Platform;
 
+using SlowTests.Tests.Sorting;
+
 namespace Tryouts
 {
     public class Program
@@ -28,21 +30,9 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var x = new DocumentStore
+            using (var x = new AlphaNumericSorting())
             {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "Foo"
-            })
-            {
-                x.Initialize();
-
-                using (var s = x.OpenSession())
-                {
-                   var q = s.Query<User>()
-                        .Where(u => !u.FirstName.In("Oren", "Ayende"))
-                        .ToString();
-                    Console.WriteLine(q);
-                }
+                x.dynamic_query_should_work().Wait();
             }
         }
 

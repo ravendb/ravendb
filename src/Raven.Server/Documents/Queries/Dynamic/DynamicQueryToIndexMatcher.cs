@@ -7,7 +7,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
-using Raven.Server.Documents.Queries.Sort;
+using Raven.Server.Documents.Queries.Sorting;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {

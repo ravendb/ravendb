@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<NumericField>>(Comparer);
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
-        
+
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 
         private readonly BlittableJsonTraverser _blittableTraverser;
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public global::Lucene.Net.Documents.Document ConvertToCachedDocument(Document document)
         {
             _document.GetFields().Clear();
-          
+
             foreach (var field in GetFields(document))
             {
                 _document.Add(field);
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             return _document;
         }
-        
+
         private IEnumerable<AbstractField> GetFields(Document document)
         {
             if (document.Key != null)
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 else
                     yield return GetOrCreateField(Constants.ReduceKeyFieldName, null, document.Key, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
             }
-            
+
             foreach (var indexField in _fields)
             {
                 object value;
@@ -111,10 +111,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
-            var lazyStringValue = value as LazyStringValue;
+            LazyStringValue lazyStringValue;
+            var lazyCompressedStringValue = value as LazyCompressedStringValue;
+            if (lazyCompressedStringValue != null)
+                lazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
+            else
+                lazyStringValue = value as LazyStringValue;
 
             if (lazyStringValue != null)
             {
+                indexing = field.Indexing.GetLuceneValue(@default: Field.Index.ANALYZED);
                 yield return GetOrCreateField(path, null, lazyStringValue, storage, indexing);
                 yield break;
             }
