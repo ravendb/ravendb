@@ -125,6 +125,9 @@ class globalConfigReplications extends viewModelBase {
 
     fetchReplications(db): JQueryPromise<any> {
         var deferred = $.Deferred();
+
+        ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
+
         new getGlobalConfigReplicationsCommand(db)
             .execute()
             .done((repSetup: replicationsDto) => {
@@ -133,11 +136,11 @@ class globalConfigReplications extends viewModelBase {
                     d.hasLocal(true);
                     d.hasGlobal(false);
                 });
-                ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
                 this.activated(true);
             })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
+
     }
 
     createNewDestination() {

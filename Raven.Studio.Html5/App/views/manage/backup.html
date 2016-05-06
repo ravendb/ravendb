@@ -15,13 +15,12 @@
                     <div class="panel panel-default" data-bind="with: dbBackupOptions">
                         <div class="panel-heading">
                             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
-                            <div class="btn-group">
-                                <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                    <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
-                                    <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
-                                    <span>Start Database Backup</span>
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
+                                <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
+                                <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
+                                <span>Start Database Backup</span>
+                            </button>
+                            <button type="button" class="btn btn-default" data-bind="visible: isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
                         </div>
                         <div class="panel-body">
                             <div class="form-group">
@@ -51,9 +50,8 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: incremental"> Incremental
-                                        </label>
+                                        <input type="checkbox" data-bind="checked: incremental" class="styled" id="incrementalDb">
+                                        <label for="incrementalDb">Incremental</label>
                                     </div>
                                 </div>
                             </div>
@@ -72,13 +70,12 @@
                     <div class="panel panel-default" data-bind="with: fsBackupOptions">
                         <div class="panel-heading">
                             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
-                            <div class="btn-group">
-                                <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                    <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
-                                    <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
-                                    <span>Start File System Backup</span>
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
+                                <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
+                                <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
+                                <span>Start File System Backup</span>
+                            </button>
+                            <button type="button" class="btn btn-default" data-bind="visible: isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
                         </div>
                         <div class="panel-body">
                             <div class="form-group">
@@ -108,9 +105,8 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: incremental"> Incremental
-                                        </label>
+                                        <input type="checkbox" data-bind="checked: incremental" class="styled"  id="incrementalFs">
+                                        <label for="incrementalFs">Incremental</label>
                                     </div>
                                 </div>
                             </div>
@@ -129,13 +125,12 @@
                     <div class="panel panel-default" data-bind="with: csBackupOptions">
                         <div class="panel-heading">
                             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
-                            <div class="btn-group">
-                                <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
-                                    <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
-                                    <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
-                                    <span>Start Counter Storage Backup</span>
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-primary" data-bind="disable: isBusy">
+                                <i class="fa fa-cloud-upload fa-fw" data-bind="visible: !isBusy()"></i>
+                                <i class="fa fa-spinner fa-spin fa-fw" data-bind="visible: isBusy"></i>
+                                <span>Start Counter Storage Backup</span>
+                            </button>
+                            <button type="button" class="btn btn-default" data-bind="visible: isBusy, css: { 'active': keepDown }, click: function () { this.toggleKeepDown() }">KeepDown</button>
                         </div>
                         <div class="panel-body">
                             <div class="form-group">
@@ -165,9 +160,8 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: incremental"> Incremental
-                                        </label>
+                                        <input type="checkbox" data-bind="checked: incremental" class="styled" id="incrementalCs">
+                                        <label for="incrementalCs">Incremental</label>
                                     </div>
                                 </div>
                             </div>

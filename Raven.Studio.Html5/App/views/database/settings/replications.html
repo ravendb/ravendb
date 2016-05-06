@@ -75,7 +75,7 @@
                     <div class="form-group">
                         <label class="col-sm-2 control-label">Request Time SLA Threshold (ms)</label>
                         <div class="col-sm-5">
-                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, visible: replicationsSetup().showRequestTimeSlaThreshold(),  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false"/>
+                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, visible: replicationsSetup().showRequestTimeSlaThreshold(),  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false" />
                         </div>
                         <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientRequestTimeSlaThreshold()">
                             <input disabled="disabled" type="number" class="form-control" data-bind="value: $root.globalClientRequestTimeSlaThreshold()" />
@@ -111,6 +111,15 @@
                                 <span data-bind="visible: documentConflictResolution() === 'ResolveToLatest'">Resolve to <strong>latest</strong></span>
                                 <span class="caret"></span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="col-sm-10 col-sm-offset-2">
+                        <div class="checkbox">
+                            <input type="checkbox" id="globalSkipIndexReplicatonForAll" class="styled" data-bind="checked: skipIndexReplicationForAll">
+                            <label for="globalSkipIndexReplicatonForAll">Skip index replication for all destinations</label>
                         </div>
                     </div>
                 </div>
@@ -237,16 +246,22 @@
                                                     <input type="text" class="form-control" data-bind="value: clientVisibleUrl, enable: canEdit, valueUpdate: 'afterkeydown'" />
                                                 </div>
                                             </div>
+
                                             <div class="form-group">
-                                                <label class="col-sm-2 control-label">Skip Index Replication</label>
-                                                <div class="col-sm-9">
-                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="enable: canEdit, checked: skipIndexReplication" />
+                                                <div class="col-sm-9 col-sm-offset-2">
+                                                    <div class="checkbox">
+                                                        <input type="checkbox" class="styled" data-bind="checked: skipIndexReplication, enable: canEdit, attr: { id: 'skipIndexReplicaton_' + $index() } ">
+                                                        <label data-bind="attr: { for: 'skipIndexReplicaton_' + $index() }">Skip Index Replication</label>
+                                                    </div>
                                                 </div>
                                             </div>
+
                                             <div class="form-group">
-                                                <label class="col-sm-2 control-label">Customize collection replication</label>
-                                                <div class="col-sm-9">
-                                                    <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="enable: canEdit, checked: enableReplicateOnlyFromCollections" />
+                                                <div class="col-sm-9 col-sm-offset-2">
+                                                    <div class="checkbox">
+                                                        <input type="checkbox" class="styled" id="mute" data-bind="attr: { id: 'collection_rep_' + $index() }, checked: enableReplicateOnlyFromCollections, enable: canEdit">
+                                                        <label data-bind="attr: { for: 'collection_rep_' + $index() }">Customize collection replication</label>
+                                                    </div>
                                                     <div data-bind="visible: enableReplicateOnlyFromCollections">
                                                         <table class="table table-striped">
                                                             <thead>
@@ -259,7 +274,7 @@
                                                             <tbody data-bind="foreach: $parents[1].collections">
                                                                 <tr>
                                                                     <td>
-                                                                        <!-- ko if:  $parent.isSelected($data) -->
+                                                                        <!-- ko if: $parent.isSelected($data) -->
                                                                         <button type="button" class="btn btn-default active" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onReplicateToCollectionClick($parents[0],$data.name); }">
                                                                             <i data-bind="css:{ 'fa-check': true  }" class="fa fa-fw"></i>
                                                                         </button>
@@ -347,12 +362,6 @@
             </div>
         </div>
         <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
-            <div class="panel-heading">
-                <input type="checkbox" class="form-checkbox-control" role="checkbox" data-bind="checked: skipIndexReplicationForAll" />
-                <span style="margin-left: 5px;">
-                    Skip index replication for all destinations
-                </span>
-            </div>
             <div class="panel-heading">
                 <button type="submit" data-bind="click:sendResolveAllConflictsCommand" class="btn btn-primary" title="Resolve all existing conflict acording to the current conflict resolution">
                     <i class="fa fa-send"></i>

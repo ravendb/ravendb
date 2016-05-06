@@ -8,14 +8,15 @@
         <br />
         <div class="btn-toolbar">
             <div>
-                <form class="checkbox navbar-form navbar-left" data-bind="submit: startExport">
+                <form class="navbar-form navbar-left" data-bind="submit: startExport">
                     <button class="btn btn-primary" type="submit" download>
                         <i class="fa fa-download"></i>
                         Export File System
                     </button>
-                    <label data-bind="visible: !chooseDifferntFileName()">
-                        <input type="checkbox" data-bind="checked: chooseDifferntFileName">Override file name
-                    </label>
+                    <div class="checkbox" data-bind="visible: !chooseDifferntFileName()">
+                        <input type="checkbox" class="styled" id="different_name" data-bind="checked: chooseDifferntFileName">
+                        <label for="different_name">Override file name</label>
+                    </div>
                     <div data-bind="visible: chooseDifferntFileName" class="form-group">
                         <input class="form-control" type="text" name="fileName" data-bind="visible: chooseDifferntFileName, value: noneDefualtFileName" title="Insert a file name to ovveride the default one." placeholder="Exported File Name">
                     </div>

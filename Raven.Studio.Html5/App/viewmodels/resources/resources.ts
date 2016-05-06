@@ -42,8 +42,7 @@ class resources extends viewModelBase {
     searchText = ko.observable("");
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
-    isAnyResourceSelected: KnockoutComputed<boolean>;
-    hasAllResourcesSelected: KnockoutComputed<boolean>;
+    resourcesSelection: KnockoutComputed<checkbox>;
     allCheckedResourcesDisabled: KnockoutComputed<boolean>;
     isCheckboxVisible: KnockoutComputed<boolean>;
     systemDb: database;
@@ -62,18 +61,25 @@ class resources extends viewModelBase {
     counterStorageType = counterStorage.type;
     timeSeriesType = timeSeries.type;
     visibleResource = ko.observable("");
-    visibleOptions = [
-        { value: "", name: "Show all" }, 
-        { value: database.type, name: "Show databases" }, 
-        { value: fileSystem.type, name: "Show file systems" }, 
-        { value: counterStorage.type, name: "Show counter storages" },
-        { value: timeSeries.type, name: "Show time series" }
-    ];
-
     has40Features = ko.computed(() => shell.has40Features());
+    visibleOptions: { value:string, name: string }[];
+
+    
 
     constructor() {
         super();
+
+        this.visibleOptions = [
+            { value: "", name: "Show all" },
+            { value: database.type, name: "Show databases" },
+            { value: fileSystem.type, name: "Show file systems" }
+        ];
+        if (this.has40Features()) {
+            this.visibleOptions.pushAll([
+                { value: counterStorage.type, name: "Show counter storages" },
+                { value: timeSeries.type, name: "Show time series" }
+            ]);
+        }
 
         this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
 
@@ -110,23 +116,15 @@ class resources extends viewModelBase {
         var updatedUrl = appUrl.forResources();
         this.updateUrl(updatedUrl);
 
-        this.hasAllResourcesSelected = ko.computed(() => {
+        this.resourcesSelection = ko.computed(() => {
             var resources = this.resources();
-            for (var i = 0; i < resources.length; i++) {
-                var rs: resource = resources[i];
-                if (rs.isDatabase() && (<any>rs).isSystem) {
-                    continue;
-                }
-
-                if (rs.isChecked() == false) {
-                    return false;
-                }
+            if (resources.length === 0) {
+                return checkbox.UnChecked;
             }
-            return true;
-        });
 
-        this.isAnyResourceSelected = ko.computed(() => {
-            var resources = this.resources();
+            var allSelected = true;
+            var anySelected = false;
+
             for (var i = 0; i < resources.length; i++) {
                 var rs: resource = resources[i];
                 if (rs.isDatabase() && (<any>rs).isSystem) {
@@ -134,10 +132,18 @@ class resources extends viewModelBase {
                 }
 
                 if (rs.isChecked()) {
-                    return true;
+                    anySelected = true;
+                } else {
+                    allSelected = false;
                 }
             }
-            return false;
+
+            if (allSelected) {
+                return checkbox.Checked;
+            } else if (anySelected) {
+                return checkbox.SomeChecked;
+            }
+            return checkbox.UnChecked;
         });
 
         this.allCheckedResourcesDisabled = ko.computed(() => {
@@ -147,7 +153,7 @@ class resources extends viewModelBase {
                 if (rs.isChecked()) {
                     if (disabledStatus == null) {
                         disabledStatus = rs.disabled();
-                    } else if (disabledStatus != rs.disabled()) {
+                    } else if (disabledStatus !== rs.disabled()) {
                         return null;
                     }
                 }
@@ -157,7 +163,7 @@ class resources extends viewModelBase {
         });
 
         this.isCheckboxVisible = ko.computed(() => {
-            if (this.isGlobalAdmin() == false)
+            if (!this.isGlobalAdmin())
                 return false;
 
             var resources = this.resources();
@@ -313,7 +319,7 @@ class resources extends viewModelBase {
     toggleSelectAll() {
         var check = true;
 
-        if (this.isAnyResourceSelected()) {
+        if (this.resourcesSelection() !== checkbox.UnChecked) {
             check = false;
         }
 

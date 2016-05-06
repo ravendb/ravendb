@@ -92,11 +92,11 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="col-sm-3 control-label">Skip index replication for all destinations</label>
-                    <div class="col-sm-9">
-                        <button type="button" class="btn-link" data-bind="click: skipIndexReplicationForAll.bind($root, !skipIndexReplicationForAll()), disable: $root.settingsAccess.isReadOnly()">
-                            <img data-bind="checkbox: skipIndexReplicationForAll">
-                        </button>
+                    <div class="col-sm-9 col-sm-offset-3">
+                        <div class="checkbox">
+                            <input type="checkbox" id="globalSkipIndexReplicatonForAll" class="styled" data-bind="checked: skipIndexReplicationForAll, disable: $root.settingsAccess.isReadOnly()">
+                            <label for="globalSkipIndexReplicatonForAll">Skip index replication for all destinations</label>
+                        </div>
                     </div>
                 </div>
 
@@ -211,11 +211,11 @@
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label class="col-sm-4 control-label">Skip Index Replication</label>
-                                                <div class="col-sm-7">
-                                                    <button type="button" class="btn-link" data-bind="click: skipIndexReplication.bind($root, !skipIndexReplication()), disable: $root.settingsAccess.isReadOnly()">
-                                                        <img data-bind="checkbox: skipIndexReplication">
-                                                    </button>
+                                                <div class="col-sm-7 col-sm-offset-4">
+                                                    <div class="checkbox">
+                                                        <input type="checkbox" class="styled" data-bind="checked: skipIndexReplication, disable: $root.settingsAccess.isReadOnly(), attr: { id: 'skipIndexReplicaton_' + $index() } ">
+                                                        <label data-bind="attr: { for: 'skipIndexReplicaton_' + $index() }">Skip Index Replication</label>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="form-group">

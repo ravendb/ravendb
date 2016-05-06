@@ -33,6 +33,8 @@ class topology extends viewModelBase {
 
     showLoadingIndicator = ko.observable(false); 
 
+    dagreGraphSize: [number, number];
+
     showCsOption = shell.has40Features;
 
     width: number;
@@ -242,6 +244,8 @@ class topology extends viewModelBase {
         }
         graph.attr('transform', 'translate(' + ((self.width - graphWidth) / 2) + ',10)');
 
+        this.dagreGraphSize = [topologyGraph.graph().width, topologyGraph.graph().height];
+
         var enteringGraph = graph.enter().append('g').attr('class', 'graph');
         var enteringGraphZoom = enteringGraph.append("g").attr("class", "graphZoom");
 
@@ -336,17 +340,30 @@ class topology extends viewModelBase {
     }
 
     saveAsPng() {
-        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', (svg) => {
-            this.removeIconsProcessor(svg);
+        svgDownloader.downloadPng(d3.select('#replicationTopology').node(), 'replicationTopology.png', svg => {
+            this.preprocesSvgDownload(svg);
             return topology.inlineCss;
         });
     }
 
     saveAsSvg() {
         svgDownloader.downloadSvg(d3.select('#replicationTopology').node(), 'replicationTopology.svg', (svg) => {
-            this.removeIconsProcessor(svg);
+            this.preprocesSvgDownload(svg);
             return topology.inlineCss;
         });
+    }
+
+    preprocesSvgDownload(svg: Element) {
+        this.removeIconsProcessor(svg);
+
+        var padding = 10;
+
+        $(svg)
+            .attr('width', (this.dagreGraphSize[0] + 2 * padding)  + 'px')
+            .attr('height', (this.dagreGraphSize[1]  + 2 * padding) + 'px');
+
+        $(".graph", svg).attr('transform', 'translate(' + padding  + ',' + padding + ')');
+        $(".graphZoom", svg).removeAttr('transform');
     }
 
     /*

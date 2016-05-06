@@ -6606,6 +6606,9 @@ html,
 body {
   height: 100%;
 }
+#applicationHost {
+  padding: 1px;
+}
 .not-implemented-yet {
   position: relative;
 }
@@ -7217,26 +7220,26 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   height: 30px;
 }
 #watchTrafficContainer #logTableContainer {
-  max-height: 80vh;
-  overflow-y: auto;
-  overflow-x: visible;
+  display: flex;
+  -ms-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
 }
 #watchTrafficContainer #logTableContainer .logRecords {
-  max-height: 60vh;
+  flex-basis: auto;
+  flex-grow: 1;
   overflow-y: auto;
-}
-#watchTrafficContainer #logTableContainer .logRecords-small {
-  max-height: 30vh;
 }
 #watchTrafficContainer #logTableContainer .log-details {
-  max-height: 25vh;
-  height: 25vh;
-  overflow-y: auto;
-  border-top-width: 2px;
-  margin-top: 1%;
-  padding-top: 1%;
+  flex-basis: content;
   border: thin dashed black;
-  margin-left: 1%;
+  padding-top: 5px;
+  margin-top: 5px;
 }
 #logNotificationsContainer {
   background-color: black;
@@ -8492,7 +8495,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   max-height: 250px;
   overflow-x: hidden;
 }
-#resources-page .resources-container .resource.fs a {
+#resources-page .resources-container .resource.fs a.resource-name {
   color: #7109AA;
 }
 #resources-page .resources-container .resource.fs:hover {
@@ -8505,7 +8508,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   -webkit-box-shadow: 0 0 20px 0 #7109AA;
   -moz-box-shadow: 0 0 20px 0 #7109AA;
 }
-#resources-page .resources-container .resource.cs a {
+#resources-page .resources-container .resource.cs a.resource-name {
   color: #0f6716;
 }
 #resources-page .resources-container .resource.cs:hover {
@@ -9023,3 +9026,46 @@ a.global_help_link:focus {
 .panel.panel-wo-margin {
   margin: 0;
 }
+/* Override default awesome bootstrap checkbox style - start */
+.checkbox label::after {
+  padding-top: 3px !important;
+}
+.checkbox input[type="checkbox"]:indeterminate + label::after,
+.checkbox input[type="radio"]:indeterminate + label::after {
+  background-color: #fff !important;
+}
+.checkbox input[type="checkbox"]:checked + label::before,
+.checkbox input[type="radio"]:checked + label::before {
+  background-color: #f36523;
+  border-color: #f36523;
+}
+.checkbox input[type="checkbox"]:checked + label::after,
+.checkbox input[type="radio"]:checked + label::after {
+  color: #fff;
+}
+.radio input[type="radio"] + label::after {
+  background-color: #f36523;
+}
+.radio input[type="radio"]:checked + label::before {
+  border-color: #f36523;
+}
+.radio input[type="radio"]:checked + label::after {
+  background-color: #f36523;
+}
+.checkbox input[type="checkbox"]:indeterminate + label::before,
+.checkbox input[type="radio"]:indeterminate + label::before {
+  background-color: #f36523;
+  border-color: #f36523;
+}
+.checkbo input[type="checkbox"]:indeterminate + label::after,
+.checkbox input[type="radio"]:indeterminate + label::after {
+  background-color: #fff;
+}
+.ko-grid .checkbox label {
+  pointer-events: none;
+}
+.ko-grid .checkbox {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+/* Override default awesome bootstrap checkbox style - end */

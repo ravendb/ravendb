@@ -59,30 +59,24 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
-                                            Defrag
-                                        </label>
+                                        <input type="checkbox" class="styled" id="defrag_db" data-bind="checked: defrag, disable: $parent.isBusy">
+                                        <label for="defrag_db">Defrag</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: $parent.disableReplicationDestinations, disable: $parent.isBusy">
-                                            Disable replication destinations
-                                        </label>
+                                        <input type="checkbox" class="styled" id="disable_replication_dest_db" data-bind="checked: $parent.disableReplicationDestinations, disable: $parent.isBusy">
+                                        <label for="disable_replication_dest_db">Disable replication destinations</label>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: $parent.generateNewDatabaseId, disable: $parent.isBusy">
-                                            Generate new database id
-                                        </label>
+                                        <input type="checkbox" class="styled" id="gen_db_id" data-bind="checked: $parent.generateNewDatabaseId, disable: $parent.isBusy">
+                                        <label for="gen_db_id">Generate new database id</label>
                                     </div>
                                 </div>
                             </div>
@@ -144,10 +138,8 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
-                                            Defrag
-                                        </label>
+                                        <input type="checkbox" class="styled" id="defrag_fs" data-bind="checked: defrag, disable: $parent.isBusy">
+                                        <label for="defrag_fs">Defrag</label>
                                     </div>
                                 </div>
                             </div>
@@ -197,10 +189,8 @@
                             <div class="form-group">
                                 <div class="col-sm-offset-2 col-sm-5">
                                     <div class="checkbox">
-                                        <label>
-                                            <input type="checkbox" data-bind="checked: defrag, disable: $parent.isBusy">
-                                            Defrag
-                                        </label>
+                                        <input type="checkbox" class="styled" id="defrag_cs" data-bind="checked: defrag, disable: $parent.isBusy">
+                                        <label for="defrag_cs">Defrag</label>
                                     </div>
                                 </div>
                             </div>

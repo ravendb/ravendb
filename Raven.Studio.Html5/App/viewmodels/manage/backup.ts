@@ -19,6 +19,7 @@ class resourceBackup {
     fullTypeName: KnockoutComputed<string>;
     searchResults: KnockoutComputed<string[]>;
     nameCustomValidityError: KnockoutComputed<string>;
+    keepDown = ko.observable<boolean>(false);
     
     drivesForCurrentResource = ko.observable<string[]>([]);
     displaySameDriveWarning = ko.computed(() => {
@@ -70,6 +71,24 @@ class resourceBackup {
             }
         });
     }
+
+    toggleKeepDown() {
+        this.keepDown.toggle();
+        this.forceKeepDown();
+    }
+
+    forceKeepDown() {
+        if (this.keepDown()) {
+            var body = document.getElementsByTagName("body")[0];
+            body.scrollTop = body.scrollHeight;
+        }
+    }
+
+    updateBackupStatus(newBackupStatus: backupStatusDto) {
+        this.backupStatusMessages(newBackupStatus.Messages);
+        this.isBusy(newBackupStatus.IsRunning);
+        this.forceKeepDown();
+    }
 }
 
 class backupDatabase extends viewModelBase {
@@ -99,13 +118,9 @@ class backupDatabase extends viewModelBase {
     startDbBackup() {
         var backupOptions = this.dbBackupOptions;
         backupOptions.isBusy(true);
-        var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
-            backupOptions.backupStatusMessages(newBackupStatus.Messages);
-            backupOptions.isBusy(newBackupStatus.IsRunning);
-        };
 
         var dbToBackup = shell.databases.first((db: database) => db.name === backupOptions.resourceName());
-        new backupDatabaseCommand(dbToBackup, backupOptions.backupLocation(), updateBackupStatus, backupOptions.incremental())
+        new backupDatabaseCommand(dbToBackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.dbBackupOptions), backupOptions.incremental())
             .execute()
             .always(() => backupOptions.isBusy(false));
     }
@@ -113,13 +128,9 @@ class backupDatabase extends viewModelBase {
     startFsBackup() {
         var backupOptions = this.fsBackupOptions;
         backupOptions.isBusy(true);
-        var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
-            backupOptions.backupStatusMessages(newBackupStatus.Messages);
-            backupOptions.isBusy(newBackupStatus.IsRunning);
-        };
 
         var fsToBackup = shell.fileSystems.first((fs: filesystem) => fs.name === backupOptions.resourceName());
-        new backupFilesystemCommand(fsToBackup, backupOptions.backupLocation(), updateBackupStatus, backupOptions.incremental())
+        new backupFilesystemCommand(fsToBackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.fsBackupOptions), backupOptions.incremental())
             .execute()
             .always(() => backupOptions.isBusy(false));
     }
@@ -127,13 +138,9 @@ class backupDatabase extends viewModelBase {
     startCsBackup() {
         var backupOptions = this.csBackupOptions;
         backupOptions.isBusy(true);
-        var updateBackupStatus = (newBackupStatus: backupStatusDto) => {
-            backupOptions.backupStatusMessages(newBackupStatus.Messages);
-            backupOptions.isBusy(newBackupStatus.IsRunning);
-        };
 
         var csToBackup = shell.counterStorages.first((cs: counterStorage) => cs.name === backupOptions.resourceName());
-        new backupCounterStorageCommand(csToBackup, backupOptions.backupLocation(), updateBackupStatus, backupOptions.incremental())
+        new backupCounterStorageCommand(csToBackup, backupOptions.backupLocation(), backupOptions.updateBackupStatus.bind(this.csBackupOptions), backupOptions.incremental())
             .execute()
             .always(() => backupOptions.isBusy(false));
     }

@@ -42,8 +42,10 @@
                         <input data-bind="value: resourceTempPath, customValidity: tempCustomValidityError, valueUpdate: 'afterkeydown', attr: { placeholder: '~/' + resourceName() }" type="text" class="form-control" id="databaseTempPath" autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="incrementalBackup">Incremental Backup</label>
-                        <input type="checkbox" data-bind="checked: isIncrementalBackupChecked"/>
+                        <div class="checkbox">
+                            <input type="checkbox" class="styled" id="incremental_backup_db" data-bind="checked: isIncrementalBackupChecked">
+                            <label for="incremental_backup_db">Incremental Backup</label>
+                        </div>
                         <label for="alertTimeout" data-bind="visible: isIncrementalBackupChecked">Alert timeout in hours:</label>
                         <select data-bind="value: alertTimeout, visible: isIncrementalBackupChecked" title="Sets the span of time allowed before issuing an alert for missing backup(in hours)." class="form-control" id="alertTimeout">
                             <option value="4">4</option>
@@ -63,8 +65,10 @@
                         </select>
                     </div>
                     <div class="form-group" data-bind="if: isClusterWideVisible, visible: isClusterWideVisible">
-                        <label for="clusterWide"> Cluster-wide</label>
-                        <input type="checkbox" id="clusterWide" data-bind="checked: isClusterWideChecked"/>
+                        <div class="checkbox">
+                            <input type="checkbox" class="styled" id="clusterWide" data-bind="checked: isClusterWideChecked">
+                            <label for="clusterWide">Cluster-wide</label>
+                        </div>
                     </div>
                     <div class="alert alert-info" data-bind="if: isClusterWideVisible, visible: isClusterWideVisible() && !isClusterWideChecked()">
                         Notice: Global configuration will be inherited by newly created database even when you unselect cluster-wide database.

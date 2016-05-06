@@ -5,7 +5,7 @@ class disableResourceToggleCommand extends commandBase {
     private oneDatabasePath = "/admin/databases-toggle-disable";
     private multipleDatabasesPath = "/admin/databases/batch-toggle-disable";
     private oneFileSystemPath = "/admin/fs/";
-    private multipleFileSystemsPath = "/admin/fs/batch-toggle-disable";
+    private multipleFileSystemsPath = "/admin/fs-batch-toggle-disable";
     private oneCounterStoragePath = "/admin/cs/";
     private multipleCounterStoragesPath = "/admin/cs/batch-toggle-disable";
     private oneTimeSeriesPath = "/admin/ts/";
@@ -88,9 +88,9 @@ class disableResourceToggleCommand extends commandBase {
         var mergedPromise = $.Deferred();
 
         var combinedPromise = $.when.apply(null, toggleTasks);
-        combinedPromise.done((resources) => {
+        combinedPromise.done((...resources:resource[][]) => {
             var toggledResources = [].concat.apply([], resources);
-            this.reportSuccess("Successfully " + action + "d " + toggledResources.length + " resources!")
+            this.reportSuccess("Successfully " + action + "d " + toggledResources.length + " resources!");
             mergedPromise.resolve(toggledResources);
         });
 
