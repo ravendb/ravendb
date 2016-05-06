@@ -1302,10 +1302,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (lambdaExpression == null)
                             throw new NotSupportedException("Expected lambda expression as a element selector in GroupBy statement");
 
-                        Expression elementSelector = lambdaExpression.Body as MemberExpression;
+                        Expression elementSelector = lambdaExpression.Body as MemberExpression; // x => x.Property
 
                         if (elementSelector == null)
-                            elementSelector = lambdaExpression.Body as MethodCallExpression;
+                            elementSelector = lambdaExpression.Body as MethodCallExpression; // x.Collection.AggregatingFunction(y => y.Property)
 
                         if (expression.Arguments.Count == 3) // GroupBy(x => keySelector, x => elementSelector)
                             groupByElementSelector = elementSelector;
@@ -1588,10 +1588,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
                 else
                 {
+                    // x.Collection.AggregatingFunction(y => y.Property) syntax
+
                     var methodCallExpression = lambdaExpression.Body as MethodCallExpression;
 
                     if (methodCallExpression == null)
-                        methodCallExpression = elementSelectorPath as MethodCallExpression;
+                        methodCallExpression = elementSelectorPath as MethodCallExpression; 
 
                     if (methodCallExpression == null)
                         throw new NotSupportedException("No idea how to handle this dynamic map-reduce query!");
