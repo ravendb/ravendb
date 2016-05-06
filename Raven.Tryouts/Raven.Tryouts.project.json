@@ -7,7 +7,7 @@
   "runtimes": {
     "win": {},
     "win-x64": {}
-  }, 
+  },
   "locked": false,
   "version": 1,
   "targets": {
@@ -20,10 +20,10 @@
           "System.Net.Http"
         ],
         "compile": {
-          "lib/net45/System.Net.Http.Formatting.dll": { }
+          "lib/net45/System.Net.Http.Formatting.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Net.Http.Formatting.dll": { }
+          "lib/net45/System.Net.Http.Formatting.dll": {}
         }
       },
       "Microsoft.AspNet.WebApi.Core/5.2.3": {
@@ -31,10 +31,10 @@
           "Microsoft.AspNet.WebApi.Client": "[5.2.3, )"
         },
         "compile": {
-          "lib/net45/System.Web.Http.dll": { }
+          "lib/net45/System.Web.Http.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Web.Http.dll": { }
+          "lib/net45/System.Web.Http.dll": {}
         }
       },
       "Microsoft.AspNet.WebApi.Owin/5.2.3": {
@@ -44,10 +44,10 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/System.Web.Http.Owin.dll": { }
+          "lib/net45/System.Web.Http.Owin.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Web.Http.Owin.dll": { }
+          "lib/net45/System.Web.Http.Owin.dll": {}
         }
       },
       "Microsoft.Owin/3.0.1": {
@@ -55,18 +55,18 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.dll": { }
+          "lib/net45/Microsoft.Owin.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.dll": { }
+          "lib/net45/Microsoft.Owin.dll": {}
         }
       },
       "Microsoft.Owin.Host.HttpListener/3.0.1": {
         "compile": {
-          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": { }
+          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": { }
+          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": {}
         }
       },
       "Microsoft.Owin.Host.SystemWeb/3.0.1": {
@@ -75,10 +75,10 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": { }
+          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": { }
+          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": {}
         }
       },
       "Microsoft.Owin.Hosting/3.0.1": {
@@ -87,26 +87,26 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.Hosting.dll": { }
+          "lib/net45/Microsoft.Owin.Hosting.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Hosting.dll": { }
+          "lib/net45/Microsoft.Owin.Hosting.dll": {}
         }
       },
       "Newtonsoft.Json/6.0.4": {
         "compile": {
-          "lib/net45/Newtonsoft.Json.dll": { }
+          "lib/net45/Newtonsoft.Json.dll": {}
         },
         "runtime": {
-          "lib/net45/Newtonsoft.Json.dll": { }
+          "lib/net45/Newtonsoft.Json.dll": {}
         }
       },
       "Owin/1.0.0": {
         "compile": {
-          "lib/net40/Owin.dll": { }
+          "lib/net40/Owin.dll": {}
         },
         "runtime": {
-          "lib/net40/Owin.dll": { }
+          "lib/net40/Owin.dll": {}
         }
       },
       "Rx-Core/2.2.5": {
@@ -114,18 +114,18 @@
           "Rx-Interfaces": "[2.2.5, )"
         },
         "compile": {
-          "lib/net45/System.Reactive.Core.dll": { }
+          "lib/net45/System.Reactive.Core.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Reactive.Core.dll": { }
+          "lib/net45/System.Reactive.Core.dll": {}
         }
       },
       "Rx-Interfaces/2.2.5": {
         "compile": {
-          "lib/net45/System.Reactive.Interfaces.dll": { }
+          "lib/net45/System.Reactive.Interfaces.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Reactive.Interfaces.dll": { }
+          "lib/net45/System.Reactive.Interfaces.dll": {}
         }
       }
     },
@@ -138,10 +138,10 @@
           "System.Net.Http"
         ],
         "compile": {
-          "lib/net45/System.Net.Http.Formatting.dll": { }
+          "lib/net45/System.Net.Http.Formatting.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Net.Http.Formatting.dll": { }
+          "lib/net45/System.Net.Http.Formatting.dll": {}
         }
       },
       "Microsoft.AspNet.WebApi.Core/5.2.3": {
@@ -149,10 +149,10 @@
           "Microsoft.AspNet.WebApi.Client": "[5.2.3, )"
         },
         "compile": {
-          "lib/net45/System.Web.Http.dll": { }
+          "lib/net45/System.Web.Http.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Web.Http.dll": { }
+          "lib/net45/System.Web.Http.dll": {}
         }
       },
       "Microsoft.AspNet.WebApi.Owin/5.2.3": {
@@ -162,10 +162,10 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/System.Web.Http.Owin.dll": { }
+          "lib/net45/System.Web.Http.Owin.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Web.Http.Owin.dll": { }
+          "lib/net45/System.Web.Http.Owin.dll": {}
         }
       },
       "Microsoft.Owin/3.0.1": {
@@ -173,18 +173,18 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.dll": { }
+          "lib/net45/Microsoft.Owin.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.dll": { }
+          "lib/net45/Microsoft.Owin.dll": {}
         }
       },
       "Microsoft.Owin.Host.HttpListener/3.0.1": {
         "compile": {
-          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": { }
+          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": { }
+          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": {}
         }
       },
       "Microsoft.Owin.Host.SystemWeb/3.0.1": {
@@ -193,10 +193,10 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": { }
+          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": { }
+          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": {}
         }
       },
       "Microsoft.Owin.Hosting/3.0.1": {
@@ -205,26 +205,26 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.Hosting.dll": { }
+          "lib/net45/Microsoft.Owin.Hosting.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Hosting.dll": { }
+          "lib/net45/Microsoft.Owin.Hosting.dll": {}
         }
       },
       "Newtonsoft.Json/6.0.4": {
         "compile": {
-          "lib/net45/Newtonsoft.Json.dll": { }
+          "lib/net45/Newtonsoft.Json.dll": {}
         },
         "runtime": {
-          "lib/net45/Newtonsoft.Json.dll": { }
+          "lib/net45/Newtonsoft.Json.dll": {}
         }
       },
       "Owin/1.0.0": {
         "compile": {
-          "lib/net40/Owin.dll": { }
+          "lib/net40/Owin.dll": {}
         },
         "runtime": {
-          "lib/net40/Owin.dll": { }
+          "lib/net40/Owin.dll": {}
         }
       },
       "Rx-Core/2.2.5": {
@@ -232,18 +232,18 @@
           "Rx-Interfaces": "[2.2.5, )"
         },
         "compile": {
-          "lib/net45/System.Reactive.Core.dll": { }
+          "lib/net45/System.Reactive.Core.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Reactive.Core.dll": { }
+          "lib/net45/System.Reactive.Core.dll": {}
         }
       },
       "Rx-Interfaces/2.2.5": {
         "compile": {
-          "lib/net45/System.Reactive.Interfaces.dll": { }
+          "lib/net45/System.Reactive.Interfaces.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Reactive.Interfaces.dll": { }
+          "lib/net45/System.Reactive.Interfaces.dll": {}
         }
       }
     },
@@ -256,10 +256,10 @@
           "System.Net.Http"
         ],
         "compile": {
-          "lib/net45/System.Net.Http.Formatting.dll": { }
+          "lib/net45/System.Net.Http.Formatting.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Net.Http.Formatting.dll": { }
+          "lib/net45/System.Net.Http.Formatting.dll": {}
         }
       },
       "Microsoft.AspNet.WebApi.Core/5.2.3": {
@@ -267,10 +267,10 @@
           "Microsoft.AspNet.WebApi.Client": "[5.2.3, )"
         },
         "compile": {
-          "lib/net45/System.Web.Http.dll": { }
+          "lib/net45/System.Web.Http.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Web.Http.dll": { }
+          "lib/net45/System.Web.Http.dll": {}
         }
       },
       "Microsoft.AspNet.WebApi.Owin/5.2.3": {
@@ -280,10 +280,10 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/System.Web.Http.Owin.dll": { }
+          "lib/net45/System.Web.Http.Owin.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Web.Http.Owin.dll": { }
+          "lib/net45/System.Web.Http.Owin.dll": {}
         }
       },
       "Microsoft.Owin/3.0.1": {
@@ -291,18 +291,18 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.dll": { }
+          "lib/net45/Microsoft.Owin.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.dll": { }
+          "lib/net45/Microsoft.Owin.dll": {}
         }
       },
       "Microsoft.Owin.Host.HttpListener/3.0.1": {
         "compile": {
-          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": { }
+          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": { }
+          "lib/net45/Microsoft.Owin.Host.HttpListener.dll": {}
         }
       },
       "Microsoft.Owin.Host.SystemWeb/3.0.1": {
@@ -311,10 +311,10 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": { }
+          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": { }
+          "lib/net45/Microsoft.Owin.Host.SystemWeb.dll": {}
         }
       },
       "Microsoft.Owin.Hosting/3.0.1": {
@@ -323,26 +323,26 @@
           "Owin": "[1.0.0, )"
         },
         "compile": {
-          "lib/net45/Microsoft.Owin.Hosting.dll": { }
+          "lib/net45/Microsoft.Owin.Hosting.dll": {}
         },
         "runtime": {
-          "lib/net45/Microsoft.Owin.Hosting.dll": { }
+          "lib/net45/Microsoft.Owin.Hosting.dll": {}
         }
       },
       "Newtonsoft.Json/6.0.4": {
         "compile": {
-          "lib/net45/Newtonsoft.Json.dll": { }
+          "lib/net45/Newtonsoft.Json.dll": {}
         },
         "runtime": {
-          "lib/net45/Newtonsoft.Json.dll": { }
+          "lib/net45/Newtonsoft.Json.dll": {}
         }
       },
       "Owin/1.0.0": {
         "compile": {
-          "lib/net40/Owin.dll": { }
+          "lib/net40/Owin.dll": {}
         },
         "runtime": {
-          "lib/net40/Owin.dll": { }
+          "lib/net40/Owin.dll": {}
         }
       },
       "Rx-Core/2.2.5": {
@@ -350,18 +350,18 @@
           "Rx-Interfaces": "[2.2.5, )"
         },
         "compile": {
-          "lib/net45/System.Reactive.Core.dll": { }
+          "lib/net45/System.Reactive.Core.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Reactive.Core.dll": { }
+          "lib/net45/System.Reactive.Core.dll": {}
         }
       },
       "Rx-Interfaces/2.2.5": {
         "compile": {
-          "lib/net45/System.Reactive.Interfaces.dll": { }
+          "lib/net45/System.Reactive.Interfaces.dll": {}
         },
         "runtime": {
-          "lib/net45/System.Reactive.Interfaces.dll": { }
+          "lib/net45/System.Reactive.Interfaces.dll": {}
         }
       }
     }
@@ -561,6 +561,11 @@
       "Microsoft.Owin.Hosting >= 3.0.1",
       "Owin >= 1.0.0"
     ],
-    ".NETFramework,Version=v4.5": [ ]
+    ".NETFramework,Version=v4.5": []
+  },
+  "dependencies": {
+    "Microsoft.AspNet.WebApi.Owin": "5.2.3",
+    "Microsoft.Owin": "3.0.1",
+    "Microsoft.Owin.Host.HttpListener": "3.0.1"
   }
 }
