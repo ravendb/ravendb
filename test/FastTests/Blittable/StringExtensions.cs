@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace FastTests.Blittable
 {
-    public static class StringExtentions
+    public static class StringExtensions
     {
         public static string ToJsonString(this object self)
         {
