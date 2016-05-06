@@ -61,18 +61,25 @@ class resources extends viewModelBase {
     counterStorageType = counterStorage.type;
     timeSeriesType = timeSeries.type;
     visibleResource = ko.observable("");
-    visibleOptions = [
-        { value: "", name: "Show all" }, 
-        { value: database.type, name: "Show databases" }, 
-        { value: fileSystem.type, name: "Show file systems" }, 
-        { value: counterStorage.type, name: "Show counter storages" },
-        { value: timeSeries.type, name: "Show time series" }
-    ];
-
     has40Features = ko.computed(() => shell.has40Features());
+    visibleOptions: { value:string, name: string }[];
+
+    
 
     constructor() {
         super();
+
+        this.visibleOptions = [
+            { value: "", name: "Show all" },
+            { value: database.type, name: "Show databases" },
+            { value: fileSystem.type, name: "Show file systems" }
+        ];
+        if (this.has40Features()) {
+            this.visibleOptions.pushAll([
+                { value: counterStorage.type, name: "Show counter storages" },
+                { value: timeSeries.type, name: "Show time series" }
+            ]);
+        }
 
         this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
 

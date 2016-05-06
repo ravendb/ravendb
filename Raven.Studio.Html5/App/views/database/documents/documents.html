@@ -78,7 +78,7 @@
                 </button>
             </div>
             <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
-                <button type="button" class="btn btn-default" data-bind="click: deleteSelectedDocs" title="Delete selected documents (DEL)">
+                <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDocs" title="Delete selected documents (DEL)">
                     <i class="fa fa-trash-o"></i>
                 </button>
             </div>
@@ -108,6 +108,6 @@
                 Clear selection
             </span>
         </div>
-        <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyDocumentsAutoSelected, isAllAutoSelected: isAllDocumentsAutoSelected, noResultsMessage: 'No documents were found!' }"></div>
+        <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: currentCollectionPagedItems, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', customFunctions: currentCustomFunctions, collections: collections, rowsAreLoading: showLoadingIndicator, isAnyAutoSelected: isAnyDocumentsAutoSelected, isAllAutoSelected: isAllDocumentsAutoSelected, noResultsMessage: 'No documents were found!', container: '#documents-page-right-container' }"></div>
     </div>
 </div>

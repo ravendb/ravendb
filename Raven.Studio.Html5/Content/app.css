@@ -6606,6 +6606,9 @@ html,
 body {
   height: 100%;
 }
+#applicationHost {
+  padding: 1px;
+}
 .not-implemented-yet {
   position: relative;
 }
@@ -8492,7 +8495,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   max-height: 250px;
   overflow-x: hidden;
 }
-#resources-page .resources-container .resource.fs a {
+#resources-page .resources-container .resource.fs a.resource-name {
   color: #7109AA;
 }
 #resources-page .resources-container .resource.fs:hover {
@@ -8505,7 +8508,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   -webkit-box-shadow: 0 0 20px 0 #7109AA;
   -moz-box-shadow: 0 0 20px 0 #7109AA;
 }
-#resources-page .resources-container .resource.cs a {
+#resources-page .resources-container .resource.cs a.resource-name {
   color: #0f6716;
 }
 #resources-page .resources-container .resource.cs:hover {

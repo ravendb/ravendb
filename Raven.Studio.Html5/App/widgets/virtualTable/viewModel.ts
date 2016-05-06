@@ -52,6 +52,7 @@ class ctor {
         showCheckboxes: boolean;
         showIds: boolean;
         useContextMenu: boolean;
+        container?: string;
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;

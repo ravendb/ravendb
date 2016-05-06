@@ -165,7 +165,7 @@ class patch extends viewModelBase {
             this.runQuery();
         });
 
-        this.isExecuteAllowed = ko.computed(() => ((this.patchDocument().script()) && (this.beforePatchDoc())) ? true : false);
+        this.isExecuteAllowed = ko.computed(() => !!this.patchDocument().script() && !!this.beforePatchDoc());
         this.keyOfTestedDocument = ko.computed(() => {
             switch (this.patchDocument().patchOnOption()) {
                 case "Collection":
@@ -207,13 +207,13 @@ class patch extends viewModelBase {
             html: true,
             trigger: 'hover',
             container: '.form-horizontal',
-            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
         });
         $("#patchScriptsLabel").popover({
             html: true,
             trigger: 'hover',
             container: '.form-horizontal',
-            content: 'Patch Scripts are written in JavaScript. Examples:<pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>',
+            content: '<p>Patch Scripts are written in JavaScript. Examples:</p><pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>',
         });
 
         var rowCreatedEvent = app.on(patch.gridSelector + 'RowsCreated').then(() => {

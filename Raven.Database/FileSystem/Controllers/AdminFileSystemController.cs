@@ -146,7 +146,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [RavenRoute("admin/fs/batch-toggle-disable")]
+        [RavenRoute("admin/fs-batch-toggle-disable")]
         public HttpResponseMessage BatchToggleDisable(bool isSettingDisabled)
         {
             string[] fileSystemsToToggle = GetQueryStringValues("ids");
