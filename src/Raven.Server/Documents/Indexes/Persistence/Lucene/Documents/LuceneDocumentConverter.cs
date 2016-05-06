@@ -96,38 +96,42 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             var path = field.Name;
 
-            var indexing = field.Indexing.GetLuceneValue(@default: Field.Index.ANALYZED_NO_NORMS);
+            var valueType = GetValueType(value);
+
+            var defaultIndexing = valueType == ValueType.CompressedString || valueType == ValueType.String
+                                      ? Field.Index.ANALYZED
+                                      : Field.Index.ANALYZED_NO_NORMS;
+
+            var indexing = field.Indexing.GetLuceneValue(@default: defaultIndexing);
             var storage = field.Storage.GetLuceneValue(@default: Field.Store.NO);
 
-            if (value == null)
+            if (valueType == ValueType.Null)
             {
                 yield return GetOrCreateField(path, Constants.NullValue, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
                 yield break;
             }
 
-            if (Equals(value, string.Empty))
+            if (valueType == ValueType.EmptyString)
             {
                 yield return GetOrCreateField(path, Constants.EmptyString, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
                 yield break;
             }
 
-            LazyStringValue lazyStringValue;
-            var lazyCompressedStringValue = value as LazyCompressedStringValue;
-            if (lazyCompressedStringValue != null)
-                lazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
-            else
-                lazyStringValue = value as LazyStringValue;
-
-            if (lazyStringValue != null)
+            if (valueType == ValueType.String || valueType == ValueType.CompressedString)
             {
-                indexing = field.Indexing.GetLuceneValue(@default: Field.Index.ANALYZED);
+                LazyStringValue lazyStringValue;
+                if (valueType == ValueType.CompressedString)
+                    lazyStringValue = ((LazyCompressedStringValue)value).ToLazyStringValue();
+                else
+                    lazyStringValue = (LazyStringValue)value;
+
                 yield return GetOrCreateField(path, null, lazyStringValue, storage, indexing);
                 yield break;
             }
 
-            var itemsToIndex = value as IEnumerable;
-            if (itemsToIndex != null)
+            if (valueType == ValueType.Enumerable)
             {
+                var itemsToIndex = value as IEnumerable;
                 int count = 1;
 
                 if (nestedArray == false)
@@ -149,17 +153,36 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
-            if (value is LazyDoubleValue)
+            if (valueType == ValueType.Double)
             {
                 yield return GetOrCreateField(path, null, ((LazyDoubleValue)value).Inner, storage, indexing);
             }
-            else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
+            else if (valueType == ValueType.Convertible) // we need this to store numbers in invariant format, so JSON could read them
             {
                 yield return GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, storage, indexing); // TODO arek - ToString()? anything better?
             }
 
             foreach (var numericField in GetOrCreateNumericField(field, value, storage))
                 yield return numericField;
+        }
+
+        private static ValueType GetValueType(object value)
+        {
+            if (value == null) return ValueType.Null;
+
+            if (Equals(value, string.Empty)) return ValueType.EmptyString;
+
+            if (value is LazyStringValue) return ValueType.String;
+
+            if (value is LazyCompressedStringValue) return ValueType.CompressedString;
+
+            if (value is IEnumerable) return ValueType.Enumerable;
+
+            if (value is LazyDoubleValue) return ValueType.Double;
+
+            if (value is IConvertible) return ValueType.Convertible;
+
+            return ValueType.Numeric;
         }
 
         private Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, Field.Store store, Field.Index index, Field.TermVector termVector = Field.TermVector.NO)
@@ -271,6 +294,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 cachedFieldItem.Dispose();
             }
+        }
+
+        private enum ValueType
+        {
+            Null,
+
+            EmptyString,
+
+            String,
+
+            CompressedString,
+
+            Enumerable,
+
+            Double,
+
+            Convertible,
+
+            Numeric
         }
     }
 }
