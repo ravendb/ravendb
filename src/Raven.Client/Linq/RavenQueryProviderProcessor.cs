@@ -1518,6 +1518,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         
                         if (keyExpression != null && "Key".Equals(GetSelectPath(keyExpression)))
                         {
+                            if (documentQuery.GetGroupByFields().Length > 1)
+                                throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
+
                             AddGroupBySelectFieldToRename(newExpression.Members[index]);
                             continue;
                         }
@@ -1554,6 +1557,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (keyExpression != null && "Key".Equals(GetSelectPath(keyExpression), StringComparison.OrdinalIgnoreCase))
                         {
+                            if (documentQuery.GetGroupByFields().Length > 1)
+                                throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
+
                             AddGroupBySelectFieldToRename(field.Member);
                             continue;
                         }
@@ -1578,7 +1584,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var groupByFields = documentQuery.GetGroupByFields();
 
             if (groupByFields.Length != 1)
-                throw new NotSupportedException("We only support grouping by single expression");
+                throw new NotSupportedException("We only support grouping by single field");
 
             if (groupByKey != groupByFields[0].Name)
             {

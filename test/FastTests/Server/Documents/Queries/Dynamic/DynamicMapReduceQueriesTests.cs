@@ -636,6 +636,52 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             }
         }
 
+        [Fact]
+        public async Task Select_does_not_allow_to_specify_composite_group_by_directly()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var ex = Assert.Throws<NotSupportedException>(() =>
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key, // not allowed, need to specify x.Key.Employee and x.Key.Company
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList());
+
+                    Assert.Equal("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.", ex.InnerException.Message);
+
+                    ex = Assert.Throws<NotSupportedException>(() =>
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new GroupByEmployeeAndCompany
+                            {
+                                Employee = x.Employee,
+                                Company = x.Company
+                            })
+                            .Select(x => new OrderByCompositeKeyReduceResult
+                            {
+                                GroupByEmployeeAndCompany = x.Key, // not allowed
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList());
+
+                    Assert.Equal("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.", ex.InnerException.Message);
+                }
+            }
+        }
+
         public class AddressReduceResult
         {
             public string City { get; set; }
@@ -652,6 +698,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic
         {
             public string Employee { get; set; }
             public string Company { get; set; }
+        }
+
+        public class OrderByCompositeKeyReduceResult
+        {
+            public GroupByEmployeeAndCompany GroupByEmployeeAndCompany { get; set; }
+            public int Count { get; set; }
         }
     }
 }
