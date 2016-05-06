@@ -1330,13 +1330,60 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (lambdaExpression == null)
                 throw new NotSupportedException("We expect GroupBy statement to have lambda expression");
 
-            var field = GetSelectPath(linqPathProvider.GetMemberExpression(lambdaExpression));
-
-            documentQuery.AddMapReduceField(new DynamicMapReduceField
+            var body = lambdaExpression.Body;
+            switch (body.NodeType)
             {
-                Name = field,
-                IsGroupBy = true
-            });
+                case ExpressionType.MemberAccess:
+                    var singleGroupByFieldName = GetSelectPath(linqPathProvider.GetMemberExpression(lambdaExpression));
+
+                    documentQuery.AddMapReduceField(new DynamicMapReduceField
+                    {
+                        Name = singleGroupByFieldName,
+                        IsGroupBy = true
+                    });
+                    break;
+                case ExpressionType.New:
+                    var newExpression = ((NewExpression)body);
+
+                    for (int index = 0; index < newExpression.Arguments.Count; index++)
+                    {
+                        var fieldName = GetSelectPath(newExpression.Members[index]);
+
+                        documentQuery.AddMapReduceField(new DynamicMapReduceField
+                        {
+                            Name = fieldName,
+                            IsGroupBy = true
+                        });
+                    }
+                    break;
+                case ExpressionType.MemberInit:
+                    var memberInitExpression = ((MemberInitExpression)body);
+
+                    for (int index = 0; index < memberInitExpression.Bindings.Count; index++)
+                    {
+                        var field = memberInitExpression.Bindings[index] as MemberAssignment;
+
+                        if (field == null)
+                            throw new InvalidOperationException($"We expected MemberAssignment expression while got {memberInitExpression.Bindings[index].GetType().FullName} in GroupBy");
+
+                        var memberExpression = field.Expression as MemberExpression;
+
+                        if (memberExpression == null)
+                            throw new InvalidOperationException($"We expected MemberExpression expression while got { field.Expression.GetType().FullName} in GroupBy");
+
+                        var fieldName = GetSelectPath(memberExpression);
+
+                        documentQuery.AddMapReduceField(new DynamicMapReduceField
+                        {
+                            Name = fieldName,
+                            IsGroupBy = true
+                        });
+                    }
+                    break;
+                default:
+                    throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);
+
+            }
         }
 
         private void VisitOrderBy(LambdaExpression expression, bool descending)

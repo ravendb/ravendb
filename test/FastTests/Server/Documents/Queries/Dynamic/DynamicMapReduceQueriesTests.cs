@@ -454,10 +454,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                 {
                     session.Store(new Order
                     {
-                        ShipTo = new Address
-                        {
-                            Country = "Norway"
-                        },
+                        ShipTo = new Address {  Country = "Norway" },
                         Lines = new List<OrderLine>
                         {
                             new OrderLine
@@ -473,10 +470,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
                     session.Store(new Order
                     {
-                        ShipTo = new Address
-                        {
-                            Country = "Norway"
-                        },
+                        ShipTo = new Address { Country = "Norway" },
                         Lines = new List<OrderLine>
                         {
                             new OrderLine
@@ -488,10 +482,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
                     session.Store(new Order
                     {
-                        ShipTo = new Address
-                        {
-                            Country = "Sweden"
-                        },
+                        ShipTo = new Address { Country = "Sweden" },
                         Lines = new List<OrderLine>
                         {
                             new OrderLine
@@ -555,6 +546,96 @@ namespace FastTests.Server.Documents.Queries.Dynamic
             }
         }
 
+        [Fact]
+        public async Task Group_by_multiple_fields()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1",
+                        Company = "companies/2"
+                    });
+
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1",
+                        Company = "companies/2"
+                    });
+
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2",
+                        Company = "companies/2"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.Employee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].Employee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].Employee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new GroupByEmployeeAndCompany // class instead of anonymous object
+                            {
+                                Employee = x.Employee,
+                                Company = x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.Employee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].Employee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].Employee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+            }
+        }
+
         public class AddressReduceResult
         {
             public string City { get; set; }
@@ -565,6 +646,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic
         {
             public string NameOfProduct { get; set; }
             public int OrderedQuantity { get; set; }
+        }
+
+        public class GroupByEmployeeAndCompany
+        {
+            public string Employee { get; set; }
+            public string Company { get; set; }
         }
     }
 }
