@@ -642,7 +642,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                             .GroupBy(x => new
                             {
                                 RenamedEmployee = x.Employee, // field rename inside GroupBy
-                                Company = x.Company
+                                x.Company
                             })
                             .Select(x => new
                             {
@@ -671,7 +671,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                             .Customize(x => x.WaitForNonStaleResults())
                             .GroupBy(x => new GroupByRenamedEmployeeAndCompany // class instead of anonymous object
                             {
-                                
+
                                 RenamedEmployee = x.Employee, // field renames inside GroupBy
                                 Company = x.Company
                             })
@@ -693,6 +693,96 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     Assert.Equal(2, orders[1].Count);
                     Assert.Equal("employees/1", orders[1].RenamedEmployee);
                     Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new
+                            {
+                                RenamedEmployee = x.Key.Employee, // field rename of composite key inside Select
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new GroupByRenamedEmployeeAndCompanyResult // class instead of anonymous object
+                            {
+                                RenamedEmployee = x.Key.Employee, // field rename of composite key inside Select
+                                Company = x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                RenamedCompany = x.Company // renamed here
+                            })
+                            .Select(x => new
+                            {
+                                RenamedEmployee = x.Key.Employee, // and here
+                                x.Key.RenamedCompany,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].RenamedCompany);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].RenamedCompany);
                 }
             }
         }
@@ -771,6 +861,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic
         {
             public string RenamedEmployee { get; set; }
             public string Company { get; set; }
+        }
+
+        public class GroupByRenamedEmployeeAndCompanyResult
+        {
+            public string RenamedEmployee { get; set; }
+            public string Company { get; set; }
+            public int Count { get; set; }
         }
     }
 }

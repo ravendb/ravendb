@@ -1549,6 +1549,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         AddGroupByFieldToRenameIfNeeded(fieldMember);
                     }
+                    else if (name.StartsWith("Key.", StringComparison.Ordinal))
+                    {
+                        var compositeGroupBy = name.Split('.');
+
+                        if (compositeGroupBy.Length > 2)
+                            throw new NotSupportedException("Nested fields inside composite GroupBy keys are not supported");
+                        
+                        AddGroupByFieldToRenameIfNeeded(fieldMember, compositeGroupBy[1]);
+                    }
                     break;
                 case ExpressionType.Call:
                     var mapReduceOperationCall = (MethodCallExpression)fieldExpression;
@@ -1577,6 +1586,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
             else
             {
+                if (originalFieldName.Equals(groupByKey, StringComparison.Ordinal)) // already renamed inside GroupBy
+                    return;
                 
                 groupByField = groupByFields.Single(x => x.Name.Equals(originalFieldName, StringComparison.Ordinal));
             }
