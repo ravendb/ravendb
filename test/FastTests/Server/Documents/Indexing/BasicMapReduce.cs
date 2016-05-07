@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -78,6 +79,8 @@ namespace FastTests.Server.Documents.Indexing
             using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
                 Assert.True(db.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap >= numberOfUsers); // ensure all docs will be indexed in a single run
+
+                db.Configuration.Indexing.DocumentProcessingTimeout = new TimeSetting(1, TimeUnit.Minutes);
 
                 CreateUsers(db, numberOfUsers, locations);
 
