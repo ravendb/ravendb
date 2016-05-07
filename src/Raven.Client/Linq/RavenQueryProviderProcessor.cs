@@ -1490,8 +1490,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (documentQuery.IsDynamicMapReduce == false)
                 throw new NotSupportedException("Expected a query to be a dynamic map reduce query");
 
-            var lambdaExpression = operand as LambdaExpression;
-            var body = lambdaExpression != null ? lambdaExpression.Body : operand;
+            var lambdaExpression = (LambdaExpression)operand;
+            var body = lambdaExpression.Body;
+
             switch (body.NodeType)
             {
                 //Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
@@ -1502,34 +1503,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
-                        var field = newExpression.Arguments[index];
-
-                        var parameterExpression = field as ParameterExpression; // GroupBy(x => key, x => element, (parameter, g) => new { Name = parameter, ... })
-
-                        if (lambdaExpression != null && lambdaExpression.Parameters.Count == 2 &&
-                            parameterExpression != null && lambdaExpression.Parameters[0].Name == parameterExpression.Name)
-                        {
-                            AddGroupByFieldToRenameIfNeeded(newExpression.Members[index]);
-                            continue;
-                        }
-
-                        var keyExpression = field as MemberExpression;
-                        
-                        if (keyExpression != null && "Key".Equals(GetSelectPath(keyExpression)))
-                        {
-                            if (documentQuery.GetGroupByFields().Length > 1)
-                                throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
-
-                            AddGroupByFieldToRenameIfNeeded(newExpression.Members[index]);
-                            continue;
-                        }
-
-                        var mapReduceOperationCall = newExpression.Arguments[index] as MethodCallExpression;
-
-                        if (mapReduceOperationCall == null)
-                            continue;
-
-                        AddMapReduceField(mapReduceOperationCall, newExpression.Members[index], elementSelectorPath);
+                        HandleOutputFieldOfDynamicMapReduce(lambdaExpression, newExpression.Arguments[index], newExpression.Members[index], elementSelectorPath);
                     }
                     break;
                 //for example .Select(x => new SomeType { x.Cost } ), it's member init because it's using the object initializer
@@ -1538,41 +1512,51 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     newExpressionType = memberInitExpression.NewExpression.Type;
                     foreach (MemberBinding t in memberInitExpression.Bindings)
                     {
-                        var field = t as MemberAssignment;
-
-                        if (field == null)
-                            continue;
-
-                        var parameterExpression = field.Expression as ParameterExpression; // GroupBy(x => key, x => element, (parameter, g) => new { Name = parameter, ... })
-
-                        if (lambdaExpression != null && lambdaExpression.Parameters.Count == 2 &&
-                            parameterExpression != null && lambdaExpression.Parameters[0].Name == parameterExpression.Name)
-                        {
-                            AddGroupByFieldToRenameIfNeeded(field.Member);
-                            continue;
-                        }
-
-                        var keyExpression = field.Expression as MemberExpression;
-
-                        if (keyExpression != null && "Key".Equals(GetSelectPath(keyExpression), StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (documentQuery.GetGroupByFields().Length > 1)
-                                throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
-
-                            AddGroupByFieldToRenameIfNeeded(field.Member);
-                            continue;
-                        }
-
-                        var mapReduceOperationCall = field.Expression as MethodCallExpression;
-
-                        if (mapReduceOperationCall == null)
-                            continue;
-
-                        AddMapReduceField(mapReduceOperationCall, t.Member, elementSelectorPath);
+                        var field = (MemberAssignment)t;
+                        
+                        HandleOutputFieldOfDynamicMapReduce(lambdaExpression, field.Expression, field.Member, elementSelectorPath);
                     }
                     break;
                 default:
                     throw new NotSupportedException("Node not supported in Select after GroupBy: " + body.NodeType);
+            }
+        }
+
+        private void HandleOutputFieldOfDynamicMapReduce(LambdaExpression entireExpression, Expression fieldExpression, MemberInfo fieldMember, Expression elementSelectorPath)
+        {
+            switch (fieldExpression.NodeType)
+            {
+                case ExpressionType.Parameter:
+                    var parameterExpression = (ParameterExpression)fieldExpression; // GroupBy(x => key, x => element, (parameter, g) => new { Name = parameter, ... })
+
+                    if (entireExpression.Parameters.Count != 2)
+                        throw new NotSupportedException($"Lambda with {entireExpression.Parameters.Count} parameters is not supported inside GroupBy");
+
+                    if (entireExpression.Parameters[0].Name == parameterExpression.Name)
+                    {
+                        AddGroupByFieldToRenameIfNeeded(fieldMember);
+                    }
+                    break;
+                case ExpressionType.MemberAccess:
+
+                    var keyExpression = (MemberExpression)fieldExpression;
+                    var name = GetSelectPath(keyExpression);
+
+                    if ("Key".Equals(name, StringComparison.Ordinal))
+                    {
+                        if (documentQuery.GetGroupByFields().Length > 1)
+                            throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
+
+                        AddGroupByFieldToRenameIfNeeded(fieldMember);
+                    }
+                    break;
+                case ExpressionType.Call:
+                    var mapReduceOperationCall = (MethodCallExpression)fieldExpression;
+
+                    AddMapReduceField(mapReduceOperationCall, fieldMember, elementSelectorPath);
+                    break;
+                default:
+                    throw new NotSupportedException($"Unsupported node type inside Select following GroupBy: {fieldExpression.NodeType}");
             }
         }
 
@@ -1594,10 +1578,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
             else
             {
                 
-                groupByField = groupByFields.Single(x => x.Name.Equals(originalFieldName, StringComparison.OrdinalIgnoreCase));
+                groupByField = groupByFields.Single(x => x.Name.Equals(originalFieldName, StringComparison.Ordinal));
             }
 
-            if (groupByKey.Equals(groupByField.Name, StringComparison.OrdinalIgnoreCase) == false)
+            if (groupByKey.Equals(groupByField.Name, StringComparison.Ordinal) == false)
             {
                 FieldsToRename.Add(new RenamedField
                 {
