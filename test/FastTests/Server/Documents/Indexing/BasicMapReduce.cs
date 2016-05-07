@@ -72,7 +72,7 @@ namespace FastTests.Server.Documents.Indexing
 
         [Theory]
         [InlineData(100, new[] { "Poland", "Israel", "USA" })]
-        [InlineData(50000, new[] { "Canadaaaaaaaaaaaaaaaaaaaaaaaa", "Franceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" })] // reduce key tree with depth 3
+        [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {
             using (var db = CreateDocumentDatabase())
