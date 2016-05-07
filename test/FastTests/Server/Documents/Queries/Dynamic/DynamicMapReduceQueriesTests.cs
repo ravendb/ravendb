@@ -633,6 +633,67 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     Assert.Equal("employees/1", orders[1].Employee);
                     Assert.Equal("companies/2", orders[1].Company);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                RenamedEmployee = x.Employee, // field rename inside GroupBy
+                                Company = x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.RenamedEmployee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new GroupByRenamedEmployeeAndCompany // class instead of anonymous object
+                            {
+                                
+                                RenamedEmployee = x.Employee, // field renames inside GroupBy
+                                Company = x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.RenamedEmployee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
             }
         }
 
@@ -704,6 +765,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic
         {
             public GroupByEmployeeAndCompany GroupByEmployeeAndCompany { get; set; }
             public int Count { get; set; }
+        }
+
+        public class GroupByRenamedEmployeeAndCompany
+        {
+            public string RenamedEmployee { get; set; }
+            public string Company { get; set; }
         }
     }
 }

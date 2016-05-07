@@ -1347,13 +1347,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     for (int index = 0; index < newExpression.Arguments.Count; index++)
                     {
-                        var fieldName = GetSelectPath(newExpression.Members[index]);
+                        var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
 
                         documentQuery.AddMapReduceField(new DynamicMapReduceField
                         {
-                            Name = fieldName,
+                            Name = originalField,
                             IsGroupBy = true
                         });
+
+                        AddGroupByFieldToRenameIfNeeded(newExpression.Members[index], originalField);
                     }
                     break;
                 case ExpressionType.MemberInit:
@@ -1366,18 +1368,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (field == null)
                             throw new InvalidOperationException($"We expected MemberAssignment expression while got {memberInitExpression.Bindings[index].GetType().FullName} in GroupBy");
 
-                        var memberExpression = field.Expression as MemberExpression;
-
-                        if (memberExpression == null)
-                            throw new InvalidOperationException($"We expected MemberExpression expression while got { field.Expression.GetType().FullName} in GroupBy");
-
-                        var fieldName = GetSelectPath(memberExpression);
+                        var originalField = GetSelectPath((MemberExpression)field.Expression);
 
                         documentQuery.AddMapReduceField(new DynamicMapReduceField
                         {
-                            Name = fieldName,
+                            Name = originalField,
                             IsGroupBy = true
                         });
+
+                        AddGroupByFieldToRenameIfNeeded(field.Member, originalField);
                     }
                     break;
                 default:
@@ -1505,12 +1504,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         var field = newExpression.Arguments[index];
 
-                        var parameterExpression = field as ParameterExpression;
+                        var parameterExpression = field as ParameterExpression; // GroupBy(x => key, x => element, (parameter, g) => new { Name = parameter, ... })
 
                         if (lambdaExpression != null && lambdaExpression.Parameters.Count == 2 &&
                             parameterExpression != null && lambdaExpression.Parameters[0].Name == parameterExpression.Name)
                         {
-                            AddGroupBySelectFieldToRename(newExpression.Members[index]);
+                            AddGroupByFieldToRenameIfNeeded(newExpression.Members[index]);
                             continue;
                         }
 
@@ -1521,7 +1520,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             if (documentQuery.GetGroupByFields().Length > 1)
                                 throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
 
-                            AddGroupBySelectFieldToRename(newExpression.Members[index]);
+                            AddGroupByFieldToRenameIfNeeded(newExpression.Members[index]);
                             continue;
                         }
 
@@ -1544,12 +1543,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (field == null)
                             continue;
 
-                        var parameterExpression = field.Expression as ParameterExpression;
+                        var parameterExpression = field.Expression as ParameterExpression; // GroupBy(x => key, x => element, (parameter, g) => new { Name = parameter, ... })
 
                         if (lambdaExpression != null && lambdaExpression.Parameters.Count == 2 &&
                             parameterExpression != null && lambdaExpression.Parameters[0].Name == parameterExpression.Name)
                         {
-                            AddGroupBySelectFieldToRename(field.Member);
+                            AddGroupByFieldToRenameIfNeeded(field.Member);
                             continue;
                         }
 
@@ -1560,7 +1559,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             if (documentQuery.GetGroupByFields().Length > 1)
                                 throw new NotSupportedException("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.");
 
-                            AddGroupBySelectFieldToRename(field.Member);
+                            AddGroupByFieldToRenameIfNeeded(field.Member);
                             continue;
                         }
 
@@ -1577,24 +1576,36 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void AddGroupBySelectFieldToRename(MemberInfo field)
+        private void AddGroupByFieldToRenameIfNeeded(MemberInfo field, string originalFieldName = null)
         {
             var groupByKey = GetSelectPath(field);
 
             var groupByFields = documentQuery.GetGroupByFields();
 
-            if (groupByFields.Length != 1)
-                throw new NotSupportedException("We only support grouping by single field");
+            DynamicMapReduceField groupByField;
 
-            if (groupByKey != groupByFields[0].Name)
+            if (originalFieldName == null)
+            {
+                if (groupByFields.Length != 1)
+                    throw new NotSupportedException("We only support grouping by single field");
+
+                groupByField = groupByFields[0];
+            }
+            else
+            {
+                
+                groupByField = groupByFields.Single(x => x.Name.Equals(originalFieldName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (groupByKey.Equals(groupByField.Name, StringComparison.OrdinalIgnoreCase) == false)
             {
                 FieldsToRename.Add(new RenamedField
                 {
                     NewField = groupByKey,
-                    OriginalField = ReplaceInvalidCharacterForFields.Replace(groupByFields[0].Name, "_")
+                    OriginalField = ReplaceInvalidCharacterForFields.Replace(groupByField.Name, "_")
                 });
 
-                groupByFields[0].ClientSideName = groupByKey;
+                groupByField.ClientSideName = groupByKey;
             }
         }
 
