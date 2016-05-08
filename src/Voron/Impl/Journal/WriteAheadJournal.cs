@@ -297,7 +297,7 @@ namespace Voron.Impl.Journal
                 {
                     var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos);
 
-                    Debug.Assert(page.PageNumber == pageNumber);
+                     Debug.Assert(page.PageNumber == pageNumber);
 
                     return page;
                 }
@@ -835,13 +835,23 @@ namespace Voron.Impl.Journal
 
             if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
             {
+                CurrentFile?.WriteLazyBufferToFile();
                 CurrentFile = NextFile(pages.Length);
             }
 
             CurrentFile.Write(tx, pages);
+            // CurrentFile.WriteLazyBufferToFile();
 
             if (CurrentFile.AvailablePages == 0)
+            {
+                CurrentFile.WriteLazyBufferToFile();
                 CurrentFile = null;
+            }
+        }
+
+        public void WriteLazyBufferToFile()
+        {
+            CurrentFile.WriteLazyBufferToFile();
         }
 
         private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, IVirtualPager compressionPager)

@@ -30,6 +30,13 @@ namespace Voron.Impl.Journal
         private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
         private readonly object _locker = new object();
 
+        public class LazyBuffer
+        {
+            public long? Position;
+            public List<IntPtr[]> PagesList = new List<IntPtr[]>();
+        }
+        private LazyBuffer lazyBuffer = new LazyBuffer();
+
         public JournalFile(IJournalWriter journalWriter, long journalNumber)
         {
             Number = journalNumber;
@@ -150,7 +157,20 @@ namespace Voron.Impl.Journal
             }
 
             var position = pageWritePos * tx.Environment.Options.PageSize;
-            _journalWriter.WriteGather(position, pages);
+
+            if (tx.IsLazyTransaction == false && lazyBuffer.Position == null)
+            {
+                _journalWriter.WriteGather(position, pages);
+            }
+            else
+            {
+                if (lazyBuffer.Position == null)
+                    lazyBuffer.Position = position;
+                lazyBuffer.PagesList.Add(pages);
+
+                if (tx.IsLazyTransaction == false)
+                    WriteLazyBufferToFile();
+            }
 
             return pageWritePos;
         }      
@@ -260,6 +280,30 @@ namespace Voron.Impl.Journal
 
                 tx.Environment.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx.Id);
             }
+        }
+
+        public void WriteLazyBufferToFile()
+        {
+            if (lazyBuffer.Position == null)
+                return;
+
+            int sizeOfArray = 0;
+            lazyBuffer.PagesList.ForEach(p => sizeOfArray += p.Length);
+            IntPtr[] pages = new IntPtr[sizeOfArray];
+            sizeOfArray = 0;
+            lazyBuffer.PagesList.ForEach(p =>
+            {
+                for (var i = 0; i < p.Length; i++)
+                {
+                    pages[i + sizeOfArray] = p[i];
+                }
+                sizeOfArray += p.Length;
+            });
+
+            _journalWriter.WriteGather(lazyBuffer.Position.Value, pages);
+                
+            lazyBuffer.Position = null;
+            lazyBuffer.PagesList.Clear();
         }
     }
 }

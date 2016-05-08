@@ -48,6 +48,7 @@ namespace Voron
         private int _sizeOfUnflushedTransactionsInJournalFile;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
+
         public Guid DbId { get; set; }
 
         public StorageEnvironmentState State { get; private set; }
@@ -293,12 +294,17 @@ namespace Voron
             return new Transaction(NewLowLevelTransaction(TransactionFlags.Read));
         }
 
-        public Transaction WriteTransaction()
+        public Transaction WriteTransaction(bool lazyTransaction = false)
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, null));
+            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, null, lazyTransaction));
         }
 
-        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null)
+        public void WriteLazyBufferToFile()
+        {
+            _journal.WriteLazyBufferToFile();
+        }
+
+        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null, bool lazyTransaction = false)
         {
             bool txLockTaken = false;
             try
@@ -332,7 +338,7 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling);
+                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling, lazyTransaction);
                 }
                 finally
                 {

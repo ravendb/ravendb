@@ -51,6 +51,8 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
 
         public TransactionFlags Flags { get; private set; }
+        public bool IsLazyTransaction { get; private set; }
+
 
         internal bool CreatedByJournalApplicator;
 
@@ -83,7 +85,7 @@ namespace Voron.Impl
             get { return _txHeader->Hash; }
         }
 
-        public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
+        public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, bool lazyTransaction)
         {
             _dataPager = env.Options.DataPager;
             _env = env;
@@ -91,6 +93,7 @@ namespace Voron.Impl
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
             Flags = flags;
+            IsLazyTransaction = lazyTransaction;
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
 
             foreach (var scratchPagerState in scratchPagerStates.Values)
