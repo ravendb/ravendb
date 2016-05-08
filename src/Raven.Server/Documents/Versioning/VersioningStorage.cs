@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -101,11 +102,11 @@ namespace Raven.Server.Documents.Versioning
         private static bool IsVersioningActiveForCollection(BlittableJsonReaderObject configuration, bool explictEnableVersioning)
         {
             bool active;
-            if (configuration.TryGet("Active", out active) && active)
+            if (configuration.TryGet(nameof(VersioningConfiguration.Active), out active) && active)
                 return true;
 
             bool activeIfExplicit;
-            if (configuration.TryGet("ActiveIfExplicit", out activeIfExplicit) && activeIfExplicit && explictEnableVersioning)
+            if (configuration.TryGet(nameof(VersioningConfiguration.ActiveIfExplicit), out activeIfExplicit) && activeIfExplicit && explictEnableVersioning)
             {
                 return true;
             }
@@ -144,8 +145,8 @@ namespace Raven.Server.Documents.Versioning
             var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
 
             int? maxRevisions;
-            configuration.TryGet("MaxRevisions", out maxRevisions);
-            var revisionsCount = IncrementCountOfRevisions(context, key, 1);
+            configuration.TryGet(nameof(VersioningConfiguration.MaxRevisions), out maxRevisions);
+            var revisionsCount = IncrementCountOfRevisions(context, collectionName, key, 1);
             DeleteOldRevisions(context, table, collectionName, key, maxRevisions, revisionsCount);
 
             byte* lowerKey;
@@ -178,6 +179,7 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key, numberOfRevisionsToDelete);
+            Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
             IncrementCountOfRevisions(context, collectionName, key, -deletedRevisionsCount);
         }
 
@@ -208,7 +210,7 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             bool purgeOnDelete;
-            configuration.TryGet("PurgeOnDelete", out purgeOnDelete);
+            configuration.TryGet(nameof(VersioningConfiguration.PurgeOnDelete), out purgeOnDelete);
 
             if (purgeOnDelete)
             {
@@ -229,7 +231,7 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             bool purgeOnDelete;
-            configuration.TryGet("PurgeOnDelete", out purgeOnDelete);
+            configuration.TryGet(nameof(VersioningConfiguration.PurgeOnDelete), out purgeOnDelete);
 
             if (purgeOnDelete)
             {
