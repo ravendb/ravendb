@@ -7097,7 +7097,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 #documents-page-container {
-  border-right: solid 3px rgba(0, 0, 0, 0.73);
+  border-right: solid 3px #f9f9f9;
   padding-right: 0;
 }
 #documents-page-container ul {
