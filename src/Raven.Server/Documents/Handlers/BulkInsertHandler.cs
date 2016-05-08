@@ -51,6 +51,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 DocumentsOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
+                using (context.CreateLazyDocumentsOperation(ContextPool))
                 {
                     while (_fullBuffers.IsCompleted == false)
                     {
@@ -103,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 _fullBuffers.CompleteAdding();
                 throw;
