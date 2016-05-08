@@ -15,6 +15,16 @@ namespace Raven.Abstractions.Extensions
             return value;
         }
 
+        public static TVal GetOrAdd<TKey, TVal>(this IDictionary<TKey, TVal> self, TKey key, TVal defaultVal) where TVal : new()
+        {
+            TVal value;
+            if (self.TryGetValue(key, out value))
+                return value;
+
+            self.Add(key, defaultVal);
+            return value;
+        }
+
         public static TVal GetOrDefault<TKey, TVal>(this IDictionary<TKey, TVal> self, TKey key) 
         {
             TVal value;
