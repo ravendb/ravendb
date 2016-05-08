@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
@@ -14,12 +13,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
-using Raven.Database;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Expiration
+namespace Raven.Database.Bundles.Expiration
 {
     [InheritedExport(typeof(IStartupTask))]
     [ExportMetadata("Bundle", "documentExpiration")]
@@ -32,7 +30,6 @@ namespace Raven.Bundles.Expiration
         public void Execute(DocumentDatabase database)
         {
             Database = database;
-
 
             var indexDefinition = database.Indexes.GetIndexDefinition(RavenDocumentsByExpirationDate);
             if (indexDefinition == null)
@@ -72,7 +69,6 @@ namespace Raven.Bundles.Expiration
 
             try
             {
-
                 DateTime currentTime = SystemTime.UtcNow;
                 string nowAsStr = currentTime.GetDefaultRavenFormat();
                 if (logger.IsDebugEnabled)
@@ -109,10 +105,14 @@ namespace Raven.Bundles.Expiration
                         break;
 
                     start += pageSize;
+
+                    if (Database.Disposed)
+                        return false;
                 }
 
                 if (list.Count == 0)
                     return true;
+
                 if (logger.IsDebugEnabled)
                     logger.Debug(
                     () => string.Format("Deleting {0} expired documents: [{1}]", list.Count, string.Join(", ", list)));
@@ -120,6 +120,9 @@ namespace Raven.Bundles.Expiration
                 foreach (var id in list)
                 {
                     Database.Documents.Delete(id, null, null);
+
+                    if (Database.Disposed)
+                        return false;
                 }
             }
             catch (Exception e)
