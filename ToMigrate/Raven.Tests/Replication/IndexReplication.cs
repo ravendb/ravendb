@@ -12,19 +12,18 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Database.Bundles.Replication;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
 
 namespace Raven.Tests.Replication
 {
     public class IndexReplication : ReplicationBase
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "Replication");
+            configuration.Settings["Raven/ActiveBundles"] = "Replication";
         }
 
         public class User
@@ -158,15 +157,15 @@ namespace Raven.Tests.Replication
                 var replicationTask = sourceDB.StartupTasks.OfType<ReplicationTask>().First();
                 SpinWait.SpinUntil(() => replicationTask.IndexReplication.Execute());
 
-                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
+                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName ,ConflictDocumentsIndex};
                 var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-                Assert.Equal(expectedIndexNames,indexStatsAfterReplication1);
+                Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication1));
 
                 var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-                Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
+                Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication3));
                 
                 var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-                Assert.Equal(expectedIndexNames, indexStatsAfterReplication2);
+                Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication2));
             }
         }
 
@@ -306,15 +305,19 @@ namespace Raven.Tests.Replication
                 WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName);
                 WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName);
 
-                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
-                var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+                var expectedIndexNames = new List<string> { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName , ConflictDocumentsIndex };
+                expectedIndexNames.Sort(StringComparer.InvariantCultureIgnoreCase);
+                var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
+                indexStatsAfterReplication1.Sort(StringComparer.InvariantCultureIgnoreCase);
                 Assert.Equal(expectedIndexNames, indexStatsAfterReplication1);
                 
 
-                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
+                indexStatsAfterReplication3.Sort(StringComparer.InvariantCultureIgnoreCase);
                 Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
 
-                var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+                var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
+                indexStatsAfterReplication2.Sort(StringComparer.InvariantCultureIgnoreCase);
                 Assert.Equal(expectedIndexNames, indexStatsAfterReplication2);
 
 
@@ -368,17 +371,17 @@ namespace Raven.Tests.Replication
                 WaitForIndexToReplicate(destination2.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName);
                 WaitForIndexToReplicate(destination2.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName);
 
-                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
-                var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName, ConflictDocumentsIndex };
+                var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != ConflictDocumentsIndex);
                 var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
-                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name);
+                var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != ConflictDocumentsIndex);
 
                 Assert.Equal(0, indexStatsAfterReplication1.Count());
                 Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication2));
                 Assert.Equal(0, indexStatsAfterReplication3.Count());
             }
         }
-
+        private const string ConflictDocumentsIndex = "Raven/ConflictDocuments";
         [Fact]
         public void Replicate_all_indexes_should_respect_disable_indexing_flag()
         {
@@ -570,18 +573,18 @@ namespace Raven.Tests.Replication
             {
                 CreateDatabaseWithReplication(source, "testDB");
                 CreateDatabaseWithReplication(destination, "testDB");
-
-                //turn-off automatic index replication - precaution
-                source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
-                SetupReplication(source, "testDB", destination);
-
-                //make sure not to replicate the index automatically
+                
                 var userIndex = new UserIndex();
-                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+
+                SetupReplication(source, "testDB", destination);
 
                 var indexStatsBeforeReplication = destination.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes;
                 Assert.False(indexStatsBeforeReplication.Any(index => index.Name.Equals(userIndex.IndexName, StringComparison.InvariantCultureIgnoreCase)));
 
+                //make sure not to replicate the index automatically
+                source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
+
+                
                 var replicationRequestUrl = string.Format("{0}/databases/testDB/replication/replicate-indexes?indexName={1}", source.Url, userIndex.IndexName);
                 var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
                 {
@@ -629,7 +632,7 @@ namespace Raven.Tests.Replication
                 replicationTask.IndexReplication.TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.Zero;
                 SpinWait.SpinUntil(() => replicationTask.IndexReplication.Execute());
 
-                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName };
+                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { userIndex.IndexName ,ConflictDocumentsIndex};
                 var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();
                 Assert.True(expectedIndexNames.SetEquals(indexStatsAfterReplication1));
 
@@ -650,13 +653,13 @@ namespace Raven.Tests.Replication
                 WaitForIndexDeletionToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName);
                 
 
-                indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();
+                indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != ConflictDocumentsIndex).Select(x => x.Name).ToArray();
                 Assert.Empty(indexStatsAfterReplication1);
 
-                indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();
+                indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != ConflictDocumentsIndex).Select(x => x.Name).ToArray();
                 Assert.Empty(indexStatsAfterReplication2);
 
-                indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToArray();
+                indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != ConflictDocumentsIndex).Select(x => x.Name).ToArray();
                 Assert.Empty(indexStatsAfterReplication3);
             }
         }

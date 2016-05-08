@@ -1,9 +1,8 @@
+using System;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler.Database;
-using Raven.Database.Smuggler.Embedded;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Streams;
+using Raven.Abstractions.Smuggler;
+using Raven.Database.Smuggler;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -19,12 +18,7 @@ namespace Raven.Tests.Patching
             {
                 using (var stream = typeof(BigDoc).Assembly.GetManifestResourceStream("Raven.Tests.Patching.failingdump11.ravendump"))
                 {
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerStreamSource(stream),
-                        new DatabaseSmugglerEmbeddedDestination(store.SystemDatabase));
-
-                    smuggler.Execute();
+                    new DatabaseDataDumper(store.SystemDatabase).ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var session = store.OpenSession())

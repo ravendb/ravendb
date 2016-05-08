@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Server.Documents.Queries.Sort
+namespace Raven.Server.Documents.Queries.Sorting
 {
     public static class SortFieldHelper
     {

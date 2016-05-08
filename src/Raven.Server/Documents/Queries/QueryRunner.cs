@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Primitives;
@@ -7,7 +8,6 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Util.RateLimiting;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
@@ -77,6 +77,16 @@ namespace Raven.Server.Documents.Queries
             context.OpenReadTransaction();
 
             return index.MoreLikeThisQuery(query, context, token);
+        }
+
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQuery indexQuery)
+        {
+            if (string.IsNullOrWhiteSpace(indexName) || (indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) == false && indexName.Equals("dynamic", StringComparison.OrdinalIgnoreCase) == false))
+                throw new InvalidOperationException("Explain can only work on dynamic indexes");
+
+            var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
+
+            return runner.ExplainIndexSelection(indexName, indexQuery);
         }
 
         public Task ExecuteDeleteQuery(string indexName, IndexQuery query, QueryOperationOptions options, DocumentsOperationContext context, OperationCancelToken token)

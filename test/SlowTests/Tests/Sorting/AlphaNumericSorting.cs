@@ -1,30 +1,32 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Security;
 using System.Threading.Tasks;
+
+using FastTests;
+
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
+
 using Xunit;
 
-namespace Raven.Tests.Sorting
+namespace SlowTests.Tests.Sorting
 {
-    public class AlphaNumericSorting : RavenTest
+    public class AlphaNumericSorting : RavenTestBase
     {
-        [Fact]
-        public void basic_alphanumeric_sort()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task basic_alphanumeric_sort()
         {
             var titles = new List<string>
             {
-                "1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce", 
-                "C# ballad", "A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
+                "1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce",
+                "C# ballad", "A and G motor vehicles", "A B C", "Balzac, HonorÃ© de", "Ambassador hotel"
             };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -61,14 +63,14 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void number_and_decimal_alphanumeric_sort()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task number_and_decimal_alphanumeric_sort()
         {
-            var titles = new List<string> {".303-inch machine guns", "3 point 2 and what goes with it", "0.25 mm", "3.1416 and all that", ".300 Vickers machine gun", "1-4-5 boogie-woogie"};
+            var titles = new List<string> { ".303-inch machine guns", "3 point 2 and what goes with it", "0.25 mm", "3.1416 and all that", ".300 Vickers machine gun", "1-4-5 boogie-woogie" };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -105,18 +107,18 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void basic_sequence_of_characters()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task basic_sequence_of_characters()
         {
             var titles = new List<string>
-            { 
+            {
                 "% of gain", "Byrum, John", "B*** de B.", "A 99", "$10 a day",
-                "¥ £ $ exchange tables", "C Windows toolkit", "Ba, Amadou", "Andersen, Hans Christian", "1, 2, buckle my shoe"
+                "Â¥ Â£ $ exchange tables", "C Windows toolkit", "Ba, Amadou", "Andersen, Hans Christian", "1, 2, buckle my shoe"
             };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -153,8 +155,8 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void order_by_two_parameters_alphanumeric()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task order_by_two_parameters_alphanumeric()
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", "3"));
@@ -164,7 +166,7 @@ namespace Raven.Tests.Sorting
             localTracks.Add(CreateTrack("2", "4"));
             localTracks.Add(CreateTrack("1.1", "1"));
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -201,8 +203,8 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void order_by_two_parameters_first_alphanumeric_than_long()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task order_by_two_parameters_first_alphanumeric_than_long()
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", year: 2005));
@@ -213,7 +215,7 @@ namespace Raven.Tests.Sorting
             localTracks.Add(CreateTrack("2", year: 2012));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -250,8 +252,8 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void order_by_two_parameters_first_long_than_alphanumeric()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task order_by_two_parameters_first_long_than_alphanumeric()
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1.01", year: 2015));
@@ -262,7 +264,7 @@ namespace Raven.Tests.Sorting
             localTracks.Add(CreateTrack("1.1", year: 2015));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -299,8 +301,8 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void random_words()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task random_words()
         {
             var localTracks = new List<Track>();
             for (var i = 0; i < 1024; i++)
@@ -309,11 +311,14 @@ namespace Raven.Tests.Sorting
                 localTracks.Add(CreateTrack(str));
             }
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.BulkInsert())
                 {
-                    localTracks.ForEach(x => session.Store(x));
+                    foreach (var track in localTracks)
+                    {
+                        await session.StoreAsync(track);
+                    }
                 }
 
                 new TracksIndex().Execute(store);
@@ -349,8 +354,8 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void random_words_using_document_query()
+        [Fact(Skip = "Missing feature: Static indexes")]
+        public async Task random_words_using_document_query()
         {
             var localTracks = new List<Track>();
             for (var i = 0; i < 1024; i++)
@@ -359,11 +364,14 @@ namespace Raven.Tests.Sorting
                 localTracks.Add(CreateTrack(str));
             }
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.BulkInsert())
                 {
-                    localTracks.ForEach(x => session.Store(x));
+                    foreach (var track in localTracks)
+                    {
+                        await session.StoreAsync(track);
+                    }
                 }
 
                 new TracksIndex().Execute(store);
@@ -399,7 +407,7 @@ namespace Raven.Tests.Sorting
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Static indexes")]
         public async Task random_words_using_document_query_async()
         {
             var localTracks = new List<Track>();
@@ -409,11 +417,14 @@ namespace Raven.Tests.Sorting
                 localTracks.Add(CreateTrack(str));
             }
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.BulkInsert())
                 {
-                    localTracks.ForEach(x => session.Store(x));
+                    foreach (var track in localTracks)
+                    {
+                        await session.StoreAsync(track);
+                    }
                 }
 
                 await new TracksIndex().ExecuteAsync(store);
@@ -437,7 +448,7 @@ namespace Raven.Tests.Sorting
                 {
                     var titlesFromServer = await session.Advanced.AsyncDocumentQuery<Track, TracksIndex>()
                         .AlphaNumericOrdering("Title", true)
-                        .SelectFields<string>(new []{"Title"})
+                        .SelectFields<string>(new[] { "Title" })
                         .Take(1024)
                         .ToListAsync();
 
@@ -472,7 +483,7 @@ namespace Raven.Tests.Sorting
                 this.yearDescending = yearDescending;
             }
 
-            [SuppressUnmanagedCodeSecurity]
+            //[SuppressUnmanagedCodeSecurity]
             private static class SafeNativeMethods
             {
                 [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
@@ -515,17 +526,17 @@ namespace Raven.Tests.Sorting
         }
 
         [Fact]
-        public void dynamic_query_should_work()
+        public async Task dynamic_query_should_work()
         {
             var titles = new List<string>
             {
-                "1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce", 
-                "C# ballad", "A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
+                "1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce",
+                "C# ballad", "A and G motor vehicles", "A B C", "Balzac, HonorÃ© de", "Ambassador hotel"
             };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -576,7 +587,7 @@ namespace Raven.Tests.Sorting
                 this.yearDescending = yearDescending;
             }
 
-            [SuppressUnmanagedCodeSecurity]
+            //[SuppressUnmanagedCodeSecurity]
             private static class SafeNativeMethods
             {
                 [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
@@ -641,20 +652,15 @@ namespace Raven.Tests.Sorting
                                   doc.Year
                               };
 
-                Sort(x => x.Year, SortOptions.Long);
+                Sort(x => x.Year, SortOptions.NumericDefault);
             }
         }
 
-        private static string GetRandomString(Int32 length)
+        private static string GetRandomString(int length)
         {
-            var seedBuffer = new Byte[4];
-            using (var rngCryptoServiceProvider = new System.Security.Cryptography.RNGCryptoServiceProvider())
-            {
-                rngCryptoServiceProvider.GetBytes(seedBuffer);
-                const string chars = "~`!@#$%^&()_+-={}[];',. 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                var random = new Random(BitConverter.ToInt32(seedBuffer, 0));
-                return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
-            }
+            const string Chars = "~`!@#$%^&()_+-={}[];',. 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            var random = new Random();
+            return new string(Enumerable.Repeat(Chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
         }
     }
 }

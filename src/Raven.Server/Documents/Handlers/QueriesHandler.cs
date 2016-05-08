@@ -24,6 +24,35 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/queries/explain/$", "GET")]
+        public Task Explain()
+        {
+            var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var indexQuery = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
+                var runner = new QueryRunner(Database, context);
+
+                var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
+                var isFirst = true;
+                writer.WriteStartArray();
+                foreach (var explanation in explanations)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+                    writer.WriteExplanation(context, explanation);
+                }
+                writer.WriteEndArray();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/queries/morelikethis/$", "GET")]
         public Task MoreLikeThis()
         {

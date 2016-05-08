@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
 using Raven.Client.Data;
@@ -91,6 +92,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
             query = EnsureValidQuery(query, map);
 
             return index.Query(query, _context, _token);
+        }
+
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(string dynamicIndexName, IndexQuery query)
+        {
+            var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
+            var map = DynamicQueryMapping.Create(collection, query);
+            var explanations = new List<DynamicQueryToIndexMatcher.Explanation>();
+
+            var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(_indexStore);
+            dynamicQueryToIndex.Match(map, explanations);
+
+            return explanations;
         }
 
         private bool TryMatchExistingIndexToQuery(DynamicQueryMapping map, out Index index)

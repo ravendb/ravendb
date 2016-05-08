@@ -19,6 +19,8 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Sorting;
+using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Indexing;
 
 using Voron.Impl;
@@ -65,6 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(query.Query, query);
+            var sort = GetSort(query.SortedFields);
             var returnedResults = 0;
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
@@ -73,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, query.SortedFields);
+                    var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
 
                     totalResults.Value = search.TotalHits;
 
@@ -129,9 +132,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
             var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query);
-
+            var sort = GetSort(query.SortedFields);
             //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-            var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, query.SortedFields);
+            var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
             currentBaseQueryMatches = search.ScoreDocs.Length;
             var intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
 
@@ -143,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     // We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
                     pageSizeBestGuess = pageSizeBestGuess * 2;
 
-                    search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, query.SortedFields);
+                    search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
                     previousBaseQueryMatches = currentBaseQueryMatches;
                     currentBaseQueryMatches = search.ScoreDocs.Length;
                     intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
@@ -190,9 +193,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, SortedField[] sortedFields)
+        private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, Sort sort)
         {
-            if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
+            if (pageSize == int.MaxValue && sort == null) // we want all docs, no sorting required
             {
                 var gatherAllCollector = new GatherAllCollector();
                 _searcher.Search(documentQuery, gatherAllCollector);
@@ -203,10 +206,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var minPageSize = Math.Max(absFullPage, 1);
 
             // NOTE: We get Start + Pagesize results back so we have something to page on
-            if (sortedFields != null)
+            if (sort != null)
             {
-                var sort = GetSort(sortedFields);
-
                 _searcher.SetDefaultFieldSortScoring(true, false);
                 try
                 {
@@ -267,9 +268,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static Sort GetSort(SortedField[] sortedFields)
         {
+            if (sortedFields == null || sortedFields.Length == 0)
+                return null;
+
             return new Sort(sortedFields.Select(x =>
             {
                 var sortOptions = SortOptions.String;
+
+                if (InvariantCompare.IsPrefix(x.Field, Constants.AlphaNumericFieldName, CompareOptions.None))
+                {
+                    var customField = SortFieldHelper.CustomField(x.Field);
+                    if (string.IsNullOrEmpty(customField.Name))
+                        throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
+
+                    var anSort = new AlphaNumericComparatorSource();
+                    return new SortField(customField.Name, anSort, x.Descending);
+                }
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {

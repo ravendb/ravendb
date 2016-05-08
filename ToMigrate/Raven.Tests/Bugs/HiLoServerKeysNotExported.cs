@@ -3,20 +3,21 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.IO;
 using Lucene.Net.Support;
-
-using Raven.Abstractions.Database.Smuggler.Common;
-using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Files;
-using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -47,15 +48,12 @@ namespace Raven.Tests.Bugs
             if(server != null)
                 server.Dispose();
 
-            server = new RavenDbServer(new AppSettingsBasedConfiguration
+            server = new RavenDbServer(new RavenConfiguration
                                         {
-                                            Core =
-                                            {
-                                                DataDirectory = "HiLoData",
-                                                Port = 8079,
-                                                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-                                            },
+                                            Port = 8079,
+                                            DataDirectory = "HiLoData",
                                             RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+                                            AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
                                         })
             {
                 UseEmbeddedHttpServer = true
@@ -76,15 +74,14 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
             }
 
-            var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions { Url = documentStore.Url };
-
-            var smuggler = new DatabaseSmuggler(
-                new DatabaseSmugglerOptions(),
-                new DatabaseSmugglerRemoteSource(connectionOptions),
-                new DatabaseSmugglerFileDestination(DumpFile));
-
-            smuggler.Execute();
-
+            var smugglerApi = new SmugglerDatabaseApi { Options = { Incremental = false } };
+            var connection = new RavenConnectionStringOptions {Url = "http://localhost:8079/"};
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    From = connection,
+                    ToFile = DumpFile
+                }).Wait(TimeSpan.FromSeconds(15));
             Assert.True(File.Exists(DumpFile));
 
             using (var session = documentStore.OpenSession())
@@ -97,12 +94,7 @@ namespace Raven.Tests.Bugs
             server.Dispose();
             CreateServer();
 
-            smuggler = new DatabaseSmuggler(
-                new DatabaseSmugglerOptions(),
-                new DatabaseSmugglerFileSource(DumpFile), 
-                new DatabaseSmugglerRemoteDestination(connectionOptions));
-
-            smuggler.Execute();
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = DumpFile, To = connection }).Wait(TimeSpan.FromSeconds(15));
 
             using (var session = documentStore.OpenSession())
             {
@@ -122,41 +114,95 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
             }
 
-            var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions { Url = documentStore.Url };
-
-            var options = new DatabaseSmugglerOptions();
-            options.Filters.Add(
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi();
+            smugglerApi.Options.Filters.Add(
                 new FilterSetting
                 {
                     Path = "Something",
                     ShouldMatch = true,
                     Values = new EquatableList<string> { "Something1" }
                 });
-
-            var smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerRemoteSource(connectionOptions),
-                new DatabaseSmugglerFileDestination(DumpFile));
-
-            smuggler.Execute();
-
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = DumpFile,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
             Assert.True(File.Exists(DumpFile));
 
             server.Dispose();
             CreateServer();
 
-            smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerFileSource(DumpFile), 
-                new DatabaseSmugglerRemoteDestination(connectionOptions));
-
-            smuggler.Execute();
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = DumpFile, To = connection }).Wait(TimeSpan.FromSeconds(15));
 
             using (var session = documentStore.OpenSession())
             {
                 Assert.NotNull(session.Load<Foo>("foos/1"));
                 Assert.Null(session.Load<Foo>("foos/2"));
             }
+        }
+
+        [Fact]
+        public void Export_And_Import_Retains_Attachment_Metadata()
+        {
+            documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", true } });
+
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments } };
+            smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = DumpFile, From = connection }).Wait(TimeSpan.FromSeconds(15));
+
+            Assert.True(File.Exists(DumpFile));
+
+            server.Dispose();
+            CreateServer();
+
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = DumpFile, To = connection }).Wait(TimeSpan.FromSeconds(15));
+
+            var attachment = documentStore.DatabaseCommands.GetAttachment("test");
+            Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+            Assert.True(attachment.Metadata.Value<bool>("Test"));
+        }
+
+        [Fact]
+        public void Export_And_Import_Incremental_Attachments()
+        {
+            var file = Path.Combine(NewDataPath(), "Incremental");
+            IOExtensions.DeleteDirectory(file);
+
+            documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", true } });
+
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments, Incremental = true } };
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
+
+            documentStore.DatabaseCommands.PutAttachment("test2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test2", true } });
+
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
+
+            server.Dispose();
+            CreateServer();
+
+            smugglerApi.Options.Incremental = true;
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file, To = connection }).Wait(TimeSpan.FromSeconds(15));
+
+            var attachment = documentStore.DatabaseCommands.GetAttachment("test");
+            Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+            Assert.True(attachment.Metadata.Value<bool>("Test"));
+
+            attachment = documentStore.DatabaseCommands.GetAttachment("test2");
+            Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+            Assert.True(attachment.Metadata.Value<bool>("Test2"));
         }
 
         [Fact]
@@ -170,36 +216,31 @@ namespace Raven.Tests.Bugs
                 Map = "from x in docs select new { x.Name, Count = 1}",
             });
 
-            var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions { Url = documentStore.Url };
-            var options = new DatabaseSmugglerOptions();
-            options.OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes;
-
-            var smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerRemoteSource(connectionOptions),
-                new DatabaseSmugglerFileDestination(file, new DatabaseSmugglerFileDestinationOptions
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments, Incremental = true } };
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
-                    Incremental = true
-                }));
-
-            smuggler.Execute();
+                    ToFile = file, From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             documentStore.DatabaseCommands.PutIndex("Index2", new IndexDefinition
             {
                 Map = "from x in docs select new { x.Title, Count = 1}",
             });
 
-            smuggler.Execute();
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             server.Dispose();
             CreateServer();
 
-            smuggler = new DatabaseSmuggler(
-                options, 
-                new DatabaseSmugglerFileSource(file),
-                new DatabaseSmugglerRemoteDestination(connectionOptions));
-
-            smuggler.Execute();
+            smugglerApi.Options.Incremental = true;
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file, To = connection }).Wait(TimeSpan.FromSeconds(15));
 
             var index = documentStore.DatabaseCommands.GetIndex("Index1");
             Assert.NotNull(index);
@@ -219,31 +260,29 @@ namespace Raven.Tests.Bugs
                 Map = "from x in docs select new { x.Name, Count = 1}",
             });
 
-            var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions { Url = documentStore.Url };
-            var options = new DatabaseSmugglerOptions();
-            options.OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes;
-
-            var smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerRemoteSource(connectionOptions),
-                new DatabaseSmugglerFileDestination(file, new DatabaseSmugglerFileDestinationOptions
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments, Incremental = true } };
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
-                    Incremental = true
-                }));
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             documentStore.DatabaseCommands.DeleteIndex("Index1");
 
-            smuggler.Execute();
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             server.Dispose();
             CreateServer();
 
-            smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerFileSource(file),
-                new DatabaseSmugglerRemoteDestination(connectionOptions));
-
-            smuggler.Execute();
+            smugglerApi.Options.Incremental = true;
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file, To = connection }).Wait(TimeSpan.FromSeconds(15));
 
             var index = documentStore.DatabaseCommands.GetIndex("Index1");
             Assert.Null(index);
@@ -255,21 +294,18 @@ namespace Raven.Tests.Bugs
             var file = Path.Combine(NewDataPath(), "Incremental");
             IOExtensions.DeleteDirectory(file);
 
-            var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions { Url = documentStore.Url };
-            var options = new DatabaseSmugglerOptions();
-            options.OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes;
-
-            var smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerRemoteSource(connectionOptions),
-                new DatabaseSmugglerFileDestination(file, new DatabaseSmugglerFileDestinationOptions
-                {
-                    Incremental = true
-                }));
-
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi();
+            smugglerApi.Options.OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
+            smugglerApi.Options.Incremental = true;
             for (int i = 0; i < 50; i++)
             {
-                smuggler.Execute();
+                smugglerApi.ExportData(
+                    new SmugglerExportOptions<RavenConnectionStringOptions>
+                    {
+                        ToFile = file,
+                        From = connection,
+                    }).Wait(TimeSpan.FromSeconds(15));
             }
 
             Assert.Equal(Directory.GetFiles(file).Length, 51);//50 .dump.inc files and 1 LastEtags.txt
@@ -288,19 +324,14 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
             }
 
-            var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions { Url = documentStore.Url };
-            var options = new DatabaseSmugglerOptions();
-            options.OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes;
-
-            var smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerRemoteSource(connectionOptions),
-                new DatabaseSmugglerFileDestination(file, new DatabaseSmugglerFileDestinationOptions
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments, Incremental = true } };
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
-                    Incremental = true
-                }));
-
-            smuggler.Execute();
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             using (var session = documentStore.OpenSession())
             {
@@ -309,17 +340,18 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
             }
 
-            smuggler.Execute();
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             server.Dispose();
             CreateServer();
 
-            smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerFileSource(file),
-                new DatabaseSmugglerRemoteDestination(connectionOptions));
-
-            smuggler.Execute();
+            smugglerApi.Options.Incremental = true;
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file, To = connection }).Wait(TimeSpan.FromSeconds(15));
 
             using (var session = documentStore.OpenSession())
             {
@@ -341,19 +373,14 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
             }
 
-            var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions { Url = documentStore.Url };
-            var options = new DatabaseSmugglerOptions();
-            options.OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Indexes;
-
-            var smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerRemoteSource(connectionOptions),
-                new DatabaseSmugglerFileDestination(file, new DatabaseSmugglerFileDestinationOptions
+            var connection = new RavenConnectionStringOptions { Url = "http://localhost:8079/" };
+            var smugglerApi = new SmugglerDatabaseApi { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments, Incremental = true } };
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
-                    Incremental = true
-                }));
-
-            smuggler.Execute();
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             using (var session = documentStore.OpenSession())
             {
@@ -362,17 +389,18 @@ namespace Raven.Tests.Bugs
                 session.SaveChanges();
             }
 
-            smuggler.Execute();
+            smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = connection,
+                }).Wait(TimeSpan.FromSeconds(15));
 
             server.Dispose();
             CreateServer();
 
-            smuggler = new DatabaseSmuggler(
-                options,
-                new DatabaseSmugglerFileSource(file),
-                new DatabaseSmugglerRemoteDestination(connectionOptions));
-
-            smuggler.Execute();
+            smugglerApi.Options.Incremental = true;
+            smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file, To = connection }).Wait(TimeSpan.FromSeconds(15));
 
             using (var session = documentStore.OpenSession())
             {

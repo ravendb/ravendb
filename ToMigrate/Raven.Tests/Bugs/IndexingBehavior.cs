@@ -121,7 +121,7 @@ namespace Raven.Tests.Bugs
             db.Documents.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),
               RavenJObject.Parse("{'Raven-Entity-Name': 'Foos'}"), null);
 
-            var document = db.Documents.Get("foos/1");
+            var document = db.Documents.Get("foos/1", null);
             db.Documents.Delete("foos/1", document.Etag, null);
 
             db.Documents.Put("foos/1", null, RavenJObject.Parse("{'Something':'something'}"),

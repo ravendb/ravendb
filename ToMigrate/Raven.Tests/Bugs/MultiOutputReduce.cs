@@ -4,19 +4,17 @@ using Raven.Client.Indexes;
 using Raven.Tests.Common;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
     public class MultiOutputReduce : RavenTest
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanGetCorrectResultsFromAllItems(string storage)
+        [Fact]
+        public void CanGetCorrectResultsFromAllItems()
         {
             for (int xx = 0; xx < 10; xx++)
             {
-                using (var store = NewDocumentStore(requestedStorage: storage))
+                using (var store = NewDocumentStore(requestedStorage: "esent"))
                 {
                     new Orders_Search().Execute(store);
 

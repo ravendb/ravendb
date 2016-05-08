@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -19,6 +21,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
+    [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class BasicMapReduce : RavenLowLevelTestBase
     {
         [Fact]
@@ -69,13 +72,15 @@ namespace FastTests.Server.Documents.Indexing
 
         [Theory]
         [InlineData(100, new[] { "Poland", "Israel", "USA" })]
-        [InlineData(50000, new[] { "Canadaaaaaaaaaaaaaaaaaaaaaaaa", "Franceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" })] // reduce key tree with depth 3
+        [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {
             using (var db = CreateDocumentDatabase())
             using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
                 Assert.True(db.Configuration.Indexing.MaxNumberOfDocumentsToFetchForMap >= numberOfUsers); // ensure all docs will be indexed in a single run
+
+                db.Configuration.Indexing.DocumentProcessingTimeout = new TimeSetting(1, TimeUnit.Minutes);
 
                 CreateUsers(db, numberOfUsers, locations);
 
@@ -436,7 +441,7 @@ namespace FastTests.Server.Documents.Indexing
                     }, 
                 }), db))
             {
-                CreateOrders(db, 5, "Poland", "Israel");
+                CreateOrders(db, 5, new[] { "Poland", "Israel" });
 
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
@@ -669,7 +674,67 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        private static void CreateOrders(DocumentDatabase db, int numberOfOrders, params string[] countries)
+        [Fact]
+        public async Task GroupByMultipleFields()
+        {
+            using (var db = CreateDocumentDatabase())
+            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Orders" }, new[]
+            {
+                new IndexField
+                {
+                    Name = "Count",
+                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Storage = FieldStorage.Yes
+                }
+            }, new[]
+            {
+                    new IndexField
+                    {
+                        Name = "Employee",
+                        Storage = FieldStorage.Yes
+                    },
+                    new IndexField
+                    {
+                        Name = "Company",
+                        Storage = FieldStorage.Yes
+                    },
+            }), db))
+            {
+                CreateOrders(db, 10, employees: new [] { "employees/1", "employees/2" }, companies: new [] { "companies/1", "companies/2", "companies/3"});
+
+                index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+
+                using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
+                {
+                    var results = (await index.Query(new IndexQuery(), context, OperationCancelToken.None)).Results;
+
+                    Assert.Equal(6, results.Count);
+
+                    for (int i = 0; i < 6; i++)
+                    {
+                        var employeeNumber = i % 2 + 1;
+                        var companyNumber = i % 3 + 1;
+                        results = (await index.Query(new IndexQuery
+                        {
+                            Query = $"Employee:employees/{employeeNumber} AND Company:companies/{companyNumber}"
+                        }, context, OperationCancelToken.None)).Results;
+
+                        Assert.Equal(1, results.Count);
+                        
+                        double expectedCount;
+
+                        if ((employeeNumber == 1 && companyNumber == 2) || (employeeNumber == 2 && companyNumber == 3))
+                            expectedCount = 1.0;
+                        else
+                            expectedCount = 2.0;
+
+                        Assert.Equal(expectedCount, (LazyDoubleValue)results[0].Data["Count"]);
+                    }
+                } 
+            }
+        }
+
+        private static void CreateOrders(DocumentDatabase db, int numberOfOrders, string[] countries = null, string[] employees = null, string[] companies = null)
         {
             using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
             {
@@ -679,9 +744,11 @@ namespace FastTests.Server.Documents.Indexing
                     {
                         using (var doc = context.ReadObject(new DynamicJsonValue
                         {
+                            ["Employee"] = employees?[i % employees.Length],
+                            ["Company"] = companies?[i % companies.Length],
                             ["ShipTo"] = new DynamicJsonValue
                             {
-                                ["Country"] = countries[i % countries.Length],
+                                ["Country"] = countries?[i % countries.Length],
                             },
                             ["Lines"] = new DynamicJsonArray
                             {

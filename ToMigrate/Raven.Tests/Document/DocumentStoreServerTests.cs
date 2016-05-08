@@ -1213,6 +1213,77 @@ namespace Raven.Tests.Document
         }
 
         [Fact]
+        public void Using_attachments()
+        {
+            var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+            Assert.Null(attachment);
+
+            documentStore.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Hello", "World"}});
+
+            attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+            Assert.NotNull(attachment);
+
+            Assert.Equal(new byte[] {1, 2, 3}, attachment.Data().ReadData());
+            Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+            documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
+
+            attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+            Assert.Null(attachment);
+        }
+
+        [Fact]
+        public void Getting_attachment_metadata()
+        {
+            documentStore.DatabaseCommands.PutAttachment("sample", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+
+            var attachmentOnlyWithMetadata = documentStore.DatabaseCommands.HeadAttachment("sample");
+            Assert.Equal("World", attachmentOnlyWithMetadata.Metadata.Value<string>("Hello"));
+
+            var exception = Assert.Throws<InvalidOperationException>(() => attachmentOnlyWithMetadata.Data());
+            Assert.Equal("Cannot get attachment data because it was loaded using: HEAD", exception.Message);
+        }
+
+        [Fact]
+        public void Getting_headers_of_attachments_with_prefix()
+        {
+            documentStore.DatabaseCommands.PutAttachment("sample/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+            documentStore.DatabaseCommands.PutAttachment("example/1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+            documentStore.DatabaseCommands.PutAttachment("sample/2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+
+            var attachmentHeaders = documentStore.DatabaseCommands.GetAttachmentHeadersStartingWith("sample", 0, 5).ToList();
+
+            Assert.Equal(2, attachmentHeaders.Count);
+
+            foreach (var attachment in attachmentHeaders)
+            {
+                Assert.True(attachment.Key.StartsWith("sample"));
+
+                Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+                var exception = Assert.Throws<InvalidOperationException>(() => attachment.Data());
+
+                Assert.Equal("Cannot get attachment data from an attachment header", exception.Message);
+            }
+        }
+
+        [Fact]
+        //Fix for issue at http://groups.google.com/group/ravendb/browse_thread/thread/78f1ca6dbdd07e2b
+        //The issue only shows up in Server/Client mode, not in Embedded mode!!!
+        public void Using_attachments_can_properly_set_WebRequest_Headers()
+        {
+            var key = string.Format("{0}-{1}", "test", SystemTime.UtcNow.ToFileTimeUtc());
+            var metadata = new RavenJObject
+                            {
+                                {"owner", 5},
+                                {"Content-Type", "text/plain"},
+                                {"filename", "test.txt"},
+                                {"Content-Length", 100},
+                            };
+            Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new MemoryStream(new byte[] {0, 1, 2}), metadata));
+        }
+
+        [Fact]
         public void Can_patch_existing_document_when_present()
         {
             var company = new Company {Name = "Hibernating Rhinos"};

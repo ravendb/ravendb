@@ -39,7 +39,7 @@ namespace Raven.Tests.Triggers
 
             db.Documents.Delete("abc", null, null);
 
-            Assert.Null(db.Documents.Get("def"));
+            Assert.Null(db.Documents.Get("def", null));
         }
         
     }

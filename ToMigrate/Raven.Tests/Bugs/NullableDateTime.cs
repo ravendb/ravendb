@@ -10,19 +10,15 @@ using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
-using Raven.Database.Config;
-using Xunit.Extensions;
-using Raven.Server;
 
 namespace Raven.Tests.Bugs
 {
     public class NullableDateTime : RavenTest
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void WillNotIncludeItemsWithNullDate(string storage)
+        [Fact]
+        public void WillNotIncludeItemsWithNullDate()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage))
+            using (var store = NewDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -74,11 +70,10 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanLoadFromIndex(string storage)
+        [Fact]
+        public void CanLoadFromIndex()
         {
-            using (var documentStore = NewDocumentStore(requestedStorage: storage))
+            using (var documentStore = NewDocumentStore())
             {
                 using (IDocumentSession session = documentStore.OpenSession())
                 {
@@ -101,22 +96,35 @@ namespace Raven.Tests.Bugs
 
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanLoadFromIndex_Remote(string storage)
+        [Fact]
+        public void CanLoadFromIndex_Remote()
         {
-            using (var server = GetNewServer(requestedStorage: storage, enableAuthentication: false))
+            var path = NewDataPath();
+
+            using (var server = new Raven.Server.RavenDbServer(new
+                                                                Raven.Database.Config.RavenConfiguration()
+                                                                {
+                                                                    HostName = "localhost",
+                                                                    DataDirectory = path,
+                                                                    Port = 8079,
+                                                                    AccessControlAllowOrigin = {"*"},
+                                                                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                                                                })
             {
+                UseEmbeddedHttpServer = true
+            })
+            {
+                server.Initialize();
                 using (IDocumentStore documentStore = NewRemoteDocumentStore(ravenDbServer: server))
                 {
                     using (IDocumentSession session = documentStore.OpenSession())
                     {
                         new UnsetDocs().Execute(documentStore);
                         session.Store(new Doc
-                        {
-                            Id = "test/doc1",
-                            Date = SystemTime.UtcNow
-                        });
+                                        {
+                                            Id = "test/doc1",
+                                            Date = SystemTime.UtcNow
+                                        });
                         session.Store(new Doc { Id = "test/doc2", Date = null });
                         session.SaveChanges();
 
@@ -150,11 +158,10 @@ namespace Raven.Tests.Bugs
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanWorkWithNullableDateTime(string storage)
+        [Fact]
+        public void CanWorkWithNullableDateTime()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage))
+            using (var store = NewDocumentStore())
             {
                 new DocsByDate().Execute(store);
 

@@ -32,12 +32,9 @@ namespace Raven.Tests.Storage
             BackupDir = NewDataPath("BackupDatabase");
             DataDir = NewDataPath("DataDirectory");
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    DataDirectory = DataDir
-                },
+                DataDirectory = DataDir,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
             }, null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -54,27 +51,22 @@ namespace Raven.Tests.Storage
         {
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
             
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                }
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null);
 
-            var document = db.Documents.Get("ayende");
+            var document = db.Documents.Get("ayende", null);
             Assert.NotNull(document);
 
             var jObject = document.ToJson();
@@ -87,24 +79,19 @@ namespace Raven.Tests.Storage
         {
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir
             }, s => { });
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                }
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
             db.SpinBackgroundWorkers();
             QueryResult queryResult;
             do
@@ -134,25 +121,20 @@ namespace Raven.Tests.Storage
             } while (queryResult.IsStale);
             Assert.Equal(1, queryResult.Results.Count);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                }
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
             queryResult = db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery
             {
@@ -179,7 +161,7 @@ namespace Raven.Tests.Storage
             Assert.Equal(1, queryResult.Results.Count);
 
             File.WriteAllText("raven.db.test.backup.txt", "Sabotage!");
-            db.Maintenance.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument());
+            db.Maintenance.StartBackup("raven.db.test.backup.txt", false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, false);
 
             var condition = GetStateOfLastStatusMessage().Severity == BackupStatus.BackupMessageSeverity.Error;
@@ -188,7 +170,7 @@ namespace Raven.Tests.Storage
 
         private BackupStatus.BackupMessage GetStateOfLastStatusMessage()
         {
-            JsonDocument jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
+            JsonDocument jsonDocument = db.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
             var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
             return backupStatus.Messages.Last();
         }

@@ -3,19 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+using System.IO;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler;
-using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Database.Smuggler.Embedded;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Remote;
+using Raven.Database.Smuggler;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
-
 using Xunit;
 
 namespace Raven.Tests.Smuggler
@@ -35,21 +31,22 @@ namespace Raven.Tests.Smuggler
                     await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" });
                     await session.SaveChangesAsync();
                 }
+                await store.AsyncDatabaseCommands.PutAttachmentAsync("1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
+                await store.AsyncDatabaseCommands.PutAttachmentAsync("2", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 
                 using (var server = GetNewServer(port: 8078))
                 {
                     using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
                     {
-                        var smuggler = new DatabaseSmuggler(
-                            new DatabaseSmugglerOptions(), 
-                            new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase), 
-                            new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                            {
-                                Url = "http://localhost:8078",
-                                Database = "TargetDB"
-                            }));
+                        var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions());
 
-                        await smuggler.ExecuteAsync();
+                        await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                        {
+                            To = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8078", DefaultDatabase = "TargetDB"
+                            }
+                        });
 
                         await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
                         await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
@@ -63,6 +60,9 @@ namespace Raven.Tests.Smuggler
 
                             Assert.Equal(2, users.Count);
                         }
+
+                        Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("1"));
+                        Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("2"));
                     }
                 }
             }
@@ -81,25 +81,26 @@ namespace Raven.Tests.Smuggler
                     await session.StoreAsync(new SmugglerBetweenTests.User { Name = "James" }, "users/2");
                     await session.SaveChangesAsync();
                 }
+                await store.AsyncDatabaseCommands.PutAttachmentAsync("1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
+                await store.AsyncDatabaseCommands.PutAttachmentAsync("2", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 
                 using (var server = GetNewServer(port: 8078))
                 {
                     using (var targetStore = NewRemoteDocumentStore(ravenDbServer: server, databaseName: "TargetDB"))
                     {
-                        var smuggler = new DatabaseSmuggler(
-                            new DatabaseSmugglerOptions(),
-                            new DatabaseSmugglerEmbeddedSource(store.DocumentDatabase),
-                            new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions()
+                        {
+                            Incremental = true
+                        });
+
+                        await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                        {
+                            To = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8078",
-                                Database = "TargetDB"
-                            }, 
-                            new DatabaseSmugglerRemoteDestinationOptions
-                            {
-                                ContinuationToken = "Token"
-                            }));
-
-                        await smuggler.ExecuteAsync();
+                                DefaultDatabase = "TargetDB"
+                            }
+                        });
 
                         await SmugglerBetweenTests.AssertDatabaseHasIndex<SmugglerBetweenTests.UsersIndex>(targetStore);
                         await SmugglerBetweenTests.AssertDatabaseHasTransformer<SmugglerBetweenTests.UsersTransformer>(targetStore);
@@ -112,7 +113,16 @@ namespace Raven.Tests.Smuggler
                             await session.SaveChangesAsync();
                         }
 
-                        await smuggler.ExecuteAsync();
+                        await store.AsyncDatabaseCommands.PutAttachmentAsync("3", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
+
+                        await smuggler.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                        {
+                            To = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8078",
+                                DefaultDatabase = "TargetDB"
+                            }
+                        });
 
                         using (var session = targetStore.OpenAsyncSession())
                         {
@@ -128,6 +138,10 @@ namespace Raven.Tests.Smuggler
 
                             Assert.Equal(3, users.Count);
                         }
+
+                        Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("1"));
+                        Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("2"));
+                        Assert.NotNull(await targetStore.AsyncDatabaseCommands.GetAttachmentAsync("3"));
                     }
                 }
             }

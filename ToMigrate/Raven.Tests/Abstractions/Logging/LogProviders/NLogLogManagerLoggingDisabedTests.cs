@@ -2,6 +2,7 @@ using System;
 using Raven.Abstractions.Logging.LogProviders;
 using NLog.Config;
 using NLog.Targets;
+using Raven.Tests.Common.Attributes;
 using Xunit;
 using LogLevel = NLog.LogLevel;
 
@@ -14,6 +15,11 @@ namespace Raven.Tests.Abstractions.Logging.LogProviders
 
         private void ConfigureLogger(NLog.LogLevel nlogLogLevel)
         {
+            if (PerTestLogger.ShouldEnablePerTestLog())
+            {
+                throw new SkipException("Unable to test NLogProvider when running in per test log mode.");
+            }
+
             NLogLogManager.ProviderIsAvailableOverride = true;
             var config = new LoggingConfiguration();
             target = new MemoryTarget();
