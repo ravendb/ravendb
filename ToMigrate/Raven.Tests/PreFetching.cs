@@ -21,6 +21,7 @@ namespace Raven.Tests
             store = NewDocumentStore();
             var workContext = store.SystemDatabase.WorkContext;
             prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, new IndexBatchSizeAutoTuner(workContext), string.Empty);
+            prefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
         }
 
         public override void Dispose()

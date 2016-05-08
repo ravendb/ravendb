@@ -106,8 +106,8 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void CanInsertSeveralDocuments()
         {
-            var configuration = new AppSettingsBasedConfiguration();
-            configuration.Core.RunInMemory = true;
+            var configuration = new RavenConfiguration();
+            configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
             using (var server = new RavenDbServer(configuration).Initialize())
             {
                 var store = server.DocumentStore;

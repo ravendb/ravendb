@@ -8,7 +8,7 @@ namespace Voron.Benchmark
     public class Configuration
     {
         public const int ItemsPerTransaction = 1000;
-        public const int Transactions = 10000;
-        public const string Path = @"c:\scratch\bench.data";
+        public const int Transactions = 1000;
+        public const string Path = @"d:\scratch\bench.data";
     }
 }

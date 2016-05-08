@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations

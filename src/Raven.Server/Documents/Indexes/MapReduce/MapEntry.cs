@@ -2,7 +2,7 @@
 {
     public class MapEntry
     {
-        public long Etag;
         public ulong ReduceKeyHash;
+        public long StorageId;
     }
 }

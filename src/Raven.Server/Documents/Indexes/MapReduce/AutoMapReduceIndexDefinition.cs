@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
-using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {
-        public readonly IndexField[] GroupByFields;
+        public readonly Dictionary<string, IndexField> GroupByFields;
 
         public AutoMapReduceIndexDefinition(string[] collections, IndexField[] mapFields, IndexField[] groupByFields)
             : base(IndexNameFinder.FindMapReduceIndexName(collections, mapFields, groupByFields), collections, IndexLockMode.Unlock, mapFields)
@@ -29,12 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     throw new ArgumentException($"GroupBy field has to be stored. Field name: {field.Name}");
             }
 
-            GroupByFields = groupByFields;
-        }
-
-        public bool ContainsGroupByField(string name)
-        {
-            return GroupByFields.Any(x => x.Name == name);
+            GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase); ;
         }
 
         protected override void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
@@ -51,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             writer.WritePropertyName(context.GetLazyString(nameof(GroupByFields)));
             writer.WriteStartArray();
             var first = true;
-            foreach (var field in GroupByFields)
+            foreach (var field in GroupByFields.Values)
             {
                 if (first == false)
                     writer.WriteComma();

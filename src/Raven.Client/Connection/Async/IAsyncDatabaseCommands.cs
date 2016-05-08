@@ -24,6 +24,7 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Indexing;
@@ -97,7 +98,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="queryToDelete">Tquery that will be performed</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
         /// <param name="token">The cancellation token.</param>
-        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
+        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Deletes the specified index
@@ -139,8 +140,9 @@ namespace Raven.Client.Connection.Async
         ///     Retrieve a single document for a specified key.
         /// </summary>
         /// <param name="key">key of the document you want to retrieve</param>
+        /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
         /// <param name="token">The cancellation token.</param>
-        Task<JsonDocument> GetAsync(string key, CancellationToken token = default(CancellationToken));
+        Task<JsonDocument> GetAsync(string key, bool metadataOnly = false, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the
@@ -314,14 +316,14 @@ namespace Raven.Client.Connection.Async
         Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Retrieves the document metadata for the specified document key.
+        ///     Retrieves the etag for the specified document.
         ///     <para>Returns:</para>
-        ///     <para>The document metadata for the specified document, or <c>null</c> if the document does not exist</para>
+        ///     <para>The document etag for the specified document, or <c>null</c> if the document does not exist</para>
         /// </summary>
-        /// <param name="key">key of a document to get metadata for</param>
+        /// <param name="key">key of a document to get etag for</param>
         /// <param name="token">The cancellation token.</param>
-        /// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
-        Task<JsonDocumentMetadata> HeadAsync(string key, CancellationToken token = default(CancellationToken));
+        /// <returns>The etag for the specified document, or null if the document does not exist</returns>
+        Task<long?> HeadAsync(string key, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Lets you check if the given index definition differs from the one on a server.
@@ -348,7 +350,7 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="query">more like this query definition that will be executed</param>
         /// <param name="token">The cancellation token.</param>
-        Task<LoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
+        Task<QueryResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Perform a single POST request containing multiple nested GET requests
@@ -487,14 +489,10 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="index">name of an index to query</param>
         /// <param name="query">query definition containing all information required to query a specified index</param>
-        /// <param name="includes">
-        ///     an array of relative paths that specify related documents ids which should be included in a
-        ///     query result
-        /// </param>
         /// <param name="metadataOnly">true if returned documents should include only metadata without a document body.</param>
         /// <param name="indexEntriesOnly">true if query results should contain only index entries.</param>
         /// <param name="token">The cancellation token.</param>
-        Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false, CancellationToken token = default(CancellationToken));
+        Task<QueryResult> QueryAsync(string index, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Removes all indexing data from a server for a given index so the indexation can start from scratch for that index.
@@ -589,7 +587,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="patch">JavaScript patch that will be executed on query results</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
         /// <param name="token">The cancellation token.</param>
-        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Get the full URL for the given document key

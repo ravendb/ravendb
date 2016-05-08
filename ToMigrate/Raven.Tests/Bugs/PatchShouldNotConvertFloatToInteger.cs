@@ -11,17 +11,15 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
     public class PatchShouldNotConvertFloatToInteger : RavenTest
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void ShouldKeepIntegerAsIntegerAndFloatAsFloat(string storage)
+        [Fact]
+        public void ShouldKeepIntegerAsIntegerAndFloatAsFloat()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage))
+            using (var store = NewDocumentStore(requestedStorage:"esent"))
             {
                 using (var session = store.OpenSession())
                 {

@@ -11,7 +11,6 @@ using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -28,9 +27,9 @@ namespace Raven.Tests.Security.OAuth
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification ravenConfiguration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
         {
-            ravenConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 
@@ -48,7 +47,7 @@ namespace Raven.Tests.Security.OAuth
             var authorizedDatabases = databases.Split(',').Select(tenantId=> new ResourceAccess{TenantId = tenantId}).ToList();
             var body = RavenJObject.FromObject(new AccessTokenBody { UserId = user, AuthorizedDatabases = authorizedDatabases, Issued = issued }).ToString(Formatting.None);
 
-            var signature = valid ? AccessToken.Sign(body, server.SystemDatabase.Configuration.OAuth.TokenKey) : "InvalidSignature";
+            var signature = valid ? AccessToken.Sign(body, server.SystemDatabase.Configuration.OAuthTokenKey) : "InvalidSignature";
 
             var token = RavenJObject.FromObject(new { Body = body, Signature = signature }).ToString(Formatting.None);
 

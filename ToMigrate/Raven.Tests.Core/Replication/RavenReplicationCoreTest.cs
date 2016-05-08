@@ -78,6 +78,36 @@ namespace Raven.Tests.Core.Replication
                        }, new RavenJObject());
         }
 
+        protected Attachment WaitForAttachment(DocumentStore destination, string attachmentName)
+        {
+            Attachment attachment = null;
+
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                attachment = destination.DatabaseCommands.GetAttachment(attachmentName);
+                if (attachment != null)
+                    break;
+                Thread.Sleep(100);
+            }
+            try
+            {
+                Assert.NotNull(attachment);
+            }
+            catch (Exception ex)
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(10));
+
+                attachment = destination.DatabaseCommands.GetAttachment(attachmentName);
+                if (attachment == null)
+                    throw;
+
+                throw new Exception(
+                    "WaitForAttachment failed, but after waiting 10 seconds more, WaitForAttachment succeed. Do we have a race condition here?",
+                    ex);
+            }
+            return attachment;
+        }
+
         protected TDocument WaitForDocument<TDocument>(DocumentStore store2, string expectedId) where TDocument : class
         {
             TDocument document = null;

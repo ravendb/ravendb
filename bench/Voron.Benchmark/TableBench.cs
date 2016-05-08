@@ -19,7 +19,7 @@ namespace Voron.Benchmark
         {
             get
             {
-                string posfix = _indexType == TableIndexType.Compact ? "prefix" : "btree";
+                string posfix = "btree";
                 return $"{Configuration.Path}.table.{posfix}";
             }
         }
@@ -110,7 +110,7 @@ namespace Voron.Benchmark
         {
             Console.WriteLine();
 
-            string benchmarkType = _indexType == TableIndexType.Compact ? "Prefix Tree" : "BTree";
+            string benchmarkType = "BTree";
             Console.WriteLine($"{benchmarkType} Table Benchmarking.");
             Console.WriteLine();
 
@@ -129,14 +129,11 @@ namespace Voron.Benchmark
             Benchmark.Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), this, delete: false);
             Benchmark.Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), this, delete: false);
 
-            if (_indexType != TableIndexType.Compact)
-            {
-                Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), this, delete: false);
-                Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), this, delete: false);
-                Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), this, delete: false);
-                Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), this, delete: false);
-                Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), this, delete: false);
-            }
+            Benchmark.Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), this, delete: false);
+            Benchmark.Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), this, delete: false);
+            Benchmark.Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), this, delete: false);
+            Benchmark.Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), this, delete: false);
+            Benchmark.Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), this, delete: false);
 
             Benchmark.Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4), this);
             Benchmark.Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8), this);

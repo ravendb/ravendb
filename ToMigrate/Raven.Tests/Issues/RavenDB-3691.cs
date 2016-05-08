@@ -24,5 +24,17 @@ namespace Raven.Tests.Issues
                 }
             }
         }
+
+        [Fact]
+        public void CanPutAttachmentWithMetadataPropertyBeingNull()
+        {
+            using (var server = GetNewServer())
+            {
+                using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
+                {
+                    documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), RavenJObject.FromObject(new { Foo = (string)null }));
+                }
+            }
+        }
     }
 }

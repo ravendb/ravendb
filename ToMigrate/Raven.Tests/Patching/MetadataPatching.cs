@@ -41,7 +41,7 @@ namespace Raven.Tests.Patching
 
                 operation.WaitForCompletion();
 
-                var jsonDocument = store.SystemDatabase.Documents.Get("foos/1");
+                var jsonDocument = store.SystemDatabase.Documents.Get("foos/1", null);
                 Assert.Equal("Bars", jsonDocument.Metadata.Value<string>("Raven-Entity-Name"));
             }
         }

@@ -70,6 +70,38 @@ namespace Raven.Tests.Notifications
         }
 
         [Fact]
+        public void CanGetNotificationsAboutConflictedAttachements()
+        {
+            using(var store1 = CreateStore())
+            using (var store2 = CreateStore())
+            {
+                store1.DatabaseCommands.PutAttachment("attachment/1", null, new MemoryStream(new byte[] {1, 2, 3}),
+                                                      new RavenJObject());
+
+                store2.DatabaseCommands.PutAttachment("attachment/1", null, new MemoryStream(new byte[] {1, 2, 3}),
+                                                      new RavenJObject());
+
+                var list = new BlockingCollection<ReplicationConflictNotification>();
+                var taskObservable = store2.Changes();
+                taskObservable.Task.Wait();
+                var observableWithTask = taskObservable.ForAllReplicationConflicts();
+                observableWithTask.Task.Wait();
+                observableWithTask
+                    .Subscribe(list.Add);
+
+                TellFirstInstanceToReplicateToSecondInstance();
+
+                ReplicationConflictNotification replicationConflictNotification;
+                Assert.True(list.TryTake(out replicationConflictNotification, TimeSpan.FromSeconds(10)));
+
+                Assert.Equal("attachment/1", replicationConflictNotification.Id);
+                Assert.Equal(replicationConflictNotification.ItemType, ReplicationConflictTypes.AttachmentReplicationConflict);
+                Assert.Equal(2, replicationConflictNotification.Conflicts.Length);
+                Assert.Equal(ReplicationOperationTypes.Put, replicationConflictNotification.OperationType);
+            }
+        }
+
+        [Fact]
         public void NotificationShouldContainAllConfictedIds()
         {
             using (var store1 = CreateStore())

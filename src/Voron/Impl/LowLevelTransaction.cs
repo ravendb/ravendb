@@ -32,6 +32,7 @@ namespace Voron.Impl
         private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
+        readonly Stack<long> _pagesToFreeOnCommit = new Stack<long>();
         private readonly IFreeSpaceHandling _freeSpaceHandling;
 
         private int _allocatedPagesInTransaction;
@@ -77,9 +78,9 @@ namespace Voron.Impl
             get { return _state; }
         }
 
-        public uint Crc
+        public ulong Hash
         {
-            get { return _txHeader->Crc; }
+            get { return _txHeader->Hash; }
         }
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
@@ -153,7 +154,7 @@ namespace Voron.Impl
             _txHeader->NextPageNumber = _state.NextPageNumber;
             _txHeader->LastPageNumber = -1;
             _txHeader->PageCount = -1;
-            _txHeader->Crc = 0;
+            _txHeader->Hash = 0;
             _txHeader->TxMarker = TransactionMarker.None;
             _txHeader->Compressed = false;
             _txHeader->CompressedSize = 0;
@@ -430,12 +431,18 @@ namespace Voron.Impl
             }
         }
 
+        internal void FreePageOnCommit(long pageNumber)
+        {
+            _pagesToFreeOnCommit.Push(pageNumber);
+        }
+
         internal void FreePage(long pageNumber)
         {
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
             Debug.Assert(pageNumber >= 0);
+
             _freeSpaceHandling.FreePage(this, pageNumber);
 
             _freedPages.Add(pageNumber);
@@ -494,6 +501,10 @@ namespace Voron.Impl
             if (RolledBack)
                 throw new InvalidOperationException("Cannot commit rolled-back transaction.");
 
+            while (_pagesToFreeOnCommit.Count > 0)
+            {
+                FreePage(_pagesToFreeOnCommit.Pop());
+            }
 
             _txHeader->LastPageNumber = _state.NextPageNumber - 1;
             _txHeader->PageCount = _allocatedPagesInTransaction;

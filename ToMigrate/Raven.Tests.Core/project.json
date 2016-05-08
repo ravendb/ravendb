@@ -1,5 +1,5 @@
 ﻿{
-  "version": "3.0.0",
+  "version": "3.5.0",
 
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
 
@@ -8,8 +8,13 @@
   },
 
   "dependencies": {
-    "Raven.Client": "4.0.0",
+    "Raven.Client.Lightweight": "3.5.0",
     "Rx-Linq": "2.2.5"
+  },
+  
+  "runtimes": {
+    "win-x64": {
+    }
   },
 
   "frameworks": {

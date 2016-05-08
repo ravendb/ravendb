@@ -9,18 +9,18 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Platform;
 
 using Sparrow.Collections;
-using Voron.Platform.Posix;
 
 namespace FastTests
 {
@@ -199,6 +199,28 @@ namespace FastTests
                 return url.Replace("localhost", "localhost.fiddler");
 
             return url;
+        }
+
+        public static void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
+        {
+            var databaseCommands = store.DatabaseCommands;
+            if (database != null)
+            {
+                databaseCommands = databaseCommands.ForDatabase(database);
+            }
+
+            timeout = timeout ?? (Debugger.IsAttached
+                ? TimeSpan.FromMinutes(5)
+                : TimeSpan.FromSeconds(20));
+
+            var spinUntil = SpinWait.SpinUntil(() =>
+                databaseCommands.GetStatistics().StaleIndexes.Length == 0,
+                timeout.Value);
+
+            if (spinUntil)
+                return;
+
+            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value);
         }
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)

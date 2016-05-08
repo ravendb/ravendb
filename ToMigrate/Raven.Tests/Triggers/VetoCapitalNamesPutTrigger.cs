@@ -12,7 +12,7 @@ namespace Raven.Tests.Triggers
 {
     public class VetoCapitalNamesPutTrigger : AbstractPutTrigger
     {
-        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
+        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             var name = document["name"];
             if(name != null && name.Value<string>().Any(char.IsUpper))

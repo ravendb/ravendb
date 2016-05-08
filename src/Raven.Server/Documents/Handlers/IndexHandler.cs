@@ -20,6 +20,36 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/indexes/source", "GET")]
+        public Task Source()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            var index = Database.IndexStore.GetIndex(names[0]);
+            if (index == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            throw new NotImplementedException(); // TODO [ppekrol] need static indexes
+        }
+
+        [RavenAction("/databases/*/indexes/debug", "GET")]
+        public Task Debug()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            var index = Database.IndexStore.GetIndex(names[0]);
+            if (index == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            throw new NotImplementedException(); // TODO [ppekrol] not sure yet what will be needed, let's wait for Studio
+        }
+
         [RavenAction("/databases/*/indexes", "GET")]
         public Task GetAll()
         {
@@ -29,6 +59,7 @@ namespace Raven.Server.Documents.Handlers
 
             var start = GetStart();
             var pageSize = GetPageSize();
+            var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -64,6 +95,13 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteComma();
 
                     isFirst = false;
+
+                    if (namesOnly)
+                    {
+                        writer.WriteString(context.GetLazyString(indexDefinition.Name));
+                        continue;
+                    }
+
                     writer.WriteIndexDefinition(context, indexDefinition);
                 }
 
@@ -407,7 +445,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-                var runner = new QueryRunner(IndexStore, Database.DocumentsStorage, context);
+                var runner = new QueryRunner(Database, context);
 
                 var result = runner.ExecuteGetTermsQuery(names[0], fields[0], fromValue, existingResultEtag, GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
 

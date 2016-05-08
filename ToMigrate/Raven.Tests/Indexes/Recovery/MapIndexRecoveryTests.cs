@@ -9,37 +9,40 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Database.Config;
-using Raven.Database.Config.Settings;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery
 {
+    using Client.Connection;
+    using Imports.Newtonsoft.Json.Linq;
+    using Raven.Abstractions.Data;
     using Raven.Abstractions.Extensions;
+    using Raven.Json.Linq;
 
     public class MapIndexRecoveryTests : RavenTest
     {
-        private void CommitPointAfterEachCommit(RavenConfiguration configuration)
+        private void CommitPointAfterEachCommit(InMemoryRavenConfiguration configuration)
         {
             // force commit point creation after each commit
-            configuration.Indexing.MinIndexingIntervalToStoreCommitPoint = new TimeSetting(0, TimeUnit.Seconds);
-            configuration.Indexing.MaxIndexCommitPointStoreInterval = new TimeSetting(0, TimeUnit.Seconds);
+            configuration.MinIndexingTimeIntervalToStoreCommitPoint = TimeSpan.FromSeconds(0);
+            configuration.MaxIndexCommitPointStoreTimeInterval = TimeSpan.FromSeconds(0);
         }
 
-        private void CommitPointAfterFirstCommitOnly(RavenConfiguration configuration)
+        private void CommitPointAfterFirstCommitOnly(InMemoryRavenConfiguration configuration)
         {
             // by default first commit will force creating commit point, here we don't need more
-            configuration.Indexing.MinIndexingIntervalToStoreCommitPoint = new TimeSetting(30, TimeUnit.Minutes);
-            configuration.Indexing.MaxIndexCommitPointStoreInterval = new TimeSetting((long) TimeSpan.MaxValue.TotalSeconds, TimeUnit.Seconds);
+            configuration.MinIndexingTimeIntervalToStoreCommitPoint = TimeSpan.FromMinutes(30);
+            configuration.MaxIndexCommitPointStoreTimeInterval = TimeSpan.MaxValue;
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Indexing.FlushIndexToDiskSize, new Size(0, SizeUnit.Bytes), "0");
+            configuration.DefaultStorageTypeName = "esent";
+            configuration.FlushIndexToDiskSizeInMb = 0;
         }
 
         [Fact]
@@ -79,7 +82,7 @@ namespace Raven.Tests.Indexes.Recovery
 
                     Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                    commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                    commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                          indexInstance.IndexId + "\\CommitPoints");
                 }
 
@@ -110,7 +113,7 @@ namespace Raven.Tests.Indexes.Recovery
             {
                 CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 
-                var maxNumberOfStoredCommitPoints = server.SystemDatabase.Configuration.Indexing.MaxNumberOfStoredCommitPoints;
+                var maxNumberOfStoredCommitPoints = server.SystemDatabase.Configuration.MaxNumberOfStoredCommitPoints;
 
                 using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
                 {
@@ -132,7 +135,7 @@ namespace Raven.Tests.Indexes.Recovery
 
                         Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                        var commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                        var commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                               indexInstance.IndexId + "\\CommitPoints");
 
                         var commitPoints = Directory.GetDirectories(commitPointsDirectory);
@@ -183,10 +186,10 @@ namespace Raven.Tests.Indexes.Recovery
 
                 Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                      indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                          indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
             }
 
@@ -260,10 +263,10 @@ namespace Raven.Tests.Indexes.Recovery
 
                 Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                      indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                          indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
             }
 
@@ -344,13 +347,13 @@ namespace Raven.Tests.Indexes.Recovery
                 }
                 Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                      indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                          indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 
-                indexStoragePath = server.SystemDatabase.Configuration.Core.IndexStoragePath;
+                indexStoragePath = server.SystemDatabase.Configuration.IndexStoragePath;
 
                 indexId = indexInstance.IndexId;
 

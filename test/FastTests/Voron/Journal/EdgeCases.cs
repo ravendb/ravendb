@@ -7,15 +7,18 @@
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Impl;
+using Voron.Impl.Journal;
 
 namespace FastTests.Voron.Journal
 {
     public class EdgeCases : StorageTest
     {
-        // all tests here relay on the fact than one log file can contains max 10 pages
+        // all tests here relay on the fact than one log file can contains max 10 pages 
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.PageSize = 4 * Constants.Size.Kilobyte;
+            options.MaxLogFileSize = 5 * options.PageSize;
         }
 
         [Fact]

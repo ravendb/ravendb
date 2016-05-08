@@ -5,18 +5,16 @@ using Raven.Tests.Common;
 using Xunit;
 using System.Linq;
 
-using Raven.Tests.Helpers.Util;
-
 namespace Raven.Tests.Bugs
 {
     public class PrefetchingBug : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core.MaxNumberOfItemsToProcessInSingleBatch, 2);
-            configuration.Modify(x => x.Core.MaxNumberOfItemsToReduceInSingleBatch, 2);
-            configuration.Modify(x => x.Core.InitialNumberOfItemsToProcessInSingleBatch, 2);
-            configuration.Modify(x => x.Core.InitialNumberOfItemsToReduceInSingleBatch, 2);
+            configuration.MaxNumberOfItemsToProcessInSingleBatch = 2;
+            configuration.MaxNumberOfItemsToReduceInSingleBatch = 2;
+            configuration.InitialNumberOfItemsToProcessInSingleBatch = 2;
+            configuration.InitialNumberOfItemsToReduceInSingleBatch = 2;
         }
 
         [Fact]
@@ -55,7 +53,7 @@ namespace Raven.Tests.Bugs
             using (var store = NewDocumentStore())
             {
                 store.SystemDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
-                store.SystemDatabase.WorkContext.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch = 1;
+                store.SystemDatabase.WorkContext.Configuration.MaxNumberOfItemsToPreFetch = 1;
 
                 var putResult1 = store.SystemDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
                 var putResult2 = store.SystemDatabase.Documents.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
@@ -75,7 +73,7 @@ namespace Raven.Tests.Bugs
         {
             using (var store = NewDocumentStore())
             {
-                store.SystemDatabase.WorkContext.Configuration.Prefetcher.Disabled = true;
+                store.SystemDatabase.WorkContext.Configuration.DisableDocumentPreFetching = true;
                 store.SystemDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
 
                 var putResult1 = store.SystemDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
@@ -96,7 +94,7 @@ namespace Raven.Tests.Bugs
             using (var store = NewDocumentStore())
             {
                 store.SystemDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
-                store.SystemDatabase.WorkContext.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch = 1;
+                store.SystemDatabase.WorkContext.Configuration.MaxNumberOfItemsToPreFetch = 1;
 
                 var putResult1 = store.SystemDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // will go to prefetching queue
                 var putResult2 = store.SystemDatabase.Documents.Put("key/1", null, new RavenJObject(), new RavenJObject(), null); // update - will not go into prefetching queue because MaxNumberOfItemsToPreFetchForIndexing = 1;

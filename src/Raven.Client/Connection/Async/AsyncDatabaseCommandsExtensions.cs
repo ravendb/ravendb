@@ -20,7 +20,7 @@ namespace Raven.Client.Connection.Async
                     {
                         Query = field + ":" + RavenQuery.Escape(term),
                         PageSize = 0,
-                    }.GetIndexQueryUrl("", indexName, "indexes"))
+                    }.GetIndexQueryUrl("", indexName, "queries"))
                         .Select(url =>
                         {
                             var uriParts = url.Split(new[] {'?'}, StringSplitOptions.RemoveEmptyEntries);

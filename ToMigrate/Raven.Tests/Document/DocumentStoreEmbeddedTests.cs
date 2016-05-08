@@ -30,7 +30,7 @@ namespace Raven.Tests.Document
 
         public DocumentStoreEmbeddedTests()
         {
-            documentStore = NewDocumentStore();
+            documentStore = NewDocumentStore(requestedStorage: "esent");
         }
 
         public override void Dispose()
@@ -38,8 +38,7 @@ namespace Raven.Tests.Document
             documentStore.Dispose();
             base.Dispose();
         }
-
-        [Fact]
+    [Fact]
         public void CanGetIndexNames()
         {
             Assert.Contains("Raven/DocumentsByEntityName", documentStore.DatabaseCommands.GetIndexNames(0, 25));
@@ -50,7 +49,57 @@ namespace Raven.Tests.Document
         {
             documentStore.SystemDatabase.Indexes.ResetIndex("Raven/DocumentsByEntityName");
         }
-    
+
+        [Fact]
+        public void UsingAttachments()
+        {
+            var attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+            Assert.Null(attachment);
+
+            documentStore.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
+
+            attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+            Assert.NotNull(attachment);
+
+            Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+            Assert.Equal("World", attachment.Metadata.Value<string>("Hello"));
+
+            documentStore.DatabaseCommands.DeleteAttachment("ayende", null);
+
+            attachment = documentStore.DatabaseCommands.GetAttachment("ayende");
+            Assert.Null(attachment);
+        }
+
+
+        [Fact]
+        public void WillGetNotificationWhenReadingNonAuthoritativeInformation()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var session = documentStore.OpenSession())
+            {
+                using (var original = documentStore.OpenSession())
+                {
+                    original.Store(company);
+                    original.SaveChanges();
+                }
+                using (new TransactionScope())
+                {
+                    session.Load<Company>(company.Id).Name = "Another Name";
+                    session.SaveChanges();
+
+                    using (new TransactionScope(TransactionScopeOption.Suppress))
+                    {
+                        using (var session2 = documentStore.OpenSession())
+                        {
+                            session2.Advanced.AllowNonAuthoritativeInformation = false;
+                            session2.Advanced.NonAuthoritativeInformationTimeout = TimeSpan.Zero;
+                            Assert.Throws<NonAuthoritativeInformationException>(() => session2.Load<Company>(company.Id));
+                        }
+                    }
+                }
+            }
+        }
+
         
         [Fact]
         public void CanRefreshEntityFromDatabase()
@@ -217,6 +266,38 @@ namespace Raven.Tests.Document
             }
         }
 
+        [Fact]
+        public void WhileInTransactionCanReadValuesPrivateForTheTransaction()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var session = documentStore.OpenSession())
+            {
+                using (new TransactionScope())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+
+                    Assert.NotNull(session.Load<Company>(company.Id));
+                }
+            }
+        }
+
+
+        [Fact]
+        public void AfterTxRollbackValueWillNotBeInTheDatabase()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var session = documentStore.OpenSession())
+            {
+                using (new TransactionScope())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+                }
+                using (var session2 = documentStore.OpenSession())
+                    Assert.Null(session2.Load<Company>(company.Id));
+            }
+        }
 
         [Fact]
         public void ShouldLoadEntityBackWithDocumentIdMappedToId()

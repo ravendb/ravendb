@@ -159,6 +159,56 @@ namespace FastTests.Server.Documents.Queries.Dynamic
         }
 
         [Fact]
+        public void CreateDefinitionForQueryWithNestedFieldsAndStringSortingSet()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "Name:A*",
+                SortedFields = new[]
+                {
+                    new SortedField("Address.Country"),
+                },
+            });
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("Name"));
+            Assert.True(definition.ContainsField("Address.Country"));
+            Assert.Equal("Auto/Users/ByAddress_CountryAndNameSortByAddress_Country", definition.Name);
+            var nameField = definition.GetField("Name");
+            Assert.Null(nameField.SortOption);
+            var ageField = definition.GetField("Address.Country");
+            Assert.Equal(SortOptions.String, ageField.SortOption);
+        }
+
+        [Fact]
+        public void CreateDefinitionForQueryWithNestedFieldsAndNumberSortingSet()
+        {
+            _sut = DynamicQueryMapping.Create("Users", new IndexQuery
+            {
+                Query = "Name:A*",
+                SortedFields = new[]
+                {
+                    new SortedField("Address.ZipCode_Range"),
+                },
+            });
+
+            var definition = _sut.CreateAutoIndexDefinition();
+
+            Assert.Equal(1, definition.Collections.Length);
+            Assert.Equal("Users", definition.Collections[0]);
+            Assert.True(definition.ContainsField("Name"));
+            Assert.True(definition.ContainsField("Address.ZipCode"));
+            Assert.Equal("Auto/Users/ByAddress_ZipCodeAndNameSortByAddress_ZipCode", definition.Name);
+            var nameField = definition.GetField("Name");
+            Assert.Null(nameField.SortOption);
+            var ageField = definition.GetField("Address.ZipCode");
+            Assert.Equal(SortOptions.NumericDefault, ageField.SortOption);
+        }
+
+        [Fact]
         public void CreateDefinitionForQueryWithRangeField()
         {
             _sut = DynamicQueryMapping.Create("Users", new IndexQuery

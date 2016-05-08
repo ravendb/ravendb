@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 using Voron.Data;
 using Voron.Data.BTrees;
-using Voron.Data.Compact;
 using Voron.Data.Fixed;
 
 namespace Voron.Impl
@@ -18,7 +17,6 @@ namespace Voron.Impl
             get { return _lowLevelTransaction; }
         }
 
-        private readonly Dictionary<string, PrefixTree> _prefixTrees = new Dictionary<string, PrefixTree>();
         private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
         private readonly HashSet<ICommittable> _participants = new HashSet<ICommittable>();
 
@@ -218,57 +216,6 @@ namespace Voron.Impl
         {
             _lowLevelTransaction?.Dispose();
         }
-
-
-
-        public PrefixTree ReadPrefixTree(string treeName)
-        {
-            PrefixTree tree;
-            if (_prefixTrees.TryGetValue(treeName, out tree))
-                return tree;
-
-            if (PrefixTree.TryOpen(this, _lowLevelTransaction.RootObjects, treeName, out tree))
-            {
-                _prefixTrees.Add(treeName, tree);
-                return tree;
-            }
-
-            return null;
-        }
-
-        public PrefixTree CreatePrefixTree(string name, int subtreeDepth = -1)
-        {
-            PrefixTree tree = ReadPrefixTree(name);
-            if (tree != null)
-                return tree;
-
-            if (_lowLevelTransaction.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new InvalidOperationException("No such tree: '" + name + "' and cannot create trees in read transactions");
-
-            Slice key = name;
-
-            tree = PrefixTree.Create(this, LowLevelTransaction.RootObjects, name, subtreeDepth);
-            tree.Name = name;
-
-            AddPrefixTree(name, tree);
-
-            return tree;
-        }
-
-        internal void AddPrefixTree(string name, PrefixTree tree)
-        {
-            PrefixTree value;
-            if (_prefixTrees.TryGetValue(name, out value))
-                throw new InvalidOperationException("Prefix Tree already exists: " + name);
-
-            _prefixTrees[name] = tree;
-        }
-
-        public IEnumerable<PrefixTree> PrefixTrees
-        {
-            get { return _prefixTrees.Values; }
-        }
-
 
         public FixedSizeTree FixedTreeFor(Slice treeName)
         {

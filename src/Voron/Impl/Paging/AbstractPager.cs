@@ -49,7 +49,8 @@ namespace Voron.Impl.Paging
 
             PageSize = pageSize;
             PageMaxSpace = PageSize - Constants.TreePageHeaderSize;
-            NodeMaxSize = PageMaxSpace/2 - 1;
+            NodeMaxSize = PageMaxSpace / 2 - 1;
+
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
             

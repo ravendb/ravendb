@@ -23,15 +23,12 @@ namespace Raven.Tests.Bugs.MultiTenancy
     {
         protected RavenDbServer GetNewServer(int port)
         {
-            RavenDbServer ravenDbServer = new RavenDbServer(new AppSettingsBasedConfiguration
+            RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = true,
-                    DataDirectory = "Data",
-                    Port = port,
-                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-                }
+                Port = port,
+                RunInMemory = true,
+                DataDirectory = "Data",
+                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
             })
             {
                 UseEmbeddedHttpServer = true

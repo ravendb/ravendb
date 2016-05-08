@@ -6,6 +6,8 @@
 
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 
 namespace Raven.Client
 {

@@ -1,0 +1,873 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
+
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
+using Raven.Tests.Core.Utils.Entities;
+using Xunit;
+
+namespace FastTests.Server.Documents.Queries.Dynamic
+{
+    [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
+    public class DynamicMapReduceQueriesTests : RavenTestBase
+    {
+        [Fact]
+        public async Task Group_by_string_calculate_count()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Torun"
+                    });
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Torun"
+                    });
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Hadera"
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var addressesCount = session.Query<Address>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .GroupBy(x => x.City)
+                        .Select(x => new
+                        {
+                            City = x.Key,
+                            Count = x.Count(),
+                        })
+                        .Where(x => x.Count == 2)
+                        .ToList();
+
+                    Assert.Equal(2, addressesCount[0].Count);
+                    Assert.Equal("Torun", addressesCount[0].City);
+
+                    var addressesTotalCount =
+                        session.Query<Address>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.City).Select(
+                            x =>
+                                new AddressReduceResult // using class instead of anonymous object
+                                {
+                                    City = x.Key,
+                                    TotalCount = x.Count(),
+                                })
+                            .Where(x => x.TotalCount == 2)
+                            .ToList();
+
+                    Assert.Equal(2, addressesTotalCount[0].TotalCount);
+                    Assert.Equal("Torun", addressesTotalCount[0].City);
+                }
+
+                // using different syntax
+                using (var session = store.OpenSession())
+                {
+                    var addressesCount =
+                        session.Query<Address>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.City, x => 1,
+                            (key, g) => new
+                            {
+                                City = key,
+                                Count = g.Count()
+                            }).Where(x => x.Count == 2)
+                            .ToList();
+
+                    Assert.Equal(2, addressesCount[0].Count);
+                    Assert.Equal("Torun", addressesCount[0].City);
+
+                    var addressesTotalCount =
+                        session.Query<Address>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.City, x => 1,
+                            (key, g) => new AddressReduceResult // using class instead of anonymous object
+                            {
+                                City = key,
+                                TotalCount = g.Count()
+                            }).Where(x => x.TotalCount == 2)
+                            .ToList();
+
+                    Assert.Equal(2, addressesTotalCount[0].TotalCount);
+                    Assert.Equal("Torun", addressesTotalCount[0].City);
+                }
+
+                var indexDefinitions = store.DatabaseCommands.GetIndexes(0, 10);
+
+                Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
+                Assert.Equal("Auto/Addresses/ByCountReducedByCity", indexDefinitions[0].Name);
+            }
+        }
+
+        [Fact]
+        public async Task Group_by_string_calculate_sum()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Chair",
+                        Quantity = 1
+                    });
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Chair",
+                        Quantity = 3
+                    });
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Desk",
+                        Quantity = 2
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var sumOfLinesByName =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .ToList();
+
+                    Assert.Equal(2, sumOfLinesByName.Count);
+
+                    Assert.Equal(4, sumOfLinesByName[0].TotalQuantity);
+                    Assert.Equal("Chair", sumOfLinesByName[0].NameOfProduct);
+
+                    Assert.Equal(2, sumOfLinesByName[1].TotalQuantity);
+                    Assert.Equal("Desk", sumOfLinesByName[1].NameOfProduct);
+
+                    var sumOfLinesByNameClass =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = x.Key,
+                                    OrderedQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .ToList();
+
+                    Assert.Equal(2, sumOfLinesByNameClass.Count);
+
+                    Assert.Equal(4, sumOfLinesByNameClass[0].OrderedQuantity);
+                    Assert.Equal("Chair", sumOfLinesByNameClass[0].NameOfProduct);
+
+                    Assert.Equal(2, sumOfLinesByNameClass[1].OrderedQuantity);
+                    Assert.Equal("Desk", sumOfLinesByNameClass[1].NameOfProduct);
+                }
+
+                // different GroupBy syntax
+                using (var session = store.OpenSession())
+                {
+                    var sumOfLinesByNameClass =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity,
+                            (anyKeyName, g) =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = anyKeyName,
+                                    OrderedQuantity = g.Sum()
+                                })
+                            .Where(x => x.NameOfProduct == "Chair")
+                            .ToList();
+
+                    Assert.Equal(1, sumOfLinesByNameClass.Count);
+
+                    Assert.Equal(4, sumOfLinesByNameClass[0].OrderedQuantity);
+                    Assert.Equal("Chair", sumOfLinesByNameClass[0].NameOfProduct);
+
+                    var sumOfLinesByName =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity,
+                            (anyKeyName, g) =>
+                                new
+                                {
+                                    NameOfProduct = anyKeyName,
+                                    OrderedQuantity = g.Sum()
+                                })
+                            .Where(x => x.OrderedQuantity == 2)
+                            .ToList();
+
+                    Assert.Equal(1, sumOfLinesByName.Count);
+
+                    Assert.Equal(2, sumOfLinesByName[0].OrderedQuantity);
+                    Assert.Equal("Desk", sumOfLinesByName[0].NameOfProduct);
+                }
+
+                // different GroupBy syntax
+                using (var session = store.OpenSession())
+                {
+                    var sumOfLinesByName =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity)
+                            .Select((group, i) => new
+                            {
+                                Name = group.Key,
+                                OrderedQuantity = group.Sum(x => x)
+                            })
+                            .Where(x => x.Name == "Chair")
+                            .ToList();
+
+                    Assert.Equal(1, sumOfLinesByName.Count);
+
+                    Assert.Equal(4, sumOfLinesByName[0].OrderedQuantity);
+                    Assert.Equal("Chair", sumOfLinesByName[0].Name);
+
+                    var sumOfLinesByNameClass =
+                        session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName, x => x.Quantity)
+                            .Select((group, i) => new OrderLineReduceResult
+                            {
+                                NameOfProduct = group.Key,
+                                OrderedQuantity = group.Sum(x => x)
+                            })
+                            .Where(x => x.OrderedQuantity == 2)
+                            .ToList();
+
+                    Assert.Equal(1, sumOfLinesByNameClass.Count);
+
+                    Assert.Equal(2, sumOfLinesByNameClass[0].OrderedQuantity);
+                    Assert.Equal("Desk", sumOfLinesByNameClass[0].NameOfProduct);
+                }
+
+                var indexDefinitions = store.DatabaseCommands.GetIndexes(0, 10);
+
+                Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
+                Assert.Equal("Auto/OrderLines/ByQuantityReducedByProductName", indexDefinitions[0].Name);
+            }
+        }
+
+        [Fact]
+        public async Task Group_by_does_not_support_custom_equality_comparer()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<NotSupportedException>(() =>
+                    {
+                        session.Query<Address>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.City, x => 1,
+                            (key, g) => new
+                            {
+                                City = key,
+                                Count = g.Count()
+                            }, StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+                    });
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_project_in_map_reduce()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Torun"
+                    });
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Torun"
+                    });
+                    await session.StoreAsync(new Address()
+                    {
+                        City = "Hadera"
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var results = store.DatabaseCommands.Query("dynamic/Addresses", new IndexQuery
+                {
+                    DynamicMapReduceFields = new[]
+                    {
+                        new DynamicMapReduceField
+                        {
+                            Name = "City",
+                            ClientSideName = null,
+                            IsGroupBy = true,
+                            OperationType = FieldMapReduceOperation.None
+                        },
+                        new DynamicMapReduceField
+                        {
+                            Name = "TotalCount",
+                            ClientSideName = "Count",
+                            IsGroupBy = false,
+                            OperationType = FieldMapReduceOperation.Count
+                        }
+                    },
+                    FieldsToFetch = new[] { "City" },
+                    WaitForNonStaleResultsAsOfNow = true
+                });
+
+                Assert.Equal(2, results.Results.Count);
+                Assert.True(results.Results.All(x => x.Keys.Count == 2));
+                Assert.True(results.Results.All(x => x.ContainsKey("City")));
+                Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata)));
+                Assert.True(results.Results.Any(x => x.Value<string>("City") == "Torun"));
+                Assert.True(results.Results.Any(x => x.Value<string>("City") == "Hadera"));
+            }
+        }
+
+        [Fact]
+        public async Task Order_by_string_integer_and_decimal_fields()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Chair",
+                        Quantity = 1,
+                        PricePerUnit = 1.2m
+                    });
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Chair",
+                        Quantity = 3,
+                        PricePerUnit = 3.3m
+                    });
+                    await session.StoreAsync(new OrderLine
+                    {
+                        ProductName = "Desk",
+                        Quantity = 2,
+                        PricePerUnit = 2.7m
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                // order by string
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = x.Key,
+                                    OrderedQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderBy(x => x.NameOfProduct)
+                            .ToList();
+
+                    Assert.Equal("Chair", items[0].NameOfProduct);
+                    Assert.Equal("Desk", items[1].NameOfProduct);
+
+                    items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new OrderLineReduceResult
+                                {
+                                    NameOfProduct = x.Key,
+                                    OrderedQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderByDescending(x => x.NameOfProduct)
+                            .ToList();
+
+                    Assert.Equal("Desk", items[0].NameOfProduct);
+                    Assert.Equal("Chair", items[1].NameOfProduct);
+                }
+
+                // order by int
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderBy(x => x.TotalQuantity)
+                            .ToList();
+
+                    Assert.Equal("Desk", items[0].NameOfProduct);
+                    Assert.Equal("Chair", items[1].NameOfProduct);
+
+                    items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalQuantity = x.Sum(_ => _.Quantity)
+                                })
+                            .OrderByDescending(x => x.TotalQuantity)
+                            .ToList();
+
+                    Assert.Equal("Chair", items[0].NameOfProduct);
+                    Assert.Equal("Desk", items[1].NameOfProduct);
+                }
+
+                // order by decimal
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalPricePerUnit = x.Sum(_ => _.PricePerUnit)
+                                })
+                            .OrderBy(x => x.TotalPricePerUnit)
+                            .ToList();
+
+                    Assert.Equal("Desk", items[0].NameOfProduct);
+                    Assert.Equal("Chair", items[1].NameOfProduct);
+
+                    items = session.Query<OrderLine>().Customize(x => x.WaitForNonStaleResults()).GroupBy(x => x.ProductName).Select(
+                            x =>
+                                new
+                                {
+                                    NameOfProduct = x.Key,
+                                    TotalPricePerUnit = x.Sum(_ => _.PricePerUnit)
+                                })
+                            .OrderByDescending(x => x.TotalPricePerUnit)
+                            .ToList();
+
+                    Assert.Equal("Chair", items[0].NameOfProduct);
+                    Assert.Equal("Desk", items[1].NameOfProduct);
+                }
+            }
+        }
+
+        [Fact]  
+        public async Task Group_by_nested_field_sum_on_collection()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        ShipTo = new Address {  Country = "Norway" },
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Quantity = 2
+                            },
+                            new OrderLine
+                            {
+                                Quantity = 2
+                            }
+                        }
+                    });
+
+                    session.Store(new Order
+                    {
+                        ShipTo = new Address { Country = "Norway" },
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Quantity = 1
+                            }
+                        }
+                    });
+
+                    session.Store(new Order
+                    {
+                        ShipTo = new Address { Country = "Sweden" },
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                Quantity = 1
+                            }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => x.ShipTo.Country)
+                            .Select(x => new
+                            {
+                                Country = x.Key,
+                                OrderedQuantity = x.Sum(order => order.Lines.Sum(line => line.Quantity)),
+                                // TODO arek - to support queries like below we would need to distinguish between
+                                // map operation (Sum) and reduce operation (Average) for a single index field 
+                                //OrderedQuantity2 = x.Average(order => order.Lines.Sum(line => line.Quantity))
+                            })
+                            .OrderBy(x => x.Country)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal("Norway", orders[0].Country);
+                    Assert.Equal(5, orders[0].OrderedQuantity);
+
+                    Assert.Equal("Sweden", orders[1].Country);
+                    Assert.Equal(1, orders[1].OrderedQuantity);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => x.ShipTo.Country, x => x.Lines.Sum(line => line.Quantity))
+                            .Select((group, i) => new
+                            {
+                                Country = group.Key,
+                                OrderedQuantity = group.Sum(x => x)
+                            })
+                            .OrderBy(x => x.Country)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal("Norway", orders[0].Country);
+                    Assert.Equal(5, orders[0].OrderedQuantity);
+
+                    Assert.Equal("Sweden", orders[1].Country);
+                    Assert.Equal(1, orders[1].OrderedQuantity);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Group_by_multiple_fields()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1",
+                        Company = "companies/2"
+                    });
+
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1",
+                        Company = "companies/2"
+                    });
+
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2",
+                        Company = "companies/2"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.Employee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].Employee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].Employee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new GroupByEmployeeAndCompany // class instead of anonymous object
+                            {
+                                Employee = x.Employee,
+                                Company = x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.Employee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].Employee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].Employee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                RenamedEmployee = x.Employee, // field rename inside GroupBy
+                                x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.RenamedEmployee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new GroupByRenamedEmployeeAndCompany // class instead of anonymous object
+                            {
+
+                                RenamedEmployee = x.Employee, // field renames inside GroupBy
+                                Company = x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.RenamedEmployee,
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new
+                            {
+                                RenamedEmployee = x.Key.Employee, // field rename of composite key inside Select
+                                x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new GroupByRenamedEmployeeAndCompanyResult // class instead of anonymous object
+                            {
+                                RenamedEmployee = x.Key.Employee, // field rename of composite key inside Select
+                                Company = x.Key.Company,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].Company);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders =
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                RenamedCompany = x.Company // renamed here
+                            })
+                            .Select(x => new
+                            {
+                                RenamedEmployee = x.Key.Employee, // and here
+                                x.Key.RenamedCompany,
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[0].RenamedCompany);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].RenamedEmployee);
+                    Assert.Equal("companies/2", orders[1].RenamedCompany);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Select_does_not_allow_to_specify_composite_group_by_directly()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var ex = Assert.Throws<NotSupportedException>(() =>
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new
+                            {
+                                x.Employee,
+                                x.Company
+                            })
+                            .Select(x => new
+                            {
+                                x.Key, // not allowed, need to specify x.Key.Employee and x.Key.Company
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList());
+
+                    Assert.Equal("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.", ex.InnerException.Message);
+
+                    ex = Assert.Throws<NotSupportedException>(() =>
+                        session.Query<Order>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .GroupBy(x => new GroupByEmployeeAndCompany
+                            {
+                                Employee = x.Employee,
+                                Company = x.Company
+                            })
+                            .Select(x => new OrderByCompositeKeyReduceResult
+                            {
+                                GroupByEmployeeAndCompany = x.Key, // not allowed
+                                Count = x.Count()
+                            })
+                            .OrderBy(x => x.Count)
+                            .ToList());
+
+                    Assert.Equal("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.", ex.InnerException.Message);
+                }
+            }
+        }
+
+        public class AddressReduceResult
+        {
+            public string City { get; set; }
+            public int TotalCount { get; set; }
+        }
+
+        public class OrderLineReduceResult
+        {
+            public string NameOfProduct { get; set; }
+            public int OrderedQuantity { get; set; }
+        }
+
+        public class GroupByEmployeeAndCompany
+        {
+            public string Employee { get; set; }
+            public string Company { get; set; }
+        }
+
+        public class OrderByCompositeKeyReduceResult
+        {
+            public GroupByEmployeeAndCompany GroupByEmployeeAndCompany { get; set; }
+            public int Count { get; set; }
+        }
+
+        public class GroupByRenamedEmployeeAndCompany
+        {
+            public string RenamedEmployee { get; set; }
+            public string Company { get; set; }
+        }
+
+        public class GroupByRenamedEmployeeAndCompanyResult
+        {
+            public string RenamedEmployee { get; set; }
+            public string Company { get; set; }
+            public int Count { get; set; }
+        }
+    }
+}

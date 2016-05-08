@@ -27,21 +27,20 @@ namespace Raven.Tests.Storage
             DataDir = NewDataPath("DataDirectory");
         }
 
-        private void InitializeDocumentDatabase()
+        private void InitializeDocumentDatabase(string storageName)
         {
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = DataDir
-                },
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
+                RunInMemory = false,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Storage =
+                Settings =
                 {
-                    AllowIncrementalBackups = true
+                    {"Raven/Esent/CircularLog", "false"},
+                    {"Raven/Voron/AllowIncrementalBackups", "true"}
                 }
-            }, null);
+            }.Initialize(), null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
         }
 
@@ -51,36 +50,37 @@ namespace Raven.Tests.Storage
             base.Dispose();
         }
 
-        [Fact]
-        public void AfterIncrementalBackupRestoreCanReadDocument()
+        [Theory]
+        [PropertyData("Storages")]
+        public void AfterIncrementalBackupRestoreCanReadDocument(string storageName)
         {
-            InitializeDocumentDatabase();
+            InitializeDocumentDatabase(storageName);
             IOExtensions.DeleteDirectory(BackupDir);
 
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
-            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
+            MaintenanceActions.Restore(new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = DataDir,
-                },
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
+                RunInMemory = false,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Storage =
+                Settings =
                 {
-                    AllowIncrementalBackups = true
+                    {"Raven/Esent/CircularLog", "false"},
+                    {"Raven/Voron/AllowIncrementalBackups", "true"}
                 }
+
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -88,21 +88,16 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                }
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("ayende");
+            var fetchedData = db.Documents.Get("ayende", null);
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Documents.Get("itamar");
+            fetchedData = db.Documents.Get("itamar", null);
             Assert.NotNull(fetchedData);
             
             jObject = fetchedData.ToJson();
@@ -110,44 +105,45 @@ namespace Raven.Tests.Storage
             Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
         }
 
-        [Fact]
-        public void AfterMultipleIncrementalBackupRestoreCanReadDocument()
+        [Theory]
+        [PropertyData("Storages")]
+        public void AfterMultipleIncrementalBackupRestoreCanReadDocument(string storageName)
         {
-            InitializeDocumentDatabase();
+            InitializeDocumentDatabase(storageName);
             IOExtensions.DeleteDirectory(BackupDir);
 
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             Thread.Sleep(TimeSpan.FromSeconds(1));
 
             db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
-            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             Thread.Sleep(TimeSpan.FromSeconds(1));
 
             db.Documents.Put("michael", null, RavenJObject.Parse("{'email':'michael.yarichuk@ayende.com'}"), new RavenJObject(), null);
-            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
+            MaintenanceActions.Restore(new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = DataDir
-                },
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
+                RunInMemory = false,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Storage =
+                Settings =
                 {
-                    AllowIncrementalBackups = true
+                    {"Raven/Esent/CircularLog", "false"},
+                    {"Raven/Voron/AllowIncrementalBackups", "true"}
                 }
+
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -155,28 +151,23 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                }
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("ayende");
+            var fetchedData = db.Documents.Get("ayende", null);
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Documents.Get("itamar");
+            fetchedData = db.Documents.Get("itamar", null);
             Assert.NotNull(fetchedData);
 
             jObject = fetchedData.ToJson();
             Assert.NotNull(jObject);
             Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
 
-            fetchedData = db.Documents.Get("michael");
+            fetchedData = db.Documents.Get("michael", null);
             Assert.NotNull(fetchedData);
 
             jObject = fetchedData.ToJson();
@@ -185,16 +176,15 @@ namespace Raven.Tests.Storage
 
         }
 
-        [Fact]
-        public void IncrementalBackupWithCircularLogOrVoronIncrementalBackupsNotEnabledThrows()
+        [Theory]
+        [PropertyData("Storages")]
+        public void IncrementalBackupWithCircularLogOrVoronIncrementalBackupsNotEnabledThrows(string storageName)
         {
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = DataDir
-                },
+                RunInMemory = false,
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
             }, null);
 
@@ -202,7 +192,7 @@ namespace Raven.Tests.Storage
         
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
-            Assert.Throws<InvalidOperationException>(() => db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument()));
+            Assert.Throws<InvalidOperationException>(() => db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState()));
         }
     }
 }

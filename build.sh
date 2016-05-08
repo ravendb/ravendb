@@ -16,6 +16,7 @@ OP_INSTALL_DNX=0
 OP_SKIP_ERRORS=0
 OP_REPORT=0
 OP_SKIP_TESTS=0
+OP_INSTALL_CLIENT=0
 
 NC='\033[0m'
 RED='\033[0;31m'
@@ -43,6 +44,7 @@ function printHelp () {
 	printf "  Options:\n"
 	printf "           --install-pkgs          : if found missing packages - try to install using packager installer\n"
 	printf "           --install-dnx           : try to install dnvm and compile libuv if missing\n"
+	printf "           --install-client        : install ravendb packages using pip in python\n"
 	printf "           --skip-errors           : do not exit on missing items, installation fails, build and test failures\n"
 	printf "           --skip-tests            : do not perform tests\n"
 	printf "           --clr-version=<version> : set clr version to install and use (default : ${CLR_VER})\n"
@@ -61,6 +63,9 @@ do
 			;;
 		--install-dnx)
 			OP_INSTALL_DNX=1
+			;;
+		--install-client)
+			OP_INSTALL_CLIENT=1
 			;;
 		--skip-errors)
 			OP_SKIP_ERRORS=1
@@ -124,6 +129,10 @@ function checkPackages () {
 	printf "\n${BLUE}Checking Packages:${NC}\n"
 	pkgsNotInstalled=()
 	foundMissingPkgs=0
+	if [ ${OP_INSTALL_CLIENT} == 1 ]
+	then
+		CHK_PKGS+=(python)
+	fi
 	for i in "${CHK_PKGS[@]}"
 	do
 		echoTestPkg $i
@@ -278,6 +287,61 @@ function checkDnx () {
                         echoSkippingErros
                 fi
         fi
+
+	if [ ${OP_INSTALL_CLIENT} == 1 ]
+	then
+		echoTestPkg "RavenDB Python Client"
+		type python &> /dev/null
+		status=$?
+		if [ ${status} == 0 ]
+		then
+			rm -f /tmp/build.pythonVer
+			python --version > ${OUT_FILE}.pythonVer 2>&1
+			pyver="`cat ${OUT_FILE}.pythonVer | cut -f1,2 -d' '`"
+			if [ "${pyver}" == "Python 2.7.6" ]
+			then
+
+				if hash pip 2>/dev/null
+				then
+					printf "${CYAN}Executing \"sudo pip install pyravendb\"${NC}"
+					sudo pip install pyravendb >& /dev/null
+					status=$?
+					if [ ${status} != 0 ]
+					then
+						echoErrorPkgWithMsg "Failed to pip install pyravendb"
+						if [ ${OP_REPORT} == 1 ] 
+						then
+							echo "`date +"%d/%m/%Y_%H:%M:%S"` WARNING - Failed to pip install pyravendb" >> ${REPORT_FILE}
+							REPORT_FLAG=1
+						fi
+					else
+						echoOkPkg
+					fi
+				else
+					echoErrorPkgWithMsg "pip (python-pip pkg) must be installed"
+					if [ ${OP_REPORT} == 1 ] 
+					then
+						echo "`date +"%d/%m/%Y_%H:%M:%S"` WARNING - pip (python-pip pkg) must be installed" >> ${REPORT_FILE}
+						REPORT_FLAG=1
+					fi
+				fi
+			else
+				echoErrorPkgWithMsg "Python version must be 2.7.6"
+				if [ ${OP_REPORT} == 1 ] 
+				then
+					echo "`date +"%d/%m/%Y_%H:%M:%S"` WARNING - Python version is not 2.7.6" >> ${REPORT_FILE}
+					REPORT_FLAG=1
+				fi			
+			fi
+		else
+			echoErrorPkgWithMsg "Python is not installed!"
+			if [ ${OP_REPORT} == 1 ] 
+			then
+				echo "`date +"%d/%m/%Y_%H:%M:%S"` WARNING - Python is not installed" >> ${REPORT_FILE}
+				REPORT_FLAG=1
+			fi
+		fi
+	fi		
 }
 
 function echoTestPkg () {
@@ -304,6 +368,13 @@ function echoOkPkg () {
 	tput cub 9999
 	tput cuf 2
 	printf "${GREEN}OK${NC}\n"
+}
+
+function echoErrorPkgWithMsg () {
+	printf " ${RED} $1${NC}"
+	tput cub 9999
+	tput cuf 1
+	printf "${RED}ERROR${NC}\n"
 }
 
 function echoSuccessExec () {
@@ -441,7 +512,7 @@ function buildRaven () {
 	done
 }
 
-function runTests () {	
+function runTests () {
 if [ ${OP_SKIP_TESTS} == 0 ]
 then
 	for i in "${TEST_DIRS[@]}"

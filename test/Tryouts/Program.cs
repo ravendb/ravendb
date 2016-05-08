@@ -10,7 +10,10 @@ using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.RawData;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Client.Linq;
 using Raven.Client.Platform;
+
+using SlowTests.Tests.Sorting;
 
 namespace Tryouts
 {
@@ -27,9 +30,9 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var x = new BasicIndexing())
+            using (var x = new AlphaNumericSorting())
             {
-                x.Errors2();
+                x.dynamic_query_should_work().Wait();
             }
         }
 

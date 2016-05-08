@@ -6,12 +6,10 @@ using System.Text.RegularExpressions;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
-using Raven.Client.Exceptions;
 using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
+using Raven.Client.Data.Queries;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
@@ -26,9 +24,8 @@ namespace Raven.Client.Document.SessionOperations
         private readonly IndexQuery indexQuery;
         private readonly bool waitForNonStaleResults;
         private bool disableEntitiesTracking;
-        private readonly TimeSpan timeout;
+        private readonly TimeSpan? timeout;
         private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
-        private readonly HashSet<string> includes;
         private QueryResult currentQueryResults;
         private readonly string[] projectionFields;
         private bool firstRequest = true;
@@ -51,15 +48,14 @@ namespace Raven.Client.Document.SessionOperations
         private Stopwatch sp;
 
         public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery,
-                              string[] projectionFields, bool waitForNonStaleResults, TimeSpan timeout,
+                              string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
                               Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
-                              HashSet<string> includes, bool disableEntitiesTracking)
+                              bool disableEntitiesTracking)
         {
             this.indexQuery = indexQuery;
             this.waitForNonStaleResults = waitForNonStaleResults;
             this.timeout = timeout;
             this.transformResults = transformResults;
-            this.includes = includes;
             this.projectionFields = projectionFields;
             this.sessionOperations = sessionOperations;
             this.indexName = indexName;
@@ -99,9 +95,9 @@ namespace Raven.Client.Document.SessionOperations
         public void LogQuery()
         {
             if (log.IsDebugEnabled)
-            log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
-                                          indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
-            }
+                log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
+                                              indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
+        }
 
         public IDisposable EnterQueryContext()
         {
@@ -130,7 +126,7 @@ namespace Raven.Client.Document.SessionOperations
                 .ToList();
 
             if (disableEntitiesTracking == false)
-                sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), includes);
+                sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), indexQuery.Includes);
 
             if (transformResults == null)
                 return list;
@@ -166,9 +162,9 @@ namespace Raven.Client.Document.SessionOperations
             var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
 
             if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
-                // We are projecting one field only (although that could be derived from the
-                // previous check, one could never be too careful
-                projectionFields != null && projectionFields.Length == 1 && 
+                                                                                    // We are projecting one field only (although that could be derived from the
+                                                                                    // previous check, one could never be too careful
+                projectionFields != null && projectionFields.Length == 1 &&
                 HasSingleValidProperty(result, metadata) // there are no more props in the result object
                 )
             {
@@ -266,7 +262,7 @@ namespace Raven.Client.Document.SessionOperations
 
                 throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
             }
-            
+
             currentQueryResults = result;
             currentQueryResults.EnsureSnapshot();
 

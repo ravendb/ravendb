@@ -3,13 +3,22 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
+using Lucene.Net.Analysis;
+
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
+using Raven.Client.Bundles.MoreLikeThis;
+using Raven.Client.Connection;
+using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
+using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -149,9 +158,9 @@ namespace FastTests.Client.Indexing
                 Assert.True(stats.IsInMemory);
                 Assert.Equal(IndexType.AutoMap, stats.Type);
                 Assert.Equal(2, stats.EntriesCount);
-                Assert.Equal(2, stats.IndexingAttempts);
-                Assert.Equal(0, stats.IndexingErrors);
-                Assert.Equal(2, stats.IndexingSuccesses);
+                Assert.Equal(2, stats.MapAttempts);
+                Assert.Equal(0, stats.MapErrors);
+                Assert.Equal(2, stats.MapSuccesses);
                 Assert.Equal(1, stats.ForCollections.Length);
                 Assert.Equal(2 + 1, stats.LastIndexedEtags[stats.ForCollections[0]]); // +1 because of HiLo
                 Assert.True(stats.LastIndexingTime.HasValue);
@@ -428,6 +437,245 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(indexName1, performanceStats[0].IndexName);
                 Assert.True(performanceStats[0].IndexId > 0);
                 Assert.True(performanceStats[0].Performance.Length > 0);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteByIndex()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
+
+                var operation = await store
+                    .AsyncDatabaseCommands
+                    .DeleteByIndexAsync(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false })
+                    .ConfigureAwait(false);
+
+                await operation
+                    .WaitForCompletionAsync()
+                    .ConfigureAwait(false);
+
+                var statistics = await store
+                    .AsyncDatabaseCommands
+                    .GetStatisticsAsync()
+                    .ConfigureAwait(false);
+
+                Assert.Equal(1, statistics.CountOfDocuments);
+                var documents = store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
+                Assert.Equal(1, documents.Result.Length);
+                Assert.Equal("Raven/Hilo/users", documents.Result[0].Key);
+
+                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync().ConfigureAwait(false);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                var e = Assert.Throws<ErrorResponseException>(() => store
+                    .DatabaseCommands
+                    .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+
+                Assert.True(e.Message.Contains("Query is stale"));
+            }
+        }
+
+        [Fact]
+        public async Task UpdateByIndex()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
+
+                var operation = await store
+                    .AsyncDatabaseCommands
+                    .UpdateByIndexAsync(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false })
+                    .ConfigureAwait(false);
+
+                await operation
+                    .WaitForCompletionAsync()
+                    .ConfigureAwait(false);
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    var user2 = session.Load<User>("users/2");
+
+                    Assert.Equal("Test", user1.LastName);
+                    Assert.Equal("Test", user2.LastName);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task GetIndexNames()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    indexName = stats.IndexName;
+                }
+
+                var indexNames = store.DatabaseCommands.GetIndexNames(0, 10);
+                Assert.Equal(1, indexNames.Length);
+                Assert.Contains(indexName, indexNames);
+            }
+        }
+
+        [Fact]
+        public async Task CanExplain()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }).ConfigureAwait(false);
+                    await session.StoreAsync(new User { Name = "Arek" }).ConfigureAwait(false);
+
+                    await session.SaveChangesAsync().ConfigureAwait(false);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var users = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
+
+                    users = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Age > 10)
+                        .ToList();
+                }
+
+                var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/queries/explain/dynamic/Users", HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+                var array = (RavenJArray)await request.ReadResponseJsonAsync();
+                var explanations = array.JsonDeserialization<DynamicQueryToIndexMatcher.Explanation>();
+
+                Assert.Equal(1, explanations.Length);
+                Assert.NotNull(explanations[0].Index);
+                Assert.NotNull(explanations[0].Reason);
+            }
+        }
+
+        [Fact]
+        public async Task MoreLikeThis()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Post { Id = "posts/1", Title = "doduck", Desc = "prototype" });
+                    session.Store(new Post { Id = "posts/2", Title = "doduck", Desc = "prototype your idea" });
+                    session.Store(new Post { Id = "posts/3", Title = "doduck", Desc = "love programming" });
+                    session.Store(new Post { Id = "posts/4", Title = "We do", Desc = "prototype" });
+                    session.Store(new Post { Id = "posts/5", Title = "We love", Desc = "challange" });
+                    session.SaveChanges();
+
+                    var database = await Server
+                        .ServerStore
+                        .DatabasesLandlord
+                        .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0));
+
+                    var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
+                    {
+                        new IndexField
+                        {
+                            Name = "Title",
+                            Analyzer = typeof(SimpleAnalyzer).FullName,
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
+                        },
+                        new IndexField
+                        {
+                            Name = "Desc",
+                            Analyzer = typeof(SimpleAnalyzer).FullName,
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
+                        }
+                    }));
+
+                    var index = database.IndexStore.GetIndex(indexId);
+
+                    WaitForIndexing(store);
+
+                    var list = session.Advanced.MoreLikeThis<Post>(index.Name, null, new MoreLikeThisQuery
+                    {
+                        DocumentId = "posts/1",
+                        MinimumDocumentFrequency = 1,
+                        MinimumTermFrequency = 0
+                    });
+
+                    Assert.Equal(3, list.Length);
+                    Assert.Equal("doduck", list[0].Title);
+                    Assert.Equal("prototype your idea", list[0].Desc);
+                    Assert.Equal("doduck", list[1].Title);
+                    Assert.Equal("love programming", list[1].Desc);
+                    Assert.Equal("We do", list[2].Title);
+                    Assert.Equal("prototype", list[2].Desc);
+                }
             }
         }
     }

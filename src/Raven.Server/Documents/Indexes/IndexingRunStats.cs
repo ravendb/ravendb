@@ -8,16 +8,22 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexingRunStats
     {
-        public int IndexingAttempts;
-        public int IndexingSuccesses;
-        public int IndexingErrors;
+        public int MapAttempts;
+        public int MapSuccesses;
+        public int MapErrors;
+
+        public int ReduceAttempts;
+        public int ReduceSuccesses;
+        public int ReduceErrors;
+
         public int IndexingOutputs;
 
         public List<IndexingError> Errors;
 
         public override string ToString()
         {
-            return $"Attempts: {IndexingAttempts}. Successes: {IndexingSuccesses}. Errors: {IndexingErrors}";
+            return $"Map - attempts: {MapAttempts}, successes: {MapSuccesses}, errors: {MapErrors} / " +
+                   $"Reduce - attempts: {ReduceAttempts}, successes: {ReduceSuccesses}, errors: {ReduceErrors}";
         }
 
         public void AddMapError(string key, string message)
@@ -25,9 +31,14 @@ namespace Raven.Server.Documents.Indexes
             AddError(key, message, "Map");
         }
 
+        public void AddReduceError(string message)
+        {
+            AddError(null, message, "Reduce");
+        }
+
         public void AddWriteError(IndexWriteException exception)
         {
-            AddError(null, $"Write exception occured: {exception.Message}", "Write");
+            AddError(null, $"Write exception occurred: {exception.Message}", "Write");
         }
 
         public void AddAnalyzerError(IndexAnalyzerException exception)

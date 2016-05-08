@@ -62,10 +62,10 @@ namespace Raven.Tests.Core.BulkInsert
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User
-                                  {
-                                      Id = "users/1", 
-                                      Name = "User - 1"
-                                  });
+                    {
+                        Id = "users/1",
+                        Name = "User - 1"
+                    });
 
                     session.SaveChanges();
                 }
@@ -79,10 +79,10 @@ namespace Raven.Tests.Core.BulkInsert
                         for (var i = 0; i < 10; i++)
                         {
                             bulkInsert.Store(new User
-                                             {
-                                                 Id = "users/" + (i + 1), 
-                                                 Name = "resU - " + (i + 1)
-                                             });
+                            {
+                                Id = "users/" + (i + 1),
+                                Name = "resU - " + (i + 1)
+                            });
                         }
                     }
                 });
@@ -113,10 +113,10 @@ namespace Raven.Tests.Core.BulkInsert
                     for (int i = 0; i < 10; i++)
                     {
                         bulkInsert.Store(new User
-                                         {
-                                             Id = "users/" + (i + 1), 
-                                             Name = "User - " + (i + 1)
-                                         });
+                        {
+                            Id = "users/" + (i + 1),
+                            Name = "User - " + (i + 1)
+                        });
                     }
                 }
 
@@ -127,10 +127,10 @@ namespace Raven.Tests.Core.BulkInsert
                     for (int i = 0; i < 10; i++)
                     {
                         bulkInsert.Store(new User
-                                         {
-                                             Id = "users/" + (i + 1), 
-                                             Name = "resU - " + (i + 1)
-                                         });
+                        {
+                            Id = "users/" + (i + 1),
+                            Name = "resU - " + (i + 1)
+                        });
                     }
                 }
 

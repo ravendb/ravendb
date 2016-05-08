@@ -11,18 +11,21 @@ using System;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Connection
 {
     public class ObservableLineStream : IObservable<string>, IDisposable
     {
+        private readonly ConcurrentSet<IObserver<string>> subscribers = new ConcurrentSet<IObserver<string>>();
         private readonly Stream stream;
         private readonly byte[] buffer = new byte[8192];
-        private int posInBuffer;
         private readonly Action onDispose;
+        private readonly object taskFaultedSyncObj = new object();
 
-        private readonly ConcurrentSet<IObserver<string>> subscribers = new ConcurrentSet<IObserver<string>>();
+        private int posInBuffer;
+        private bool onDisposeCalled;
 
         public ObservableLineStream(Stream stream, Action onDispose)
         {
@@ -95,28 +98,60 @@ namespace Raven.Client.Connection
                                 {
                                     if (task.IsFaulted)
                                     {
-                                        try
-                                        {
-                                            stream.Dispose();
-                                        }
-                                        catch (Exception)
-                                        {
-                                            // explicitly ignoring this
-                                        }
-                                        var aggregateException = task.Exception;
-                                        var exception = aggregateException.ExtractSingleInnerException();
-                                        if (exception is ObjectDisposedException)
-                                            return; // this isn't an error
-
-                                        foreach (var subscriber in subscribers)
-                                        {
-                                            subscriber.OnError(aggregateException);
-                                        }
+                                        DisposeAndSingalConnectionError(task);
                                         return;
                                     }
 
                                     Start(); // read more lines
                                 });
+        }
+
+        private void DisposeAndSingalConnectionError(Task task)
+        {
+            if (Monitor.TryEnter(taskFaultedSyncObj) == false)
+                return;
+
+            try
+            {
+                try
+                {
+                    stream.Dispose();
+                }
+                catch (Exception)
+                {
+                    // explicitly ignoring this
+                }
+
+                //make sure the existing connection is returned
+                //to http client cache
+                //since the stream has faulted, we will either
+                //reconnect or fail the Changes API with exception
+                //so in any case we need to cleanup things
+
+                if (onDisposeCalled == false)
+                {
+                    onDispose();
+                    onDisposeCalled = true;
+                }
+
+                var aggregateException = task.Exception;
+                var exception = aggregateException.ExtractSingleInnerException();
+                if (exception is ObjectDisposedException)
+                    return;
+
+                var we = exception as WebException;
+                if (we != null && we.Status == WebExceptionStatus.RequestCanceled)
+                    return;
+
+                foreach (var subscriber in subscribers)
+                {
+                    subscriber.OnError(aggregateException);
+                }
+            }
+            finally
+            {
+                Monitor.Exit(taskFaultedSyncObj);
+            }
         }
 
         private async Task<int> ReadAsync()
@@ -139,7 +174,17 @@ namespace Raven.Client.Connection
                 subscriber.OnCompleted();
             }
 
-            onDispose();
+            if (onDisposeCalled)
+                return;
+
+            lock (taskFaultedSyncObj)
+            {
+                if (onDisposeCalled)
+                    return;
+
+                onDispose();
+                onDisposeCalled = true;
+            }
         }
     }
 }

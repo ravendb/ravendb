@@ -12,12 +12,12 @@ namespace Raven.Tests.Triggers
 {
     public class AuditPutTrigger : AbstractPutTrigger
     {
-        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
+        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             return VetoResult.Allowed;
         }
 
-        public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
+        public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             jsonReplicationDocument["created_at"] = new RavenJValue(new DateTime(2010, 2, 13, 18, 26, 48, 506, DateTimeKind.Utc));
         }

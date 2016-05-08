@@ -22,6 +22,7 @@ using Raven.Client.Connection.Implementation;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Indexing;
@@ -86,7 +87,7 @@ namespace Raven.Client.Connection
         /// <param name="indexName">name of an index to perform a query on</param>
         /// <param name="queryToDelete">Tquery that will be performed</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-        Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null);
+        Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null);
 
         /// <summary>
         ///     Deletes the specified index
@@ -126,7 +127,8 @@ namespace Raven.Client.Connection
         ///     Retrieve a single document for a specified key.
         /// </summary>
         /// <param name="key">key of the document you want to retrieve</param>
-        JsonDocument Get(string key);
+        /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
+        JsonDocument Get(string key, bool metadataOnly = false);
 
         /// <summary>
         ///     Retrieves documents with the specified ids, optionally specifying includes to fetch along and also optionally the
@@ -298,13 +300,13 @@ namespace Raven.Client.Connection
         void SetTransformerLock(string name, TransformerLockMode lockMode);
 
         /// <summary>
-        ///     Retrieves the document metadata for the specified document key.
+        ///     Retrieves the etag for the specified document.
         ///     <para>Returns:</para>
-        ///     <para>The document metadata for the specified document, or <c>null</c> if the document does not exist</para>
+        ///     <para>The document etag for the specified document, or <c>null</c> if the document does not exist</para>
         /// </summary>
-        /// <param name="key">key of a document to get metadata for</param>
-        /// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
-        JsonDocumentMetadata Head(string key);
+        /// <param name="key">key of a document to get etag for</param>
+        /// <returns>The etag for the specified document, or null if the document does not exist</returns>
+        long? Head(string key);
 
         /// <summary>
         ///     Lets you check if the given index definition differs from the one on a server.
@@ -329,7 +331,7 @@ namespace Raven.Client.Connection
         ///     Return a list of documents that based on the MoreLikeThisQuery.
         /// </summary>
         /// <param name="query">more like this query definition that will be executed</param>
-        LoadResult MoreLikeThis(MoreLikeThisQuery query);
+        QueryResult MoreLikeThis(MoreLikeThisQuery query);
 
         /// <summary>
         ///     Perform a single POST request containing multiple nested GET requests
@@ -441,13 +443,9 @@ namespace Raven.Client.Connection
         /// </summary>
         /// <param name="index">name of an index to query</param>
         /// <param name="query">query definition containing all information required to query a specified index</param>
-        /// <param name="includes">
-        ///     an array of relative paths that specify related documents ids which should be included in a
-        ///     query result
-        /// </param>
         /// <param name="metadataOnly">true if returned documents should include only metadata without a document body.</param>
         /// <param name="indexEntriesOnly">true if query results should contain only index entries.</param>
-        QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false, bool indexEntriesOnly = false);
+        QueryResult Query(string index, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false);
 
         /// <summary>
         ///     Removes all indexing data from a server for a given index so the indexation can start from scratch for that index.
@@ -540,7 +538,7 @@ namespace Raven.Client.Connection
         /// <param name="queryToUpdate">query that will be performed</param>
         /// <param name="patch">JavaScript patch that will be executed on query results</param>
         /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest patch, BulkOperationOptions options = null);
+        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null);
 
         /// <summary>
         ///     Get the full URL for the given document key

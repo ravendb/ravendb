@@ -111,55 +111,64 @@ namespace Raven.Server.Web
 
             long etag;
             if (long.TryParse(etags[0], out etag) == false)
-                throw new ArgumentException(
-                    "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
+                throw new ArgumentException("Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
+
             return etag;
         }
 
         protected int GetStart(int defaultValue = 0)
         {
-            return GetIntQueryString(StartParameter, defaultValue);
+            return GetIntValueQueryString(StartParameter, required: false) ?? defaultValue;
         }
 
         protected int GetPageSize(int defaultValue = 25)
         {
-            return GetIntQueryString(PageSizeParameter, defaultValue);
+            return GetIntValueQueryString(PageSizeParameter, required: false) ?? defaultValue;
         }
 
-        protected int GetIntQueryString(string name, int? defaultValue = null)
+        protected int? GetIntValueQueryString(string name, bool required = true)
         {
-            var val = HttpContext.Request.Query[name];
-            if (val.Count == 0)
-            {
-                if (defaultValue.HasValue)
-                    return defaultValue.Value;
-                throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
-            }
+            var intAsString = GetStringQueryString(name, required);
+            if (intAsString == null)
+                return null;
 
             int result;
-            if (int.TryParse(val[0], out result) == false)
-                throw new ArgumentException(
-                    string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+            if (int.TryParse(intAsString, out result) == false)
+                throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, intAsString));
+
             return result;
         }
 
-        protected long GetLongQueryString(string name)
+        protected long? GetLongQueryString(string name, bool required = true)
         {
-            var val = HttpContext.Request.Query[name];
-            if (val.Count == 0)
-                throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+            var longAsString = GetStringQueryString(name, required);
+            if (longAsString == null)
+                return null;
 
             long result;
-            if (long.TryParse(val[0], out result) == false)
-                throw new ArgumentException(
-                    string.Format("Could not parse query string '{0}' header as int64, value was: {1}", name, val[0]));
+            if (long.TryParse(longAsString, out result) == false)
+                throw new ArgumentException(string.Format("Could not parse query string '{0}' header as int64, value was: {1}", name, longAsString));
+
+            return result;
+        }
+
+        protected float? GetFloatValueQueryString(string name, bool required = true)
+        {
+            var floatAsString = GetStringQueryString(name, required);
+            if (floatAsString == null)
+                return null;
+
+            float result;
+            if (float.TryParse(floatAsString, out result) == false)
+                throw new ArgumentException($"Could not parse query string '{name}' as float");
+
             return result;
         }
 
         protected string GetStringQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
-            if (val.Count == 0)
+            if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))
             {
                 if (required)
                     throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
@@ -184,20 +193,15 @@ namespace Raven.Server.Web
             return val;
         }
 
-        protected bool GetBoolValueQueryString(string name, bool required = false)
+        protected bool? GetBoolValueQueryString(string name, bool required = true)
         {
             var boolAsString = GetStringQueryString(name, required);
             if (boolAsString == null)
-                return false;
+                return null;
 
             bool result;
             if (bool.TryParse(boolAsString, out result) == false)
-            {
-                if (required)
-                    throw new ArgumentException($"Could not parse query string '{name}' as bool");
-
-                return false;
-            }
+                throw new ArgumentException($"Could not parse query string '{name}' as bool");
 
             return result;
         }
@@ -212,6 +216,21 @@ namespace Raven.Server.Web
 
             DateTime result;
             if (DateTime.TryParseExact(dataAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+                return result;
+
+            throw new ArgumentException($"Could not parse query string '{name}' as date");
+        }
+
+        protected TimeSpan? GetTimeSpanQueryString(string name, bool required = true)
+        {
+            var timeSpanAsString = GetStringQueryString(name, required);
+            if (timeSpanAsString == null)
+                return null;
+
+            timeSpanAsString = Uri.UnescapeDataString(timeSpanAsString);
+
+            TimeSpan result;
+            if (TimeSpan.TryParse(timeSpanAsString, out result))
                 return result;
 
             throw new ArgumentException($"Could not parse query string '{name}' as date");

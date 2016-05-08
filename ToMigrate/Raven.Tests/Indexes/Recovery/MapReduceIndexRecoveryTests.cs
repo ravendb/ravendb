@@ -9,7 +9,6 @@ using System.Linq;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -17,9 +16,10 @@ namespace Raven.Tests.Indexes.Recovery
 {
     public class MapReduceIndexRecoveryTests : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core.NumberOfItemsToExecuteReduceInSingleStep, 10);		    
+            configuration.NumberOfItemsToExecuteReduceInSingleStep = 10;
+            configuration.DefaultStorageTypeName = "esent";
         }
 
         [Fact]
@@ -36,7 +36,7 @@ namespace Raven.Tests.Indexes.Recovery
                 {
                     index.Execute(store);
 
-                    indexFullPath = Path.Combine(server.SystemDatabase.Configuration.Core.IndexStoragePath,
+                    indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                              server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName).IndexId.ToString(CultureInfo.InvariantCulture));
 
                     using (var session = store.OpenSession())

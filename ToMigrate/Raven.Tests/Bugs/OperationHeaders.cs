@@ -38,10 +38,10 @@ namespace Raven.Tests.Bugs
         {
             public static string Hello;
 
-            public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
+            public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
             {
                 Hello = CurrentOperationContext.Headers.Value.Value["Hello"];
-                base.OnPut(key, jsonReplicationDocument, metadata);
+                base.OnPut(key, jsonReplicationDocument, metadata, transactionInformation);
             }
         }
     }

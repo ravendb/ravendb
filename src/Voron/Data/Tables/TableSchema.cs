@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Voron.Data.BTrees;
-using Voron.Data.Compact;
 using Voron.Data.RawData;
 using Voron.Impl;
 using Voron.Util.Conversion;
@@ -13,7 +12,6 @@ namespace Voron.Data.Tables
     {
         Default = 0x01,
         BTree = 0x01,
-        Compact = 0x02,
     }
 
     public unsafe class TableSchema
@@ -155,73 +153,29 @@ namespace Voron.Data.Tables
 
             if (_pk != null)
             {
-                switch (_pk.Type)
+                if (_pk.IsGlobal == false)
                 {
-                    case TableIndexType.BTree:
-                        {
-                            if (_pk.IsGlobal == false)
-                            {
-                                var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                                var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(TreeRootHeader));
-                                indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
-                            }
-                            else
-                            {
-                                tx.CreateTree(_pk.Name);
-                            }
-
-                            break;
-                        }
-                    case TableIndexType.Compact:
-                        {
-                            if (_pk.IsGlobal == false)
-                            {
-                                var indexTree = PrefixTree.Create(tx, tableTree, _pk.Name);
-                                var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(PrefixTreeRootHeader));
-                                indexTree.State.CopyTo((PrefixTreeRootHeader*)treeHeader);
-                            }
-                            else
-                            {
-                                tx.CreatePrefixTree(_pk.Name);
-                            }
-                            break;
-                        }
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                    var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof(TreeRootHeader));
+                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                }
+                else
+                {
+                    tx.CreateTree(_pk.Name);
                 }
             }
 
             foreach (var indexDef in _indexes.Values)
             {
-                switch (indexDef.Type)
+                if (indexDef.IsGlobal == false)
                 {
-                    case TableIndexType.BTree:
-                        {
-                            if (indexDef.IsGlobal == false)
-                            {
-                                var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                                var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(TreeRootHeader));
-                                indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
-                            }
-                            else
-                            {
-                                tx.CreateTree(indexDef.Name);
-                            }
-
-                            break;
-                        }
-                    case TableIndexType.Compact:
-                        {
-                            if (indexDef.IsGlobal == false)
-                            {
-                                var indexTree = PrefixTree.Create(tx, tableTree, indexDef.NameAsSlice);
-                                var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(PrefixTreeRootHeader));
-                                indexTree.State.CopyTo((PrefixTreeRootHeader*)treeHeader);
-                            }
-                            else
-                            {
-                                tx.CreatePrefixTree(indexDef.Name);
-                            }
-                            break;
-                        }
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                    var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof(TreeRootHeader));
+                    indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                }
+                else
+                {
+                    tx.CreateTree(indexDef.Name);
                 }
             }
         }

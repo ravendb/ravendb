@@ -1,8 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
-
-using Microsoft.AspNet.Http;
 
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -47,7 +44,11 @@ namespace Raven.Server.Documents.Handlers
                 context.OpenReadTransaction();
 
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
-                WriteDocuments(context, documents);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteDocuments(context, documents, metadataOnly: false);
+                }
             }
             return Task.CompletedTask;
         }

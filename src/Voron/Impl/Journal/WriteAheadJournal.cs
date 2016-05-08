@@ -135,7 +135,7 @@ namespace Voron.Impl.Journal
             var journalFiles = new List<JournalFile>();
             long lastSyncedTxId = -1;
             long lastSyncedJournal = logInfo.LastSyncedJournal;
-            uint lastShippedTxCrc = 0;
+            ulong lastShippedTxCrc = 0;
             for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
                 using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
@@ -162,7 +162,7 @@ namespace Voron.Impl.Journal
 
                         *txHeader = *lastReadHeaderPtr;
                         lastSyncedTxId = txHeader->TransactionId;
-                        lastShippedTxCrc = txHeader->Crc;
+                        lastShippedTxCrc = txHeader->Hash;
                         lastSyncedJournal = journalNumber;
                     }
 
@@ -376,11 +376,13 @@ namespace Voron.Impl.Journal
 
         public class JournalApplicator : IDisposable
         {
-            private const long DelayedDataFileSynchronizationBytesLimit = 2L * 1024 * 1024 * 1024;
+            private const long DelayedDataFileSynchronizationBytesLimit = 2L * Constants.Size.Gigabyte;
+
             private readonly TimeSpan _delayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
             private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
             private readonly object _flushingLock = new object();
             private readonly WriteAheadJournal _waj;
+
             private long _lastSyncedTransactionId;
             private long _lastSyncedJournal;
             private long _totalWrittenButUnsyncedBytes;
@@ -728,9 +730,11 @@ namespace Voron.Impl.Journal
 
                     lastReadTxHeader = *readTxHeader;
 
-                    var compressedPages = (readTxHeader->CompressedSize / _waj._env.Options.PageSize) + (readTxHeader->CompressedSize % _waj._env.Options.PageSize == 0 ? 0 : 1);
+                    int totalSize = readTxHeader->CompressedSize + sizeof(TransactionHeader);
+                    int compressedPages = (totalSize / _waj._env.Options.PageSize) + (totalSize % _waj._env.Options.PageSize == 0 ? 0 : 1);
 
-                    txPos += compressedPages + 1;
+                    // We skip to the next transaction header.
+                    txPos += compressedPages;
                 }
                 
                 Debug.Assert(_lastSyncedJournal != -1);
@@ -844,56 +848,62 @@ namespace Voron.Impl.Journal
         {
             // numberOfPages include the tx header page, which we don't compress
             var dataPagesCount = numberOfPages - 1;
-            var pageSize = tx.Environment.Options.PageSize;
-            var sizeInBytes = dataPagesCount * pageSize;
-            var outputBuffer = LZ4.MaximumOutputLength(sizeInBytes);
-            var outputBufferInPages = outputBuffer / pageSize +
-                                      (outputBuffer % pageSize == 0 ? 0 : 1);
-            var pagesRequired = (dataPagesCount + outputBufferInPages);
 
+            int pageSize = tx.Environment.Options.PageSize;
+            var sizeInBytes = dataPagesCount * pageSize;
+
+            // We want to include the Transaction Header straight into the compression buffer.
+            var outputBufferSize = LZ4.MaximumOutputLength(sizeInBytes) + sizeof(TransactionHeader);
+            var outputBufferInPages = outputBufferSize / pageSize +
+                                      (outputBufferSize % pageSize == 0 ? 0 : 1);
+
+            // The pages required includes the intermediate pages and the required output pages. 
+            var pagesRequired = (dataPagesCount + outputBufferInPages);
             var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
             tx.AddPagerState(pagerState);
-            var tempBuffer = compressionPager.AcquirePagePointer(0);
-            var compressionBuffer = compressionPager.AcquirePagePointer(dataPagesCount);
-
-            var write = tempBuffer;
+                        
+            // We get the pointer to the compression buffer, which will be the buffer that will hold the whole thing.
+            var outputBuffer = compressionPager.AcquirePagePointer(dataPagesCount);
+            
+            // Where we are going to store the input data continously to compress it afterwards.             
+            var tempBuffer = compressionPager.AcquirePagePointer(0);           
             var txPages = tx.GetTransactionPages();
-
-            foreach( var txPage in txPages )
+            var write = tempBuffer;
+            foreach ( var txPage in txPages )
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var count = txPage.NumberOfPages * pageSize;
-                Memory.BulkCopy(write, scratchPage, count);
+                Memory.Copy(write, scratchPage, count);
                 write += count;
             }
 
-            var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
-            var remainder = len % pageSize;
-            var compressedPages = (len / pageSize) + (remainder == 0 ? 0 : 1);
+            var compressionBuffer = outputBuffer + sizeof(TransactionHeader);
+            var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBufferSize);
 
+            int totalLength = len + sizeof(TransactionHeader);  // We need to account for the transaction header as part of the total length.
+            var remainder = totalLength % pageSize;
+            var compressedPages = (totalLength / pageSize) + (remainder == 0 ? 0 : 1);
+            
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(compressionBuffer + len, 0, pageSize - remainder);
-            }
-
-            var pages = new IntPtr[compressedPages + 1];
+                UnmanagedMemory.Set(outputBuffer + totalLength, 0, pageSize - remainder);
+            }     
 
             var txHeaderPage = tx.GetTransactionHeaderPage();
             var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txHeaderPage.ScratchFileNumber, txHeaderPage.PositionInScratchBuffer);
             var txHeader = (TransactionHeader*)txHeaderBase;
-
             txHeader->Compressed = true;
             txHeader->CompressedSize = len;
             txHeader->UncompressedSize = sizeInBytes;
+            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, len);
 
-            pages[0] = new IntPtr(txHeaderBase);
+            // Copy the transaction header to the output buffer. 
+            Memory.Copy(outputBuffer, txHeaderBase, sizeof(TransactionHeader));
+            
+            var pages = new IntPtr[compressedPages];
             for (int index = 0; index < compressedPages; index++)
-            {
-                pages[index + 1] = new IntPtr(compressionBuffer + (index * pageSize));
-            }
-
-            txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages * pageSize);
+                pages[index] = new IntPtr(outputBuffer + (index * pageSize));
 
             return pages;
         }

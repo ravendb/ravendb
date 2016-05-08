@@ -571,9 +571,8 @@ namespace Sparrow.Json
                      // the verbatim string
                      str.Size - sizeof(int) * 2;
             var shouldCompress =
-                _state.CompressedSize != null ||
-                ((state & UsageMode.CompressStrings) == UsageMode.CompressStrings && size > 128) ||
-                (state & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings;
+                _state.CompressedSize != null &&
+                ((state & UsageMode.CompressStrings) == UsageMode.CompressStrings && size > 128 || (state & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings);
             if (maxGoodCompressionSize > 0 && shouldCompress)
             {
                 Compressed++;
@@ -647,6 +646,7 @@ namespace Sparrow.Json
         {
             var str = new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context);
             WriteString(str, out token, _mode);
+
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence
             _position += WriteVariableSizeInt(_state.EscapePositions.Count);

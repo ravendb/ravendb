@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
 using Raven.Abstractions.Data;
@@ -8,6 +7,7 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Client.Data.Queries;
 
 namespace Raven.Client.Document.Batches
 {
@@ -15,15 +15,13 @@ namespace Raven.Client.Document.Batches
     {
         private readonly QueryOperation queryOperation;
         private readonly Action<QueryResult> afterQueryExecuted;
-        private readonly HashSet<string> includes;
 
         private NameValueCollection headers;
 
-        public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, HashSet<string> includes, NameValueCollection headers)
+        public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, NameValueCollection headers)
         {
             this.queryOperation = queryOperation;
             this.afterQueryExecuted = afterQueryExecuted;
-            this.includes = includes;
             this.headers = headers;
         }
 
@@ -32,13 +30,9 @@ namespace Raven.Client.Document.Batches
             var stringBuilder = new StringBuilder();
             queryOperation.IndexQuery.AppendQueryString(stringBuilder);
 
-            foreach (var include in includes)
-            {
-                stringBuilder.Append("&include=").Append(include);
-            }
             var request = new GetRequest
             {
-                Url = "/indexes/" + queryOperation.IndexName, 
+                Url = "/indexes/" + queryOperation.IndexName,
                 Query = stringBuilder.ToString()
             };
             if (headers != null)
@@ -71,7 +65,7 @@ namespace Raven.Client.Document.Batches
             var queryResult = shardStrategy.MergeQueryResults(queryOperation.IndexQuery, list);
 
             queryOperation.EnsureIsAcceptable(queryResult);
-            
+
             if (afterQueryExecuted != null)
                 afterQueryExecuted(queryResult);
             Result = queryOperation.Complete<T>();

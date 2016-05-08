@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes
                     statsTree.Add(Schema.CreatedTimestampSlice, new Slice((byte*)&binaryDate, sizeof(long)));
                 }
 
-                tx.InnerTransaction.CreateTree(Schema.EtagsMapTree);
+                tx.InnerTransaction.CreateTree(Schema.EtagsTree);
                 tx.InnerTransaction.CreateTree(Schema.EtagsTombstoneTree);
 
                 _index.Definition.Persist(context, _environment.Options);
@@ -174,13 +174,20 @@ namespace Raven.Server.Documents.Indexes
             if (lastIndexingTime != null)
             {
                 stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
-                stats.IndexingAttempts = statsTree.Read(Schema.IndexingAttemptsSlice).Reader.ReadLittleEndianInt32();
-                stats.IndexingErrors = statsTree.Read(Schema.IndexingErrorsSlice).Reader.ReadLittleEndianInt32();
-                stats.IndexingSuccesses = statsTree.Read(Schema.IndexingAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapAttempts = statsTree.Read(Schema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapErrors = statsTree.Read(Schema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapSuccesses = statsTree.Read(Schema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+
+                if (_index.Type.IsMapReduce())
+                {
+                    stats.ReduceAttempts = statsTree.Read(Schema.ReduceAttemptsSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceErrors = statsTree.Read(Schema.ReduceErrorsSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceSuccesses = statsTree.Read(Schema.ReduceSuccessesSlice).Reader.ReadLittleEndianInt32();
+                }
 
                 stats.LastIndexedEtags = new Dictionary<string, long>();
                 foreach (var collection in _index.Definition.Collections)
-                    stats.LastIndexedEtags[collection] = ReadLastMappedEtag(tx, collection);
+                    stats.LastIndexedEtags[collection] = ReadLastIndexedEtag(tx, collection);
             }
 
             return stats;
@@ -191,9 +198,9 @@ namespace Raven.Server.Documents.Indexes
             return ReadLastEtag(tx, Schema.EtagsTombstoneTree, collection);
         }
 
-        public long ReadLastMappedEtag(RavenTransaction tx, string collection)
+        public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
-            return ReadLastEtag(tx, Schema.EtagsMapTree, collection);
+            return ReadLastEtag(tx, Schema.EtagsTree, collection);
         }
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
@@ -201,9 +208,9 @@ namespace Raven.Server.Documents.Indexes
             WriteLastEtag(tx, Schema.EtagsTombstoneTree, collection, etag);
         }
 
-        public void WriteLastMappedEtag(RavenTransaction tx, string collection, long etag)
+        public void WriteLastIndexedEtag(RavenTransaction tx, string collection, long etag)
         {
-            WriteLastEtag(tx, Schema.EtagsMapTree, collection, etag);
+            WriteLastEtag(tx, Schema.EtagsTree, collection, etag);
         }
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, string collection, long etag)
@@ -239,9 +246,16 @@ namespace Raven.Server.Documents.Indexes
 
                 var statsTree = tx.InnerTransaction.ReadTree(Schema.StatsTree);
 
-                statsTree.Increment(Schema.IndexingAttemptsSlice, stats.IndexingAttempts);
-                statsTree.Increment(Schema.IndexingSuccessesSlice, stats.IndexingSuccesses);
-                statsTree.Increment(Schema.IndexingErrorsSlice, stats.IndexingErrors);
+                statsTree.Increment(Schema.MapAttemptsSlice, stats.MapAttempts);
+                statsTree.Increment(Schema.MapSuccessesSlice, stats.MapSuccesses);
+                statsTree.Increment(Schema.MapErrorsSlice, stats.MapErrors);
+
+                if (_index.Type.IsMapReduce())
+                {
+                    statsTree.Increment(Schema.ReduceAttemptsSlice, stats.ReduceAttempts);
+                    statsTree.Increment(Schema.ReduceSuccessesSlice, stats.ReduceSuccesses);
+                    statsTree.Increment(Schema.ReduceErrorsSlice, stats.ReduceErrors);
+                }
 
                 var binaryDate = indexingTime.ToBinary();
                 statsTree.Add(Schema.LastIndexingTimeSlice, new Slice((byte*)&binaryDate, sizeof(long)));
@@ -302,7 +316,7 @@ namespace Raven.Server.Documents.Indexes
         {
             public static readonly string StatsTree = "Stats";
 
-            public static readonly string EtagsMapTree = "Etags.Map";
+            public static readonly string EtagsTree = "Etags";
 
             public static readonly string EtagsTombstoneTree = "Etags.Tombstone";
 
@@ -310,11 +324,17 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice CreatedTimestampSlice = "CreatedTimestamp";
 
-            public static readonly Slice IndexingAttemptsSlice = "IndexingAttempts";
+            public static readonly Slice MapAttemptsSlice = "MapAttempts";
 
-            public static readonly Slice IndexingSuccessesSlice = "IndexingSuccesses";
+            public static readonly Slice MapSuccessesSlice = "MapSuccesses";
 
-            public static readonly Slice IndexingErrorsSlice = "IndexingErrors";
+            public static readonly Slice MapErrorsSlice = "MapErrors";
+
+            public static readonly Slice ReduceAttemptsSlice = "ReduceAttempts";
+
+            public static readonly Slice ReduceSuccessesSlice = "ReduceSuccesses";
+
+            public static readonly Slice ReduceErrorsSlice = "ReduceErrors";
 
             public static readonly Slice LastIndexingTimeSlice = "LastIndexingTime";
 

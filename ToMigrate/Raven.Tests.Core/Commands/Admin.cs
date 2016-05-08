@@ -5,7 +5,6 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 #if !DNXCORE50
 using Raven.Database.Extensions;
-using Raven.Database.Config;
 #endif
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
@@ -127,7 +126,7 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public void CanDoBackupAndRestore()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false")))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(Constants.RunInMemory, "false")))
             {
                 store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
 
@@ -135,13 +134,13 @@ namespace Raven.Tests.Core.Commands
                 {
                     Settings = new Dictionary<string, string>()
                     {
-                        { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" }
+                        {Constants.RunInMemory, "false"}
                     }
-                }, false, store.DefaultDatabase);
-                WaitForBackup(store.DatabaseCommands, true);
+                }, false, store.DefaultDatabase)
+                    .WaitForCompletion();
             }
 
-          Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
+            Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = RestoreDir,

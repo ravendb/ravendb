@@ -63,7 +63,11 @@ namespace Voron.Impl.Journal
             if (!TryReadAndValidateHeader(options, out current))
                 return false;
 
-            var transactionSize = GetNumberOfPagesFromSize(options, current->Compressed ? current->CompressedSize : current->UncompressedSize);
+            // Uncompressed transactions will respect boundaries between the TransactionHeader page and the data, so we move to the data page.
+            if (current->Compressed == false)                 
+                _readingPage++;
+
+            var transactionSize = GetNumberOfPagesFromSize(options, current->Compressed ? current->CompressedSize + sizeof(TransactionHeader) : current->UncompressedSize);
 
             if (current->TransactionId <= _lastSyncedTransactionId)
             {
@@ -72,21 +76,27 @@ namespace Voron.Impl.Journal
                 return true; // skipping
             }
 
-            if (checkCrc && !ValidatePagesCrc(options, transactionSize, current))
+            if (checkCrc && !ValidatePagesHash(options, current))
                 return false;
-
-            _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
-            var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
-
-            UnmanagedMemory.Set(dataPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
+           
+            byte* outputPage;           
             if (current->Compressed)
             {
-                if (TryDecompressTransactionPages(options, current, dataPage) == false)
+                _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount));
+                outputPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
+                UnmanagedMemory.Set(outputPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
+
+                // Compressed transactions will put the TransactionHeader in the same page of the data. 
+                if (TryDecompressTransactionPages(options, current, outputPage) == false)
                     return false;
             }
             else
             {
-                Memory.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
+                _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
+                outputPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
+                UnmanagedMemory.Set(outputPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
+
+                Memory.Copy(outputPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
             }
 
             var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();
@@ -143,11 +153,12 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        private unsafe bool TryDecompressTransactionPages(StorageEnvironmentOptions options, TransactionHeader* current, byte* dataPage)
+        private unsafe bool TryDecompressTransactionPages(StorageEnvironmentOptions options, TransactionHeader* current, byte* outputPage)
         {
             try
             {
-                LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
+                byte* dataPtr = _pager.AcquirePagePointer(_readingPage) + sizeof(TransactionHeader);
+                LZ4.Decode64(dataPtr, current->CompressedSize, outputPage, current->UncompressedSize, true);
             }
             catch (Exception e)
             {
@@ -217,7 +228,6 @@ namespace Voron.Impl.Journal
                 return false;
             }
 
-            _readingPage++;
             return true;
         }
 
@@ -227,8 +237,8 @@ namespace Voron.Impl.Journal
                 throw new InvalidDataException("Transaction id cannot be less than 0 (llt: " + current->TransactionId + " )");
             if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
                 throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
-                throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
+            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Hash == 0)
+                throw new InvalidDataException("Committed and not empty transaction hash can't be equal to 0");
             if (current->Compressed)
             {
                 if (current->CompressedSize <= 0)
@@ -245,14 +255,16 @@ namespace Voron.Impl.Journal
                                                ", got:" + current->TransactionId);
         }
 
-        private bool ValidatePagesCrc(StorageEnvironmentOptions options, int compressedPages, TransactionHeader* current)
+        private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
-            uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * options.PageSize);
+            // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
+            byte* dataPtr = _pager.AcquirePagePointer(_readingPage) + (current->Compressed == true ? sizeof(TransactionHeader) : 0);
 
-            if (crc != current->Crc)
+            ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->Compressed == true ? current->CompressedSize : current->UncompressedSize);
+            if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId, null);
+                options.InvokeRecoveryError(this, "Invalid hash signature for transaction " + current->TransactionId, null);
 
                 return false;
             }

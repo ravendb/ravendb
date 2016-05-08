@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Includes
         private readonly DocumentsOperationContext _context;
         private readonly StringValues _includes;
 
+        private readonly HashSet<string> _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, StringValues includes)
         {
             _storage = storage;
@@ -20,19 +22,15 @@ namespace Raven.Server.Documents.Includes
             _includes = includes;
         }
 
-        public void Execute(List<Document> documents, List<Document> includedDocs)
+        public void Gather(Document document)
         {
-            var includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
             foreach (var include in _includes)
-            {
-                foreach (var doc in documents)
-                {
-                    IncludeUtil.GetDocIdFromInclude(doc.Data, new StringSegment(include, 0), includedIds);
-                }
-            }
+                IncludeUtil.GetDocIdFromInclude(document.Data, new StringSegment(include, 0), _includedIds);
+        }
 
-            foreach (var includedDocId in includedIds)
+        public void Fill(List<Document> result)
+        {
+            foreach (var includedDocId in _includedIds)
             {
                 if (includedDocId == null) //precaution, should not happen
                     continue;
@@ -41,7 +39,7 @@ namespace Raven.Server.Documents.Includes
                 if (includedDoc == null)
                     continue;
 
-                includedDocs.Add(includedDoc);
+                result.Add(includedDoc);
             }
         }
     }

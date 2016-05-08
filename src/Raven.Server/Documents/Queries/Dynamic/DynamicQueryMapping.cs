@@ -5,12 +5,11 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
-using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Queries.Parse;
-using Raven.Server.Documents.Queries.Sort;
+using Raven.Server.Documents.Queries.Sorting;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -53,13 +52,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         Name = field.Name,
                         Storage = FieldStorage.Yes,
-                        MapReduceOperation = field.MapReduceOperation
+                        MapReduceOperation = field.MapReduceOperation,
+                        SortOption = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Field))?.FieldType,
                     }).ToArray(),
                     GroupByFields.Select(field =>
                     new IndexField
                     {
                         Name = field,
                         Storage = FieldStorage.Yes,
+                        SortOption = SortDescriptors.FirstOrDefault(x => field.Equals(x.Field))?.FieldType,
                     }).ToArray());
         }
 
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (extendedSortDescriptors.Any(x => x.Field.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false && field.SortOption != null)
                 {
-                    extendedSortDescriptors.Add(new DynamicSortInfo()
+                    extendedSortDescriptors.Add(new DynamicSortInfo
                     {
                         Field = field.Name,
                         FieldType = field.SortOption.Value
@@ -97,13 +98,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public static DynamicQueryMapping Create(string entityName, IndexQuery query)
         {
-            var dynamicQueryMapping = new DynamicQueryMapping
+            var result = new DynamicQueryMapping
             {
                 ForCollection = entityName,
-                
             };
 
             IEnumerable<DynamicQueryMappingItem> dynamicMapFields;
+            string[] numericFields;
 
             if (query.DynamicMapReduceFields == null)
             {
@@ -136,23 +137,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 dynamicMapFields = fields.Select(x => new DynamicQueryMappingItem
                 {
-                    //From = x.Item1,
-                    //To = IndexField.ReplaceInvalidCharactersInFieldName(x.Item2),
-                    //QueryFrom = EscapeParentheses(x.Item2),
                     Name = x.Item1.EndsWith("_Range") ? x.Item1.Substring(0, x.Item1.Length - "_Range".Length) : x.Item1
                 });
 
-                dynamicQueryMapping.SortDescriptors = GetSortInfo(query.SortedFields,
-                    fields.Where(x => x.Item1.EndsWith("_Range")).Select(x => x.Item1).Distinct().ToArray());
-
-                dynamicQueryMapping.HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray();
+                numericFields = fields.Where(x => x.Item1.EndsWith("_Range")).Select(x => x.Item1).Distinct().ToArray();
             }
             else
             {
                 // dynamic map-reduce query
-                // TODO arek: sorted fields
 
-                dynamicQueryMapping.IsMapReduce = true;
+                result.IsMapReduce = true;
 
                 dynamicMapFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy == false).Select(x => new DynamicQueryMappingItem
                 {
@@ -160,40 +154,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     MapReduceOperation = x.OperationType
                 });
 
-                dynamicQueryMapping.GroupByFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy).Select(x => x.Name).ToArray();
+                result.GroupByFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy).Select(x => x.Name).ToArray();
+
+                numericFields = null;
             }
 
-            foreach (var dynamicSortInfo in dynamicQueryMapping.SortDescriptors)
-            {
-                dynamicSortInfo.Field = IndexField.ReplaceInvalidCharactersInFieldName(dynamicSortInfo.Field);
-            }
+            result.MapFields = dynamicMapFields.OrderByDescending(x => x.Name.Length).ToArray();
 
-            dynamicQueryMapping.MapFields = dynamicMapFields.OrderByDescending(x => x.Name.Length).ToArray();
+            result.SortDescriptors = GetSortInfo(query.SortedFields, numericFields);
 
-            return dynamicQueryMapping;
+            result.HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray();
+            
+            return result;
         }
 
-        public static DynamicSortInfo[] GetSortInfo(SortedField[] sortedFields, string[] numericFields)
+        private static DynamicSortInfo[] GetSortInfo(SortedField[] sortedFields, string[] numericFields)
         {
             var sortInfo = new List<DynamicSortInfo>();
 
-            foreach (var key in numericFields)
+            if (numericFields != null)
             {
-                sortInfo.Add(new DynamicSortInfo
-                {
-                    Field = key.Substring(0, key.Length - "_Range".Length),
-                    FieldType = SortOptions.NumericDefault
-                });
-            }
-
-            if (sortedFields == null)
-                return sortInfo.ToArray();
-
-            foreach (var sortOptions in sortedFields)
-            {
-                var key = sortOptions.Field;
-
-                if (key.EndsWith("_Range"))
+                foreach (var key in numericFields)
                 {
                     sortInfo.Add(new DynamicSortInfo
                     {
@@ -201,13 +182,30 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         FieldType = SortOptions.NumericDefault
                     });
                 }
-                else
+            }
+
+            if (sortedFields != null)
+            {
+                foreach (var sortOptions in sortedFields)
                 {
-                    sortInfo.Add(new DynamicSortInfo
+                    var key = sortOptions.Field;
+
+                    if (key.EndsWith("_Range"))
                     {
-                        Field = key,
-                        FieldType = SortOptions.String
-                    });
+                        sortInfo.Add(new DynamicSortInfo
+                        {
+                            Field = key.Substring(0, key.Length - "_Range".Length),
+                            FieldType = SortOptions.NumericDefault
+                        });
+                    }
+                    else
+                    {
+                        sortInfo.Add(new DynamicSortInfo
+                        {
+                            Field = key,
+                            FieldType = SortOptions.String
+                        });
+                    }
                 }
             }
 

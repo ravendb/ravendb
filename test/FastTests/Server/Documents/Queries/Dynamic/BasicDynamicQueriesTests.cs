@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -141,6 +142,82 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     Assert.Equal("cameras/2", cameras[1].Id);
                     Assert.Equal("cameras/4", cameras[2].Id);
                     Assert.Equal("cameras/3", cameras[3].Id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Sorting_by_nested_string_field()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Poland"} }, "orders/1");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Israel"} }, "orders/2");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "USA"} }, "orders/3");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Canada" } }, "orders/4");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.ShipTo.Country).ToList();
+
+                    Assert.Equal("orders/4", orders[0].Id);
+                    Assert.Equal("orders/2", orders[1].Id);
+                    Assert.Equal("orders/1", orders[2].Id);
+                    Assert.Equal("orders/3", orders[3].Id);
+
+                    orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderByDescending(x => x.ShipTo.Country).ToList();
+
+                    Assert.Equal("orders/3", orders[0].Id);
+                    Assert.Equal("orders/1", orders[1].Id);
+                    Assert.Equal("orders/2", orders[2].Id);
+                    Assert.Equal("orders/4", orders[3].Id);
+
+                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+
+                    Assert.Equal(1, indexes.Count);
+                    Assert.Equal("Auto/Orders/ByShipTo_CountrySortByShipTo_Country", indexes[0].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Sorting_by_nested_integer_field()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 3000 } }, "orders/1");
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 222 } }, "orders/2");
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 5599 } }, "orders/3");
+                    await session.StoreAsync(new Order { ShipTo = new Address { ZipCode = 111 } }, "orders/4");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.ShipTo.ZipCode).ToList();
+
+                    Assert.Equal("orders/4", orders[0].Id);
+                    Assert.Equal("orders/2", orders[1].Id);
+                    Assert.Equal("orders/1", orders[2].Id);
+                    Assert.Equal("orders/3", orders[3].Id);
+
+                    orders = session.Query<Order>().Customize(x => x.WaitForNonStaleResults()).OrderByDescending(x => x.ShipTo.ZipCode).ToList();
+
+                    Assert.Equal("orders/3", orders[0].Id);
+                    Assert.Equal("orders/1", orders[1].Id);
+                    Assert.Equal("orders/2", orders[2].Id);
+                    Assert.Equal("orders/4", orders[3].Id);
+
+                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+
+                    Assert.Equal(1, indexes.Count);
+                    Assert.Equal("Auto/Orders/ByShipTo_ZipCodeSortByShipTo_ZipCode", indexes[0].Name);
                 }
             }
         }
@@ -309,6 +386,87 @@ namespace FastTests.Server.Documents.Queries.Dynamic
                     Assert.Equal(1, nested.Count);
                     Assert.Equal("New York", nested[0].City);
                     Assert.Equal("USA", nested[0].Country);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Where_on_collection()
+        {
+            using (var store = await GetDocumentStore().ConfigureAwait(false))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                ProductName = "abc",
+                                Discount = 0.3m
+                            }
+                        }
+                    }, "orders/1");
+
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                ProductName = "cde",
+                                Discount = 0.6m
+                            }
+                        }
+                    }, "orders/2");
+
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                ProductName = "abc",
+                                Discount = 0.7m
+                            },
+                            new OrderLine
+                            {
+                                ProductName = "eee",
+                                Discount = 0.3m
+                            }
+                        }
+                    }, "orders/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>()
+                                .Customize(x => x.WaitForNonStaleResults())
+                                .Where(x => x.Lines.Any(order => order.ProductName == "abc"))
+                                .OrderByDescending(x => x.Id)
+                                .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal("orders/3", orders[0].Id);
+                    Assert.Equal("orders/1", orders[1].Id);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>()
+                                .Customize(x => x.WaitForNonStaleResults())
+                                .Where(x => x.Lines.Any(order => order.Discount > 0.5m))
+                                .OrderBy(x => x.Id)
+                                .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal("orders/2", orders[0].Id);
+                    Assert.Equal("orders/3", orders[1].Id);
                 }
             }
         }

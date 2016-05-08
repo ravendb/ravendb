@@ -27,6 +27,7 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Connection.Request;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Data.Queries;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
@@ -66,9 +67,9 @@ namespace Raven.Client.Connection
             set { asyncServerClient.OperationsHeaders = value; }
         }
 
-        public JsonDocument Get(string key)
+        public JsonDocument Get(string key, bool metadataOnly = false)
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key));
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key, metadataOnly));
         }
 
         public IGlobalAdminDatabaseCommands GlobalAdmin => 
@@ -229,12 +230,12 @@ namespace Raven.Client.Connection
             return asyncServerClient.DirectPutIndexAsync(name, definition, overwrite, operationMetadata).Result;
         }
 
-        public QueryResult Query(string index, IndexQuery query, string[] includes = null, bool metadataOnly = false,
+        public QueryResult Query(string index, IndexQuery query, bool metadataOnly = false,
             bool indexEntriesOnly = false)
         {
             try
             {
-                return AsyncHelpers.RunSync(() => asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly));
+                return AsyncHelpers.RunSync(() => asyncServerClient.QueryAsync(index, query, metadataOnly, indexEntriesOnly));
             }
             catch (Exception e)
             {
@@ -336,13 +337,13 @@ namespace Raven.Client.Connection
             get { return asyncServerClient.Url; }
         }
 
-        public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
+        public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, QueryOperationOptions options = null)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, options));
         }
 
         public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest patch,
-            BulkOperationOptions options = null)
+            QueryOperationOptions options = null)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, options));
         }
@@ -352,7 +353,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.SuggestAsync(index, suggestionQuery));
         }
 
-        public LoadResult MoreLikeThis(MoreLikeThisQuery query)
+        public QueryResult MoreLikeThis(MoreLikeThisQuery query)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.MoreLikeThisAsync(query));
         }
@@ -407,7 +408,7 @@ namespace Raven.Client.Connection
             return asyncServerClient.UrlFor(documentKey);
         }
 
-        public JsonDocumentMetadata Head(string key)
+        public long? Head(string key)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.HeadAsync(key));
         }

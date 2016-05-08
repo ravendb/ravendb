@@ -53,14 +53,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
         public int MaxNumberOfDocumentsToFetchForMap { get; set; }
 
-        [Description("Maximum number of documents to reduce by index during single indexing run")]
-        [DefaultValue(64 * 1024)]
-        [MinValue(128)]
-        [ConfigurationEntry("Raven/Indexing/MaxNumberOfDocumentsToFetchForReduce")]
-        [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetch")]
-        [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
-        public int MaxNumberOfDocumentsToFetchForReduce { get; set; }
-
         [Description("Maximum number of tombstones to process by index during single indexing run")]
         [DefaultValue(16 * 1024)]
         [MinValue(128)]
