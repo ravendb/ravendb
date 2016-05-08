@@ -20,43 +20,43 @@ namespace Raven.Database
             {
                 return false;
             }
-
-            IStorageActionsAccessor actions = database.TransactionalStorage.CreateAccessor();
-            if (actions == null) throw new ArgumentNullException(nameof(actions));
-
-            var conflicts = actions
-                .Documents
-                .GetDocumentsWithIdStartingWith(document.Key, 0, Int32.MaxValue, null)
-                .Where(x => x.Key.Contains("/conflicts/"))
-                .ToList();
-
-            KeyValuePair<JsonDocument, DateTime> local;
-            KeyValuePair<JsonDocument, DateTime> remote;
-            database.GetConflictDocuments(conflicts, out local, out remote);
-
-            var docsReplicationConflictResolvers = database.DocsConflictResolvers();
-            
-            foreach (var replicationConflictResolver in docsReplicationConflictResolvers)
+            bool res = false;
+            database.TransactionalStorage.Batch(actions =>
             {
-                RavenJObject metadataToSave;
-                RavenJObject documentToSave;
-                if (remote.Key != null && local.Key != null && replicationConflictResolver.TryResolveConflict(document.Key, remote.Key.Metadata, remote.Key.DataAsJson, local.Key, key => actions.Documents.DocumentByKey(document.Key),
-                    out metadataToSave, out documentToSave))
-                {
-                    if (metadataToSave != null && metadataToSave.Value<bool>(Constants.RavenDeleteMarker))
-                    {
+                var conflicts = actions
+                    .Documents
+                    .GetDocumentsWithIdStartingWith(document.Key, 0, Int32.MaxValue, null)
+                    .Where(x => x.Key.Contains("/conflicts/"))
+                    .ToList();
 
-                        database.Documents.Delete(document.Key, null, null);
-                    }
-                    else
+                KeyValuePair<JsonDocument, DateTime> local;
+                KeyValuePair<JsonDocument, DateTime> remote;
+                database.GetConflictDocuments(conflicts, out local, out remote);
+
+                var docsReplicationConflictResolvers = database.DocsConflictResolvers();
+
+                foreach (var replicationConflictResolver in docsReplicationConflictResolvers)
+                {
+                    RavenJObject metadataToSave;
+                    RavenJObject documentToSave;
+                    if (remote.Key != null && local.Key != null && replicationConflictResolver.TryResolveConflict(document.Key, remote.Key.Metadata, remote.Key.DataAsJson, local.Key, key => actions.Documents.DocumentByKey(document.Key),
+                        out metadataToSave, out documentToSave))
                     {
-                        metadataToSave?.Remove(Constants.RavenReplicationConflictDocument);
-                        database.Documents.Put(document.Key, document.Etag, documentToSave, metadataToSave, null);
+                        if (metadataToSave != null && metadataToSave.Value<bool>(Constants.RavenDeleteMarker))
+                        {
+
+                            database.Documents.Delete(document.Key, null, null);
+                        }
+                        else
+                        {
+                            metadataToSave?.Remove(Constants.RavenReplicationConflictDocument);
+                            database.Documents.Put(document.Key, document.Etag, documentToSave, metadataToSave, null);
+                        }
+                        res = true;
                     }
-                    return true;
                 }
-            }
-            return false;
+            });
+            return res;
         }
 
         public static ReplicationConfig GetReplicationConfig(this DocumentDatabase database)
