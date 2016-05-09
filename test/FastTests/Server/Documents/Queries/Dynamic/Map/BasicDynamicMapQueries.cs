@@ -1,18 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-
 using FastTests.Server.Basic.Entities;
-
 using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Queries.Dynamic
+namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class BasicDynamicQueriesTests : RavenTestBase
+    public class BasicDynamicMapQueries : RavenTestBase
     {
         [Fact]
         public async Task String_where_clause()

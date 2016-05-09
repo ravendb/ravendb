@@ -6,7 +6,7 @@ using FastTests.Server.Basic.Entities;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Queries.Dynamic
+namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class DynamicQueriesEnumsNestedFieldsAndCollections : RavenTestBase
