@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
+using Raven.Server.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
@@ -15,89 +15,24 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication
 {
-    public class SqlReplication : IDisposable
+    public class SqlReplication : BaseReplicationExecuter
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof(SqlReplication));
-
-        private readonly DocumentDatabase _database;
         public readonly SqlReplicationConfiguration Configuration;
         public readonly SqlReplicationStatistics Statistics;
 
-        public readonly ManualResetEventSlim WaitForChanges = new ManualResetEventSlim();
+        public override string Name => "Sql replication of " + Configuration.Name;
 
-        public string Name => Configuration.Name;
-
-        private readonly CancellationTokenSource _cancellationTokenSource;
-        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
-
-        private Thread _sqlReplicationThread;
-        private bool _disposed;
         private PredefinedSqlConnection _predefinedSqlConnection;
         public readonly SqlReplicationMetricsCountersManager MetricsCountersManager;
 
         public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration, MetricsScheduler metricsScheduler)
+            : base(database)
         {
-            _database = database;
-            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             Configuration = configuration;
             Statistics = new SqlReplicationStatistics(configuration.Name);
             MetricsCountersManager = new SqlReplicationMetricsCountersManager(metricsScheduler);
         }
-
-        public void Start()
-        {
-            _sqlReplicationThread = new Thread(ExecuteSqlReplication)
-            {
-                Name = "Sql replication of " + Name,
-                IsBackground = true
-            };
-
-            _sqlReplicationThread.Start();
-        }
-
-        private void ExecuteSqlReplication()
-        {
-            while (_cancellationTokenSource.IsCancellationRequested == false)
-            {
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Starting sql replication for '{Name}'.");
-
-                WaitForChanges.Reset();
-
-                try
-                {
-                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                    DoWork();
-
-                    if (Log.IsDebugEnabled)
-                        Log.Debug($"Finished sql replication for '{Name}'.");
-                }
-                catch (OutOfMemoryException oome)
-                {
-                    Log.WarnException($"Out of memory occured for '{Name}'.", oome);
-                    // TODO [ppekrol] GC?
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    Log.WarnException($"Exception occured for '{Name}'.", e);
-                }
-
-                try
-                {
-                    WaitForChanges.Wait(_cancellationTokenSource.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-            }
-        }
-
+      
         private void LoadLastEtag(DocumentsOperationContext context)
         {
             var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
@@ -126,7 +61,7 @@ namespace Raven.Server.Documents.SqlReplication
             _database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        private void DoWork()
+        protected override void ExecuteReplicationOnce()
         {
             if (Configuration.Disabled)
                 return;
@@ -196,8 +131,8 @@ namespace Raven.Server.Documents.SqlReplication
                     writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, Configuration.ParameterizeDeletesDisabled, documentsKeys);
                 }
                 writer.Commit();
-                if (Log.IsDebugEnabled)
-                    Log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", documentsKeys), Configuration.Name);
+                if (_log.IsDebugEnabled)
+                    _log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", documentsKeys), Configuration.Name);
             }
             return true;
         }
@@ -224,14 +159,14 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     if (writer.ExecuteScript(scriptResult))
                     {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
+                        if (_log.IsDebugEnabled)
+                            _log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
                         Statistics.CompleteSuccess(countOfReplicatedItems);
                     }
                     else
                     {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
+                        if (_log.IsDebugEnabled)
+                            _log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", documents.Select(d => d.Key)), Configuration.Name);
                         Statistics.Success(countOfReplicatedItems);
                     }
                 }
@@ -239,7 +174,7 @@ namespace Raven.Server.Documents.SqlReplication
             }
             catch (Exception e)
             {
-                Log.WarnException("Failure to replicate changes to relational database for: " + Configuration.Name, e);
+                _log.WarnException("Failure to replicate changes to relational database for: " + Configuration.Name, e);
                 DateTime newTime;
                 if (Statistics.LastErrorTime == null)
                 {
@@ -267,9 +202,9 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     var scope = patcher.Apply(context, replicatedDoc, new PatchRequest { Script = Configuration.Script });
 
-                    if (Log.IsDebugEnabled && scope.DebugInfo.Count > 0)
+                    if (_log.IsDebugEnabled && scope.DebugInfo.Count > 0)
                     {
-                        Log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, Configuration.Name, string.Join("\r\n", scope.DebugInfo.Items));
+                        _log.Debug("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, Configuration.Name, string.Join("\r\n", scope.DebugInfo.Items));
                     }
 
                     Statistics.ScriptSuccess();
@@ -278,14 +213,14 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     Statistics.MarkScriptAsInvalid(_database, Configuration.Script);
 
-                    Log.WarnException("Could not parse SQL Replication script for " + Configuration.Name, e);
+                    _log.WarnException("Could not parse SQL Replication script for " + Configuration.Name, e);
 
                     return result;
                 }
                 catch (Exception diffExceptionName)
                 {
                     Statistics.RecordScriptError(_database, diffExceptionName);
-                    Log.WarnException("Could not process SQL Replication script for " + Configuration.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
+                    _log.WarnException("Could not process SQL Replication script for " + Configuration.Name + ", skipping document: " + replicatedDoc.Key, diffExceptionName);
                 }
             }
             return result;
@@ -306,7 +241,7 @@ namespace Raven.Server.Documents.SqlReplication
                 }
 
                 if (writeToLog)
-                    Log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
+                    _log.Warn("Could not find connection string named '{0}' for sql replication config: {1}, ignoring sql replication setting.",
                         Configuration.ConnectionStringName,
                         Configuration.Name);
                 Statistics.LastAlert = new Alert
@@ -320,7 +255,7 @@ namespace Raven.Server.Documents.SqlReplication
             }
 
             if (writeToLog)
-                Log.Warn("Connection string name cannot be empty for sql replication config: {1}, ignoring sql replication setting.",
+                _log.Warn("Connection string name cannot be empty for sql replication config: {1}, ignoring sql replication setting.",
                     Configuration.ConnectionStringName,
                     Configuration.Name);
             Statistics.LastAlert = new Alert
@@ -344,7 +279,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (string.IsNullOrWhiteSpace(Configuration.Name) == false)
                 return true;
 
-            Log.Warn($"Could not find name for sql replication document {Configuration.Name}, ignoring");
+            _log.Warn($"Could not find name for sql replication document {Configuration.Name}, ignoring");
             Statistics.LastAlert = new Alert
             {
                 IsError = true,

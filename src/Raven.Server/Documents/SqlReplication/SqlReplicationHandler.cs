@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
             var name = names[0];
-            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name);
+            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name) as SqlReplication;
 
             if (replication == null)
             {
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     writer.WriteStartArray();
                     bool first = true;
-                    foreach (var replication in Database.SqlReplicationLoader.Replications)
+                    foreach (var replication in Database.SqlReplicationLoader.Replications.Select(x => x as SqlReplication))
                     {
                         if (first == false)
                             writer.WriteComma();

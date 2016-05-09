@@ -1,5 +1,5 @@
-﻿using Raven.Server.Documents.Indexes;
-
+﻿using System.Collections.Generic;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;

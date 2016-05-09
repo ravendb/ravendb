@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Server.Json;
+using Raven.Server.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
@@ -12,60 +12,31 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication
 {
-    public class SqlReplicationLoader : IDisposable
+    public class SqlReplicationLoader : BaseReplicationLoader
     {
-        private readonly ILog Log = LogManager.GetLogger(typeof(SqlReplicationLoader));
-
-        private readonly DocumentDatabase _database;
         private readonly MetricsScheduler _metricsScheduler;
-        private const int MaxSupportedSqlReplication = int.MaxValue; // TODO: Maybe this should be 128 or 1024
+        private const int MaxSupportedSqlReplication = int.MaxValue; // TODO: Maybe this should be 128, 1024 or configurable?
 
-        public readonly List<SqlReplication> Replications = new List<SqlReplication>();
         private BlittableJsonReaderObject _connections;
 
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
 
         public SqlReplicationLoader(DocumentDatabase database, MetricsScheduler metricsScheduler)
+            :base(database)
         {
-            _database = database;
             _metricsScheduler = metricsScheduler;
-            _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
-            _database.Notifications.OnDocumentChange += WakeSqlReplication;
         }
 
-        private void WakeSqlReplication(DocumentChangeNotification documentChangeNotification)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected override bool ShouldReloadConfiguration(string systemDocumentKey)
         {
-            foreach (var replication in Replications)
-            {
-                replication.WaitForChanges.Set();
-            }
-        }
+            return
+                systemDocumentKey.StartsWith(Constants.SqlReplication.SqlReplicationConfigurationPrefix,
+                    StringComparison.OrdinalIgnoreCase) ||
+                systemDocumentKey.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase);
+        }	          
 
-        private void HandleSystemDocumentChange(DocumentChangeNotification notification)
-        {
-            if (notification.Key.StartsWith(Constants.SqlReplication.SqlReplicationConfigurationPrefix, StringComparison.OrdinalIgnoreCase) ||
-                notification.Key.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase))
-            {
-                _connections = null;
-                foreach (var replication in Replications)
-                {
-                    replication.Dispose();
-                }
-                Replications.Clear();
-
-                LoadConfigurations();
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug(() => $"Sql Replication configuration was changed: {notification.Key}");
-            }
-        }
-
-        public void Initialize()
-        {
-            LoadConfigurations();
-        }
-
-        private void LoadConfigurations()
+        protected override void LoadConfigurations()
         {
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -94,13 +65,7 @@ namespace Raven.Server.Documents.SqlReplication
                     sqlReplication.Start();
                 }
             }
-        }
-
-        public void Dispose()
-        {
-            _database.Notifications.OnDocumentChange -= WakeSqlReplication;
-            _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
-        }
+        }        
 
         public DynamicJsonValue SimulateSqlReplicationSqlQueries(SimulateSqlReplication simulateSqlReplication, DocumentsOperationContext context)
         {
