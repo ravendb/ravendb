@@ -24,7 +24,7 @@ class database extends resource {
         this.clusterWide(clusterWide);
         this.iconName = ko.computed(() => !this.clusterWide() ? "fa fa-fw fa-database" : "fa fa-fw fa-cubes");
         this.itemCountText = ko.computed(() => !!this.statistics() ? this.statistics().countOfDocumentsText() : "");
-        this.isLicensed = ko.computed(() => {
+        this.isLicensed = ko.pureComputed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var attributes = license.licenseStatus().Attributes;
                 var result = this.activeBundles()

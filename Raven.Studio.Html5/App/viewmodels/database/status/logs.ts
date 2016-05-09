@@ -30,11 +30,11 @@ class logs extends viewModelBase {
 
         autoRefreshBindingHandler.install();
 
-        this.debugLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Debug"));
-        this.infoLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Info"));
-        this.warningLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Warn"));
-        this.errorLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Error"));
-        this.fatalLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Fatal"));
+        this.debugLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Debug"));
+        this.infoLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Info"));
+        this.warningLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Warn"));
+        this.errorLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Error"));
+        this.fatalLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Fatal"));
         this.searchTextThrottled = this.searchText.throttle(400);
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
@@ -95,7 +95,7 @@ class logs extends viewModelBase {
 
     createHumanReadableTime(item:any, chainDateTime: boolean = true): KnockoutComputed<string> {
         if (item.TimeStamp) {
-            return ko.computed(() => {
+            return ko.pureComputed(() => {
                 var dateMoment = item.dateMoment;
                 var formattedDateTime = "";
                 var agoInMs = dateMoment.diff(this.now());
@@ -106,7 +106,7 @@ class logs extends viewModelBase {
             });
         }
 
-        return ko.computed(() => null);
+        return ko.pureComputed(() => null);
     }
 
     processLogResults(results: logDto[]) {
@@ -115,7 +115,7 @@ class logs extends viewModelBase {
             r['dateMoment'] = moment(r.TimeStamp);
             r['HumanizedTimestamp'] = this.createHumanReadableTime(r, false);
             r['TimeStampText'] = this.createHumanReadableTime(r, true);
-            r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r) && !this.filteredLoggers.contains(r.LoggerName));
+            r['IsVisible'] = ko.pureComputed(() => this.matchesFilterAndSearch(r) && !this.filteredLoggers.contains(r.LoggerName));
         });
 
         this.allLogs(results.reverse());
@@ -146,8 +146,6 @@ class logs extends viewModelBase {
 
         return matchesLogLevel && matchesSearchText;
     }
-
-    
 
     selectLog(log: logDto) {
         this.selectedLog(log);
@@ -282,7 +280,7 @@ class logs extends viewModelBase {
 
                 // Stop propagation of the event so the text selection doesn't fire up
                 if (e.stopPropagation) e.stopPropagation();
-                if (e.preventDefault) e.preventDefault();
+                if (e.preventDefault) e.preventDefault();   
                 e.cancelBubble = true;
                 e.returnValue = false;
 

@@ -274,30 +274,17 @@
                                                             <tbody data-bind="foreach: $parents[1].collections">
                                                                 <tr>
                                                                     <td>
-                                                                        <!-- ko if: $parent.isSelected($data) -->
-                                                                        <button type="button" class="btn btn-default active" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onReplicateToCollectionClick($parents[0],$data.name); }">
-                                                                            <i data-bind="css:{ 'fa-check': true  }" class="fa fa-fw"></i>
-                                                                        </button>
-                                                                        <!-- /ko -->
-                                                                        <!-- ko if:  $parent.isSelected($data) == false -->
-                                                                        <button type="button" class="btn btn-default" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onReplicateToCollectionClick($parents[0],$data.name); }">
-                                                                            <i data-bind="css:{ 'fa-check': false  }" class="fa fa-fw"></i>
-                                                                        </button>
-                                                                        <!-- /ko -->
-                                                                        <span data-bind="text: name"></span>
+                                                                        <div class="checkbox">
+                                                                            <input type="checkbox" class="styled" data-bind="checked: $parent.specifiedCollectionsNames, value: $data.name, event: { change: $root.onReplicateToCollectionClick.bind($root, $parents[0], $data.name) }, enable: $parent.canEdit, attr: { id: 'per_collection_' + $parentContext.$index() + '_' + $index() }">
+                                                                            <label data-bind="text: name, attr: { for: 'per_collection_' + $parentContext.$index() + '_' + $index() }"></label>
+                                                                        </div>
                                                                     </td>
                                                                     <td>
                                                                         <div data-bind="visible: $parent.isSelected($data)">
-                                                                            <!-- ko if:  $parent.hasScript($data) -->
-                                                                            <button type="button" class="btn btn-default active" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onTransformCollectionClick($parents[0],$data.name); }">
-                                                                                <i data-bind="css:{ 'fa-check': true  }" class="fa fa-fw"></i>
-                                                                            </button>
-                                                                            <!-- /ko -->
-                                                                            <!-- ko if:  $parent.hasScript($data) == false -->
-                                                                            <button type="button" class="btn btn-default" data-bind="enable: $parent.canEdit, click: function(data, event) { $root.onTransformCollectionClick($parents[0],$data.name); }">
-                                                                                <i data-bind="css:{ 'fa-check': false  }" class="fa fa-fw"></i>
-                                                                            </button>
-                                                                            <!-- /ko -->
+                                                                            <div class="checkbox">
+                                                                                <input type="checkbox" class="styled" data-bind="checked: $parent.withScripts, value: $data.name, event: { change: $root.onTransformCollectionClick.bind($root, $parents[0], $data.name) }, enable: $parent.canEdit, attr: { id: 'per_coll_filter_' + $parentContext.$index() + '_' + $index() }">
+                                                                                <label data-bind="attr: { for: 'per_coll_filter_' + $parentContext.$index() + '_' + $index() }">&nbsp;</label>
+                                                                            </div>
                                                                         </div>
                                                                     </td>
                                                                     <td data-bind="if: $parent.hasScript($data) ">

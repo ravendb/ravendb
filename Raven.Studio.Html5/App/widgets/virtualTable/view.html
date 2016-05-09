@@ -67,8 +67,8 @@
 
 <script id="checkboxTemplate" type="text/template">
     <div class="checkbox" data-bind="visible: $parents[1].settings.selectionEnabled">
-        <input type="checkbox" class="styled" data-bind="checked: $parent.isChecked, event: { change: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }}">
-        <label>&nbsp;</label>
+        <input type="checkbox" class="styled" data-bind="attr: { id: 'virtualTable_' + $parentContext.$index() }, checked: $parent.isChecked, event: { change: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }}">
+        <label data-bind="attr: { for:  'virtualTable_' + $parentContext.$index() }">&nbsp;</label>
     </div>
 </script>
 

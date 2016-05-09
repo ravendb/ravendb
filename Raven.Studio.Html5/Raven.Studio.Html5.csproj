@@ -1033,7 +1033,6 @@
     <TypeScriptCompile Include="App\viewmodels\common\viewSystemDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\showDataDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\upgrade.ts" />
-    <TypeScriptCompile Include="App\viewmodels\common\viewSystemDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\conflicts\conflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\copyDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\deleteCollection.ts" />

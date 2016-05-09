@@ -19,7 +19,9 @@ class replicationDestination {
 
     globalConfiguration = ko.observable<replicationDestination>();
 
-    specifiedCollections = ko.observableArray<replicationPatchScript>().extend({required: false});
+    specifiedCollections = ko.observableArray<replicationPatchScript>().extend({ required: false });
+    specifiedCollectionsNames = ko.observableArray<string>([]);
+    withScripts = ko.observableArray<string>([]);
     enableReplicateOnlyFromCollections = ko.observable<boolean>();
 
     name = ko.computed(() => {
@@ -97,6 +99,8 @@ class replicationDestination {
         this.clientVisibleUrl(dto.ClientVisibleUrl);
         this.skipIndexReplication(dto.SkipIndexReplication);
         this.specifiedCollections(this.mapSpecifiedCollections(dto.SpecifiedCollections));
+        this.specifiedCollectionsNames(this.specifiedCollections().map(x => x.collection()));
+        this.withScripts(this.specifiedCollections().filter(x => typeof (x.script()) !== "undefined").map(x => x.collection()));
 
         this.enableReplicateOnlyFromCollections = ko.observable<boolean>(this.specifiedCollections().length > 0);
 
