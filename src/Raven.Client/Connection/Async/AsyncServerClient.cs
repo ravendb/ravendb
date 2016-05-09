@@ -1320,7 +1320,7 @@ namespace Raven.Client.Connection.Async
                     new GetRequest
                     {
                         Query = stringBuilder.ToString(),
-                        Url = "/indexes/" + index
+                        Url = "/queries/" + index
                     }
                 }, token, operationMetadataRef).ConfigureAwait(false);
 
