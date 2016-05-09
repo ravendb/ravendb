@@ -32,7 +32,7 @@ namespace Raven.Client.Document.Batches
 
             var request = new GetRequest
             {
-                Url = "/indexes/" + queryOperation.IndexName,
+                Url = "/queries/" + queryOperation.IndexName,
                 Query = stringBuilder.ToString()
             };
             if (headers != null)
