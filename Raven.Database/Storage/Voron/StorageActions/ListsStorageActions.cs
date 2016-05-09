@@ -5,18 +5,18 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
     using System.Collections.Generic;
     using System.IO;
 
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Extensions;
-    using Raven.Database.Impl;
-    using Raven.Database.Storage.Voron.Impl;
+    using Abstractions.Data;
+    using Abstractions.Extensions;
+    using Database.Impl;
+    using Impl;
     using Raven.Json.Linq;
 
     using global::Voron;
@@ -30,6 +30,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         private readonly Reference<WriteBatch> writeBatch;
         private readonly GeneralStorageActions generalStorageActions;
+
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
         public ListsStorageActions(TableStorage tableStorage, 
             IUuidGenerator generator, Reference<SnapshotReader> snapshot, 
@@ -278,8 +280,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     skipMoveNext = false;
                     ushort version;
                     var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch.Value, out version);
-                    var createdAt = value.Value<DateTime>("createdAt");
+                    if (value == null)
+                    {
+                        Logger.Warn("Couldn't locate key : '{0}' in Lists TableStorage for '{1}'", 
+                            iterator.CurrentKey, name);
+                        continue;
+                    }
 
+                    var createdAt = value.Value<DateTime>("createdAt");
                     if (createdAt > cutoff)
                         break;
 

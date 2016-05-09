@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Raven.Client.Document;
 using Raven.Tests.Helpers;
 using Xunit;
@@ -31,6 +32,7 @@ namespace Raven.Tests.Issues
                                 if (j == 5000 && run == 1)
                                 {
                                     server.Dispose();
+                                    Thread.Sleep(5000);
                                 }
                             }
                         }
