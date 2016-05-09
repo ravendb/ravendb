@@ -263,9 +263,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     break;
                 case NumberParseResult.Long:
                     if (field.SortOption == SortOptions.NumericDouble)
-                        yield return numericField.SetDoubleValue((long)value);
+                        yield return numericField.SetDoubleValue(longValue);
                     else
-                        yield return numericField.SetLongValue((long)value);
+                        yield return numericField.SetLongValue(longValue);
                     break;
             }
         }

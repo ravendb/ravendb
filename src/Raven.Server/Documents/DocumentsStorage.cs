@@ -103,20 +103,20 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
-            _unmanagedBuffersPool?.Dispose();
-            _unmanagedBuffersPool = null;
+                _unmanagedBuffersPool?.Dispose();
+                _unmanagedBuffersPool = null;
             });
 
             exceptionAggregator.Execute(() =>
             {
-            ContextPool?.Dispose();
-            ContextPool = null;
+                ContextPool?.Dispose();
+                ContextPool = null;
             });
 
             exceptionAggregator.Execute(() =>
             {
-            Environment?.Dispose();
-            Environment = null;
+                Environment?.Dispose();
+                Environment = null;
             });
 
             exceptionAggregator.ThrowIfNeeded();
@@ -823,13 +823,24 @@ namespace Raven.Server.Documents
             if (collectionName[0] != '@')
                 collectionName = "@" + collectionName;
 
-            var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
-
-            return new CollectionStat
+            try
             {
-                Name = collectionName.Substring(1),
-                Count = collectionTable.NumberOfEntries
-            };
+                var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+
+                return new CollectionStat
+                {
+                    Name = collectionName.Substring(1),
+                    Count = collectionTable.NumberOfEntries
+                };
+            }
+            catch (InvalidDataException)
+            {
+                return new CollectionStat
+                {
+                    Name = collectionName.Substring(1),
+                    Count = 0
+                };
+            }
         }
 
         public void DeleteTombstonesBefore(string collection, long etag, Transaction transaction)

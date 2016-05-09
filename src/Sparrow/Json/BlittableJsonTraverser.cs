@@ -59,8 +59,26 @@ namespace Sparrow.Json
                     {
                         return TryRead(subObject, pathSegment, out result);
                     }
-                    
-                    throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader?.GetType()?.FullName ?? "null"} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}." );
+
+                    if (pathSegment == "Length")
+                    {
+                        var lazyStringValue = reader as LazyStringValue;
+                        if (lazyStringValue == null)
+                        {
+                            var lazyCompressedStringValue = reader as LazyCompressedStringValue;
+                            if (lazyCompressedStringValue != null)
+                                lazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
+                        }
+
+                        if (lazyStringValue != null)
+                        {
+                            var value = lazyStringValue.ToString();
+                            result = value.Length;
+                            return true;
+                        }
+                    }
+
+                    throw new InvalidOperationException($"Invalid path. After the property separator ('{PropertySeparator}') {reader?.GetType()?.FullName ?? "null"} object has been ancountered instead of {nameof(BlittableJsonReaderObject)}.");
                 case CollectionSeparator:
                     var subArray = reader as BlittableJsonReaderArray;
                     if (subArray != null)
