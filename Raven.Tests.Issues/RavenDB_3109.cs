@@ -4,7 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Tests.Common;
@@ -33,7 +36,7 @@ namespace Raven.Tests.Issues
 
                 TellFirstInstanceToReplicateToSecondInstance();
 
-                WaitForDocument(store2.DatabaseCommands, "shippers/1");
+                Assert.True(SpinWait.SpinUntil(() => store2.DatabaseCommands.Get("shippers/1") == null, Debugger.IsAttached ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(15)));
 
                 var path = NewDataPath();
 
@@ -47,21 +50,21 @@ namespace Raven.Tests.Issues
                     .DatabaseCommands
                     .GlobalAdmin
                     .StartRestore(new DatabaseRestoreRequest
-                                  {
-                                      BackupLocation = path,
-                                      DatabaseName = "DBX"
-                                  })
+                    {
+                        BackupLocation = path,
+                        DatabaseName = "DBX"
+                    })
                     .WaitForCompletion();
 
-                WaitForDocument(store3.DatabaseCommands.ForDatabase("DBX"), Constants.RavenAlerts);
+                 WaitForReplication(store3, session =>
+                 {
+                     var alerts = session.Load<AlertsDocument>(Constants.RavenAlerts);
+                     if (alerts == null)
+                         return false;
 
-                using (var session = store3.OpenSession("DBX"))
-                {
-                    var alerts = session.Load<AlertsDocument>(Constants.RavenAlerts);
-
-                    Assert.True(alerts.Alerts.Any(alert=> alert.Title.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId")));
-                }
-
+                     return (alerts.Alerts.Any(alert => alert.Title.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId")));
+                 }, "DBX");
+                
                 SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(11);
 
                 using (var session = store3.OpenSession("DBX"))
@@ -78,3 +81,4 @@ namespace Raven.Tests.Issues
         }
     }
 }
+

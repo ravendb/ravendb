@@ -387,7 +387,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                 retries = lastIndex == docIndex ? retries : 0;
                             });
                         }
-
                         if (lastIndex == docIndex)
                         {
                             if (retries == 3)

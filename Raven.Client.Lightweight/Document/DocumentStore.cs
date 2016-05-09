@@ -136,6 +136,7 @@ namespace Raven.Client.Document
             ResourceManagerId = new Guid("E749BAA6-6F76-4EEF-A069-40A4378954F8");
             SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
             Conventions = new DocumentConvention();
+            
         }
 
         private string identifier;
@@ -244,6 +245,7 @@ namespace Raven.Client.Document
 #if DEBUG
             GC.SuppressFinalize(this);
 #endif
+
 
             foreach (var observeChangesAndEvictItemsFromCacheForDatabase in observeChangesAndEvictItemsFromCacheForDatabases)
             {

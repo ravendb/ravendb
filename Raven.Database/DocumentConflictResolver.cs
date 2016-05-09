@@ -6,26 +6,24 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Plugins;
-using Raven.Database.Storage;
 using Raven.Json.Linq;
 
 namespace Raven.Database
 {
     public static class DocumentConflictResolver
     {
-
         public static bool ResolveConflict(this DocumentDatabase database, JsonDocument document)
         {
             if (document == null)
             {
                 return false;
             }
-            bool res = false;
+            var res = false;
             database.TransactionalStorage.Batch(actions =>
             {
                 var conflicts = actions
                     .Documents
-                    .GetDocumentsWithIdStartingWith(document.Key, 0, Int32.MaxValue, null)
+                    .GetDocumentsWithIdStartingWith(document.Key, 0, int.MaxValue, null)
                     .Where(x => x.Key.Contains("/conflicts/"))
                     .ToList();
 
@@ -44,7 +42,6 @@ namespace Raven.Database
                     {
                         if (metadataToSave != null && metadataToSave.Value<bool>(Constants.RavenDeleteMarker))
                         {
-
                             database.Documents.Delete(document.Key, null, null);
                         }
                         else
@@ -80,35 +77,34 @@ namespace Raven.Database
 
         public static IEnumerable<AbstractDocumentReplicationConflictResolver> DocsConflictResolvers(this DocumentDatabase database)
         {
-           
-                var exported = database.Configuration.Container.GetExportedValues<AbstractDocumentReplicationConflictResolver>();
+            var exported = database.Configuration.Container.GetExportedValues<AbstractDocumentReplicationConflictResolver>();
 
-                var config = database.GetReplicationConfig();
+            var config = database.GetReplicationConfig();
 
-                if (config == null || config.DocumentConflictResolution == StraightforwardConflictResolution.None)
-                    return exported;
+            if (config == null || config.DocumentConflictResolution == StraightforwardConflictResolution.None)
+                return exported;
 
-                var withConfiguredResolvers = exported.ToList();
+            var withConfiguredResolvers = exported.ToList();
 
-                switch (config.DocumentConflictResolution)
-                {
-                    case StraightforwardConflictResolution.ResolveToLocal:
-                        withConfiguredResolvers.Add(LocalDocumentReplicationConflictResolver.Instance);
-                        break;
-                    case StraightforwardConflictResolution.ResolveToRemote:
-                        withConfiguredResolvers.Add(RemoteDocumentReplicationConflictResolver.Instance);
-                        break;
-                    case StraightforwardConflictResolution.ResolveToLatest:
-                        withConfiguredResolvers.Add(LatestDocumentReplicationConflictResolver.Instance);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException("config.DocumentConflictResolution");
-                }
+            switch (config.DocumentConflictResolution)
+            {
+                case StraightforwardConflictResolution.ResolveToLocal:
+                    withConfiguredResolvers.Add(LocalDocumentReplicationConflictResolver.Instance);
+                    break;
+                case StraightforwardConflictResolution.ResolveToRemote:
+                    withConfiguredResolvers.Add(RemoteDocumentReplicationConflictResolver.Instance);
+                    break;
+                case StraightforwardConflictResolution.ResolveToLatest:
+                    withConfiguredResolvers.Add(LatestDocumentReplicationConflictResolver.Instance);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("config.DocumentConflictResolution");
+            }
 
-                return withConfiguredResolvers;
+            return withConfiguredResolvers;
         }
 
-        public static void GetConflictDocuments(this DocumentDatabase database,IEnumerable<JsonDocument> conflicts, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)
+        public static void GetConflictDocuments(this DocumentDatabase database, IEnumerable<JsonDocument> conflicts, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)
         {
             DateTime localModified = DateTime.MinValue, remoteModified = DateTime.MinValue;
             JsonDocument localDocument = null, newestRemote = null;

@@ -266,15 +266,13 @@ namespace Raven.Database.Server.Controllers
                 msg.StatusCode = HttpStatusCode.NotFound;
                 return msg;
             }
-            if (doc.DataAsJson.ContainsKey("Conflicts"))
+            if (doc.Metadata.ContainsKey(Constants.RavenReplicationConflict))
             {
-                var successes = Database.ResolveConflict(doc);
-                if (successes)
+                if (Database.ResolveConflict(doc))
                 {
                     doc = Database.Documents.Get(docId, requestTransaction);
                 }
             }
-
             if (doc.NonAuthoritativeInformation != null && doc.NonAuthoritativeInformation.Value)
                 msg.StatusCode = HttpStatusCode.NonAuthoritativeInformation;
 
