@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     try
                     {
-                        using (var result = AggregateLeafPage(page, table, indexContext))
+                        using (var result = AggregateLeafPage(page, lowLevelTransaction, table, indexContext))
                         {
                             if (parentPage == -1)
                             {
@@ -218,16 +218,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        private BlittableJsonReaderObject AggregateLeafPage(TreePage page, Table table, TransactionOperationContext indexContext)
+        private BlittableJsonReaderObject AggregateLeafPage(TreePage page, LowLevelTransaction lowLevelTransaction, Table table, TransactionOperationContext indexContext)
         {
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
-                int size;
-                var mapEntryInternalId = page.GetNodeKey(page.GetNode(i), canBeMutable: true).CreateReader().ReadLittleEndianInt64();
-                
-                var mapEntry = new TableValueReader(_mapReduceContext.MapEntriesTable.DirectRead(mapEntryInternalId, out size), size);
+                var valueReader = TreeNodeHeader.Reader(lowLevelTransaction, page.GetNode(i));
+                var reduceEntry = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, indexContext);
 
-                var reduceEntry = new BlittableJsonReaderObject(mapEntry.Read(2, out size), size, indexContext);
                 _aggregationBatch.Add(reduceEntry);
             }
 

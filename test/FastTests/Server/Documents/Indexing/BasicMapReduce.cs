@@ -659,7 +659,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var context = new DocumentsOperationContext(new UnmanagedBuffersPool(string.Empty), db))
                 {
-                    var queryResult = await index.Query(new IndexQuery(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQuery() { SortedFields = new []{ new SortedField("Location") }}, context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
