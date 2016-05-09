@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 
 #if !DNXCORE50
+using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
 using Raven.Tests.Core;
 using Raven.Tests.Core.Commands;
@@ -18,23 +19,12 @@ namespace Raven.Tryouts
         {
 #if !DNXCORE50
 
-            try
+            using (var x = new AlphaNumericSorting())
             {
-                for (int i = 0; i < 1000; i++)
-                {
-                    if(i%50==0)
-                        Console.WriteLine("i = " + i);
-                    using (var test = new ParallelCalculation())
-                    {
-                        test.ThrottlingTest();
-                    }
-                }
+                x.dynamic_query_should_work();
             }
-            catch (Exception e)
-            {
 
-                Debugger.Break();
-            }
+            Console.ReadLine();
 #endif
         }
     }

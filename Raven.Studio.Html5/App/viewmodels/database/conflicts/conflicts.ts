@@ -26,6 +26,7 @@ class conflicts extends viewModelBase {
     private refreshConflictsObservable = ko.observable<number>();
     private conflictsSubscription: KnockoutSubscription;
     currentColumns = ko.observable(customColumns.empty());
+    hasAnyConflict: KnockoutComputed<boolean>;
 
     static performedIndexChecks: Array<string> = [];
     static conflictsIndexName = "Raven/ConflictDocuments";
@@ -60,6 +61,14 @@ class conflicts extends viewModelBase {
     activate(args) {
         super.activate(args);
         this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
+
+        this.hasAnyConflict = ko.computed(() => {
+            var pagedItems = this.currentConflictsPagedItems();
+            if (pagedItems) {
+                return pagedItems.totalResultCount() > 0;
+            }
+            return false;
+        });
 
         this.currentColumns().columns([
             new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),

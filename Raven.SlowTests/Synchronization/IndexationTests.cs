@@ -112,8 +112,6 @@ namespace Raven.SlowTests.Synchronization
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(1));
 
-                Assert.Equal(20000, store.DatabaseCommands.GetStatistics().CountOfDocuments);
-
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Person>(index1.IndexName)

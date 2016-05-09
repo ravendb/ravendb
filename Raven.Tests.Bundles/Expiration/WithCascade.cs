@@ -9,6 +9,7 @@ using Raven.Bundles.CascadeDelete;
 using Raven.Bundles.Expiration;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Bundles.Expiration;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;

@@ -283,19 +283,16 @@
                                     <label class="col-sm-2 control-label">Resource types</label>
                                     <div class="col-sm-5">
                                         <div class="checkbox">
-                                            <label>
-                                                <input type="checkbox" data-bind="checked: fetchDb"> Databases
-                                            </label>
+                                            <input type="checkbox" class="styled" id="topo_db" data-bind="checked: fetchDb">
+                                            <label for="topo_db">Databases</label>
                                         </div>
                                         <div class="checkbox">
-                                            <label>
-                                                <input type="checkbox" data-bind="checked: fetchFs"> File systems
-                                            </label>
+                                            <input type="checkbox" class="styled" id="topo_fs" data-bind="checked: fetchFs">
+                                            <label for="topo_fs">File systems</label>
                                         </div>
                                         <div class="checkbox" data-bind="visible: $root.showCsOption()">
-                                            <label>
-                                                <input type="checkbox" data-bind="checked: fetchCs"> Counters
-                                            </label>
+                                            <input type="checkbox" class="styled" id="topo_cs" data-bind="checked: fetchCs">
+                                            <label for="topo_cs">Counters</label>
                                         </div>
                                     </div>
                                 </div>

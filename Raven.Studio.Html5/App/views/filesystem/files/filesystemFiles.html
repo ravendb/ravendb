@@ -50,9 +50,10 @@
         <div class="col-md-10">
             <div class="btn-toolbar" role="toolbar">
                 <div class="btn-group" data-bind="style: { visibility : hasFiles() ? 'visible' : 'hidden' }">
-                    <button type="button" class="btn btn-link" style="margin-left: 10px;" data-bind="click: toggleSelectAll" title="Select all or none">
-                        <img data-bind="attr: { src: hasAllFilesSelected() ? 'content/images/checked.png' : hasAnyFilesSelected() ? 'content/images/some-checked.png' : 'content/images/unchecked.png' }" />
-                    </button>
+                    <div class="checkbox">
+                        <input id="files_all" class="styled" type="checkbox" data-bind="checkboxTriple: filesSelection, event: { change: toggleSelectAll }" title="Select all or none">
+                        <label for="files_all">&nbsp;</label>
+                    </div>
                 </div>
                 <div class="btn-group" data-bind="visible: hasAnyFilesSelected">
                     <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1, click: editSelectedFile" title="Edit selected document (F2)">

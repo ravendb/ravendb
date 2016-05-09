@@ -96,7 +96,7 @@ namespace Raven.Database.Server.Controllers
             catch (InvalidOperationException e)
             {
                 if (Log.IsDebugEnabled)
-                    Log.DebugException("Failed to deserialize document request.", e);
+                    Log.DebugException("Failed to read json document.", e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -105,7 +105,7 @@ namespace Raven.Database.Server.Controllers
             catch (InvalidDataException e)
             {
                 if (Log.IsDebugEnabled)
-                    Log.DebugException("Failed to deserialize document request.", e);
+                    Log.DebugException("Failed to read json document.", e);
                 return GetMessageWithObject(new
                 {
                     e.Message

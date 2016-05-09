@@ -52,6 +52,7 @@ class ctor {
         showCheckboxes: boolean;
         showIds: boolean;
         useContextMenu: boolean;
+        container?: string;
         maxHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
@@ -613,9 +614,9 @@ class ctor {
 
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
-        var firstIndex = <number>this.settings.selectedIndices.first();
+        var firstIndex = this.settings.selectedIndices.first();
         var toggledIndices: Array<number> = isShiftSelect && this.settings.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
-        if (!isChecked) {
+        if (isChecked) {
             // Going from unchecked to checked.
             if (this.settings.selectedIndices.indexOf(rowIndex) === -1) {
                 toggledIndices

@@ -400,6 +400,7 @@
     <Content Include="Content\app.min.css">
       <DependentUpon>app.css</DependentUpon>
     </Content>
+    <Content Include="Content\awesome-bootstrap-checkbox.css" />
     <Content Include="Content\bootstrap-datetimepicker.css" />
     <Content Include="Content\bootstrap-datetimepicker.min.css" />
     <Content Include="Content\bootstrap-multiselect.css" />
@@ -419,7 +420,6 @@
     <Content Include="Content\images\ios-startup-image-portrait.png" />
     <Content Include="Content\images\logo.png" />
     <Content Include="Content\images\raven.png" />
-    <Content Include="Content\images\some-checked.png" />
     <Content Include="Content\images\ui-bg_flat_0_aaaaaa_40x100.png" />
     <Content Include="Content\images\ui-bg_flat_75_ffffff_40x100.png" />
     <Content Include="Content\images\ui-bg_glass_55_fbf9ee_1x400.png" />
@@ -852,21 +852,16 @@
     <TypeScriptCompile Include="App\commands\database\transformers\getSingleTransformerCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\transformers\getTransformersCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\transformers\saveTransformerCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\backupFilesystemCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\createDefaultSettingsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\createFolderCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteConfigurationKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteDestinationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\deleteFilesMatchingQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFilesConflictsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\getFilesystemRevisionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemsStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getFileSystemStatsCommand.ts" />
@@ -877,22 +872,10 @@
     <TypeScriptCompile Include="App\commands\filesystem\getVersioningCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\importFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\monitorCompactCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\monitorRestoreCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\renameFileCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\resetIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\resolveConflictCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\saveDestinationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\saveVersioningCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\startCompactCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\startRestoreCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
-    <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\commands\licensing\activateHotSpareCommand.ts" />
     <TypeScriptCompile Include="App\commands\licensing\GetHotSpareInformation.ts" />
     <TypeScriptCompile Include="App\commands\licensing\testHotSpareCommand.ts" />
@@ -1268,10 +1251,8 @@
     <None Include="web.Release.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
-    <Content Include="Content\images\checked.png" />
     <Content Include="Content\images\glyphicons-halflings-white.png" />
     <Content Include="Content\images\glyphicons-halflings.png" />
-    <Content Include="Content\images\unchecked.png" />
     <Content Include="Scripts\bootstrap-contextmenu-2.1.js" />
     <Content Include="Content\app.less" />
     <Content Include="Scripts\text.js" />

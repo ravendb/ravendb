@@ -2,7 +2,7 @@
     <div class="row">
         <div class="btn-toolbar">
             <div class="btn-group">
-                <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom">
+                <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" data-trigger="hover" data-placement="bottom" data-bind="enable: hasAnyConflict()">
                     Resolve all conflicts <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
@@ -29,7 +29,7 @@
 <script type="text/html" id="versions-template">
     <span data-bind="foreach: { data: $data, as: 'version' }">
         <a href="#" data-bind="attr: { href: $root.getUrlForConflict(version), title: 'Document Id: ' + version.id + ' Server Id: ' + $root.getServerUrlForVersion(version) }">
-            <span data-bind="  text: ($index() + 1) + $root.getTextForVersion(version)"></span>
+            <span data-bind="text: ($index() + 1) + $root.getTextForVersion(version)"></span>
         </a>
     </span>
 </script>

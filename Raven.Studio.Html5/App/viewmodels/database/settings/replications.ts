@@ -190,6 +190,8 @@ class replications extends viewModelBase {
 
     fetchReplications(db): JQueryPromise<any> {
         var deferred = $.Deferred();
+        ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
+
         new getReplicationsCommand(db)
             .execute()
             .done((repSetup: configurationDocumentDto<replicationsDto>) => {
@@ -200,8 +202,6 @@ class replications extends viewModelBase {
                     this.globalClientFailoverBehaviour(repSetup.GlobalDocument.ClientConfiguration.FailoverBehavior);
                     this.globalClientRequestTimeSlaThreshold(repSetup.GlobalDocument.ClientConfiguration.RequestTimeSlaThresholdInMilliseconds);
                 }
-
-                ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
 
                 var status = this.getIndexReplicationStatusForAllDestinations();
                 if (status === 'all')

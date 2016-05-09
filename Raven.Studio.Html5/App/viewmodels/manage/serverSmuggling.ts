@@ -203,14 +203,6 @@ class serverSmuggling extends viewModelBase {
         }
     }
 
-    toggleSelection(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            this.selectedResources.remove(item);
-        } else {
-            this.selectedResources.push(item);
-        }
-    }
-
     isSelected(item: serverSmugglingItem) {
         return this.selectedResources().indexOf(item) >= 0;
     }
@@ -254,23 +246,6 @@ class serverSmuggling extends viewModelBase {
         this.showCurlRequest(!this.showCurlRequest());
     }
 
-    toggleIncremental(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            item.incremental(!item.incremental());
-        }
-    }
-
-    toggleStripReplicationInformation(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            item.stripReplicationInformation(!item.stripReplicationInformation());
-        }
-    }
-
-    toggleDisableVersioningBundle(item: serverSmugglingItem) {
-        if (this.isSelected(item)) {
-            item.shouldDisableVersioningBundle(!item.shouldDisableVersioningBundle());
-        }
-    }
 }
 
 export = serverSmuggling;  
