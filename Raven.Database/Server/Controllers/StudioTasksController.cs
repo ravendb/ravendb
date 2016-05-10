@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -14,19 +13,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
-
 using Jint;
 using Jint.Parser;
-
-using Raven.Abstractions.Replication;
-using Raven.Database.Storage;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Bundles.Versioning.Triggers;
@@ -36,13 +31,14 @@ using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
     public class StudioTasksController : BaseDatabaseApiController
     {
-        const int CsvImportBatchSize = 512;
+        private const int CsvImportBatchSize = 512;
 
 
         [HttpGet]
@@ -59,6 +55,7 @@ namespace Raven.Database.Server.Controllers
             documentsController.SetResource(DatabasesLandlord.SystemDatabase);
             return documentsController.DocGet("Raven/StudioConfig").WithNoCache();
         }
+
         [HttpGet]
         [RavenRoute("studio-tasks/server-configs")]
         public HttpResponseMessage GerServerConfigs()
@@ -68,7 +65,7 @@ namespace Raven.Database.Server.Controllers
             {
                 IsGlobalAdmin = userInfo.IsAdminGlobal,
                 CanReadWriteSettings = userInfo.IsAdminGlobal ||
-                                       (userInfo.ReadWriteDatabases != null && 
+                                       (userInfo.ReadWriteDatabases != null &&
                                         userInfo.ReadWriteDatabases.Any(x => x.Equals(Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))),
                 CanReadSettings = userInfo.IsAdminGlobal ||
                                   (userInfo.ReadOnlyDatabases != null &&
@@ -77,14 +74,6 @@ namespace Raven.Database.Server.Controllers
             };
 
             return GetMessageWithObject(serverConfigs);
-        }
-
-        private class ServerConfigs
-        {
-            public bool IsGlobalAdmin { get; set; }
-            public bool CanReadWriteSettings { get; set; }
-            public bool CanReadSettings { get; set; }
-            public bool CanExposeConfigOverTheWire { get; set; }
         }
 
         [HttpPost]
@@ -122,7 +111,6 @@ var customFunctions = function() {{
 for(var customFunction in customFunctions) {{
     this[customFunction] = customFunctions[customFunction];
 }};", document.Value<string>("Functions")));
-
         }
 
         [HttpGet]
@@ -130,12 +118,12 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/check-sufficient-diskspace")]
         public async Task<HttpResponseMessage> CheckSufficientDiskspaceBeforeImport(long fileSize)
         {
-            string tempRoot = Path.GetPathRoot(Database.Configuration.TempPath);
-            var rootPathToDriveInfo = new Dictionary<string,DriveInfo>();
+            var tempRoot = Path.GetPathRoot(Database.Configuration.TempPath);
+            var rootPathToDriveInfo = new Dictionary<string, DriveInfo>();
             DriveInfo.GetDrives().ForEach(drive => rootPathToDriveInfo[drive.RootDirectory.FullName] = drive);
             DriveInfo tempFolderDrive;
-            if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) || 
-                tempFolderDrive.AvailableFreeSpace - (long)(tempFolderDrive.TotalSize * 0.1) < fileSize)
+            if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) ||
+                tempFolderDrive.AvailableFreeSpace - (long) (tempFolderDrive.TotalSize*0.1) < fileSize)
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
 
             return GetEmptyMessage();
@@ -144,14 +132,14 @@ for(var customFunction in customFunctions) {{
         [HttpPost]
         [RavenRoute("studio-tasks/import")]
         [RavenRoute("databases/{databaseName}/studio-tasks/import")]
-        public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+        public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
         {
             if (!Request.Content.IsMimeMultipartContent())
             {
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
-            string tempPath = Database.Configuration.TempPath;
+            var tempPath = Database.Configuration.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
                 File.Delete(fullTempPath);
@@ -161,7 +149,7 @@ for(var customFunction in customFunctions) {{
             var streamProvider = new MultipartFileStreamProvider(fullTempPath);
             await Request.Content.ReadAsMultipartAsync(streamProvider).ConfigureAwait(false);
             var uploadedFilePath = streamProvider.FileData[0].LocalFileName;
-            
+
             string fileName = null;
             var fileContent = streamProvider.Contents.SingleOrDefault();
             if (fileContent != null)
@@ -201,19 +189,18 @@ for(var customFunction in customFunctions) {{
                         if (filtersPipeDelimited != null)
                         {
                             smugglerOptions.Filters.AddRange(filtersPipeDelimited
-                                .Split(new string[] { "|||" }, StringSplitOptions.RemoveEmptyEntries)
-                                .Select(f => f.Split(new string[] { ";;;" }, StringSplitOptions.RemoveEmptyEntries))
-                                .Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
+                                .Split(new[] {"|||"}, StringSplitOptions.RemoveEmptyEntries)
+                                .Select(f => f.Split(new[] {";;;"}, StringSplitOptions.RemoveEmptyEntries))
+                                .Select(o => new FilterSetting {Path = o[0], Values = new List<string> {o[1]}, ShouldMatch = bool.Parse(o[2])}));
                         }
 
-                        await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
+                        await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> {FromStream = fileStream}).ConfigureAwait(false);
                     }
                     // use the last status which contains info about amount of doc/indexes imported
                     status.MarkCompleted(status.State.Value<string>("Progress"));
                 }
                 catch (Exception e)
                 {
-                    
                     if (cts.Token.IsCancellationRequested)
                     {
                         status.MarkCanceled("Task was cancelled");
@@ -224,14 +211,14 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = e.Message;
                     }
-                    else if (e is Imports.Newtonsoft.Json.JsonReaderException)
+                    else if (e is JsonReaderException)
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }
                     else if (e is OperationVetoedException && e.Message.Contains(VersioningPutTrigger.CreationOfHistoricalRevisionIsNotAllowed))
                     {
                         status.ExceptionDetails = "You are trying to import historical documents while the versioning bundle is enabled. " +
-                                                  "The versioning bundle is enabled. You should disable versioning during import. " + 
+                                                  "The versioning bundle is enabled. You should disable versioning during import. " +
                                                   "Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
                     }
                     else
@@ -252,8 +239,7 @@ for(var customFunction in customFunctions) {{
             {
                 StartTime = SystemTime.UtcNow,
                 TaskType = TaskActions.PendingTaskType.ImportDatabase,
-                Description = fileName,
-                
+                Description = fileName
             }, out id, cts);
 
             return GetMessageWithObject(new
@@ -262,27 +248,22 @@ for(var customFunction in customFunctions) {{
             }, HttpStatusCode.Accepted);
         }
 
-        public class ExportData
-        {
-            public string SmugglerOptions { get; set; }
-        }
-
         [HttpPost]
         [RavenRoute("studio-tasks/exportDatabase")]
         [RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
-        public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
+        public Task<HttpResponseMessage> ExportDatabase([FromBody] ExportData smugglerOptionsJson)
         {
             var requestString = smugglerOptionsJson.SmugglerOptions;
             SmugglerDatabaseOptions smugglerOptions;
-      
+
             using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
             {
                 var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-                smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
+                smugglerOptions = (SmugglerDatabaseOptions) serializer.Deserialize(jsonReader, typeof (SmugglerDatabaseOptions));
             }
 
             var result = GetEmptyMessage();
-            
+
             // create PushStreamContent object that will be called when the output stream will be ready.
             result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
             {
@@ -300,18 +281,18 @@ for(var customFunction in customFunctions) {{
                     outputStream.Close();
                 }
             });
-            
-            var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
+
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
                 string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
                 smugglerOptions.NoneDefaultFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
                 FileName = fileName + ".ravendump"
             };
-            
+
             return new CompletedTask<HttpResponseMessage>(result);
         }
-        
+
         [HttpPost]
         [RavenRoute("studio-tasks/createSampleData")]
         [RavenRoute("databases/{databaseName}/studio-tasks/createSampleData")]
@@ -323,10 +304,10 @@ for(var customFunction in customFunctions) {{
                 return GetMessageWithString("You cannot create sample data in a database that already contains documents", HttpStatusCode.BadRequest);
             }
 
-            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
+            using (var sampleData = typeof (StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
             {
-                var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
-                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData }).ConfigureAwait(false);
+                var dataDumper = new DatabaseDataDumper(Database) {Options = {OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false}};
+                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> {FromStream = sampleData}).ConfigureAwait(false);
             }
 
             return GetEmptyMessage();
@@ -345,7 +326,7 @@ for(var customFunction in customFunctions) {{
                 {
                     Error = "SQL Replication bundle is not installed"
                 }, HttpStatusCode.NotFound);
-            
+
             try
             {
                 Alert alert = null;
@@ -354,18 +335,19 @@ for(var customFunction in customFunctions) {{
 
                 // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
                 var results = task.SimulateSqlReplicationSqlQueries(sqlSimulate.DocumentId, sqlReplication, sqlSimulate.PerformRolledBackTransaction, out alert);
-                return GetMessageWithObject(new {
+                return GetMessageWithObject(new
+                {
                     Results = results,
                     LastAlert = alert
                 });
             }
             catch (Exception ex)
             {
-                    return GetMessageWithObject(new
-                    {
-                        Error = "Executeion failed",
-                        Exception = ex
-                    }, HttpStatusCode.BadRequest);
+                return GetMessageWithObject(new
+                {
+                    Error = "Executeion failed",
+                    Exception = ex
+                }, HttpStatusCode.BadRequest);
             }
         }
 
@@ -394,16 +376,16 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/createSampleDataClass")]
         public Task<HttpResponseMessage> CreateSampleDataClass()
         {
-            using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
+            using (var sampleData = typeof (StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.NorthwindHelpData.cs"))
             {
                 if (sampleData == null)
                     return GetEmptyMessageAsTask();
-                   
+
                 sampleData.Position = 0;
                 using (var reader = new StreamReader(sampleData, Encoding.UTF8))
                 {
-                   var data = reader.ReadToEnd();
-                   return GetMessageWithObjectAsTask(data);
+                    var data = reader.ReadToEnd();
+                    return GetMessageWithObjectAsTask(data);
                 }
             }
         }
@@ -447,7 +429,7 @@ for(var customFunction in customFunctions) {{
             {
                 var replicationStatus = jsonDocument.DataAsJson.JsonDeserialization<SqlReplicationStatus>();
                 replicationStatus.LastReplicatedEtags.RemoveAll(x => x.Name == sqlReplicationName);
-                
+
                 Database.Documents.Put(SqlReplicationTask.RavenSqlReplicationStatus, null, RavenJObject.FromObject(replicationStatus), new RavenJObject(), null);
             }
 
@@ -459,7 +441,7 @@ for(var customFunction in customFunctions) {{
         public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 35000, int max = 39999)
         {
             var args = string.Format("stableOnly={0}&min={1}&max={2}", stableOnly, min, max);
-            var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
+            var request = (HttpWebRequest) WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
             try
             {
                 request.Timeout = 5000;
@@ -469,12 +451,12 @@ for(var customFunction in customFunctions) {{
                     var result = new StreamReader(stream).ReadToEnd();
                     var parts = result.Split('-');
                     var build = int.Parse(parts[0]);
-                    return GetMessageWithObject(new { LatestBuild = build });
+                    return GetMessageWithObject(new {LatestBuild = build});
                 }
             }
             catch (Exception e)
             {
-                return GetMessageWithObject(new { Exception = e.Message });
+                return GetMessageWithObject(new {Exception = e.Message});
             }
         }
 
@@ -487,7 +469,7 @@ for(var customFunction in customFunctions) {{
             randomNumberGenerator.GetBytes(byteStruct);
             var result = Convert.ToBase64String(byteStruct);
 
-            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.OK, result);
+            var response = Request.CreateResponse(HttpStatusCode.OK, result);
             return response;
         }
 
@@ -499,8 +481,8 @@ for(var customFunction in customFunctions) {{
             try
             {
                 //Request is of type HttpRequestMessage
-                string keyObjectString = await Request.Content.ReadAsStringAsync().ConfigureAwait(false);
-                NameValueCollection nvc = HttpUtility.ParseQueryString(keyObjectString);
+                var keyObjectString = await Request.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var nvc = HttpUtility.ParseQueryString(keyObjectString);
                 var key = nvc["key"];
 
                 //Convert base64-encoded hash value into a byte array.
@@ -512,21 +494,21 @@ for(var customFunction in customFunctions) {{
                 message = "The key must be in Base64 encoding format!";
             }
 
-            HttpResponseMessage response = Request.CreateResponse((message == null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, message);
+            var response = Request.CreateResponse((message == null) ? HttpStatusCode.OK : HttpStatusCode.BadRequest, message);
             return response;
         }
 
         private Task FlushBatch(IEnumerable<RavenJObject> batch)
         {
             var commands = (from doc in batch
-                            let metadata = doc.Value<RavenJObject>("@metadata")
-                            let removal = doc.Remove("@metadata")
-                            select new PutCommandData
-                            {
-                                Metadata = metadata,
-                                Document = doc,
-                                Key = metadata.Value<string>("@id"),
-                            }).ToArray();
+                let metadata = doc.Value<RavenJObject>("@metadata")
+                let removal = doc.Remove("@metadata")
+                select new PutCommandData
+                {
+                    Metadata = metadata,
+                    Document = doc,
+                    Key = metadata.Value<string>("@id")
+                }).ToArray();
 
             Database.Batch(commands, CancellationToken.None);
             return new CompletedTask();
@@ -537,7 +519,7 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/resolveMerge")]
         public Task<HttpResponseMessage> ResolveMerge(string documentId)
         {
-            int nextPage = 0;
+            var nextPage = 0;
             var docs = Database.Documents.GetDocumentsWithIdStartingWith(documentId + "/conflicts", null, null, 0, 1024, CancellationToken.None, ref nextPage);
             var conflictsResolver = new ConflictsResolver(docs.Values<RavenJObject>());
             return GetMessageWithObjectAsTask(conflictsResolver.Resolve());
@@ -548,7 +530,6 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/loadCsvFile")]
         public async Task<HttpResponseMessage> LoadCsvFile()
         {
-
             if (!Request.Content.IsMimeMultipartContent())
                 throw new Exception(); // divided by zero
 
@@ -573,9 +554,9 @@ for(var customFunction in customFunctions) {{
                     var totalCount = 0;
                     var batch = new List<RavenJObject>();
 
-                    var validColumnIndexes = headers.Select((h, i) => new { Header = h, Index = i })
+                    var validColumnIndexes = headers.Select((h, i) => new {Header = h, Index = i})
                         .Where(x => x.Header.StartsWith("@") == false)
-                        .Select(s=> s.Index)
+                        .Select(s => s.Index)
                         .ToArray();
 
                     batch.Clear();
@@ -615,7 +596,7 @@ for(var customFunction in customFunctions) {{
                         }
 
 
-                        metadata = metadata ?? new RavenJObject { { "Raven-Entity-Name", entity } };
+                        metadata = metadata ?? new RavenJObject {{"Raven-Entity-Name", entity}};
                         document.Add("@metadata", metadata);
                         metadata.Add("@id", id ?? Guid.NewGuid().ToString());
 
@@ -634,7 +615,6 @@ for(var customFunction in customFunctions) {{
                         await FlushBatch(batch).ConfigureAwait(false);
                     }
                 }
-
             }
 
             return GetEmptyMessage();
@@ -665,9 +645,9 @@ for(var customFunction in customFunctions) {{
             {
                 var result = Database
                     .Queries
-                    .Query(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:" + collectionName, PageSize = 0 }, CancellationToken.None);
+                    .Query(Constants.DocumentsByEntityNameIndex, new IndexQuery {Query = "Tag:" + collectionName, PageSize = 0}, CancellationToken.None);
 
-                results.Add(new CollectionNameAndCount { CollectionName = collectionName, Count = result.TotalResults });
+                results.Add(new CollectionNameAndCount {CollectionName = collectionName, Count = result.TotalResults});
             });
 
             return GetMessageWithObjectAsTask(results);
@@ -694,17 +674,17 @@ for(var customFunction in customFunctions) {{
                 {
                     var transactionalStorageId = Database.TransactionalStorage.Id.ToString();
                     bool stale;
-                    foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery { PageSize = int.MaxValue }, linked, out stale))
+                    foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery {PageSize = int.MaxValue}, linked, out stale))
                     {
                         var conflicts = accessor
                             .Documents
-                            .GetDocumentsWithIdStartingWith(documentId, 0, Int32.MaxValue, null)
+                            .GetDocumentsWithIdStartingWith(documentId, 0, int.MaxValue, null)
                             .Where(x => x.Key.Contains("/conflicts/"))
                             .ToList();
 
                         KeyValuePair<JsonDocument, DateTime> local;
                         KeyValuePair<JsonDocument, DateTime> remote;
-                        GetConflictDocuments(conflicts, accessor, documentId, transactionalStorageId, out local, out remote);
+                        Database.GetConflictDocuments(conflicts, out local, out remote);
 
                         var documentToSave = GetDocumentToSave(resolution, local, remote);
                         if (documentToSave == null)
@@ -722,10 +702,10 @@ for(var customFunction in customFunctions) {{
 
             long id;
             Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
-                                                                            {
-                                                                                StartTime = SystemTime.UtcNow,
-                                                                                TaskType = TaskActions.PendingTaskType.BulkInsert,
-                                                                            }, out id, cts);
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.BulkInsert
+            }, out id, cts);
 
             return GetMessageWithObjectAsTask(new
             {
@@ -733,42 +713,16 @@ for(var customFunction in customFunctions) {{
             }, HttpStatusCode.Accepted);
         }
 
-        private static void GetConflictDocuments(IEnumerable<JsonDocument> conflicts, IStorageActionsAccessor actions, string documentId, string transactionalStorageId, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)
-        {
-            DateTime localModified = DateTime.MinValue, remoteModified = DateTime.MinValue;
-            JsonDocument localDocument = null, newestRemote = null;
-            foreach (var conflict in conflicts)
-            {
-                var lastModified = conflict.LastModified.HasValue ? conflict.LastModified.Value : DateTime.MinValue;
-                var replicationSource = conflict.Metadata.Value<string>(Constants.RavenReplicationSource);
-
-                if (string.Equals(replicationSource, transactionalStorageId, StringComparison.OrdinalIgnoreCase))
-                {
-                    localModified = lastModified;
-                    localDocument = conflict;
-                    continue;
-                }
-
-                if (lastModified <= remoteModified)
-                    continue;
-
-                newestRemote = conflict;
-                remoteModified = lastModified;
-            }
-            
-            local = new KeyValuePair<JsonDocument, DateTime>(localDocument, localModified);
-            remote = new KeyValuePair<JsonDocument, DateTime>(newestRemote, remoteModified);
-        }
 
         private static JsonDocument GetDocumentToSave(StraightforwardConflictResolution resolution, KeyValuePair<JsonDocument, DateTime> local, KeyValuePair<JsonDocument, DateTime> remote)
         {
-            if (local.Key == null && remote.Key == null) 
+            if (local.Key == null && remote.Key == null)
                 return null;
 
-            if (local.Key == null) 
+            if (local.Key == null)
                 return remote.Key;
 
-            if (remote.Key == null) 
+            if (remote.Key == null)
                 return local.Key;
 
             JsonDocument documentToSave;
@@ -847,6 +801,19 @@ for(var customFunction in customFunctions) {{
             return value;
         }
 
+        private class ServerConfigs
+        {
+            public bool IsGlobalAdmin { get; set; }
+            public bool CanReadWriteSettings { get; set; }
+            public bool CanReadSettings { get; set; }
+            public bool CanExposeConfigOverTheWire { get; set; }
+        }
+
+        public class ExportData
+        {
+            public string SmugglerOptions { get; set; }
+        }
+
         private class ImportOperationStatus : OperationStateBase
         {
             public string ExceptionDetails { get; set; }
@@ -860,4 +827,3 @@ for(var customFunction in customFunctions) {{
         }
     }
 }
-

@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -17,7 +18,8 @@ namespace Raven.Database.Extensions
         {
             while (true)
             {
-                using (var putSerialLock = self.DocumentLock.TryLock(250))
+                using(self.TransactionalStorage.DisableBatchNesting())
+                using (var putSerialLock = self.DocumentLock.TryLock(25))
                 {
                     if (putSerialLock == null)
                         continue;
@@ -25,7 +27,7 @@ namespace Raven.Database.Extensions
                     AlertsDocument alertsDocument;
                     var alertsDoc = self.Documents.Get(Constants.RavenAlerts, null);
                     RavenJObject metadata;
-                    Etag etag;
+                    Etag etag;  
                     if (alertsDoc == null)
                     {
                         etag = Etag.Empty;

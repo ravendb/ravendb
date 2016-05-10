@@ -53,17 +53,17 @@ namespace Raven.Database.Server.Controllers
 
                 var startsWith = GetQueryStringValue("startsWith");
                 HttpResponseMessage msg;
-                int nextPageStart = GetNextPageStart();
+                var nextPageStart = GetNextPageStart();
                 if (string.IsNullOrEmpty(startsWith))
                 {
-                    var results = Database.Documents.GetDocumentsAsJson(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), 
+                    var results = Database.Documents.GetDocumentsAsJson(GetStart(), GetPageSize(Database.Configuration.MaxPageSize),
                         GetEtagFromQueryString(), cts.Token);
                     msg = GetMessageWithObject(results);
                 }
                 else
                 {
                     var transformer = GetQueryStringValue("transformer");
-                    var transformerParameters = this.ExtractTransformerParameters();
+                    var transformerParameters = ExtractTransformerParameters();
 
                     msg =
                         GetMessageWithObject(
@@ -74,11 +74,10 @@ namespace Raven.Database.Server.Controllers
                                 GetStart(),
                                 GetPageSize(Database.Configuration.MaxPageSize),
                                 cts.Token,
-                                ref nextPageStart, transformer, transformerParameters,
-                                skipAfter: GetQueryStringValue("skipAfter")));
+                                ref nextPageStart, transformer, transformerParameters, GetQueryStringValue("skipAfter")));
                 }
 
-                WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);
+                WriteHeaders(new RavenJObject {{Constants.NextPageStart, nextPageStart}}, lastDocEtag, msg);
 
                 return msg;
             }
@@ -89,7 +88,6 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/docs")]
         public async Task<HttpResponseMessage> DocsPost()
         {
-
             RavenJObject json;
             try
             {
@@ -102,8 +100,7 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
-                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-
+                }, (HttpStatusCode) 422); //http code 422 - Unprocessable entity
             }
             catch (InvalidDataException e)
             {
@@ -112,12 +109,12 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithObject(new
                 {
                     e.Message
-                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+                }, (HttpStatusCode) 422); //http code 422 - Unprocessable entity
             }
 
             var id = Database.Documents.Put(null, Etag.Empty, json,
-                                  ReadInnerHeaders.FilterHeadersToObject(),
-                                  GetRequestTransaction());
+                ReadInnerHeaders.FilterHeadersToObject(),
+                GetRequestTransaction());
 
             return GetMessageWithObject(id);
         }
@@ -128,7 +125,7 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage DocHead(string docId)
         {
             var msg = GetEmptyMessage();
-            msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+            msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"};
             var transactionInformation = GetRequestTransaction();
             var documentMetadata = Database.Documents.GetDocumentMetadata(docId, transactionInformation);
             if (documentMetadata == null)
@@ -215,8 +212,7 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
-                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
-
+                }, (HttpStatusCode) 422); //http code 422 - Unprocessable entity
             }
             catch (InvalidDataException e)
             {
@@ -225,7 +221,7 @@ namespace Raven.Database.Server.Controllers
                 return GetMessageWithObject(new
                 {
                     e.Message
-                }, (HttpStatusCode)422); //http code 422 - Unprocessable entity
+                }, (HttpStatusCode) 422); //http code 422 - Unprocessable entity
             }
 
             var putResult = Database.Documents.Put(docId, GetEtag(), json, ReadInnerHeaders.FilterHeadersToObject(), GetRequestTransaction());
@@ -263,20 +259,27 @@ namespace Raven.Database.Server.Controllers
                 msg.StatusCode = HttpStatusCode.NotFound;
                 return msg;
             }
-            var doc = Database.Documents.Get(docId, GetRequestTransaction());
+            var requestTransaction = GetRequestTransaction();
+            var doc = Database.Documents.Get(docId, requestTransaction);
             if (doc == null)
             {
                 msg.StatusCode = HttpStatusCode.NotFound;
                 return msg;
             }
-
+            if (doc.Metadata.ContainsKey(Constants.RavenReplicationConflict))
+            {
+                if (Database.ResolveConflict(doc))
+                {
+                    doc = Database.Documents.Get(docId, requestTransaction);
+                }
+            }
             if (doc.NonAuthoritativeInformation != null && doc.NonAuthoritativeInformation.Value)
                 msg.StatusCode = HttpStatusCode.NonAuthoritativeInformation;
 
             Debug.Assert(doc.Etag != null);
             doc.Metadata[Constants.LastModified] = doc.LastModified;
             doc.Metadata[Constants.DocumentIdFieldName] = Uri.EscapeUriString(doc.Key ?? string.Empty);
-            msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+            msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"};
             return WriteData(doc.DataAsJson, doc.Metadata, doc.Etag, msg: msg);
         }
 
@@ -287,7 +290,7 @@ namespace Raven.Database.Server.Controllers
                 case PatchResult.DocumentDoesNotExists:
                     return GetEmptyMessage(HttpStatusCode.NotFound);
                 case PatchResult.Patched:
-                    var msg = GetMessageWithObject(new { Patched = true, Debug = debug });
+                    var msg = GetMessageWithObject(new {Patched = true, Debug = debug});
                     msg.Headers.Location = Database.Configuration.GetFullUrl("docs/" + docId);
                     return msg;
                 case PatchResult.Tested:
