@@ -1,22 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
-using Voron.Data.Tables;
+using System.Runtime.CompilerServices;
+using Voron.Data.BTrees;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public class MapReduceIndexingContext : IDisposable
     {
-        public Table MapEntriesTable;
+        private readonly Queue<long> _idsOfDeletedEntries = new Queue<long>();
+
+        public Tree MapEntries;
         public Dictionary<ulong, ReduceKeyState> StateByReduceKeyHash = new Dictionary<ulong, ReduceKeyState>();
         public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
         public Dictionary<string, long> ProcessedTombstoneEtags = new Dictionary<string, long>();
+        
+        internal long LastMapResultId = -1; // TODO arek - initialize on index startup
 
         public void Dispose()
         {
-            MapEntriesTable = null;
+            MapEntries = null;
             ProcessedDocEtags.Clear();
             ProcessedTombstoneEtags.Clear();
             StateByReduceKeyHash.Clear();
+            _idsOfDeletedEntries.Clear();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void EntryDeleted(MapEntry deletedEntry)
+        {
+            _idsOfDeletedEntries.Enqueue(deletedEntry.Id);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long GetNextIdentifier()
+        {
+            return _idsOfDeletedEntries.Count > 1 ? _idsOfDeletedEntries.Dequeue() : ++LastMapResultId;
         }
     }
 }

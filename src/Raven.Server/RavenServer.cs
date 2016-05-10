@@ -13,6 +13,7 @@ using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server

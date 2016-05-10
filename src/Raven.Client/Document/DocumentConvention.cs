@@ -21,6 +21,7 @@ using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Converters;
@@ -72,7 +73,7 @@ namespace Raven.Client.Document
             FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
             ShouldCacheRequest = url => true;
             FindIdentityProperty = q => q.Name == "Id";
-            FindClrType = (id, doc, metadata) => metadata.Value<string>(Abstractions.Data.Constants.RavenClrType);
+            FindClrType = (id, doc, metadata) => metadata.Value<string>(Constants.Headers.RavenClrType);
 
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
             TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;

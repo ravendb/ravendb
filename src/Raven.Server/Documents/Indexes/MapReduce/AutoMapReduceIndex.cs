@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -14,7 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.Tables;
+using Voron.Data.Fixed;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
@@ -23,25 +22,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     {
         private readonly BlittableJsonTraverser _blittableTraverser = new BlittableJsonTraverser();
 
-        private readonly TableSchema _mapEntriesSchema = new TableSchema();
-
         private readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
-
-        private readonly TableSchema.SchemaIndexDef _byDocumentKeysIndex;
 
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
         {
-            // map entries schema is as follows
-            // 3 fields (document key, hash of reduce key, map result)
-
-            _mapEntriesSchema.DefineIndex("DocumentKeys", new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 1
-            });
-
-            _byDocumentKeysIndex = _mapEntriesSchema.Indexes["DocumentKeys"];
         }
 
         public static AutoMapReduceIndex CreateNew(int indexId, AutoMapReduceIndexDefinition definition,
@@ -75,24 +60,29 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            _mapReduceWorkContext.MapEntriesTable = GetMapEntriesTable(indexContext.Transaction.InnerTransaction);
+            _mapReduceWorkContext.MapEntries = GetMapEntriesTree(indexContext.Transaction.InnerTransaction);
 
             return _mapReduceWorkContext;
         }
 
         public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            var mapEntry = GetMapEntryForDocument(tombstone.Key);
+            var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(tombstone.Key, sizeof(ulong));
 
-            if (mapEntry == null)
+            if (documentMapEntries.NumberOfEntries == 0)
                 return;
 
-            var state = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
+            foreach (var mapEntry in GetMapEntriesForDocument(tombstone.Key, documentMapEntries))
+            {
+                var state = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
+                
+                fixed (long* ptr = &mapEntry.Id)
+                    state.Tree.Delete(new Slice((byte*)ptr, sizeof(long)));
 
-            var storageId = mapEntry.StorageId;
+                _mapReduceWorkContext.EntryDeleted(mapEntry);
+            }
 
-            _mapReduceWorkContext.MapEntriesTable.Delete(storageId);
-            state.Tree.Delete(new Slice((byte*)&storageId, sizeof(long))); 
+            _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.Key, sizeof(ulong));
         }
 
         public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
@@ -197,66 +187,81 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return new MapReduceQueryResultRetriever(indexContext, fieldsToFetch);
         }
 
-        private Table GetMapEntriesTable(Transaction tx)
+        private static Tree GetMapEntriesTree(Transaction tx)
         {
-            _mapEntriesSchema.Create(tx, "MapResults");
-            var table = new Table(_mapEntriesSchema, "MapResults", tx);
+            // map entries structure
+            // MapEntries tree has the following entries
+            // -> { document key, fixed size tree }
+            // each fixed size tree stored records like 
+            // -> { identifier of a map result, hash of a reduce key for the map result }
 
-            return table;
+            return tx.CreateTree("MapEntries");
         }
 
         private unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, LazyStringValue documentKey, ulong reduceKeyHash, ReduceKeyState state, TransactionOperationContext indexContext)
         {
-            var tvb = new TableValueBuilder
-            {
-                { documentKey.Buffer, documentKey.Size },
-                { (byte*) &reduceKeyHash, sizeof(ulong) },
-                { mappedResult.BasePointer, mappedResult.Size }
-            };
+            var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(documentKey, sizeof(ulong));
 
-            var existingEntry = GetMapEntryForDocument(documentKey);
+            long id = -1;
 
-            long storageId;
-            if (existingEntry == null)
+            if (documentMapEntries.NumberOfEntries > 0)
             {
-                storageId = _mapReduceWorkContext.MapEntriesTable.Insert(tvb);
-            }
-            else
-            {
-                if (existingEntry.ReduceKeyHash != reduceKeyHash)
+                var mapEntries = GetMapEntriesForDocument(documentKey, documentMapEntries);
+
+                if (mapEntries.Count == 1 && mapEntries[0].ReduceKeyHash == reduceKeyHash)
                 {
-                    // reduce key changed - need to remove record in related reduce tree
-
-                    var previousState = GetReduceKeyState(existingEntry.ReduceKeyHash, indexContext, create: false);
-                    var previousStorageId = existingEntry.StorageId;
-                    previousState.Tree.Delete(new Slice((byte*)&previousStorageId, sizeof(long)));
+                    // update of existing entry, reduce key remained the same - we are going to overwrite the map result only
+                    id = mapEntries[0].Id;
                 }
-                
-                storageId = _mapReduceWorkContext.MapEntriesTable.Update(existingEntry.StorageId, tvb);
+                else
+                {
+                    foreach (var mapEntry in mapEntries)
+                    {
+                        var previousState = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
+
+                        fixed (long* ptr = &mapEntry.Id)
+                            previousState.Tree.Delete(new Slice((byte*)ptr, sizeof(long)));
+
+                        documentMapEntries.Delete(mapEntry.Id);
+
+                        _mapReduceWorkContext.EntryDeleted(mapEntry);
+                    }
+                }
             }
-           
-            state.Tree.DirectAdd(new Slice((byte*)&storageId, sizeof(long)), mappedResult.Size);
+
+            if (id == -1)
+            {
+                id = _mapReduceWorkContext.GetNextIdentifier();
+                documentMapEntries.Add(id, new Slice((byte*)&reduceKeyHash, sizeof(ulong)));
+            }
+
+            var pos = state.Tree.DirectAdd(new Slice((byte*)&id, sizeof(long)), mappedResult.Size);
+
+            mappedResult.CopyTo(pos);
         }
 
-        public unsafe MapEntry GetMapEntryForDocument(LazyStringValue documentKey)
+        public static unsafe List<MapEntry> GetMapEntriesForDocument(LazyStringValue documentKey, FixedSizeTree documentMapEntries)
         {
-            var documentKeySlice = new Slice(documentKey.Buffer, (ushort) documentKey.Size);
+            var entries = new List<MapEntry>((int)documentMapEntries.NumberOfEntries);
 
-            var seek = _mapReduceWorkContext.MapEntriesTable.SeekForwardFrom(_byDocumentKeysIndex, documentKeySlice).FirstOrDefault();
-
-            if (seek?.Key.Compare(documentKeySlice) != 0)
-                return null;
-
-            var tvr = seek.Results.Single();
-
-            int _;
-            var ptr = tvr.Read(1, out _);
-
-            return new MapEntry
+            using (var it = documentMapEntries.Iterate())
             {
-                ReduceKeyHash = *(ulong*)ptr,
-                StorageId = tvr.Id
-            };
+                do
+                {
+                    var currentKey = it.CurrentKey;
+                    ulong reduceKeyHash;
+
+                    it.CreateReaderForCurrent().Read((byte*)&reduceKeyHash, sizeof(ulong));
+
+                    entries.Add(new MapEntry
+                    {
+                        Id = currentKey,
+                        ReduceKeyHash = reduceKeyHash
+                    });
+                } while (it.MoveNext());
+            }
+
+            return entries;
         }
 
         private ReduceKeyState GetReduceKeyState(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create)

@@ -3,6 +3,6 @@
     public class MapEntry
     {
         public ulong ReduceKeyHash;
-        public long StorageId;
+        public long Id;
     }
 }

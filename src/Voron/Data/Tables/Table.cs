@@ -342,7 +342,7 @@ namespace Voron.Data.Tables
 
                 builder.CopyTo(pos);
 
-                id = page.PageNumber;
+                id = page.PageNumber * _pageSize;
             }
 
             InsertIndexValuesFor(id, new TableValueReader(pos, size));

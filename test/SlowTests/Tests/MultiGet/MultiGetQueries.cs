@@ -1,26 +1,38 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Bugs.TransformResults;
-using Raven.Tests.Common;
-
-using Xunit;
 using Raven.Client.Linq;
-using User = Raven.Tests.Linq.User;
+using Xunit;
 
-namespace Raven.Tests.MultiGet
+namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetQueries : RavenTest
+    public class MultiGetQueries : RavenTestBase
     {
-        [Fact]
-        public void UnlessAccessedLazyQueriesAreNoOp()
+        private class User
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public int Age { get; set; }
+            public string Info { get; set; }
+            public bool Active { get; set; }
+            public DateTime Created { get; set; }
+
+            public User()
+            {
+                Name = string.Empty;
+                Age = default(int);
+                Info = string.Empty;
+                Active = false;
+            }
+        }
+
+        [Fact]
+        public async Task UnlessAccessedLazyQueriesAreNoOp()
+        {
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -28,15 +40,13 @@ namespace Raven.Tests.MultiGet
                     var result2 = session.Query<User>().Where(x => x.Name == "ayende").Lazily();
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
                 }
-
             }
         }
 
         [Fact]
-        public void WithPaging()
+        public async Task WithPaging()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -52,23 +62,21 @@ namespace Raven.Tests.MultiGet
                     var result1 = session.Query<User>().Where(x => x.Age == 0).Skip(1).Take(2).Lazily();
                     Assert.Equal(2, result1.Value.ToArray().Length);
                 }
-
             }
         }
 
 
         [Fact]
-        public void CanGetQueryStats()
+        public async Task CanGetQueryStats()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "oren" });
                     session.Store(new User());
                     session.Store(new User { Name = "ayende" });
-                    session.Store(new User{Age = 3});
+                    session.Store(new User { Age = 3 });
                     session.SaveChanges();
                 }
 
@@ -76,7 +84,7 @@ namespace Raven.Tests.MultiGet
                 {
                     RavenQueryStatistics stats1;
                     var result1 = session.Query<User>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats1)
                         .Where(x => x.Age == 0).Skip(1).Take(2)
                         .Lazily();
@@ -98,10 +106,9 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void WithQueuedActions()
+        public async Task WithQueuedActions()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -124,10 +131,9 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void WithQueuedActions_Load()
+        public async Task WithQueuedActions_Load()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -146,34 +152,34 @@ namespace Raven.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void write_then_read_from_complex_entity_types_lazily()
+        [Fact(Skip = "Missing feature: Static indexes and transformers")]
+        public Task write_then_read_from_complex_entity_types_lazily()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
-            {
-                new Answers_ByAnswerEntity().Execute(store);
-                new Answers_ByAnswerEntityTransformer().Execute(store);
+            throw new NotImplementedException();
 
-                string answerId = ComplexValuesFromTransformResults.CreateEntities(store);
-                // Working
-                using (IDocumentSession session = store.OpenSession())
-                {
-                    var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                        .Where(x => x.Id == answerId)
-                        .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
-                        .Lazily();
-                    Assert.NotNull(answerInfo.Value.ToArray().Length);
-                }
-            }
+            //using (var store = await GetDocumentStore())
+            //{
+            //    new Answers_ByAnswerEntity().Execute(store);
+            //    new Answers_ByAnswerEntityTransformer().Execute(store);
+
+            //    string answerId = ComplexValuesFromTransformResults.CreateEntities(store);
+            //    // Working
+            //    using (IDocumentSession session = store.OpenSession())
+            //    {
+            //        var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+            //            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+            //            .Where(x => x.Id == answerId)
+            //            .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
+            //            .Lazily();
+            //        Assert.NotNull(answerInfo.Value.ToArray().Length);
+            //    }
+            //}
         }
 
         [Fact]
-        public void LazyOperationsAreBatched()
+        public async Task LazyOperationsAreBatched()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -189,10 +195,9 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void LazyMultiLoadOperationWouldBeInTheSession()
+        public async Task LazyMultiLoadOperationWouldBeInTheSession()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -226,10 +231,9 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void LazyWithProjection()
+        public async Task LazyWithProjection()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -259,10 +263,9 @@ namespace Raven.Tests.MultiGet
 
 
         [Fact]
-        public void LazyWithProjection2()
+        public async Task LazyWithProjection2()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -291,10 +294,9 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
+        public async Task LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -323,10 +325,9 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void CanGetStatisticsWithLazyQueryResults()
+        public async Task CanGetStatisticsWithLazyQueryResults()
         {
-            using (GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

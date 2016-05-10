@@ -3,21 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+using FastTests;
+
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
 
 using Xunit;
-using System.Linq;
 
-namespace Raven.Tests.Queries
+namespace SlowTests.Tests.Queries
 {
-    public class CanQueryOnCustomClass : RavenTest
+    public class CanQueryOnCustomClass : RavenTestBase
     {
         [Fact]
-        public void UsingConverter()
+        public async Task UsingConverter()
         {
-            using (var store = NewDocumentStore())
+            using (var store = await GetDocumentStore())
             {
                 store.Conventions.CustomizeJsonSerializer += x => x.Converters = new JsonConverterCollection(x.Converters) { new MoneyConverter() };
 

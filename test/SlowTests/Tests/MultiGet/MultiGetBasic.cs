@@ -1,55 +1,78 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
-using Raven.Abstractions.Extensions;
-using Raven.Imports.Newtonsoft.Json;
+using System.Threading.Tasks;
+
+using FastTests;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Tests.Bugs;
-using Raven.Tests.Common;
+using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
+using Raven.Client.Data;
+using Raven.Imports.Newtonsoft.Json;
 
 using Xunit;
-using System.Linq;
-using Raven.Abstractions;
 
-namespace Raven.Tests.MultiGet
+namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetBasic : RavenTest
+    public class MultiGetBasic : RavenTestBase
     {
-        [Fact]
-        public void CanUseMultiGetToBatchGetDocumentRequests()
+        private class User
         {
-            using(GetNewServer())
-            using(var docStore = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public int Age { get; set; }
+            public string Info { get; set; }
+            public bool Active { get; set; }
+            public DateTime Created { get; set; }
+
+            public User()
             {
-                using(var session = docStore.OpenSession())
+                Name = string.Empty;
+                Age = default(int);
+                Info = string.Empty;
+                Active = false;
+            }
+        }
+
+        [Fact]
+        public async Task CanUseMultiGetToBatchGetDocumentRequests()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                var docs = $"/databases/{store.DefaultDatabase}/docs";
+                using (var session = store.OpenSession())
                 {
-                    session.Store(new User{Name = "Ayende"});
-                    session.Store(new User{Name = "Oren"});
+                    session.Store(new User { Name = "Ayende" });
+                    session.Store(new User { Name = "Oren" });
                     session.SaveChanges();
                 }
 
-                var request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
+                var request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
                 request.Method = "POST";
-                using(var stream = request.GetRequestStream())
+                using (var stream = await request.GetRequestStreamAsync())
                 {
                     var streamWriter = new StreamWriter(stream);
                     JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
                     {
                         new GetRequest
                         {
-                            Url = "/docs/users/1"
+                            Url = docs,
+                            Query = "?id=users/1"
                         },
                         new GetRequest
                         {
-                            Url = "/docs/users/2"
+                            Url = docs,
+                            Query = "?id=users/2"
                         },
                     });
                     streamWriter.Flush();
                     stream.Flush();
                 }
 
-                using(var resp = request.GetResponse())
+                using (var resp = await request.GetResponseAsync())
                 using (var stream = resp.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();
@@ -60,30 +83,29 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void CanUseMultiQuery()
+        public async Task CanUseMultiQuery()
         {
-            using (GetNewServer())
-            using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
-                using (var session = docStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Ayende" });
                     session.Store(new User { Name = "Oren" });
                     session.SaveChanges();
                 }
 
-                using (var session = docStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Query<User>()
-                        .Customize(x=>x.WaitForNonStaleResults())
-                        .Where(u=>u.Name == "Ayende")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(u => u.Name == "Ayende")
                         .ToArray();
                 }
 
 
-                var request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
+                var request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
                 request.Method = "POST";
-                using (var stream = request.GetRequestStream())
+                using (var stream = await request.GetRequestStreamAsync())
                 {
                     var streamWriter = new StreamWriter(stream);
                     JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
@@ -103,7 +125,7 @@ namespace Raven.Tests.MultiGet
                     stream.Flush();
                 }
 
-                using (var resp = request.GetResponse())
+                using (var resp = await request.GetResponseAsync())
                 using (var stream = resp.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();
@@ -114,40 +136,42 @@ namespace Raven.Tests.MultiGet
         }
 
         [Fact]
-        public void CanHandleCaching()
+        public async Task CanHandleCaching()
         {
-            using (GetNewServer())
-            using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            using (var store = await GetDocumentStore())
             {
-                using (var session = docStore.OpenSession())
+                var docs = $"/databases/{store.DefaultDatabase}/docs";
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Ayende" });
                     session.Store(new User { Name = "Oren" });
                     session.SaveChanges();
                 }
 
-                var request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
+                var request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
                 request.Method = "POST";
-                using (var stream = request.GetRequestStream())
+                using (var stream = await request.GetRequestStreamAsync())
                 {
                     var streamWriter = new StreamWriter(stream);
                     JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
                     {
                         new GetRequest
                         {
-                            Url = "/docs/users/1"
+                            Url = docs,
+                            Query = "?id=users/1"
                         },
                         new GetRequest
                         {
-                            Url = "/docs/users/2"
+                            Url = docs,
+                            Query = "?id=users/2"
                         },
                     });
                     streamWriter.Flush();
                     stream.Flush();
                 }
-                
+
                 GetResponse[] results;
-                using (var resp = request.GetResponse())
+                using (var resp = await request.GetResponseAsync())
                 using (var stream = resp.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();
@@ -156,35 +180,37 @@ namespace Raven.Tests.MultiGet
                     Assert.True(results[1].Headers.ContainsKey("ETag"));
                 }
 
-                request = (HttpWebRequest)WebRequest.Create("http://localhost:8079/multi_get");
+                request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
                 request.Method = "POST";
-                using (var stream = request.GetRequestStream())
+                using (var stream = await request.GetRequestStreamAsync())
                 {
                     var streamWriter = new StreamWriter(stream);
                     JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
                     {
                         new GetRequest
                         {
-                            Url = "/docs/users/1",
+                            Url = docs,
+                            Query = "?id=users/1",
                             Headers =
-                                                                    {
-                                                                        {"If-None-Match", results[0].Headers["ETag"]}
-                                                                    }
+                            {
+                                {"If-None-Match", results[0].Headers["ETag"]}
+                            }
                         },
                         new GetRequest
                         {
-                            Url = "/docs/users/2",
+                            Url = docs,
+                            Query = "?id=users/2",
                             Headers =
-                                                                    {
-                                                                        {"If-None-Match", results[1].Headers["ETag"]}
-                                                                    }
+                            {
+                                {"If-None-Match", results[1].Headers["ETag"]}
+                            }
                         },
                     });
                     streamWriter.Flush();
                     stream.Flush();
                 }
 
-                using (var resp = request.GetResponse())
+                using (var resp = await request.GetResponseAsync())
                 using (var stream = resp.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();

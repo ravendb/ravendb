@@ -10,7 +10,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 
-namespace FastTests.Server.Documents.Queries.Dynamic
+namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class MatchingAutoMapReduceIndexesForDynamicQueries : RavenLowLevelTestBase
     {

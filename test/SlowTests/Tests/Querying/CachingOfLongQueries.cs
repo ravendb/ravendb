@@ -3,19 +3,22 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
+
 using System.Linq;
-using Raven.Tests.Common;
+using System.Threading.Tasks;
+
+using FastTests;
+
 using Xunit;
 
-namespace Raven.Tests.Querying
+namespace SlowTests.Tests.Querying
 {
-    public class CachingOfLongQueries : RavenTest
+    public class CachingOfLongQueries : RavenTestBase
     {
         [Fact]
-        public void ShouldWork()
+        public async Task ShouldWork()
         {
-            using (var store = NewRemoteDocumentStore(fiddler:true))
+            using (var store = await GetDocumentStore())
             {
                 var val = new string('a', 2048);
                 using (var session = store.OpenSession())
@@ -35,8 +38,6 @@ namespace Raven.Tests.Querying
                     Assert.Empty(session.Query<Item>()
                         .Where(x => x.Val == val)
                         .ToList());
-
-
                 }
             }
         }

@@ -90,7 +90,7 @@ namespace Raven.Client.Document.Batches
             var jsonDocuments = SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)response.Result).OfType<RavenJObject>());
 
             int nextPageStart;
-            if (pagingInformation != null && int.TryParse(response.Headers[Constants.NextPageStart], out nextPageStart))
+            if (pagingInformation != null && int.TryParse(response.Headers[Constants.Headers.NextPageStart], out nextPageStart))
                 pagingInformation.Fill(start, pageSize, nextPageStart);
 
             Result = jsonDocuments

@@ -1,22 +1,40 @@
-using System.Diagnostics;
+using System;
 using System.Linq;
+using System.Threading.Tasks;
+
+using FastTests;
+
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Tests.Bugs;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.MultiGet
+namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetNonStaleResults : RavenTest
+    public class MultiGetNonStaleResults : RavenTestBase
     {
-        [Fact]
-        public void ShouldBeAbleToGetNonStaleResults()
+        private class User
         {
-            using (var server = GetNewServer())
-            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public int Age { get; set; }
+            public string Info { get; set; }
+            public bool Active { get; set; }
+            public DateTime Created { get; set; }
+
+            public User()
+            {
+                Name = string.Empty;
+                Age = default(int);
+                Info = string.Empty;
+                Active = false;
+            }
+        }
+
+        [Fact]
+        public async Task ShouldBeAbleToGetNonStaleResults()
+        {
+            using (var store = await GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -34,13 +52,11 @@ namespace Raven.Tests.MultiGet
                     session.Store(new User());
                     session.SaveChanges();
                 }
-                WaitForAllRequestsToComplete(server);
-                server.Server.ResetNumberOfRequests();
 
                 using (var session = store.OpenSession())
                 {
                     var result1 = session.Query<User>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "oren")
                         .Lazily();
 

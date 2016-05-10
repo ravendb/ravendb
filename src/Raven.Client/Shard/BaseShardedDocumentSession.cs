@@ -171,7 +171,7 @@ namespace Raven.Client.Shard
             var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity, this);
             if (string.IsNullOrEmpty(shardId))
                 throw new InvalidOperationException("Could not find shard id for " + entity + " because " + shardStrategy.ShardAccessStrategy + " returned null or empty string for the document shard id.");
-            metadata[Constants.RavenShardId] = shardId;
+            metadata[Constants.Headers.RavenShardId] = shardId;
             var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
             if (modifyDocumentId != id)
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, modifyDocumentId);

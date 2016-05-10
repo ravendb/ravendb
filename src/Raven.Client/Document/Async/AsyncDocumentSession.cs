@@ -316,7 +316,7 @@ namespace Raven.Client.Document.Async
                 for (int i = 0; i < pendingLazyOperations.Count; i++)
                 {
                     long totalTime;
-                    long.TryParse(responses[i].Headers["Temp-Request-Time"], out totalTime);
+                    long.TryParse(responses[i].Headers[Constants.Headers.RequestTime], out totalTime);
 
                     responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
                     {

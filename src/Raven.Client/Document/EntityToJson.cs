@@ -113,7 +113,7 @@ namespace Raven.Client.Document
                 return;// do not overwrite the value
             }
 
-            metadata[Constants.RavenClrType] = documentStore.Conventions.GetClrTypeName(entityType);
+            metadata[Constants.Headers.RavenClrType] = documentStore.Conventions.GetClrTypeName(entityType);
         }
 
 

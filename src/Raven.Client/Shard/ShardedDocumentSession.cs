@@ -791,7 +791,7 @@ namespace Raven.Client.Shard
             {
                 var entity = data.Entities[index];
                 var metadata = GetMetadataFor(entity);
-                var shardId = metadata.Value<string>(Constants.RavenShardId);
+                var shardId = metadata.Value<string>(Constants.Headers.RavenShardId);
                 if (shardId == null)
                     throw new InvalidOperationException("Cannot save a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
                 var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
@@ -926,7 +926,7 @@ namespace Raven.Client.Shard
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 throw new ArgumentException("The entity is not part of the session");
 
-            var shardId = value.Metadata.Value<string>(Constants.RavenShardId);
+            var shardId = value.Metadata.Value<string>(Constants.Headers.RavenShardId);
             IDatabaseCommands commands;
             if (shardDbCommands.TryGetValue(shardId, out commands) == false)
                 throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
