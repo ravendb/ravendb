@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Net;
-
+using System.Threading;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -20,11 +20,10 @@ namespace Raven.Tests.Issues
             using (var store = NewRemoteDocumentStore())
             {
                 store.DatabaseCommands.Get("keys/1");
-
+                Thread.Sleep(1);
                 var cache = store.JsonRequestFactory.HttpClientCache;
                 Assert.True(cache.Count > 0);
                 cache.Cleanup(null);
-
                 Assert.Equal(0, cache.Count);
             }
         }
