@@ -672,7 +672,6 @@ for(var customFunction in customFunctions) {{
             {
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, Database.WorkContext.CancellationToken))
                 {
-                    var transactionalStorageId = Database.TransactionalStorage.Id.ToString();
                     bool stale;
                     foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery {PageSize = int.MaxValue}, linked, out stale))
                     {

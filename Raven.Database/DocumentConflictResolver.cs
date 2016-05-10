@@ -35,21 +35,32 @@ namespace Raven.Database
 
                 foreach (var replicationConflictResolver in docsReplicationConflictResolvers)
                 {
-                    RavenJObject metadataToSave;
-                    RavenJObject documentToSave;
-                    if (remote.Key != null && local.Key != null && replicationConflictResolver.TryResolveConflict(document.Key, remote.Key.Metadata, remote.Key.DataAsJson, local.Key, key => actions.Documents.DocumentByKey(document.Key),
-                        out metadataToSave, out documentToSave))
+                    if (remote.Key != null && local.Key != null)
                     {
-                        if (metadataToSave != null && metadataToSave.Value<bool>(Constants.RavenDeleteMarker))
+                        RavenJObject metadataToSave;
+                        RavenJObject documentToSave;
+                        Func<object, JsonDocument> getDocument = key => actions.Documents.DocumentByKey(document.Key);
+                        var conflictResolved = replicationConflictResolver.TryResolveConflict(document.Key, 
+                            remote.Key.Metadata, 
+                            remote.Key.DataAsJson, 
+                            local.Key, 
+                            getDocument, 
+                            out metadataToSave, 
+                            out documentToSave);
+
+                        if (conflictResolved)
                         {
-                            database.Documents.Delete(document.Key, null, null);
+                            if (metadataToSave != null && metadataToSave.Value<bool>(Constants.RavenDeleteMarker))
+                            {
+                                database.Documents.Delete(document.Key, null, null);
+                            }
+                            else
+                            {
+                                metadataToSave?.Remove(Constants.RavenReplicationConflictDocument);
+                                database.Documents.Put(document.Key, document.Etag, documentToSave, metadataToSave, null);
+                            }
+                            res = true;
                         }
-                        else
-                        {
-                            metadataToSave?.Remove(Constants.RavenReplicationConflictDocument);
-                            database.Documents.Put(document.Key, document.Etag, documentToSave, metadataToSave, null);
-                        }
-                        res = true;
                     }
                 }
             });
