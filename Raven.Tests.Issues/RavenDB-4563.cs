@@ -32,7 +32,7 @@ namespace Raven.Tests.Issues
                                 if (j == 5000 && run == 1)
                                 {
                                     server.Dispose();
-                                    Thread.Sleep(5000);
+                                    Thread.Sleep(1000);
                                 }
                             }
                         }
