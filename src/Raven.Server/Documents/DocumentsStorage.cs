@@ -771,7 +771,7 @@ namespace Raven.Server.Documents
             string collectionName;
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
+                metadata.TryGet(Constants.Headers.RavenEntityName, out collectionName) == false)
             {
                 collectionName = NoCollectionSpecified;
             }

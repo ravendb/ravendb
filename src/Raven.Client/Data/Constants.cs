@@ -11,30 +11,81 @@ namespace Raven.Abstractions.Data
             InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
         }
 
+        public class Headers
+        {
+            private Headers()
+            {
+            }
+
+            public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
+
+            public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
+
+            public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
+
+            public const string RavenShardId = "Raven-Shard-Id";
+
+            public const string LastModified = "Last-Modified";
+
+            public const string CreationDate = "Creation-Date";
+
+            public const string RavenCreationDate = "Raven-Creation-Date";
+
+            public const string RavenLastModified = "Raven-Last-Modified";
+
+            public const string TemporaryScoreValue = "Temp-Index-Score";
+
+            public const string RavenClrType = "Raven-Clr-Type";
+
+            public const string RavenEntityName = "Raven-Entity-Name";
+
+            public const string RavenReadOnly = "Raven-Read-Only";
+
+            public const string RavenDocumentDoesNotExists = "Raven-Document-Does-Not-Exists";
+
+            public const string NotForReplication = "Raven-Not-For-Replication";
+
+            public const string RavenDeleteMarker = "Raven-Delete-Marker";
+
+            public const string RavenIndexDeleteMarker = "Raven-Index-Delete-Marker";
+
+            public const string RavenTransformerDeleteMarker = "Raven-Transformer-Delete-Marker";
+
+            public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
+
+            public const string RavenServerBuild = "Raven-Server-Build";
+
+            public const string RavenReplicationSource = "Raven-Replication-Source";
+
+            public const string RavenReplicationVersion = "Raven-Replication-Version";
+
+            public const string RavenReplicationHistory = "Raven-Replication-History";
+
+            public const string RavenReplicationConflict = "Raven-Replication-Conflict";
+
+            public const string RavenReplicationConflictSkipResolution = "Raven-Replication-Conflict-Skip-Resolution";
+
+            public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
+
+            public const string RavenReplicationConflictDocumentForcePut = "Raven-Replication-Conflict-Document-Force-Put";
+
+            public const string RavenCreateVersion = "Raven-Create-Version";
+
+            public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
+
+            public const string RavenClientVersion = "Raven-Client-Version";
+
+            public const string NextPageStart = "Next-Page-Start";
+
+            public const string RequestTime = "Raven-Request-Time";
+        }
+
         public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
 
         public const string IsReplicatedUrlParamName = "is-replicated";
-        public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
-
-        public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
-
-        public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
-
-        public const string RavenShardId = "Raven-Shard-Id";
         
-        
-        public const string LastModified = "Last-Modified";
-
-        public const string CreationDate = "Creation-Date";
-
-        public const string RavenCreationDate = "Raven-Creation-Date";
-
-        public const string RavenLastModified = "Raven-Last-Modified";
-
         // TODO: Delete this, we don't have system database anymore
         public const string SystemDatabase = "<system>";
-
-        public const string TemporaryScoreValue = "Temp-Index-Score";
 
         public const string AlphaNumericFieldName = "__alphaNumeric";
 
@@ -58,37 +109,17 @@ namespace Raven.Abstractions.Data
 
         public const string IntersectSeparator = " INTERSECT ";
 
-        public const string RavenClrType = "Raven-Clr-Type";
-
-        public const string RavenEntityName = "Raven-Entity-Name";
-
-        public const string RavenReadOnly = "Raven-Read-Only";
-
         public const string AllFields = "__all_fields";
-
-        // This is used to indicate that a document exists in an uncommitted transaction
-        public const string RavenDocumentDoesNotExists = "Raven-Document-Does-Not-Exists";
 
         public const string Metadata = "@metadata";
 
         public const string MetadataDocId = "@id";
 
-        public const string NotForReplication = "Raven-Not-For-Replication";
-
-        public const string RavenDeleteMarker = "Raven-Delete-Marker";
-        public const string RavenIndexDeleteMarker = "Raven-Index-Delete-Marker";
-        public const string RavenTransformerDeleteMarker = "Raven-Transformer-Delete-Marker";
-
         public const string TemporaryTransformerPrefix = "Temp/";
-
-        public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 
         public const string RavenAlerts = "Raven/Alerts";
 
         public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
-
-        // Server
-        public const string RavenServerBuild = "Raven-Server-Build";
 
         public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
 
@@ -122,18 +153,7 @@ namespace Raven.Abstractions.Data
         public const int DefaultIndexFileBlockSize = 12 * 1024;
 
         //Replications
-        public const string RavenReplicationSource = "Raven-Replication-Source";
 
-        public const string RavenReplicationVersion = "Raven-Replication-Version";
-
-        public const string RavenReplicationHistory = "Raven-Replication-History";
-
-        public const string RavenReplicationConflict = "Raven-Replication-Conflict";
-
-        public const string RavenReplicationConflictSkipResolution = "Raven-Replication-Conflict-Skip-Resolution";
-        public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
-
-        public const string RavenReplicationConflictDocumentForcePut = "Raven-Replication-Conflict-Document-Force-Put";
         public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 
         public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
@@ -170,15 +190,11 @@ namespace Raven.Abstractions.Data
         public const double MilesToKm = 1.60934;
         
         //Versioning
-        public const string RavenCreateVersion = "Raven-Create-Version";
 
-        public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
-
-        public const string RavenClientVersion = "Raven-Client-Version";
 
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 
-        public const string NextPageStart = "Next-Page-Start";
+       
 
         /// <summary>
         /// if no encoding information in headers of incoming request, this encoding is assumed
@@ -308,5 +324,5 @@ namespace Raven.Abstractions.Data
             } 
         }
 
-        public const string RequestFailedExceptionMarker = "ExceptionRequestFailed"; 
-}}
+        public const string RequestFailedExceptionMarker = "ExceptionRequestFailed";
+    }}

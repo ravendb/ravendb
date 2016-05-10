@@ -255,7 +255,7 @@ namespace Raven.Client.Connection.Implementation
 
         private void AssertServerVersionSupported()
         {
-            var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
+            var serverBuildString = ResponseHeaders[Constants.Headers.RavenServerBuild];
             int serverBuild;
 
             // server doesn't return Raven-Server-Build in case of requests failures, thus we firstly check for header presence 

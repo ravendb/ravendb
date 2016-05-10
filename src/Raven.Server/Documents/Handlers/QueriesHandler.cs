@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Handlers
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
             DocumentsOperationContext context;
+            using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
@@ -93,6 +94,7 @@ namespace Raven.Server.Documents.Handlers
             var query = GetIndexQuery(Database.Configuration.Core.MaxPageSize);
 
             DocumentsOperationContext context;
+            using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {

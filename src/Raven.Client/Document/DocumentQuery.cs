@@ -128,13 +128,13 @@ namespace Raven.Client.Document
         }
         public IDocumentQuery<T> OrderByScore()
         {
-            AddOrder(Constants.TemporaryScoreValue, false);
+            AddOrder(Constants.Headers.TemporaryScoreValue, false);
             return this;
         }
 
         public IDocumentQuery<T> OrderByScoreDescending()
         {
-            AddOrder(Constants.TemporaryScoreValue, true);
+            AddOrder(Constants.Headers.TemporaryScoreValue, true);
             return this;
         }
 

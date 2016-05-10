@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Microsoft.AspNet.Http;
 
+using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -71,8 +72,6 @@ namespace Raven.Server.Documents.Handlers
                         writer.WritePropertyName(resultProperty);
                         writer.Flush();
 
-                        var sw = Stopwatch.StartNew();
-
                         HttpContext.Request.QueryString = new QueryString(query);
                         HttpContext.Response.Headers.Clear();
                         await requestHandler(new RequestHandlerContext
@@ -83,9 +82,6 @@ namespace Raven.Server.Documents.Handlers
                             HttpContext = HttpContext,
                             AllowResponseCompression = false
                         });
-
-                        sw.Stop();
-                        HttpContext.Response.Headers.Add("Temp-Request-Time", sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture));
 
                         writer.WriteComma();
                         writer.WritePropertyName(statusProperty);

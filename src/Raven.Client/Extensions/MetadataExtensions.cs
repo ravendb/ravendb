@@ -24,12 +24,12 @@ namespace Raven.Abstractions.Extensions
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // Raven internal headers
-            Constants.RavenServerBuild,
+            Constants.Headers.RavenServerBuild,
             "Raven-Client-Version",
             "Non-Authoritative-Information",
             "Raven-Timer-Request",
             "Raven-Authenticated-User",
-            Constants.RavenLastModified,
+            Constants.Headers.RavenLastModified,
             "Has-Api-Key",
 
             // COTS
@@ -52,7 +52,7 @@ namespace Raven.Abstractions.Extensions
             "Content-Type",
             "Expires",
             // ignoring this header, we handle this internally
-            Constants.LastModified,
+            Constants.Headers.LastModified,
             // Ignoring this header, since it may
             // very well change due to things like encoding,
             // adding metadata, etc
@@ -120,8 +120,8 @@ namespace Raven.Abstractions.Extensions
 
         private static readonly HashSet<string> HeadersToIgnoreForClient = HeadersToIgnoreClient.Except(new[]
         {
-            Constants.LastModified,
-            Constants.RavenLastModified
+            Constants.Headers.LastModified,
+            Constants.Headers.RavenLastModified
         }).ToHashSet();
 
         private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

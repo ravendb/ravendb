@@ -36,8 +36,8 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 var lastModified = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains(Constants.RavenLastModified))
-                    lastModified = this.Metadata[Constants.RavenLastModified].Value<DateTimeOffset>();
+                if (this.Metadata.Keys.Contains(Constants.Headers.RavenLastModified))
+                    lastModified = this.Metadata[Constants.Headers.RavenLastModified].Value<DateTimeOffset>();
                 return lastModified;
             }
         }
@@ -47,8 +47,8 @@ namespace Raven.Abstractions.FileSystem
             get
             {
                 var creationDate = new DateTimeOffset();
-                if (this.Metadata.Keys.Contains(Constants.RavenCreationDate))
-                    creationDate = this.Metadata[Constants.RavenCreationDate].Value<DateTimeOffset>();
+                if (this.Metadata.Keys.Contains(Constants.Headers.RavenCreationDate))
+                    creationDate = this.Metadata[Constants.Headers.RavenCreationDate].Value<DateTimeOffset>();
                 return creationDate;
             }
         }
@@ -109,8 +109,8 @@ namespace Raven.Abstractions.FileSystem
         {
             get
             {                
-                if (Metadata.ContainsKey(Constants.RavenDeleteMarker))
-                    return Metadata[Constants.RavenDeleteMarker].Value<bool>();
+                if (Metadata.ContainsKey(Constants.Headers.RavenDeleteMarker))
+                    return Metadata[Constants.Headers.RavenDeleteMarker].Value<bool>();
                 return false;
             }
         }

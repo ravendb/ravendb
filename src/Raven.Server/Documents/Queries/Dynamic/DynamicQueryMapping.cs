@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         var field = sortedField.Field;
 
-                        if (field == Constants.TemporaryScoreValue)
+                        if (field == Constants.Headers.TemporaryScoreValue)
                             continue;
 
                         if (field.StartsWith(Constants.AlphaNumericFieldName) ||
