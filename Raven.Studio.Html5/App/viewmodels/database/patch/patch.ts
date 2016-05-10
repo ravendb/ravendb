@@ -12,7 +12,6 @@ import appUrl = require("common/appUrl");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import savePatch = require('viewmodels/database/patch/savePatch');
-import loadPatch = require('viewmodels/database/patch/loadPatch');
 import executePatchConfirm = require('viewmodels/database/patch/executePatchConfirm');
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import executePatchCommand = require("commands/database/patch/executePatchCommand");
@@ -24,6 +23,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
 import recentPatchesStorage = require("common/recentPatchesStorage");
+import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 
 
 class patch extends viewModelBase {
@@ -35,6 +35,7 @@ class patch extends viewModelBase {
     collectionToSelect: KnockoutComputed<collection[]>;
 
     recentPatches = ko.observableArray<storedPatchDto>();
+    savedPatches = ko.observableArray<patchDocument>();
 
     currentCollectionPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
@@ -159,9 +160,9 @@ class patch extends viewModelBase {
 
     activate(recentPatchHash?: string) {
         super.activate(recentPatchHash);
-        this.updateHelpLink('QGGJR5');
+        this.updateHelpLink("QGGJR5");
         this.patchDocument(patchDocument.empty());
-        this.queryText.throttle(1000).subscribe(v => {
+        this.queryText.throttle(1000).subscribe(() => {
             this.runQuery();
         });
 
@@ -175,6 +176,7 @@ class patch extends viewModelBase {
                     return this.patchDocument().selectedItem();
             }
         });
+
         this.selectedDocumentIndices.subscribe(list => {
             var firstCheckedOnList = list.last();
             if (firstCheckedOnList != null) {
@@ -194,6 +196,7 @@ class patch extends viewModelBase {
         var db = this.activeDatabase();
         if (!!db) {
             this.fetchRecentPatches();
+            this.fetchAllPatches();
         }
 
         if (recentPatchHash) {
@@ -205,15 +208,15 @@ class patch extends viewModelBase {
         super.attached();
         $("#indexQueryLabel").popover({
             html: true,
-            trigger: 'hover',
+            trigger: "hover",
             container: '.form-horizontal',
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>'
         });
         $("#patchScriptsLabel").popover({
             html: true,
-            trigger: 'hover',
-            container: '.form-horizontal',
-            content: '<p>Patch Scripts are written in JavaScript. Examples:</p><pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>',
+            trigger: "hover",
+            container: ".form-horizontal",
+            content: '<p>Patch Scripts are written in JavaScript. Examples:</p><pre><span class="code-keyword">this</span>.NewProperty = <span class="code-keyword">this</span>.OldProperty + myParameter;<br/><span class="code-keyword">delete this</span>.UnwantedProperty;<br/><span class="code-keyword">this</span>.Comments.RemoveWhere(<span class="code-keyword">function</span>(comment){<br/>  <span class="code-keyword">return</span> comment.Spam;<br/>});</pre>'
         });
 
         var rowCreatedEvent = app.on(patch.gridSelector + 'RowsCreated').then(() => {
@@ -224,6 +227,12 @@ class patch extends viewModelBase {
         $(window).bind('storage', () => {
             self.fetchRecentPatches();
         });
+    }
+
+    private fetchAllPatches() {
+        new getPatchesCommand(this.activeDatabase())
+            .execute()
+            .done((patches: patchDocument[]) => this.savedPatches(patches));
     }
 
     private fetchRecentPatches() {
@@ -260,10 +269,13 @@ class patch extends viewModelBase {
     }
 
     private clearDocumentPreview() {
-        this.beforePatchDoc('');
-        this.beforePatchMeta('');
-        this.afterPatchDoc('');
-        this.afterPatchMeta('');
+        this.beforePatchDoc("");
+        this.beforePatchMeta("");
+        this.afterPatchDoc("");
+        this.afterPatchMeta("");
+        this.putDocuments([]);
+        this.loadedDocuments([]);
+        this.outputLog([]);
     }
 
     setSelectedPatchOnOption(patchOnOption: string) {
@@ -357,22 +369,18 @@ class patch extends viewModelBase {
         var savePatchViewModel: savePatch = new savePatch();
         app.showDialog(savePatchViewModel);
         savePatchViewModel.onExit().done((patchName) => {
-            new savePatchCommand(patchName, this.patchDocument(), this.activeDatabase()).execute();
-        });
-    }
-
-    loadPatch() {
-        this.clearDocumentPreview();
-        var loadPatchViewModel: loadPatch = new loadPatch(this.activeDatabase());
-        app.showDialog(loadPatchViewModel);
-        loadPatchViewModel.onExit().done((patch) => {
-           this.usePatch(patch);
+            new savePatchCommand(patchName, this.patchDocument(), this.activeDatabase())
+                .execute()
+                .done(() => this.fetchAllPatches());
         });
     }
 
     private usePatch(patch: patchDocument) {
+        this.clearDocumentPreview();
         var selectedItem = patch.selectedItem();
-        this.patchDocument(patch.cloneWithoutMetadata());
+        patch = patch.clone();
+        patch.resetMetadata();
+        this.patchDocument(patch);
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 this.fetchAllCollections().then(() => {
