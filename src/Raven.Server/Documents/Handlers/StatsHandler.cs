@@ -7,6 +7,8 @@ using Raven.Database.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers

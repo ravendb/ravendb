@@ -7,6 +7,8 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 using System.Linq;
+
+using Raven.Client.Data;
 using Raven.Client.Data.Queries;
 
 namespace Raven.Client.Document.Batches

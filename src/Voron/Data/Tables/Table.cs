@@ -153,20 +153,10 @@ namespace Voron.Data.Tables
 
         public byte* DirectRead(long id, out int size)
         {
-            Page page;
             var posInPage = id % _pageSize;
-
             if (posInPage == 0) // large
             {
-                page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
-                size = page.OverflowSize;
-
-                return page.Pointer + sizeof(PageHeader);
-            }
-
-            page = _tx.LowLevelTransaction.GetPage(id);
-            if (page != null && page.IsOverflow)
-            {
+                var page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
                 size = page.OverflowSize;
 
                 return page.Pointer + sizeof(PageHeader);
