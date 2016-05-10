@@ -60,7 +60,7 @@ namespace Raven.Tests.Linq
             var documents =
                 GetDocumentsFromString(
                     @"[{loc: 4, lang: 3, '@metadata': {'@id': 1}}]");
-            var configuration = new RavenConfiguration();
+            var configuration = new InMemoryRavenConfiguration();
             configuration.Initialize();
             var transformer = new DynamicViewCompiler("pagesByTitle", new IndexDefinition
             {

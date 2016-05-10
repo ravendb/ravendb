@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Extensions
     {
         public static bool IsConflictDocument(this JsonDocument document)
         {
-            var conflict = document.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
+            var conflict = document.Metadata.Value<RavenJValue>(Constants.Headers.RavenReplicationConflict);
             if (conflict == null || conflict.Value<bool>() == false)
             {
                 return false;

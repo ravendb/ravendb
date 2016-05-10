@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using  Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Abstractions.Data
+using Raven.Imports.Newtonsoft.Json;
+
+namespace Raven.Client.Data
 {
     public class GetRequest
     {

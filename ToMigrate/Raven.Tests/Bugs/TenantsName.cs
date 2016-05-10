@@ -1,9 +1,10 @@
 using System;
 using Raven.Abstractions.Connection;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -11,9 +12,10 @@ namespace Raven.Tests.Bugs
 {
     public class TenantsName : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification ravenConfiguration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
         {
-            ravenConfiguration.Modify(x => x.Core.RunInMemory, false);
+            ravenConfiguration.RunInMemory = false;
+            ravenConfiguration.DefaultStorageTypeName = "esent";
         }
 
         [Fact]

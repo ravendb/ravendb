@@ -957,7 +957,7 @@ namespace Raven.Client.Document
                 {
                     long totalTime;
                     string tempReqTime;
-                    responses[i].Headers.TryGetValue("Temp-Request-Time", out tempReqTime);
+                    responses[i].Headers.TryGetValue(Constants.Headers.RequestTime, out tempReqTime);
                     long.TryParse(tempReqTime, out totalTime);
 
                     responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem

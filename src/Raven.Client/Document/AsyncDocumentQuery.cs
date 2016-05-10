@@ -848,7 +848,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScore()
         {
-            AddOrder(Constants.TemporaryScoreValue, false);
+            AddOrder(Constants.Headers.TemporaryScoreValue, false);
             return this;
         }
 
@@ -857,7 +857,7 @@ namespace Raven.Client.Document
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScoreDescending()
         {
-            AddOrder(Constants.TemporaryScoreValue, true);
+            AddOrder(Constants.Headers.TemporaryScoreValue, true);
             return this;
         }
 

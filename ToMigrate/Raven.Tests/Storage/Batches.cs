@@ -29,11 +29,9 @@ namespace Raven.Tests.Storage
         [PropertyData("Storages")]
         public void BatchNestingAndCommits(string storageType)
         {
-            using (var dd = new DocumentDatabase(new AppSettingsBasedConfiguration
+            using (var dd = new DocumentDatabase(new RavenConfiguration
             {
-                Core = {
-                    DataDirectory = NewDataPath("DataDirectory")
-                },
+                DataDirectory = NewDataPath("DataDirectory"),
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
             }, null))
             {

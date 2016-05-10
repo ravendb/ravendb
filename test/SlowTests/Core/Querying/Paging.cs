@@ -19,7 +19,7 @@ namespace SlowTests.Core.Querying
 {
     public class Paging : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Distinct queries - TODO [ppekrol]")]
+        [Fact]
         public async Task BasicPaging()
         {
             using (var store = await GetDocumentStore())

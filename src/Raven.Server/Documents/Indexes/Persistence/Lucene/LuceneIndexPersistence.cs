@@ -26,6 +26,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IndexDefinitionBase _definition;
 
+        private readonly IndexType _indexType;
+
         private readonly LuceneDocumentConverter _converter;
 
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
@@ -42,10 +44,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private bool _initialized;
 
-        public LuceneIndexPersistence(int indexId, IndexDefinitionBase indexDefinition, IndexType type)
+        public LuceneIndexPersistence(int indexId, IndexDefinitionBase indexDefinition, IndexType indexType)
         {
             _indexId = indexId;
             _definition = indexDefinition;
+            _indexType = indexType;
 
             IEnumerable<IndexField> fields = _definition.MapFields.Values;
 
@@ -53,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (mapReduceDef != null)
                 fields = fields.Union(mapReduceDef.GroupByFields.Values);
 
-            _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: type.IsMapReduce());
+            _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
         }
 
@@ -105,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized == false)
                 throw new InvalidOperationException($"Index persistence for index '{_definition.Name} ({_indexId})' was not initialized.");
 
-            return new IndexReadOperation(_definition.Name, _definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
+            return new IndexReadOperation(_definition.Name, _indexType, _definition.MapFields, _directory, _indexSearcherHolder, readTransaction);
         }
 
         internal void RecreateSearcher()

@@ -8,10 +8,8 @@ using System.Threading.Tasks;
 
 using Microsoft.AspNet.Http;
 
-using Raven.Server.Json;
+using Raven.Client.Data;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -46,8 +44,8 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteStartObject();
 
                         string method = "GET", url, query;
-                        if (request.TryGet("Url", out url) == false ||
-                            request.TryGet("Query", out query) == false)
+                        if (request.TryGet(nameof(GetRequest.Url), out url) == false ||
+                            request.TryGet(nameof(GetRequest.Query), out query) == false)
                             continue;
 
                         RouteMatch localMatch;
@@ -71,6 +69,23 @@ namespace Raven.Server.Documents.Handlers
 
                         HttpContext.Request.QueryString = new QueryString(query);
                         HttpContext.Response.Headers.Clear();
+                        HttpContext.Request.Headers.Clear();
+                        BlittableJsonReaderObject headers;
+                        if (request.TryGet(nameof(GetRequest.Headers), out headers))
+                        {
+                            foreach (var header in headers.GetPropertyNames())
+                            {
+                                string value;
+                                if (headers.TryGet(header, out value) == false)
+                                    continue;
+
+                                if (string.IsNullOrWhiteSpace(value))
+                                    continue;
+
+                                HttpContext.Request.Headers.Add(header, value);
+                            }
+                        }
+
                         await requestHandler(new RequestHandlerContext
                         {
                             Database = Database,
@@ -79,6 +94,7 @@ namespace Raven.Server.Documents.Handlers
                             HttpContext = HttpContext,
                             AllowResponseCompression = false
                         });
+
                         writer.WriteComma();
                         writer.WritePropertyName(statusProperty);
                         writer.WriteInteger(HttpContext.Response.StatusCode);

@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly Dictionary<FieldCacheKey, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<NumericField>>(Comparer);
 
         private readonly global::Lucene.Net.Documents.Document _document = new global::Lucene.Net.Documents.Document();
-        
+
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 
         private readonly BlittableJsonTraverser _blittableTraverser;
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public global::Lucene.Net.Documents.Document ConvertToCachedDocument(Document document)
         {
             _document.GetFields().Clear();
-          
+
             foreach (var field in GetFields(document))
             {
                 _document.Add(field);
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             return _document;
         }
-        
+
         private IEnumerable<AbstractField> GetFields(Document document)
         {
             if (document.Key != null)
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 else
                     yield return GetOrCreateField(Constants.ReduceKeyFieldName, null, document.Key, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
             }
-            
+
             foreach (var indexField in _fields)
             {
                 object value;
@@ -96,32 +96,42 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             var path = field.Name;
 
-            var indexing = field.Indexing.GetLuceneValue(@default: Field.Index.ANALYZED_NO_NORMS);
+            var valueType = GetValueType(value);
+
+            var defaultIndexing = valueType == ValueType.CompressedString || valueType == ValueType.String
+                                      ? Field.Index.ANALYZED
+                                      : Field.Index.ANALYZED_NO_NORMS;
+
+            var indexing = field.Indexing.GetLuceneValue(@default: defaultIndexing);
             var storage = field.Storage.GetLuceneValue(@default: Field.Store.NO);
 
-            if (value == null)
+            if (valueType == ValueType.Null)
             {
                 yield return GetOrCreateField(path, Constants.NullValue, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
                 yield break;
             }
 
-            if (Equals(value, string.Empty))
+            if (valueType == ValueType.EmptyString)
             {
                 yield return GetOrCreateField(path, Constants.EmptyString, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS);
                 yield break;
             }
 
-            var lazyStringValue = value as LazyStringValue;
-
-            if (lazyStringValue != null)
+            if (valueType == ValueType.String || valueType == ValueType.CompressedString)
             {
+                LazyStringValue lazyStringValue;
+                if (valueType == ValueType.CompressedString)
+                    lazyStringValue = ((LazyCompressedStringValue)value).ToLazyStringValue();
+                else
+                    lazyStringValue = (LazyStringValue)value;
+
                 yield return GetOrCreateField(path, null, lazyStringValue, storage, indexing);
                 yield break;
             }
 
-            var itemsToIndex = value as IEnumerable;
-            if (itemsToIndex != null)
+            if (valueType == ValueType.Enumerable)
             {
+                var itemsToIndex = value as IEnumerable;
                 int count = 1;
 
                 if (nestedArray == false)
@@ -143,17 +153,36 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
-            if (value is LazyDoubleValue)
+            if (valueType == ValueType.Double)
             {
                 yield return GetOrCreateField(path, null, ((LazyDoubleValue)value).Inner, storage, indexing);
             }
-            else if (value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
+            else if (valueType == ValueType.Convertible) // we need this to store numbers in invariant format, so JSON could read them
             {
                 yield return GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, storage, indexing); // TODO arek - ToString()? anything better?
             }
 
             foreach (var numericField in GetOrCreateNumericField(field, value, storage))
                 yield return numericField;
+        }
+
+        private static ValueType GetValueType(object value)
+        {
+            if (value == null) return ValueType.Null;
+
+            if (Equals(value, string.Empty)) return ValueType.EmptyString;
+
+            if (value is LazyStringValue) return ValueType.String;
+
+            if (value is LazyCompressedStringValue) return ValueType.CompressedString;
+
+            if (value is IEnumerable) return ValueType.Enumerable;
+
+            if (value is LazyDoubleValue) return ValueType.Double;
+
+            if (value is IConvertible) return ValueType.Convertible;
+
+            return ValueType.Numeric;
         }
 
         private Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, Field.Store store, Field.Index index, Field.TermVector termVector = Field.TermVector.NO)
@@ -234,9 +263,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     break;
                 case NumberParseResult.Long:
                     if (field.SortOption == SortOptions.NumericDouble)
-                        yield return numericField.SetDoubleValue((long)value);
+                        yield return numericField.SetDoubleValue(longValue);
                     else
-                        yield return numericField.SetLongValue((long)value);
+                        yield return numericField.SetLongValue(longValue);
                     break;
             }
         }
@@ -265,6 +294,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 cachedFieldItem.Dispose();
             }
+        }
+
+        private enum ValueType
+        {
+            Null,
+
+            EmptyString,
+
+            String,
+
+            CompressedString,
+
+            Enumerable,
+
+            Double,
+
+            Convertible,
+
+            Numeric
         }
     }
 }

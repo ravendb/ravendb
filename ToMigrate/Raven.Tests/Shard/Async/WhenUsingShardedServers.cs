@@ -48,8 +48,8 @@ namespace Raven.Tests.Shard.Async
             }.ToDictionary(x => x.Identifier, x => x);
 
             shardResolution = MockRepository.GenerateStub<IShardResolutionStrategy>();
-            shardResolution.Stub(x => x.GenerateShardIdFor(Arg.Is(company1), Arg<IDocumentSession>.Is.Anything)).Return("Shard1");
-            shardResolution.Stub(x => x.GenerateShardIdFor(Arg.Is(company2), Arg<IDocumentSession>.Is.Anything)).Return("Shard2");
+            shardResolution.Stub(x => x.GenerateShardIdFor(Arg.Is(company1), Arg<ITransactionalDocumentSession>.Is.Anything)).Return("Shard1");
+            shardResolution.Stub(x => x.GenerateShardIdFor(Arg.Is(company2), Arg<ITransactionalDocumentSession>.Is.Anything)).Return("Shard2");
 
             shardResolution.Stub(x => x.MetadataShardIdFor(company1)).Return("Shard1");
             shardResolution.Stub(x => x.MetadataShardIdFor(company2)).Return("Shard1");

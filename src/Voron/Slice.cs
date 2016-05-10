@@ -1,14 +1,12 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
+using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Util.Conversion;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Voron.Util;
-using Sparrow;
-using Voron.Data.BTrees;
-using Sparrow.Binary;
 
 namespace Voron
 {
@@ -24,7 +22,6 @@ namespace Voron
         public ushort Size;
         public ushort KeyLength;
         public SliceOptions Options;
-
 
         private Slice()
         { }
@@ -46,31 +43,6 @@ namespace Voron
             this.Options = options;
             this.Size = size;
             this.KeyLength = keyLength;
-        }
-
-        internal BitVector ToBitVector()
-        {
-            BitVector bitVector;
-            if (Array != null)
-            {
-                bitVector = BitVector.Of(true, Array);
-            }
-            else
-            {
-                bitVector = BitVector.Of(true, this.Pointer, this.KeyLength);
-            }
-
-            ValidateBitVectorIsPrefixFree(bitVector);
-
-            return bitVector;
-        }
-
-        [Conditional("DEBUG")]
-        private void ValidateBitVectorIsPrefixFree(BitVector vector)
-        {
-            int start = vector.Count - 2 * BitVector.BitsPerByte;
-            for (int i = 0; i < 2 * BitVector.BitsPerByte; i++)
-                Debug.Assert(vector.Get(start + i) == false);
         }
 
         public bool Equals(Slice other)

@@ -1185,7 +1185,7 @@ namespace Raven.Client.Connection.Async
                     var result = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
                     int nextPageStart;
-                    if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart)) pagingInformation.Fill(start, pageSize, nextPageStart);
+                    if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.Headers.NextPageStart], out nextPageStart)) pagingInformation.Fill(start, pageSize, nextPageStart);
 
                     var docResults = result.OfType<RavenJObject>().ToList();
                     var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject)x.CloneToken())).ToArray();
@@ -1274,7 +1274,7 @@ namespace Raven.Client.Connection.Async
                     {
                         if (json == null) throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
 
-                        var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
+                        var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get(Constants.Headers.RequestTime), request.Size);
 
                         if (request.ResponseStatusCode == HttpStatusCode.NotModified)
                             queryResult.DurationMilliseconds = -1;
@@ -1320,12 +1320,12 @@ namespace Raven.Client.Connection.Async
                     new GetRequest
                     {
                         Query = stringBuilder.ToString(),
-                        Url = "/indexes/" + index
+                        Url = "/queries/" + index
                     }
                 }, token, operationMetadataRef).ConfigureAwait(false);
 
                 var json = (RavenJObject)result[0].Result;
-                var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers["Temp-Request-Time"], -1);
+                var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers[Constants.Headers.RequestTime], -1);
 
                 var docResults = queryResult.Results.Concat(queryResult.Includes);
                 return await RetryOperationBecauseOfConflict(operationMetadataRef.Value, docResults, queryResult,
@@ -2130,7 +2130,7 @@ namespace Raven.Client.Connection.Async
 
             }
 
-            if (metadata.Value<bool>(Constants.RavenReplicationConflict) && onConflictedQueryResult != null)
+            if (metadata.Value<bool>(Constants.Headers.RavenReplicationConflict) && onConflictedQueryResult != null)
                 throw onConflictedQueryResult(metadata.Value<string>("@id"));
 
             return (false);

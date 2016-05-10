@@ -380,6 +380,125 @@ namespace Raven.Tests.Storage.Voron
             }
         }
 
+        [Theory]
+        [PropertyData("Storages")]
+        public void TouchingListItemIncreasesItsEtag(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
+                {
+                    {
+                        "test", "data1"
+                    }
+                }, UuidType.Documents));
+
+                Etag oldEtag = null;
+
+                storage.Batch(actions =>
+                {
+                    oldEtag = actions.Lists.Read("items", "1").Etag;
+                });
+
+                storage.Batch(actions =>
+                {
+                    Etag afterEtag;
+                    Etag beforeEtag;
+                    actions.Lists.Touch("items", "1", UuidType.Documents, out beforeEtag, out afterEtag);
+
+                    Assert.True(afterEtag.CompareTo(oldEtag) > 0);
+                    Assert.True(oldEtag.CompareTo(beforeEtag) == 0);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void AfterTouchListItemDataRemainsTheSame(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
+                {
+                    {
+                        "test", "data1"
+                    }
+                }, UuidType.Documents));
+
+                DateTime? createdAt = null;
+                storage.Batch(actions =>
+                {
+                    createdAt = actions.Lists.Read("items", "1").CreatedAt;
+                });
+
+                storage.Batch(actions =>
+                {
+                    Etag afterEtag;
+                    Etag beforeEtag;
+                    actions.Lists.Touch("items", "1", UuidType.Documents, out beforeEtag, out afterEtag);
+                });
+
+                storage.Batch(actions =>
+                {
+                    var item = actions.Lists.Read("items", "1");
+
+                    Assert.Equal("data1", item.Data.Value<string>("test"));
+                    Assert.Equal(createdAt, item.CreatedAt);
+                });
+
+                storage.Batch(actions =>
+                {
+                    var items = actions.Lists.Read("items", 0, 10).ToList();
+
+                    Assert.Equal(1, items.Count);
+                    Assert.Equal("data1", items[0].Data.Value<string>("test"));
+                    Assert.Equal(createdAt, items[0].CreatedAt);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void TouchedItemShouldBeReturnedOnHigherPosition(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
+                {
+                    {
+                        "test", "1"
+                    }
+                }, UuidType.Documents));
+
+                storage.Batch(actions => actions.Lists.Set("items", "2", new RavenJObject
+                {
+                    {
+                        "test", "2"
+                    }
+                }, UuidType.Documents));
+
+                storage.Batch(actions =>
+                {
+                    Etag afterEtag;
+                    Etag beforeEtag;
+                    actions.Lists.Touch("items", "1", UuidType.Documents, out beforeEtag, out afterEtag);
+                });
+
+                storage.Batch(actions =>
+                {
+                    var items = actions.Lists.Read("items", 0, 100).ToList();
+
+                    Assert.Equal("2", items[0].Key);
+                    Assert.Equal("1", items[1].Key);
+
+                    items = actions.Lists.Read("items", Etag.Empty, null, 10).ToList();
+
+                    Assert.Equal("2", items[0].Key);
+                    Assert.Equal("1", items[1].Key);
+                });
+            }
+        }
+
         private void CompareListItems(ListItem expected, ListItem actual)
         {
             Assert.Equal(expected.Key, actual.Key);

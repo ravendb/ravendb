@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using Raven.Abstractions.Indexing;
@@ -11,12 +10,13 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
-using Voron.Debugging;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly AutoMapReduceIndexDefinition _indexDefinition;
         private readonly IndexStorage _indexStorage;
         private readonly MetricsCountersManager _metrics;
-        private readonly MapReduceIndexingContext _indexingWorkContext;
+        private readonly MapReduceIndexingContext _mapReduceContext;
 
         private readonly TableSchema _reduceResultsSchema = new TableSchema()
             .DefineKey(new TableSchema.SchemaIndexDef
@@ -39,12 +39,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Count = 1
             });
 
-        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext indexingWorkContext)
+        public ReduceMapResults(AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricsCountersManager metrics, MapReduceIndexingContext mapReduceContext)
         {
             _indexDefinition = indexDefinition;
             _indexStorage = indexStorage;
             _metrics = metrics;
-            _indexingWorkContext = indexingWorkContext;
+            _mapReduceContext = mapReduceContext;
         }
 
         public string Name => "Reduce";
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
-            if (_indexingWorkContext.StateByReduceKeyHash.Count == 0)
+            if (_mapReduceContext.StateByReduceKeyHash.Count == 0)
                 return false;
 
             _aggregationBatch.Clear();
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var writer = writeOperation.Value;
 
-            foreach (var state in _indexingWorkContext.StateByReduceKeyHash)
+            foreach (var state in _mapReduceContext.StateByReduceKeyHash)
             {
                 var reduceKeyHash = indexContext.GetLazyString(state.Key.ToString(CultureInfo.InvariantCulture));
                 var modifiedState = state.Value;
@@ -207,9 +207,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            foreach (var lastEtag in _indexingWorkContext.LastEtags)
+            foreach (var lastEtag in _mapReduceContext.ProcessedDocEtags)
             {
                 _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
+            }
+
+            foreach (var lastEtag in _mapReduceContext.ProcessedTombstoneEtags)
+            {
+                _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
             }
 
             return false;
@@ -221,6 +226,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 var valueReader = TreeNodeHeader.Reader(lowLevelTransaction, page.GetNode(i));
                 var reduceEntry = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, indexContext);
+
                 _aggregationBatch.Add(reduceEntry);
             }
 

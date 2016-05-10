@@ -255,10 +255,10 @@ namespace Raven.Client.Connection
             httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
             httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
 
-            httpJsonRequest.ResponseHeaders.Remove(Constants.RavenForcePrimaryServerCheck);
-            if (additionalHeaders != null && additionalHeaders[Constants.RavenForcePrimaryServerCheck] != null)
+            httpJsonRequest.ResponseHeaders.Remove(Constants.Headers.RavenForcePrimaryServerCheck);
+            if (additionalHeaders != null && additionalHeaders[Constants.Headers.RavenForcePrimaryServerCheck] != null)
             {
-                httpJsonRequest.ResponseHeaders.Set(Constants.RavenForcePrimaryServerCheck, additionalHeaders[Constants.RavenForcePrimaryServerCheck]);
+                httpJsonRequest.ResponseHeaders.Set(Constants.Headers.RavenForcePrimaryServerCheck, additionalHeaders[Constants.Headers.RavenForcePrimaryServerCheck]);
             }
 
             IncrementCachedRequests();
@@ -274,9 +274,9 @@ namespace Raven.Client.Connection
 
             if (additionalHeaders != null)
             {
-                string forcePrimaryServerCHeck = additionalHeaders.GetFirstValue(Constants.RavenForcePrimaryServerCheck);
+                string forcePrimaryServerCHeck = additionalHeaders.GetFirstValue(Constants.Headers.RavenForcePrimaryServerCheck);
                 if (forcePrimaryServerCHeck != null)
-                    httpJsonRequest.ResponseHeaders.Add(Constants.RavenForcePrimaryServerCheck, forcePrimaryServerCHeck);
+                    httpJsonRequest.ResponseHeaders.Add(Constants.Headers.RavenForcePrimaryServerCheck, forcePrimaryServerCHeck);
             }
 
             IncrementCachedRequests();

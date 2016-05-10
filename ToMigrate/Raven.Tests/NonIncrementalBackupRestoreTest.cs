@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
@@ -40,14 +41,16 @@ namespace Raven.Tests
 
         private void InitializeDocumentDatabase(string storageName)
         {
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = DataDir
-                },
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
+                RunInMemory = false,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                Settings =
+                {
+                    {"Raven/Esent/CircularLog", "false"}
+                }
             }, null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
         }
@@ -61,24 +64,24 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
+            MaintenanceActions.Restore(new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = DataDir
-                },
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
+                RunInMemory = false,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Storage =
+                Settings =
                 {
-                    AllowIncrementalBackups = false
+                    {"Raven/Esent/CircularLog", "false"},
+                    {"Raven/Voron/AllowIncrementalBackups", "true"}
                 }
+
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -86,14 +89,9 @@ namespace Raven.Tests
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                }
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("Foo");
+            var fetchedData = db.Documents.Get("Foo", null);
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
@@ -112,21 +110,24 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
 
             //data directiory still exists --> should fail to restore backup
             Assert.Throws<IOException>(() => 
-                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
+                MaintenanceActions.Restore(new RavenConfiguration
                 {
-                    Core =
-                    {
-                        RunInMemory = false,
-                        DataDirectory = DataDir
-                    },
+                    DefaultStorageTypeName = storageName,
+                    DataDirectory = DataDir,
+                    RunInMemory = false,
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                    Settings =
+                    {
+                        {"Raven/Esent/CircularLog", "false"}
+                    }
+
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -144,7 +145,7 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -155,14 +156,17 @@ namespace Raven.Tests
 
             //index directiory doesn't exists --> should NOT fail to restore backup
             Assert.DoesNotThrow(() =>
-                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
+                MaintenanceActions.Restore(new RavenConfiguration
                 {
-                    Core =
-                    {
-                        RunInMemory = false,
-                        DataDirectory = DataDir,
-                    },
+                    DefaultStorageTypeName = storageName,
+                    DataDirectory = DataDir,
+                    RunInMemory = false,
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                    Settings =
+                    {
+                        {"Raven/Esent/CircularLog", "false"}
+                    }
+
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -170,14 +174,9 @@ namespace Raven.Tests
                     Defrag = true
                 }, s => { }));
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                }
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("Foo");
+            var fetchedData = db.Documents.Get("Foo", null);
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();
@@ -196,7 +195,7 @@ namespace Raven.Tests
 
             db.Documents.Put("Foo", null, RavenJObject.Parse("{'email':'foo@bar.com'}"), new RavenJObject(), null);
 
-            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
             WaitForBackup(db, true);
 
             db.Dispose();
@@ -209,14 +208,17 @@ namespace Raven.Tests
 
             //index is corrupted --> should NOT fail to restore backup
             Assert.DoesNotThrow(() =>
-                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
+                MaintenanceActions.Restore(new RavenConfiguration
                 {
-                    Core =
-                    {
-                        RunInMemory = false,
-                        DataDirectory = DataDir,
-                    },
+                    DefaultStorageTypeName = storageName,
+                    DataDirectory = DataDir,
+                    RunInMemory = false,
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                    Settings =
+                    {
+                        {"Raven/Esent/CircularLog", "false"}
+                    }
+
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -224,14 +226,9 @@ namespace Raven.Tests
                     Defrag = true
                 }, s => { }));
 
-            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                },
-            }, null);
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
 
-            var fetchedData = db.Documents.Get("Foo");
+            var fetchedData = db.Documents.Get("Foo", null);
             Assert.NotNull(fetchedData);
 
             var jObject = fetchedData.ToJson();

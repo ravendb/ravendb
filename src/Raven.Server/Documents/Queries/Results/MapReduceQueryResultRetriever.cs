@@ -1,8 +1,5 @@
-﻿using System;
-using System.Globalization;
-using System.Linq;
+﻿using System.Globalization;
 
-using Raven.Client.Data;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
@@ -12,9 +9,9 @@ namespace Raven.Server.Documents.Queries.Results
     {
         private readonly TransactionOperationContext _indexContext;
 
-        private readonly string[] _fieldsToFetch;
+        private readonly FieldsToFetch _fieldsToFetch;
 
-        public MapReduceQueryResultRetriever(TransactionOperationContext indexContext, string[] fieldsToFetch)
+        public MapReduceQueryResultRetriever(TransactionOperationContext indexContext, FieldsToFetch fieldsToFetch)
         {
             _indexContext = indexContext;
             _fieldsToFetch = fieldsToFetch;
@@ -24,12 +21,14 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var djv = new DynamicJsonValue();
 
+            // TODO [ppekrol] handle IsDistinct, no Id then
+
             foreach (var field in input.GetFields())
             {
                 if (field.Name.EndsWith("_Range"))
                 {
                     var fieldName = field.Name.Substring(0, field.Name.Length - 6);
-                    if (IncludeField(fieldName) == false)
+                    if (_fieldsToFetch.ContainsField(fieldName) == false)
                         continue;
 
                     djv[fieldName] = double.Parse(field.StringValue, CultureInfo.InvariantCulture);
@@ -37,7 +36,7 @@ namespace Raven.Server.Documents.Queries.Results
                     continue;
                 }
 
-                if (IncludeField(field.Name) == false)
+                if (_fieldsToFetch.ContainsField(field.Name) == false)
                     continue;
 
                 djv[field.Name] = field.StringValue;
@@ -47,14 +46,6 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 Data = _indexContext.ReadObject(djv, "map-reduce result document")
             };
-        }
-
-        private bool IncludeField(string name)
-        {
-            if (_fieldsToFetch != null && _fieldsToFetch.Contains(name, StringComparer.OrdinalIgnoreCase) == false)
-                return false;
-
-            return true;
         }
     }
 }

@@ -3,14 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Files;
-using Raven.Smuggler.Database.Remote;
+using Raven.Smuggler;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -189,36 +190,36 @@ namespace Raven.Tests.Smuggler
 
         private async Task Export(DocumentStore store, string transformScript)
         {
-            var options = new DatabaseSmugglerOptions();
-            options.TransformScript = transformScript;
+            var smugglerApi = new SmugglerDatabaseApi();
+            smugglerApi.Options.TransformScript = transformScript;
 
-            var smuggler = new DatabaseSmuggler(
-                    options,
-                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+            await smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = new RavenConnectionStringOptions
                     {
                         Url = store.Url,
-                        Database = store.DefaultDatabase
-                    }),
-                    new DatabaseSmugglerFileDestination(file));
-
-            await smuggler.ExecuteAsync();
+                        DefaultDatabase = store.DefaultDatabase
+                    }
+                });
         }
 
-        private async Task Import(DocumentStore store, string transformScript)
+        private async Task Import(DocumentStore documentStore, string transformScript)
         {
-            var options = new DatabaseSmugglerOptions();
-            options.TransformScript = transformScript;
-
-            var smuggler = new DatabaseSmuggler(
-                    options,
-                    new DatabaseSmugglerFileSource(file),
-                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+            var smugglerApi = new SmugglerDatabaseApi();
+            smugglerApi.Options.TransformScript = transformScript;
+            ;
+            await smugglerApi.ImportData(
+                new SmugglerImportOptions<RavenConnectionStringOptions>
+                {
+                    FromFile = file,
+                    To = new RavenConnectionStringOptions
                     {
-                        Database = store.DefaultDatabase,
-                        Url = store.Url
-                    }));
-
-            await smuggler.ExecuteAsync();
+                        Url = documentStore.Url,
+                        DefaultDatabase = documentStore.DefaultDatabase
+                    }
+                });
         }
     }
 }

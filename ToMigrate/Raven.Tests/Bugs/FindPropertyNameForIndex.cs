@@ -2,7 +2,6 @@ using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -10,7 +9,7 @@ namespace Raven.Tests.Bugs
 {
     public class FindPropertyNameForIndex : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
         }
 

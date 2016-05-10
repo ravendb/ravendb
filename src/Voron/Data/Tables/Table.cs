@@ -342,7 +342,7 @@ namespace Voron.Data.Tables
 
                 builder.CopyTo(pos);
 
-                id = page.PageNumber;
+                id = page.PageNumber * _pageSize;
             }
 
             InsertIndexValuesFor(id, new TableValueReader(pos, size));
@@ -521,12 +521,12 @@ namespace Voron.Data.Tables
             var tree = GetTree(index);
             using (var it = tree.Iterate())
             {
-                if (it.Seek(value) == false)
-                    yield break;
-
                 if (startsWith)
                     it.RequiredPrefix = value;
 
+                if (it.Seek(value) == false)
+                    yield break;
+                
                 do
                 {
                     yield return new SeekResult

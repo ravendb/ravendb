@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 

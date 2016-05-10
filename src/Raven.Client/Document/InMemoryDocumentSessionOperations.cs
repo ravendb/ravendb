@@ -381,7 +381,7 @@ more responsive application.
         /// <returns></returns>
         public object TrackEntity(Type entityType, JsonDocument documentFound)
         {
-            if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
+            if (documentFound.Metadata.Value<bool?>(Constants.Headers.RavenDocumentDoesNotExists) == true)
             {
                 return GetDefaultValue(entityType); // document is not really there.
             }
@@ -389,9 +389,9 @@ more responsive application.
             {
                 documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
             }
-            if (!documentFound.Metadata.ContainsKey(Constants.LastModified))
+            if (!documentFound.Metadata.ContainsKey(Constants.Headers.LastModified))
             {
-                documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
+                documentFound.Metadata[Constants.Headers.LastModified] = documentFound.LastModified;
             }
 
             return TrackEntity(entityType, documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);
@@ -565,7 +565,7 @@ more responsive application.
             DocumentMetadata value;
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
-            if (value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) && value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly))
+            if (value.OriginalMetadata.ContainsKey(Constants.Headers.RavenReadOnly) && value.OriginalMetadata.Value<bool>(Constants.Headers.RavenReadOnly))
                 throw new InvalidOperationException(entity + " is marked as read only and cannot be deleted");
             deletedEntities.Add(entity);
             knownMissingIds.Add(value.Key);
@@ -698,7 +698,7 @@ more responsive application.
             var metadata = new RavenJObject();
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)
-                metadata.Add(Constants.RavenEntityName, tag);
+                metadata.Add(Constants.Headers.RavenEntityName, tag);
             if (id != null)
                 knownMissingIds.Remove(id);
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
@@ -972,8 +972,8 @@ more responsive application.
             var keysToDelete = (from deletedEntity in deletedEntities
                                 where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
                                 // skip deleting read only entities
-                                where !value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) ||
-                                      !value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly)
+                                where !value.OriginalMetadata.ContainsKey(Constants.Headers.RavenReadOnly) ||
+                                      !value.OriginalMetadata.Value<bool>(Constants.Headers.RavenReadOnly)
                                 select value.Key).ToList();
 
             foreach (var key in keysToDelete)
@@ -1033,7 +1033,7 @@ more responsive application.
         /// </summary>
         public void MarkReadOnly(object entity)
         {
-            GetMetadataFor(entity)[Constants.RavenReadOnly] = true;
+            GetMetadataFor(entity)[Constants.Headers.RavenReadOnly] = true;
         }
 
         /// <summary>
@@ -1066,10 +1066,10 @@ more responsive application.
                 return true;
 
             // prevent saves of a modified read only entity
-            if (documentMetadata.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) &&
-                documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) &&
-                documentMetadata.Metadata.ContainsKey(Constants.RavenReadOnly) &&
-                documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
+            if (documentMetadata.OriginalMetadata.ContainsKey(Constants.Headers.RavenReadOnly) &&
+                documentMetadata.OriginalMetadata.Value<bool>(Constants.Headers.RavenReadOnly) &&
+                documentMetadata.Metadata.ContainsKey(Constants.Headers.RavenReadOnly) &&
+                documentMetadata.Metadata.Value<bool>(Constants.Headers.RavenReadOnly))
                 return false;
 
             var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
@@ -1137,7 +1137,7 @@ more responsive application.
         {
             var metadata = GetMetadataFor(entity);
 
-            metadata[Constants.RavenCreateVersion] = true;
+            metadata[Constants.Headers.RavenCreateVersion] = true;
         }
 
         /// <summary>
@@ -1300,7 +1300,7 @@ more responsive application.
                 return;
             }
 
-            var entityName = metadata.Value<string>(Constants.RavenEntityName);
+            var entityName = metadata.Value<string>(Constants.Headers.RavenEntityName);
 
             var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
             if (result.ContainsKey(idPropName))

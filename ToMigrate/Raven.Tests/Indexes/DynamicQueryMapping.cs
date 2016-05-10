@@ -20,9 +20,9 @@ namespace Raven.Tests.Indexes
     {
         private DocumentDatabase CreateDocumentDatabase()
         {
-            var configuration = new AppSettingsBasedConfiguration();
-            configuration.Core.DataDirectory = Path.Combine(NewDataPath(), "System");
-            configuration.Core.RunInMemory = true;
+            var configuration = new RavenConfiguration();
+            configuration.DataDirectory = Path.Combine(NewDataPath(), "System");
+            configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
             return new DocumentDatabase(configuration, null);
         }
 

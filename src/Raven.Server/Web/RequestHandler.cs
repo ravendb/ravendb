@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.Primitives;
+
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -245,6 +249,12 @@ namespace Raven.Server.Web
                 throw new ArgumentException($"Query string value '{name}' must have a non empty value");
 
             return values;
+        }
+
+        protected DisposableAction TrackRequestTime()
+        {
+            var sw = Stopwatch.StartNew();
+            return new DisposableAction(() => HttpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture)));
         }
     }
 }

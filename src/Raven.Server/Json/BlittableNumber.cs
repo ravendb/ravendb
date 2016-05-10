@@ -7,9 +7,9 @@ namespace Raven.Server.Json
     {
         public static NumberParseResult Parse(object value, out double doubleResult, out long longResult)
         {
-            if (value is long)
+            if (value is long || value is int)
             {
-                longResult = (long)value;
+                longResult = Convert.ToInt64(value);
                 doubleResult = double.MinValue;
 
                 return NumberParseResult.Long;

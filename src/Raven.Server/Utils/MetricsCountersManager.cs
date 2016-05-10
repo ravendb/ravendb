@@ -3,52 +3,68 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using System.Linq;
+
 using Raven.Server.Utils.Metrics;
+
 using Sparrow.Json.Parsing;
 
-
-namespace Raven.Database.Util
+namespace Raven.Server.Utils
 {
     public class MetricsCountersManager : IDisposable
     {
+        private readonly MetricsScheduler _metricsScheduler;
+
         public MeterMetric RequestsMeter { get; private set; }
+
         public MeterMetric RequestsPerSecondCounter { get; private set; }
-        public MeterMetric DocPutsPerSecond { get; set; }
+
+        public MeterMetric DocPutsPerSecond { get; private set; }
         public MeterMetric IndexedPerSecond { get; private set; }
-        public MeterMetric MapReduceMappedPerSecond { get; set; }
-        public MeterMetric MapReduceReducedPerSecond { get; set; }
-        public MeterMetric SqlReplicationBatchSizeMeter { get; set; }
+
+        public MeterMetric MapReduceMappedPerSecond { get; private set; }
+        public MeterMetric MapReduceReducedPerSecond { get; private set; }
+        public MeterMetric SqlReplicationBatchSizeMeter { get; private set; }
 
         public long ConcurrentRequestsCount;
-        private readonly MetricsScheduler _metricsScheduler;
-        
+
         public MetricsCountersManager(MetricsScheduler metricsScheduler)
         {
             _metricsScheduler = metricsScheduler;
+            CreateNew();
+        }
+
+        public void Dispose()
+        {
+            RequestsMeter?.Dispose();
+            RequestsPerSecondCounter?.Dispose();
+            DocPutsPerSecond?.Dispose();
+            IndexedPerSecond?.Dispose();
+            MapReduceMappedPerSecond?.Dispose();
+            MapReduceReducedPerSecond?.Dispose();
+            SqlReplicationBatchSizeMeter?.Dispose();
+        }
+
+        public void Reset()
+        {
+            Dispose();
+            CreateNew();
+        }
+
+        private void CreateNew()
+        {
             RequestsMeter = new MeterMetric(_metricsScheduler);
 
             RequestsPerSecondCounter = new MeterMetric(_metricsScheduler);
 
             DocPutsPerSecond = new MeterMetric(_metricsScheduler);
-            
+
             IndexedPerSecond = new MeterMetric(_metricsScheduler);
             MapReduceMappedPerSecond = new MeterMetric(_metricsScheduler);
             MapReduceReducedPerSecond = new MeterMetric(_metricsScheduler);
 
             SqlReplicationBatchSizeMeter = new MeterMetric(_metricsScheduler);
-        }
-
-        public void Dispose()
-        {
-            RequestsMeter.Dispose();
-            RequestsPerSecondCounter.Dispose();
-            DocPutsPerSecond.Dispose();
-            IndexedPerSecond.Dispose();
         }
     }
 
@@ -73,7 +89,7 @@ namespace Raven.Database.Util
         public static DynamicJsonValue CreateMeterData(this MeterMetric self)
         {
             var meterValue = self;
-            
+
             return new DynamicJsonValue
             {
                 ["Count"] = meterValue.Count,

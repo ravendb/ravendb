@@ -1,9 +1,8 @@
 ﻿using System.IO;
 using System.Text;
-using System.Threading.Tasks;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
+
+using Raven.Abstractions.Data;
+
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -12,6 +11,40 @@ namespace FastTests.Blittable
 {
     public class ObjectJsonParsingTests
     {
+        [Fact]
+        public void CanCompressSmallStrings()
+        {
+            var traverser = new BlittableJsonTraverser();
+
+            using (var pool = new UnmanagedBuffersPool("foo"))
+            using (var ctx = new JsonOperationContext(pool))
+            {
+                var input = new DynamicJsonValue
+                {
+                    [Constants.DocumentIdFieldName] = "tracks/1",
+                    ["Title"] = "A and G motor vehicles"
+                };
+
+                using (var inputJson = ctx.ReadObject(input, "input", BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings))
+                {
+                    var output = new DynamicJsonValue
+                    {
+                        [Constants.DocumentIdFieldName] = "tracks/1",
+                    };
+
+                    object value;
+                    traverser.TryRead(inputJson, "Title", out value);
+
+                    output["Title"] = value;
+
+                    using (var outputJson = ctx.ReadObject(output, "output", BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings))
+                    {
+                        Assert.Equal(inputJson.ToString(), outputJson.ToString());
+                    }
+                }
+            }
+        }
+
         [Fact]
         public void Dup()
         {
@@ -36,7 +69,7 @@ namespace FastTests.Blittable
             },
                 "{\"Name\":\"Oren Eini\",\"Wife\":{\"Name\":\"Rachel\"}}");
 
-            
+
             AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
@@ -65,7 +98,7 @@ namespace FastTests.Blittable
             AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini"
-            }, 
+            },
                 "{\"Name\":\"Oren Eini\"}");
 
             AssertEqualAfterRoundTrip(new DynamicJsonValue
@@ -88,7 +121,7 @@ namespace FastTests.Blittable
                 "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true,\"Null\":null,\"Pie\":3.14}");
         }
 
-        private static void AssertEqualAfterRoundTrip(DynamicJsonValue  doc, string expected)
+        private static void AssertEqualAfterRoundTrip(DynamicJsonValue doc, string expected)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new JsonOperationContext(pool))

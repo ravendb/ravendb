@@ -31,7 +31,7 @@ namespace FastTests.Server.Documents.Tombstones
                             ["Name"] = "John",
                             [Constants.Metadata] = new DynamicJsonValue
                             {
-                                [Constants.RavenEntityName] = "Users"
+                                [Constants.Headers.RavenEntityName] = "Users"
                             }
                         }))
                         {
@@ -89,7 +89,7 @@ namespace FastTests.Server.Documents.Tombstones
                                 ["Name"] = "John",
                                 [Constants.Metadata] = new DynamicJsonValue
                                 {
-                                    [Constants.RavenEntityName] = "Users"
+                                    [Constants.Headers.RavenEntityName] = "Users"
                                 }
                             }))
                             {
@@ -101,7 +101,7 @@ namespace FastTests.Server.Documents.Tombstones
                                 ["Name"] = "Edward",
                                 [Constants.Metadata] = new DynamicJsonValue
                                 {
-                                    [Constants.RavenEntityName] = "Users"
+                                    [Constants.Headers.RavenEntityName] = "Users"
                                 }
                             }))
                             {
@@ -113,7 +113,7 @@ namespace FastTests.Server.Documents.Tombstones
                                 ["Name"] = "William",
                                 [Constants.Metadata] = new DynamicJsonValue
                                 {
-                                    [Constants.RavenEntityName] = "Users"
+                                    [Constants.Headers.RavenEntityName] = "Users"
                                 }
                             }))
                             {

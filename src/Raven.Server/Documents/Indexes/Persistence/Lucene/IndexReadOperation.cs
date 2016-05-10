@@ -13,11 +13,14 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
+using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Sorting;
+using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Indexing;
 
 using Voron.Impl;
@@ -36,15 +39,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
         private readonly string _indexName;
+
+        private readonly IndexType _indexType;
+
         private readonly IndexSearcher _searcher;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
 
-        public IndexReadOperation(string indexName, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public IndexReadOperation(string indexName, IndexType indexType, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
         {
             _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying: true);
             _indexName = indexName;
+            _indexType = indexType;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(out _searcher);
         }
@@ -54,49 +61,63 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<Document> Query(IndexQuery query, CancellationToken token, Reference<int> totalResults, IQueryResultRetriever retriever)
+        public IEnumerable<Document> Query(IndexQuery query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
             var docsToGet = query.PageSize;
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(query.Query, query);
+            var sort = GetSort(query.SortedFields);
             var returnedResults = 0;
-            bool endOfResults;
 
-            do
+            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
             {
-                token.ThrowIfCancellationRequested();
-
-                var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, query.SortedFields);
-
-                totalResults.Value = search.TotalHits;
-
-                for (; position < search.ScoreDocs.Length && query.PageSize > 0; position++)
+                while (true)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var scoreDoc = search.ScoreDocs[position];
-                    var document = _searcher.Doc(scoreDoc.Doc);
+                    var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
 
-                    returnedResults++;
+                    totalResults.Value = search.TotalHits;
 
-                    yield return retriever.Get(document);
+                    scope.RecordAlreadyPagedItemsInPreviousPage(search);
 
-                    if (returnedResults == query.PageSize)
-                        yield break;
+                    for (; position < search.ScoreDocs.Length && query.PageSize > 0; position++)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        var scoreDoc = search.ScoreDocs[position];
+                        var document = _searcher.Doc(scoreDoc.Doc);
+
+                        var result = retriever.Get(document);
+                        if (scope.ShouldIncludeInResults(result) == false)
+                        {
+                            skippedResults.Value++;
+                            continue;
+                        }
+
+                        returnedResults++;
+                        yield return result;
+
+                        if (returnedResults == query.PageSize)
+                            yield break;
+                    }
+
+                    //if (hasMultipleIndexOutputs)
+                    //    docsToGet += (pageSize - returnedResults) * maxNumberOfIndexOutputs;
+                    //else
+                    docsToGet += query.PageSize - returnedResults;
+
+                    if (search.TotalHits == search.ScoreDocs.Length)
+                        break;
+
+                    if (returnedResults >= query.PageSize)
+                        break;
                 }
-
-                //if (hasMultipleIndexOutputs)
-                //    docsToGet += (pageSize - returnedResults) * maxNumberOfIndexOutputs;
-                //else
-                docsToGet += (query.PageSize - returnedResults);
-
-                endOfResults = search.TotalHits == search.ScoreDocs.Length;
-
-            } while (returnedResults < query.PageSize && endOfResults == false);
+            }
         }
 
-        public IEnumerable<Document> IntersectQuery(IndexQuery query, CancellationToken token, Reference<int> totalResults, IQueryResultRetriever retriever)
+        public IEnumerable<Document> IntersectQuery(IndexQuery query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
             throw new NotImplementedException();
 
@@ -111,9 +132,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
             var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query);
-
+            var sort = GetSort(query.SortedFields);
             //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-            var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, query.SortedFields);
+            var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
             currentBaseQueryMatches = search.ScoreDocs.Length;
             var intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
 
@@ -125,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     // We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
                     pageSizeBestGuess = pageSizeBestGuess * 2;
 
-                    search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, query.SortedFields);
+                    search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
                     previousBaseQueryMatches = currentBaseQueryMatches;
                     currentBaseQueryMatches = search.ScoreDocs.Length;
                     intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
@@ -172,9 +193,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, SortedField[] sortedFields)
+        private TopDocs ExecuteQuery(Query documentQuery, int start, int pageSize, Sort sort)
         {
-            if (pageSize == int.MaxValue && sortedFields == null) // we want all docs, no sorting required
+            if (pageSize == int.MaxValue && sort == null) // we want all docs, no sorting required
             {
                 var gatherAllCollector = new GatherAllCollector();
                 _searcher.Search(documentQuery, gatherAllCollector);
@@ -185,10 +206,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var minPageSize = Math.Max(absFullPage, 1);
 
             // NOTE: We get Start + Pagesize results back so we have something to page on
-            if (sortedFields != null)
+            if (sort != null)
             {
-                var sort = GetSort(sortedFields);
-
                 _searcher.SetDefaultFieldSortScoring(true, false);
                 try
                 {
@@ -249,9 +268,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static Sort GetSort(SortedField[] sortedFields)
         {
+            if (sortedFields == null || sortedFields.Length == 0)
+                return null;
+
             return new Sort(sortedFields.Select(x =>
             {
                 var sortOptions = SortOptions.String;
+
+                if (InvariantCompare.IsPrefix(x.Field, Constants.AlphaNumericFieldName, CompareOptions.None))
+                {
+                    var customField = SortFieldHelper.CustomField(x.Field);
+                    if (string.IsNullOrEmpty(customField.Name))
+                        throw new InvalidOperationException("Alphanumeric sort: cannot figure out what field to sort on!");
+
+                    var anSort = new AlphaNumericComparatorSource();
+                    return new SortField(customField.Name, anSort, x.Descending);
+                }
 
                 if (InvariantCompare.IsSuffix(x.Field, _Range, CompareOptions.None))
                 {
