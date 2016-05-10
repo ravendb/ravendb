@@ -636,34 +636,6 @@ namespace Voron.Data.Tables
             return Insert(builder);
         }
 
-        public bool DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)
-        {
-            var fst = GetFixedSizeTree(index);
-            using (var it = fst.Iterate())
-            {
-                if (it.Seek(long.MinValue) == false)
-                    return true;
-
-                do
-                {
-                    if (it.CurrentKey > maxValue)
-                        break;
-
-                    if (deletedList.Count > 10 * 1024)
-                        break;
-
-                    deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
-                } while (it.MoveNext());
-            }
-
-            foreach (var id in deletedList)
-            {
-                Delete(id);
-            }
-
-            return true;
-        }
-
         public void DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
         {
             if (numberOfEntriesToDelete < 0)

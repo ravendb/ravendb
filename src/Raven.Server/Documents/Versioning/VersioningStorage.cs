@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Voron.Data.BTrees;
 using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Versioning
@@ -17,15 +18,19 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentDatabase _database;
         private readonly TableSchema _docsSchema = new TableSchema();
 
-        private Document _versioningConfiguration;
+        private readonly Dictionary<string, VersioningConfiguration> _versioningConfiguration;
+
+        private const string VersioningRevisionsCount = "_VersioningRevisionsCount";
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
         private long _lastEtag;
+        private readonly VersioningConfiguration _emptyConfiguration = new VersioningConfiguration();
 
-        public VersioningStorage(DocumentDatabase database)
+        public VersioningStorage(DocumentDatabase database, Dictionary<string, VersioningConfiguration> versioningConfiguration)
         {
             _database = database;
+            _versioningConfiguration = versioningConfiguration;
 
             // The documents schema is as follows
             // 4 fields (lowered key, etag, lazy string key, document)
@@ -36,86 +41,46 @@ namespace Raven.Server.Documents.Versioning
                 Count = 2,
                 IsGlobal = true,
             });
-            _docsSchema.DefineIndex("Key", new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 1,
-                IsGlobal = true,
-            });
-            _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
-            {
-                StartIndex = 1,
-                IsGlobal = true
-            });
-
-            _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
-            LoadConfigurations();
         }
 
-        private void LoadConfigurations()
+        public static VersioningStorage LoadConfigurations(DocumentDatabase database)
         {
             DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
 
-                _versioningConfiguration = _database.DocumentsStorage.Get(context, Constants.Versioning.RavenVersioningConfiguration);
+                var configuration = database.DocumentsStorage.Get(context, Constants.Versioning.RavenVersioningConfiguration);
+                if (configuration == null)
+                    return null;
+
+                var versioningConfiguration = JsonDeserialization.VersioningConfiguration(configuration.Data);
+                return new VersioningStorage(database, versioningConfiguration);
             }
-        }
-
-        private void HandleSystemDocumentChange(DocumentChangeNotification notification)
-        {
-            if (notification.Key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase) == false)
-                return;
-
-            _versioningConfiguration = null;
-            LoadConfigurations();
-
-            if (Log.IsDebugEnabled)
-                Log.Debug(() => $"Versioning configuration was changed");
         }
 
         public void Dispose()
         {
-            _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
         }
 
-        private bool IsVersioningActive(string collectionName, bool explictEnableVersioning, out BlittableJsonReaderObject configuration)
+        private VersioningConfiguration GetVersioningConfiguration(string collectionName)
         {
-            configuration = null;
-            if (_versioningConfiguration == null)
-                return false;
-
-            if (_versioningConfiguration.Data.TryGet(collectionName, out configuration))
+            VersioningConfiguration configuration;
+            if (_versioningConfiguration.TryGetValue(collectionName, out configuration))
             {
-                return IsVersioningActiveForCollection(configuration, explictEnableVersioning);
+                return configuration;
             }
 
-            if (_versioningConfiguration.Data.TryGet("DefaultConfiguration", out configuration))
+            if (_versioningConfiguration.TryGetValue("DefaultConfiguration", out configuration))
             {
-                return IsVersioningActiveForCollection(configuration, explictEnableVersioning);
+                return configuration;
             }
 
-            return false;
-        }
-
-        private static bool IsVersioningActiveForCollection(BlittableJsonReaderObject configuration, bool explictEnableVersioning)
-        {
-            bool active;
-            if (configuration.TryGet(nameof(VersioningConfiguration.Active), out active) && active)
-                return true;
-
-            bool activeIfExplicit;
-            if (configuration.TryGet(nameof(VersioningConfiguration.ActiveIfExplicit), out activeIfExplicit) && activeIfExplicit && explictEnableVersioning)
-            {
-                return true;
-            }
-
-            return false;
+            return _emptyConfiguration;
         }
 
         public void PutVersion(DocumentsOperationContext context, string collectionName, string key, 
-            BlittableJsonReaderObject document, BlittableJsonReaderObject oldDocument, bool isSystemDocument)
+            BlittableJsonReaderObject document, bool isSystemDocument)
         {
             if (isSystemDocument)
                 return;
@@ -138,16 +103,13 @@ namespace Raven.Server.Documents.Versioning
                 }
             }
 
-            BlittableJsonReaderObject configuration;
-            if (IsVersioningActive(collectionName, enableVersioning, out configuration) == false)
+            var configuration = GetVersioningConfiguration(collectionName);
+            if (enableVersioning == false && configuration.Active == false)
                 return;
 
             var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
-
-            int? maxRevisions;
-            configuration.TryGet(nameof(VersioningConfiguration.MaxRevisions), out maxRevisions);
-            var revisionsCount = IncrementCountOfRevisions(context, collectionName, key, 1);
-            DeleteOldRevisions(context, table, collectionName, key, maxRevisions, revisionsCount);
+            var revisionsCount = IncrementCountOfRevisions(context, key, 1);
+            DeleteOldRevisions(context, table, key, configuration.MaxRevisions, revisionsCount);
 
             byte* lowerKey;
             int lowerSize;
@@ -163,13 +125,13 @@ namespace Raven.Server.Documents.Versioning
                 {lowerKey, lowerSize},
                 {(byte*)&newEtagBigEndian, sizeof(long)},
                 {keyPtr, keySize},
-                {oldDocument.BasePointer, oldDocument.Size}
+                {document.BasePointer, document.Size}
             };
 
-            var insert = table.Insert(tbv);
+            table.Insert(tbv);
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string collectionName, string key, int? maxRevisions, long revisionsCount)
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string key, int? maxRevisions, long revisionsCount)
         {
             if (maxRevisions.HasValue == false || maxRevisions.Value == int.MaxValue)
                 return;
@@ -180,24 +142,19 @@ namespace Raven.Server.Documents.Versioning
 
             var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key, numberOfRevisionsToDelete);
             Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
-            IncrementCountOfRevisions(context, collectionName, key, -deletedRevisionsCount);
+            IncrementCountOfRevisions(context, key, -deletedRevisionsCount);
         }
 
-        private long IncrementCountOfRevisions(DocumentsOperationContext context, string collectionName, string key, long delta)
+        private long IncrementCountOfRevisions(DocumentsOperationContext context, string key, long delta)
         {
-            var numbers = context.Transaction.InnerTransaction.ReadTree(collectionName + "_VersioningRevisionsCount");
+            var numbers = context.Transaction.InnerTransaction.ReadTree(VersioningRevisionsCount);
             return numbers.Increment(key, delta);
         }
 
-        private void DeleteCountOfRevisions(DocumentsOperationContext context, string collectionName, string key)
+        private void DeleteCountOfRevisions(DocumentsOperationContext context, string key)
         {
-            var numbers = context.Transaction.InnerTransaction.ReadTree(collectionName + "_VersioningRevisionsCount");
+            var numbers = context.Transaction.InnerTransaction.ReadTree(VersioningRevisionsCount);
             numbers.Delete(key);
-        }
-
-        private void DeleteCollectionCountOfRevisions(DocumentsOperationContext context, string collectionName)
-        {
-            context.Transaction.InnerTransaction.DeleteTree(collectionName + "_VersioningRevisionsCount");
         }
 
         public void Delete(DocumentsOperationContext context, string collectionName, string key, Document document, bool isSystemDocument)
@@ -205,55 +162,15 @@ namespace Raven.Server.Documents.Versioning
             if (isSystemDocument)
                 return;
 
-            BlittableJsonReaderObject configuration;
-            if (IsVersioningActive(collectionName, false, out configuration) == false)
+            var configuration = GetVersioningConfiguration(collectionName);
+            if (configuration.Active == false)
                 return;
 
-            bool purgeOnDelete;
-            configuration.TryGet(nameof(VersioningConfiguration.PurgeOnDelete), out purgeOnDelete);
-
-            if (purgeOnDelete)
-            {
-                DeleteCountOfRevisions(context, collectionName, key);
-                var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
-                table.DeleteByKey(key);
-            }
-            else
-            {
-                PutVersion(context, collectionName, key, null, document.Data, isSystemDocument);
-            }
-        }
-
-        public void DeleteCollection(DocumentsOperationContext context, string collectionName)
-        {
-            BlittableJsonReaderObject configuration;
-            if (IsVersioningActive(collectionName, false, out configuration) == false)
+            if (configuration.PurgeOnDelete == false)
                 return;
 
-            bool purgeOnDelete;
-            configuration.TryGet(nameof(VersioningConfiguration.PurgeOnDelete), out purgeOnDelete);
-
-            if (purgeOnDelete)
-            {
-                using (context.OpenWriteTransaction())
-                {
-                    DeleteCollectionCountOfRevisions(context, collectionName);
-                    context.Transaction.InnerTransaction.DeleteTree("_revisions/" + collectionName);
-                    context.Transaction.Commit();
-                }
-            }
-            else
-            {
-                using (context.OpenWriteTransaction())
-                {
-                    /* TODO: 
-                        Discuss what to do in this case. Should we version also the inserts to avoid slow method here
-                        or should we load all the data and version it here?
-                    */
-                    // Load in a loop and commit as we do in the calling method
-                    context.Transaction.Commit();
-                }
-            }
+            var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
+            table.SeekForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key /* todo, lowered*/, startsWith: true);
         }
     }
 }

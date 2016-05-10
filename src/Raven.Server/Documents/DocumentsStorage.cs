@@ -5,11 +5,8 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
-using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Versioning;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.Documents.Replication;using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -21,6 +18,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -42,7 +40,7 @@ namespace Raven.Server.Documents
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
-        private VersioningStorage _versioningStorage;
+        public VersioningStorage VersioningStorage;
         private const string NoCollectionSpecified = "Raven/Empty";
         private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
@@ -101,12 +99,14 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            _documentDatabase.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
+
             var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(DocumentsStorage)}");
 
             exceptionAggregator.Execute(() =>
             {
-                _versioningStorage?.Dispose();
-                _versioningStorage = null;
+                VersioningStorage?.Dispose();
+                VersioningStorage = null;
             });
 
             exceptionAggregator.Execute(() =>
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents
                     tx.Commit();
                 }
 
-                _versioningStorage = new VersioningStorage(_documentDatabase);
+                _documentDatabase.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
             }
             catch (Exception e)
             {
@@ -184,6 +184,18 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }
+
+        public void HandleSystemDocumentChange(DocumentChangeNotification notification)
+        {
+            if (notification.Key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase) == false)
+                return;
+
+            VersioningStorage = null;
+            VersioningStorage = VersioningStorage.LoadConfigurations(_documentDatabase);
+
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Versioning configuration was {(notification.Type == DocumentChangeTypes.Delete ? "disalbed" : "enabled")}");
         }
 
         public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
@@ -622,7 +634,7 @@ namespace Raven.Server.Documents
 
             CreateTombstone(context, table, doc, originalCollectionName);
 
-            _versioningStorage.Delete(context, collectionName, key, doc, isSystemDocument);
+            VersioningStorage?.Delete(context, collectionName, key, doc, isSystemDocument);
             table.Delete(doc.StorageId);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -666,49 +678,6 @@ namespace Raven.Server.Documents
             var table = new Table(_tombstonesSchema, col, context.Transaction.InnerTransaction);
 
             table.Insert(tbv);
-        }
-
-        public void DeleteCollection(DocumentsOperationContext context, string name, BlittableJsonTextWriter writer)
-        {
-            _versioningStorage.DeleteCollection(context, name);
-
-            name = "@" + name; //todo: avoid this allocation
-
-            var deletedList = new List<long>();
-            long totalDocsDeletes = 0;
-            long maxEtag = -1;
-            while (true)
-            {
-                bool isAllDeleted;
-                using (context.OpenWriteTransaction())
-                {
-                    if (maxEtag == -1)
-                        maxEtag = ReadLastEtag(context.Transaction.InnerTransaction);
-
-                    var table = new Table(_docsSchema, name, context.Transaction.InnerTransaction);
-
-                    isAllDeleted = table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, maxEtag);
-                    context.Transaction.Commit();
-                }
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["BatchSize"] = deletedList.Count
-                });
-                writer.WriteComma();
-                writer.WriteNewLine();
-                writer.Flush();
-
-                totalDocsDeletes += deletedList.Count;
-
-                if (isAllDeleted)
-                    break;
-
-                deletedList.Clear();
-            }
-            context.Write(writer, new DynamicJsonValue
-            {
-                ["TotalDocsDeleted"] = totalDocsDeletes
-            });
         }
 
         public PutResult Put(DocumentsOperationContext context, string key, long? expectedEtag,
@@ -775,10 +744,10 @@ namespace Raven.Server.Documents
                         $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
                         $"Delete the document and recreate the document {key}.");
 
-                _versioningStorage.PutVersion(context, collectionName, key, document, oldDoc, isSystemDocument);
-
                 table.Update(oldValue.Id, tbv);
             }
+
+            VersioningStorage?.PutVersion(context, collectionName, key, document, isSystemDocument);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
