@@ -241,7 +241,6 @@
     <Content Include="App\views\database\indexes\resetIndexConfirm.html" />
     <Content Include="App\views\database\indexes\scriptedIndexes.html" />
     <Content Include="App\views\database\patch\executePatchConfirm.html" />
-    <Content Include="App\views\database\patch\loadPatch.html" />
     <Content Include="App\views\database\patch\patch.html" />
     <Content Include="App\views\database\patch\savePatch.html" />
     <Content Include="App\views\database\query\deleteDocumentsMatchingQueryConfirm.html" />
@@ -1050,7 +1049,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\indexes\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\indexes\scriptedIndexes.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\patch\executePatchConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\patch\loadPatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\patch\patch.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\patch\savePatch.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\query\deleteDocumentsMatchingQueryConfirm.ts" />

@@ -72,11 +72,13 @@ class patchDocument extends document {
         return this.__metadata.id.replace('Studio/Patch/', '');
     }
 
-    cloneWithoutMetadata() {
-        var clone = this;
-        clone.__metadata = new documentMetadata();
-        clone.__metadata.ravenEntityName = 'PatchDocuments';
-        return clone;
+    resetMetadata() {
+        this.__metadata = new documentMetadata();
+        this.__metadata.ravenEntityName = 'PatchDocuments';
+    }
+
+    clone() {
+        return new patchDocument(this.toDto());
     }
 }
 
