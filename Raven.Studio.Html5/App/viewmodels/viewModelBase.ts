@@ -115,11 +115,14 @@ class viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
+        // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
+        var adminArea = this.appUrls.isAreaActive("admin");
+
         oauthContext.enterApiKeyTask.done(() => {
             // we have to wait for changes api to connect as well
             // as obtaining changes api connection might take a while, we have to spin until connection is read
             var createNotifySpinFunction = () => {
-                if (isShell || this.appUrls.isAreaActive("admin")())
+                if (isShell || adminArea())
                     return;
                 if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
                     this.notifications = this.createNotifications();
@@ -133,13 +136,13 @@ class viewModelBase {
         this.postboxSubscriptions = this.createPostboxSubscriptions();
         this.modelPollingStart();
 
-        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
 
         ko.postbox.publish("SetRawJSONUrl", "");
         this.updateHelpLink(null); // clean link
     }
 
     attached() {
+        window.addEventListener("beforeunload", this.beforeUnloadListener, false);
         this.isAttached = true;
         viewModelBase.showSplash(false);
     }
@@ -183,8 +186,14 @@ class viewModelBase {
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
         this.activeTimeSeries.unsubscribeFrom("ActivateTimeSeries");
+        this.lastActivatedResource.unsubscribeFrom("ActivateDatabase");
+        this.lastActivatedResource.unsubscribeFrom("ActivateFilesystem");
+        this.lastActivatedResource.unsubscribeFrom("ActivateCounterStorage");
+        this.lastActivatedResource.unsubscribeFrom("ActivateTimeSeries");
+        this.currentHelpLink.unsubscribeFrom("currentHelpLink");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
+
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
 
         this.isAttached = true;
@@ -325,7 +334,7 @@ class viewModelBase {
 
         if (!appUrl.warnWhenUsingSystemDatabase || viewModelBase.isConfirmedUsingSystemDatabase) {
             canNavTask.resolve({ can: true });
-        } else {
+        } else { 
             var systemDbConfirm = new viewSystemDatabaseConfirm("Meddling with the system database could cause irreversible damage");
             systemDbConfirm.viewTask
                 .fail(() => forceRejectWithResolve == false ? canNavTask.resolve({ redirect: appUrl.forResources() }) : canNavTask.reject())

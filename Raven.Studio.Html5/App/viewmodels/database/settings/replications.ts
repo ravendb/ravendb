@@ -302,7 +302,10 @@ class replications extends viewModelBase {
         if (db) {
             new saveReplicationDocumentCommand(this.replicationsSetup().toDto(), db)
                 .execute()
-                .done(() => this.replicationsSetupDirtyFlag().reset());
+                .done(() => {
+                    this.replicationsSetupDirtyFlag().reset();
+                    this.dirtyFlag().reset();
+                });
         }
     }
 

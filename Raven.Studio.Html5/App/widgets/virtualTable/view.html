@@ -21,7 +21,7 @@
         </div>
         <!-- /ko -->
     </div>
-    <div class="ko-grid-viewport-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: settings.dynamicHeightTargetSelector, bottomMargin: settings.dynamicHeightBottomMargin, container: settings.container }, style: { 'max-height': settings.maxHeight }">
+    <div class="ko-grid-viewport-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: settings.dynamicHeightTargetSelector, bottomMargin: bottomMargin, container: settings.container }, style: { 'max-height': settings.maxHeight }">
         <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px' }">
             <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked}">
                 <div class="ko-grid-cell" data-bind="template: { name: $parent.getCellTemplate(binding) }, style: { width: width() + 'px' }, attr: { title: ($parent.getCellTemplate(binding) !== 'customTemplate') ? $parent.getCellData(binding) : '' }">
@@ -67,8 +67,8 @@
 
 <script id="checkboxTemplate" type="text/template">
     <div class="checkbox" data-bind="visible: $parents[1].settings.selectionEnabled">
-        <input type="checkbox" class="styled" data-bind="checked: $parent.isChecked, event: { change: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }}">
-        <label>&nbsp;</label>
+        <input type="checkbox" class="styled" data-bind="attr: { id: 'virtualTable_' + $parentContext.$index() }, checked: $parent.isChecked, event: { change: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }}">
+        <label data-bind="attr: { for:  'virtualTable_' + $parentContext.$index() }">&nbsp;</label>
     </div>
 </script>
 
