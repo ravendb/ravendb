@@ -221,9 +221,9 @@ namespace Raven.Database.Smuggler
             });
         }
 
-        public Task<string> GetVersion(RavenConnectionStringOptions server)
+        public Task<BuildNumber> GetVersion(RavenConnectionStringOptions server)
         {
-            return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+            return new CompletedTask<BuildNumber>(new BuildNumber { BuildVersion = DocumentDatabase.BuildVersion.ToString(), ProductVersion = DocumentDatabase.ProductVersion });
         }
 
         public Task<DatabaseStatistics> GetStats()
@@ -265,7 +265,12 @@ namespace Raven.Database.Smuggler
         public Task SeedIdentityFor(string identityName, long identityValue)
         {
             if (identityName != null)
-                database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
+            {
+                using (database.IdentityLock.Lock())
+                {
+                    database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
+                }
+            }
 
             return new CompletedTask();
         }
@@ -279,6 +284,30 @@ namespace Raven.Database.Smuggler
             exporter.Export(items.Add, database.WorkContext.CancellationToken);
 
             return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(items.GetEnumerator()));
+        }
+
+        public Task SeedIdentities(List<KeyValuePair<string, long>> itemsToInsert)
+        {
+            using (database.IdentityLock.Lock())
+            {
+                database.TransactionalStorage.Batch(accessor =>
+                {
+                    foreach (var identityPair in itemsToInsert)
+                    {
+                        if (identityPair.Key != null)
+                        {
+                            accessor.General.SetIdentityValue(identityPair.Key, identityPair.Value);
+                        }
+                    }
+                });
+            }
+
+            return new CompletedTask();
+        }
+
+        public Task<List<KeyValuePair<string, long>>> GetIdentities()
+        {
+            throw new NotSupportedException("Should support multi-part.");
         }
 
         public RavenJToken DisableVersioning(RavenJObject metadata)

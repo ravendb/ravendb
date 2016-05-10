@@ -534,6 +534,7 @@ namespace Raven.Database.Indexing
                     try
                     {
                         var stats = new IndexingWorkStats();
+                        shouldRecreateSearcher = false;
 
                         try
                         {
@@ -541,7 +542,7 @@ namespace Raven.Database.Indexing
                             {
                                 throw new InvalidOperationException(
                                     string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
-                                                                                  PublicName));
+                                        PublicName));
                             }
 
                             itemsInfo = action(indexWriter, searchAnalyzer, stats);
@@ -559,6 +560,11 @@ namespace Raven.Database.Indexing
                                     writePerformanceStats.Add(PerformanceStats.From(operation, extensionExecutionDuration.ElapsedMilliseconds));
                                 }
                             }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            //do not add error if this exception happens,
+                            //since this exception can happen during normal code-flow
                         }
                         catch (Exception e)
                         {
@@ -1949,9 +1955,9 @@ namespace Raven.Database.Indexing
             if (e is SystemException) // Don't count transient errors
                 return;
 
-            writeErrors = Interlocked.Increment(ref writeErrors);
+            var errors = Interlocked.Increment(ref writeErrors);
 
-            if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error)
+            if (errors < WriteErrorsLimit || Priority == IndexingPriority.Error)
                 return;
 
             var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
@@ -2000,7 +2006,7 @@ namespace Raven.Database.Indexing
 
         private void ResetWriteErrors()
         {
-            writeErrors = Interlocked.Exchange(ref writeErrors, 0);
+            Interlocked.Exchange(ref writeErrors, 0);
         }
 
         internal class IndexByIdEqualityComparer : IEqualityComparer<Index>

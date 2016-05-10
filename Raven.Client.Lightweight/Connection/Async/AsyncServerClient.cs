@@ -976,6 +976,19 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
+
+        public Task SeedIdentitiesAsync(List<KeyValuePair<string, long>> identities, CancellationToken token = default(CancellationToken))
+        {
+            return ExecuteWithReplication("POST", async operationMetadata =>
+            {
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/seed/bulk", "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)))
+                {
+                    await request.WriteAsync(RavenJToken.FromObject(identities)).ConfigureAwait(false);
+                    await request.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                }
+            }, token);
+        }
+
         private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, BulkOperationOptions options, String requestData, String method, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(method, async operationMetadata =>

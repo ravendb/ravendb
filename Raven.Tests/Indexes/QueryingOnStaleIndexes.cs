@@ -38,6 +38,8 @@ namespace Raven.Tests.Indexes
         [Fact]
         public void WillGetStaleResultWhenThereArePendingTasks()
         {
+            db.WorkContext.StopIndexing();
+
             db.Documents.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 
             Assert.True(db.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery

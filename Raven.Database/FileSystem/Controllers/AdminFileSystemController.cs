@@ -274,6 +274,15 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/admin/optimize-index")]
+        public HttpResponseMessage Optimize()
+        {
+            FileSystem.Search.OptimizeIndex();
+
+            return GetEmptyMessage();
+        }
+
+        [HttpPost]
         [RavenRoute("fs/admin/backup")]
         [RavenRoute("fs/{fileSystemName}/admin/backup")]
         public async Task<HttpResponseMessage> Backup()

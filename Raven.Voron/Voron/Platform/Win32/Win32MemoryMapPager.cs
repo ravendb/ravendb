@@ -7,13 +7,11 @@ using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
-using Sparrow;
 
 namespace Voron.Platform.Win32
 {
@@ -26,6 +24,8 @@ namespace Voron.Platform.Win32
         private readonly SafeFileHandle _handle;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
+
+        private static readonly bool CanPrefetch = IsWindows8OrNewer();
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -151,12 +151,21 @@ namespace Voron.Platform.Win32
             Debug.Assert(PagerState.Files != null && PagerState.Files.Any());
 
             var allocationInfo = RemapViewOfFileAtAddress(allocationSize, (ulong)_totalAllocationSize, PagerState.MapBase + _totalAllocationSize);
-
             if (allocationInfo == null)
                 return false;
 
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
+
+            if (CanPrefetch == false)
+                return true; // not supported
+
+            // We are asking to allocate pages. It is a good idea that they should be already in memory to only cause a single page fault (as they are continuous).
+            Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
+            entry.VirtualAddress = allocationInfo.BaseAddress;
+            entry.NumberOfBytes = (IntPtr)allocationInfo.Size;
+
+            Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(), (UIntPtr)1, &entry, 0);
 
             return true;
         }
@@ -291,7 +300,7 @@ namespace Voron.Platform.Win32
                 throw new Win32Exception();
         }
 
-        private bool IsWindows8OrNewer()
+        private static bool IsWindows8OrNewer()
         {
             var os = Environment.OSVersion;
             return os.Platform == PlatformID.Win32NT &&
@@ -303,7 +312,7 @@ namespace Voron.Platform.Win32
             if (sortedPages.Count == 0)
                 return;
 
-            if (IsWindows8OrNewer() == false)
+            if (CanPrefetch == false)
                 return; // not supported
 
             var list = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>();
@@ -363,9 +372,30 @@ namespace Voron.Platform.Win32
             }
         }
 
+        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        {
+            if (CanPrefetch == false)
+                return; // not supported
+
+            if (pagesToPrefetch.Count == 0)
+                return;
+
+            var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
+            for (int i = 0; i < entries.Length; i++)
+            {
+                entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
+                entries[i].VirtualAddress = AcquirePagePointer(pagesToPrefetch[i]);
+            }
+
+            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entriesPtr = entries)
+            {
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(), (UIntPtr)PagerState.AllocationInfos.Length, entriesPtr, 0);
+            }
+        }
+
         public override void TryPrefetchingWholeFile()
         {
-            if (IsWindows8OrNewer() == false)
+            if (CanPrefetch == false)
                 return; // not supported
 
             var entries = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[PagerState.AllocationInfos.Length];
@@ -376,11 +406,9 @@ namespace Voron.Platform.Win32
                 entries[i].NumberOfBytes = (IntPtr)PagerState.AllocationInfos[i].Size;
             }
 
-
             if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
                 (UIntPtr)PagerState.AllocationInfos.Length, entries, 0) == false)
                 throw new Win32Exception();
-
         }
     }
 }

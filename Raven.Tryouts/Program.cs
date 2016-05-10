@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Document;
 
 namespace Tryouts
@@ -26,29 +29,31 @@ namespace Tryouts
             })
             {
                 store.Initialize();
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
-                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-                {
-                    Id = "FooBar123",
-                    Settings =
-                    {
-                        { "Raven/DataDir", "~\\FooBar123" }
-                    }
-                });
+//                store.DatabaseCommands.GlobalAdmin.DeleteDatabase("FooBar123", true);
+//                store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+//                {
+//                    Id = "FooBar123",
+//                    Settings =
+//                    {
+//                        { "Raven/DataDir", "~\\FooBar123" }
+//                    }
+//                });
+//
+//                BulkInsert(store, 1024);
+                var changesList = new List<IDatabaseChanges>();
 
-                BulkInsert(store, 5);
-                using (var file = File.CreateText("results.csv"))
+                changesList.Add(store.Changes());
+
+
+                var mre = new ManualResetEventSlim();
+                Task.Run(() =>
                 {
-                    file.WriteLine("Count,ElapsedMs");
-                    for (int count = 1; count < 1024 * 128; count += (1024 * 4))
-                    {
-                        var sw = Stopwatch.StartNew();
-                        BulkInsert(store, count);
-                        file.WriteLine(String.Format("{0},{1}", count, sw.ElapsedMilliseconds));
-                        Console.WriteLine(count);
-                    }
-                    file.Flush();
-                }
+                    while (mre.IsSet == false)
+                        Thread.Sleep(100);
+                }).Wait();
+
+                Console.ReadLine();
+                mre.Set();				
             }
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Storage;
 
@@ -47,6 +48,11 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         public Stream CreateContent(string sigName)
         {
             var sigFileName = NameToPath(sigName);
+
+            var signatureDirectory = Path.GetDirectoryName(sigFileName);
+
+            IOExtensions.CreateDirectoryIfNotExists(signatureDirectory);
+
             var result = File.Create(sigFileName, 64 * 1024);
             log.Info("File {0} created", sigFileName);
             _createdFiles.Add(sigFileName, result);
@@ -119,8 +125,8 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 
         public void Dispose()
         {
-            CloseCreatedStreams();
-            Directory.Delete(_tempDirectory, true);
+           CloseCreatedStreams();
+           IOExtensions.DeleteDirectory(_tempDirectory);
         }
 
         public SignatureInfo GetByName(string sigName)
@@ -166,7 +172,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         {
             foreach (var item in _createdFiles)
             {
-                item.Value.Close();
+                item.Value.Dispose();
             }
         }
     }

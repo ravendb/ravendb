@@ -11,9 +11,12 @@
         </li>
         <!-- ko ifnot: isCreatingNewDocument -->
         <li data-bind="with: metadata" style="display: inline-block">
-            <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode() === true?(ravenEntityName ===undefined)?'System Documents':prettyLabel(ravenEntityName):$root.queryIndex, 
-            attr: {title:ravenEntityName, href: '#documents?collection=' + (ravenEntityName ===undefined)?'System Documents':ravenEntityName }, click: $root.navigateToCollection.bind($root,
-            (ravenEntityName ===undefined)?'System Documents':ravenEntityName)"></a>
+            <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode()?$root.generateCollectionName(ravenEntityName, true):$root.queryIndex, 
+               attr: { 
+                   title: ravenEntityName, 
+                   href: '#documents?collection=' + $root.generateCollectionName(ravenEntityName) 
+               }, 
+               click: $root.navigateToCollection.bind($root, $root.generateCollectionName(ravenEntityName))"></a>
         </li>
         <!-- /ko -->
         <li class="active" data-bind="text: docTitle, attr:{ title: docTitle }" style="display: inline-block">
@@ -71,7 +74,7 @@
 
                     <div class="row">
                         <label class="col-md-5">Raven-Entity-Name</label>
-                        <span class="col-md-7" data-bind="text: prettyLabel(ravenEntityName), attr: {title:ravenEntityName}"></span>
+                        <span class="col-md-7" data-bind="text: $root.prettyLabel(ravenEntityName), attr: {title:ravenEntityName}"></span>
                     </div>
                     <div class="row">
                         <label class="col-md-5">Etag</label>

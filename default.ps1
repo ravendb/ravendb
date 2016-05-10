@@ -227,6 +227,12 @@ task Unstable {
     $global:configuration = "Release"
 }
 
+task Hotfix {
+    $global:uploadCategory = "RavenDB-Hotfix"
+    $global:uploadMode = "Unstable"
+    $global:configuration = "Release"
+}
+
 task Stable {
     $global:uploadCategory = "RavenDB"
     $global:uploadMode = "Stable"
@@ -566,7 +572,7 @@ task Upload {
         $zipFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
         $installerFile = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.Setup.exe"
         
-        $files = @(@($installerFile, $uploadCategory.Replace("RavenDB", "RavenDB Installer")) , @($zipFile, "$uploadCategory"))
+        $files = @(@($installerFile, $global:uploadCategory.Replace("RavenDB", "RavenDB Installer")) , @($zipFile, "$global:uploadCategory"))
         
         foreach ($obj in $files)
         {
@@ -601,8 +607,8 @@ task Upload {
 task InitNuget {
 
     $global:nugetVersion = "$version.$env:buildlabel"
-    if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-        $global:nugetVersion += "-Unstable"
+    if ($global:uploadCategory -and $global:uploadCategory -ne "RavenDB"){
+        $global:nugetVersion += "-" + $global:uploadCategory
     }
 
 }

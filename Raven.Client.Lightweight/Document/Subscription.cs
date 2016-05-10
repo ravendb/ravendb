@@ -209,7 +209,7 @@ namespace Raven.Client.Document
                                         }
                                         else
                                         {
-                                            queue.Add((T)(object)jsonDoc);
+                                            queue.Add((T) (object) jsonDoc);
                                         }
 
                                         if (IsErroredBecauseOfSubscriber)
@@ -574,7 +574,8 @@ namespace Raven.Client.Document
                         }
                         catch (AggregateException ae)
                         {
-                            if (ae.InnerException is OperationCanceledException == false)
+                            if (ae.InnerException is OperationCanceledException == false &&
+                                ae.InnerException is ObjectDisposedException == false)
                             {
                                 throw;
                             }

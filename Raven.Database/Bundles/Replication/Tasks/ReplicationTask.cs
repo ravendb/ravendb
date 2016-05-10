@@ -1457,6 +1457,12 @@ namespace Raven.Bundles.Replication.Tasks
             var tombstones = actions
                 .Lists
                 .Read(Constants.RavenReplicationDocsTombstones, result.LastEtag, lastEtag, maxNumberOfTombstones + 1)
+                .Where(x =>
+                {
+                    if (x == null)
+                        log.Warn("Couldn't get a tombstone from '{0}' list", Constants.RavenReplicationDocsTombstones);
+                    return x != null;
+                })
                 .Select(x => new JsonDocument
                 {
                     Etag = x.Etag,
