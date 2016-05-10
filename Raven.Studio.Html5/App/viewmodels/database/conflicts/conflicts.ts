@@ -72,7 +72,7 @@ class conflicts extends viewModelBase {
 
         this.currentColumns().columns([
             new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),
-            new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' }),
+            new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' })
         ]);
         this.currentColumns().customMode(true);
 
