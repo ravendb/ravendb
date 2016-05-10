@@ -39,7 +39,7 @@ class dynamicHeightBindingHandler {
 
             var newWindowHeight = bindingValue.resizeTrigger;
             var targetSelector = bindingValue.target || "footer";
-            var bottomMargin = bindingValue.bottomMargin || 0;
+            var bottomMargin = ko.unwrap(bindingValue.bottomMargin) || 0;
             var container = bindingValue.container;
 
             // Check what was the last dispatched height to this element.

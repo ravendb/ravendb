@@ -82,7 +82,7 @@ class row {
                     context[p] = this.compiledCustomFunctions[p];
                 }
                 var cellValue = execJs.createSimpleCallableCode("return " + binding + ";", context)();
-                var callValueAsString = typeof cellValue === "object" ? JSON.stringify(cellValue, null, 4) : cellValue;
+                var callValueAsString = (typeof cellValue === "object" && this.getCellTemplateName(binding, rowData) !== cell.customTemplate) ? JSON.stringify(cellValue, null, 4) : cellValue;
                 this.addOrUpdateCellMap(binding, callValueAsString);
             });
 

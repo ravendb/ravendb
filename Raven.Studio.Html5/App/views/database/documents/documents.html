@@ -1,4 +1,4 @@
-<div id="documents-pane" class="documents-page no-outline" tabindex="0" data-bind="enableResize: true">
+<div id="documents-pane" class="documents-page no-outline row" tabindex="0" data-bind="enableResize: true">
     <!-- ko if: alerts().length > 0 -->
         <!-- ko foreach: alerts -->
     <div class="alert alert-dismissable" role="alert" data-bind="css: { 'alert-warning': alertLevel === 'Warning', 'alert-danger': alertLevel === 'Error' }">
@@ -25,7 +25,7 @@
                 <a href="javascript:void(0)">
                     <div class="collection-name">
                         <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
-                        <span class="collection-text pull-left collection-name-part" data-bind=" text: prettyLabel(name), attr: {title: name}"></span>
+                        <span class="collection-text pull-left collection-name-part" data-bind="text: prettyLabel(name), attr: {title: name}"></span>
                         <span class="collection-text pull-left text-muted" data-bind="visible: !isSystemDocuments && !isAllDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text:  '&nbsp;(' + documentsCountWithThousandsSeparator() + ')', updateHighlighting: documentCount()"></span>
                     </div>
                 </a>

@@ -22,6 +22,8 @@ class ctor {
 
     static idColumnWidth = 200;
 
+    $window = $(window);
+
     items: pagedList;
     recycleRows = ko.observableArray<row>();
     rowHeight = 38;
@@ -42,6 +44,8 @@ class ctor {
     noResults: KnockoutComputed<boolean>;
     getCollectionClassFromEntityNameMemoized: (base: documentBase, collectionName: string) => string;
     ensureColumnsAnimationFrameHandle = 0;
+    bottomMargin: KnockoutComputed<number>;
+    headerVisible = ko.observable(false);
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -95,6 +99,15 @@ class ctor {
             isCounterAllGroupsGroup: ko.observable<boolean>(false)
         };
         this.settings = $.extend(defaults, settings);
+        this.bottomMargin = ko.computed(() => {
+            // if header is visible we have to substruct it's height to avoid scroll
+            var headerHeight = this.headerVisible() ? 0 : 41;
+            return headerHeight + (this.settings.dynamicHeightBottomMargin || 0);
+        });
+
+        this.$window.resize(() => {
+            this.headerVisible($(".ko-grid-column-container", this.grid).is(":visible"));
+        });
 
         if (!!settings.isIndexMapReduce) {
             this.isIndexMapReduce = settings.isIndexMapReduce;

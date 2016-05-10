@@ -49,7 +49,7 @@ class editDocument extends viewModelBase {
     relatedDocumentHrefs = ko.observableArray<{id:string;href:string}>();
     docEditroHasFocus = ko.observable(true);
     documentMatchRegexp = /\w+\/\w+/ig;
-    lodaedDocumentName = ko.observable('');
+    loadedDocumentName = ko.observable('');
     isSaveEnabled: KnockoutComputed<Boolean>;
     documentSize: KnockoutComputed<string>;
     isInDocMode = ko.observable(true);
@@ -123,8 +123,8 @@ class editDocument extends viewModelBase {
 
 
         this.docTitle = ko.computed(() => {
-            if (this.isInDocMode() == true) {
-                if (this.isCreatingNewDocument() === true) {
+            if (this.isInDocMode()) {
+                if (this.isCreatingNewDocument()) {
                     this.isSystemDocumentByDocTitle(false);
                     return 'New Document';
                 } else {
@@ -154,7 +154,7 @@ class editDocument extends viewModelBase {
             if (list) {
                 var currentDocumentIndex = list.currentItemIndex();
 
-                if (currentDocumentIndex == 0) {
+                if (currentDocumentIndex === 0) {
                     return true;
                 }
             }
@@ -168,7 +168,7 @@ class editDocument extends viewModelBase {
                 var currentDocumentIndex = list.currentItemIndex();
                 var totalDocuments = list.totalResultCount();
 
-                if (currentDocumentIndex == totalDocuments - 1) {
+                if (currentDocumentIndex === totalDocuments - 1) {
                     return true;
                 }
             }
@@ -177,7 +177,6 @@ class editDocument extends viewModelBase {
         });
     }
 
-    // Called by Durandal when seeing if we can activate this view.
     canActivate(args: any) {
         super.canActivate(args);
         var canActivateResult = $.Deferred();
@@ -220,7 +219,7 @@ class editDocument extends viewModelBase {
             list.getNthItem(item)
                 .done((doc: document) => {
                     this.document(doc);
-                    this.lodaedDocumentName("");
+                    this.loadedDocumentName("");
                     canActivateResult.resolve({ can: true });
                 })
                 .fail(() => {
@@ -241,11 +240,11 @@ class editDocument extends viewModelBase {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
 
-        this.lodaedDocumentName(this.userSpecifiedId());
+        this.loadedDocumentName(this.userSpecifiedId());
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.metadataText, this.userSpecifiedId],false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.computed(()=> {
-            return (this.dirtyFlag().isDirty() || this.lodaedDocumentName() == "");// && !!self.userSpecifiedId(); || 
+            return (this.dirtyFlag().isDirty() || this.loadedDocumentName() == "");// && !!self.userSpecifiedId(); || 
         }, this);
 
         // Find the database and collection we're supposed to load.
@@ -514,7 +513,7 @@ class editDocument extends viewModelBase {
     saveDocument() {
         this.isInDocMode(true);
         var currentDocumentId = this.userSpecifiedId();
-        if ((currentDocumentId == "") || (this.lodaedDocumentName() != currentDocumentId)) {
+        if ((currentDocumentId == "") || (this.loadedDocumentName() != currentDocumentId)) {
             //the name of the document was changed and we have to save it as a new one
             this.isCreatingNewDocument(true);
         }
@@ -670,7 +669,7 @@ class editDocument extends viewModelBase {
         var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
         loadDocTask.done((document: document)=> {
             this.document(document);
-            this.lodaedDocumentName(this.userSpecifiedId());
+            this.loadedDocumentName(this.userSpecifiedId());
             this.dirtyFlag().reset(); //Resync Changes
 
             this.loadRelatedDocumentsList(document);
@@ -699,7 +698,7 @@ class editDocument extends viewModelBase {
         }
         } else {
             this.queryResultList().getNthItem(this.currentQueriedItemIndex).done((doc) => this.document(doc));
-            this.lodaedDocumentName("");
+            this.loadedDocumentName("");
     }
     }
 
@@ -794,7 +793,7 @@ class editDocument extends viewModelBase {
                         }
                         else {
                             this.document(doc);
-                            this.lodaedDocumentName("");
+                            this.loadedDocumentName("");
                             this.dirtyFlag().reset(); //Resync Changes
                         }
 

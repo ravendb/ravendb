@@ -27,15 +27,15 @@ namespace Raven.Database.Bundles.Replication
 from result in results
 select new {
     Id = result[""__document_id""],
-    ConflictDetectedAt = result[""@metadata""].Value<DateTime>(""Last -Modified""),
-                EntityName = result[""@metadata""][""Raven -Entity-Name""],
+    ConflictDetectedAt = result[""@metadata""].Value<DateTime>(""Last-Modified""),
+                EntityName = result[""@metadata""][""Raven-Entity-Name""],
                 Versions = result.Conflicts.Select(versionId =>
                 {
                     var version = LoadDocument(versionId);
                     return new
                     {
                         Id = versionId,
-                        SourceId = version[""@metadata""][""Raven -Replication-Source""]
+                        SourceId = version[""@metadata""][""Raven-Replication-Source""]
                     };
                 })
             }
