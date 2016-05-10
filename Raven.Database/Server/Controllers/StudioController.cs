@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -20,6 +21,7 @@ namespace Raven.Database.Server.Controllers
     [RoutePrefix("")]
     public class StudioController : BaseDatabaseApiController
     {
+        private static readonly string[] FieldsToTake = { "@id", Constants.RavenEntityName };
 
         public const int DocPreviewMaxColumns = 9;
 
@@ -154,12 +156,19 @@ namespace Raven.Database.Server.Controllers
 
             foreach (var jObject in input)
             {
+
+                var metadata = jObject.Value<RavenJObject>(Constants.Metadata);
+
+                var filteredMetadata = new RavenJObject();
+
+                foreach (var field in FieldsToTake)
+                {
+                    filteredMetadata[field] = metadata.Value<string>(field);
+                }
+
                 var filteredObject = new RavenJObject
                 {
-                    [Constants.Metadata] = new RavenJObject
-                    {
-                        {"@id", jObject.Value<RavenJObject>(Constants.Metadata).Value<string>("@id")}
-                    }
+                    [Constants.Metadata] = filteredMetadata
                 };
 
                 if (bindingGroups.SimpleBindings != null)

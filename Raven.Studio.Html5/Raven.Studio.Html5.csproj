@@ -756,7 +756,6 @@
     <TypeScriptCompile Include="App\commands\database\documents\deleteDocumentCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\deleteDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\executeBulkDocsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCountCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCustomColumnsCommand.ts" />
@@ -1031,7 +1030,6 @@
     </TypeScriptCompile>
     <TypeScriptCompile Include="App\viewmodels\common\upgrade.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\viewSystemDatabaseConfirm.ts" />
-    <TypeScriptCompile Include="App\viewmodels\common\showDataDialog.ts" />
     <TypeScriptCompile Include="App\viewmodels\common\upgrade.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\conflicts\conflicts.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\documents\copyDocuments.ts" />
