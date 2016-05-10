@@ -17,7 +17,8 @@ namespace Raven.Database.Extensions
         {
             while (true)
             {
-                using (var putSerialLock = self.DocumentLock.TryLock(250))
+                using (self.TransactionalStorage.DisableBatchNesting())
+                using (var putSerialLock = self.DocumentLock.TryLock(25))
                 {
                     if (putSerialLock == null)
                         continue;
