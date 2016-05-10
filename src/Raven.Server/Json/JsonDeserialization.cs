@@ -8,6 +8,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
 
 namespace Raven.Server.Json
@@ -32,8 +33,9 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, SqlReplicationStatus> SqlReplicationStatus = GenerateJsonDeserializationRoutine<SqlReplicationStatus>();
 
-        public static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> SubscriptionCriteria = GenerateJsonDeserializationRoutine<SubscriptionCriteria>();
+        public static readonly Func<BlittableJsonReaderObject, Dictionary<string, VersioningConfiguration>> VersioningConfiguration = GenerateJsonDeserializationRoutine<Dictionary<string, VersioningConfiguration>>();
 
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> SubscriptionCriteria = GenerateJsonDeserializationRoutine<SubscriptionCriteria>();
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionCriteriaOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
 
 

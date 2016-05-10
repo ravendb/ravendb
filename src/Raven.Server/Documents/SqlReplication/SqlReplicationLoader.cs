@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.SqlReplication
                 systemDocumentKey.StartsWith(Constants.SqlReplication.SqlReplicationConfigurationPrefix,
                     StringComparison.OrdinalIgnoreCase) ||
                 systemDocumentKey.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase);
-        }	          
+            }
 
         protected override void LoadConfigurations()
         {
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.SqlReplication
                     sqlReplication.Start();
                 }
             }
-        }        
+        }
 
         public DynamicJsonValue SimulateSqlReplicationSqlQueries(SimulateSqlReplication simulateSqlReplication, DocumentsOperationContext context)
         {
