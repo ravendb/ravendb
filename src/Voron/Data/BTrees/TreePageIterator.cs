@@ -19,9 +19,8 @@ namespace Voron.Data.BTrees
         public void Dispose()
         {
             _disposed = true;
-            var action = OnDispoal;
-            if (action != null)
-                action(this);
+
+            OnDisposal?.Invoke(this);
         }
 
         public bool Seek(Slice key)
@@ -120,6 +119,6 @@ namespace Voron.Data.BTrees
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
-        public event Action<IIterator> OnDispoal;
+        public event Action<IIterator> OnDisposal;
     }
 }
