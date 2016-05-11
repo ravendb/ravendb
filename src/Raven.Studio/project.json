@@ -11,10 +11,11 @@
   },
 
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516" 
-      }
+        "Microsoft.CSharp": "4.0.1-rc2-*"
+      },
+      "imports": "dnxcore50"
     }
   },
 

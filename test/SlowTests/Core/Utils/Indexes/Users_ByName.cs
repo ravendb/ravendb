@@ -13,10 +13,6 @@ using Raven.Tests.Core.Utils.Entities;
 
 using User = SlowTests.Core.Utils.Entities.User;
 
-#if !DNXCORE50
-using Lucene.Net.Analysis;
-#endif
-
 namespace SlowTests.Core.Utils.Indexes
 {
     public class Users_ByName : AbstractIndexCreationTask<User>
@@ -29,11 +25,7 @@ namespace SlowTests.Core.Utils.Indexes
 
             IndexSuggestions.Add(x => x.Name);
 
-#if !DNXCORE50
-            Analyzers.Add(x => x.Name, typeof(SimpleAnalyzer).FullName);
-#else
-            Analyzers.Add(x => x.Name, "Lucene.Net.Analysis.SimpleAnalyzer");
-#endif
+            Analyzers.Add(x => x.Name, typeof(Lucene.Net.Analysis.SimpleAnalyzer).FullName);
 
             Stores.Add(x => x.Name, FieldStorage.Yes);
         }

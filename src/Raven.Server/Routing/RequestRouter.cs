@@ -6,18 +6,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Http;
-using Raven.Abstractions.Data;
+using Microsoft.AspNetCore.Http;
+
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
 using Raven.Client.Data;
 using Raven.Server.Web;
-using static System.String;
 
 namespace Raven.Server.Routing
 {
@@ -91,8 +89,7 @@ namespace Raven.Server.Routing
 
             if (token == null)
             {
-                var oAuthTokenInCookieValues = context.Request.Cookies["Raven-Authorization"];
-                token = oAuthTokenInCookieValues.Count == 0 ? null : oAuthTokenInCookieValues[0];
+                token = context.Request.Cookies["Raven-Authorization"];
             }
 
             if (token == null)

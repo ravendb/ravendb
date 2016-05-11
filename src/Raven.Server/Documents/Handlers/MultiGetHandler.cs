@@ -6,7 +6,7 @@
 
 using System.Threading.Tasks;
 
-using Microsoft.AspNet.Http;
+using Microsoft.AspNetCore.Http;
 
 using Raven.Client.Data;
 using Raven.Server.Routing;

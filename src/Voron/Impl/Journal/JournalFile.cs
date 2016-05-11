@@ -8,20 +8,10 @@ using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security;
 using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Schema;
-using Voron.Exceptions;
-using Voron.Impl.Paging;
-using Voron.Impl.Scratch;
+
 using Voron.Util;
-using Sparrow.Platform;
-using Voron.Platform.Posix;
-using Voron.Platform.Win32;
 
 namespace Voron.Impl.Journal
 {

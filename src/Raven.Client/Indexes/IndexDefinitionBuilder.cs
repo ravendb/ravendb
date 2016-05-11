@@ -236,18 +236,15 @@ namespace Raven.Client.Indexes
 
                 if (Map != null)
                 {
-                    indexDefinition.Maps.Add(
-                        IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
+                    var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
                             Map,
                             convention,
                             querySource,
-                            translateIdentityProperty: true));
+                            translateIdentityProperty: true);
 
-#if !DNXCORE50
-                    if (convention.PrettifyGeneratedLinqExpressions)
-                        indexDefinition.Map = IndexPrettyPrinter.TryFormat(indexDefinition.Map);
-#endif
+                    indexDefinition.Maps.Add(convention.PrettifyGeneratedLinqExpressions ? IndexPrettyPrinter.TryFormat(map) : map);
                 }
+
                 return indexDefinition;
             }
             catch (Exception e)

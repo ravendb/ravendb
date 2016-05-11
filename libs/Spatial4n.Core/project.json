@@ -1,10 +1,10 @@
 {
   "version": "0.3.1",
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "bin": {
-        "assembly": "dnxcore50\\Spatial4n.Core.dll",
-        "pdb": "dnxcore50\\Spatial4n.Core.pdb"
+        "assembly": "netcoreapp1.0\\Spatial4n.Core.dll",
+        "pdb": "netcoreapp1.0\\Spatial4n.Core.pdb"
       }
     }
   }

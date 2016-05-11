@@ -1,17 +1,17 @@
 {
 	"version": "3.0.4",
-	"frameworks": {
-		"dnxcore50": {
-			"bin": {
-				"assembly": "dnxcore50\\Lucene.Net.Contrib.Spatial.NTS.dll",
-				"pdb": "dnxcore50\\Lucene.Net.Contrib.Spatial.NTS.pdb"
-			}
-		}
-	},
+  "frameworks": {
+    "netcoreapp1.0": {
+      "bin": {
+        "assembly": "netcoreapp1.0\\Lucene.Net.Contrib.Spatial.NTS.dll",
+        "pdb": "netcoreapp1.0\\Lucene.Net.Contrib.Spatial.NTS.pdb"
+      }
+    }
+  },
 	"dependencies": {
 		"GeoAPI": "1.7.5",
 		"Lucene.Net": "3.0.4",
-		"NetTopologySuite": "1.14.0",
+		"NetTopologySuite": "1.15.0",
 		"Spatial4n.Core": "0.3.1"
 	}
 }

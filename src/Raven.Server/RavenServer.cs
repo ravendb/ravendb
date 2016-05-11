@@ -2,11 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
-using Microsoft.AspNet.Hosting;
-using Microsoft.AspNet.Hosting.Internal;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+
 using Raven.Abstractions.Logging;
 using Raven.Client.Data;
 using Raven.Database.Util;
@@ -14,7 +12,6 @@ using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server
 {
@@ -27,11 +24,11 @@ namespace Raven.Server
         public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
         public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
 
-
         public Timer Timer;
 
         public readonly ServerStore ServerStore;
-        private IApplication _application;
+
+        private IWebHost _webHost;
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -82,13 +79,14 @@ namespace Raven.Server
 
             Router = new RequestRouter(RouteScanner.Scan(), this);
 
-            IHostingEngine hostingEngine;
             try
             {
-                hostingEngine = new WebHostBuilder(Configuration.WebHostConfig, true)
-                    .UseServer("Microsoft.AspNet.Server.Kestrel")
+                _webHost = new WebHostBuilder()
+                    .CaptureStartupErrors(captureStartupErrors: true)
+                    .UseKestrel(options => { })
+                    .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
-                    .UseServices(services => services.AddInstance(Router))
+                    .ConfigureServices(services => services.AddSingleton(Router))
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
                 Log.Info("Initialized Server...");
@@ -106,7 +104,7 @@ namespace Raven.Server
 
             try
             {
-                _application = hostingEngine.Start();
+                _webHost.Start();
             }
             catch (Exception e)
             {
@@ -121,7 +119,7 @@ namespace Raven.Server
         public void Dispose()
         {
             Metrics.Dispose();
-            _application?.Dispose();
+            _webHost?.Dispose();
             ServerStore?.Dispose();
             Timer?.Dispose();
         }

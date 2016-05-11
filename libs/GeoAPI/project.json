@@ -1,10 +1,10 @@
 {
   "version": "1.7.5",
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "bin": {
-        "assembly": "dnxcore50\\GeoAPI.dll",
-        "pdb": "dnxcore50\\GeoAPI.pdb"
+        "assembly": "netcoreapp1.0\\GeoAPI.dll",
+        "pdb": "netcoreapp1.0\\GeoAPI.pdb"
       }
     }
   }
