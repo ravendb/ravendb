@@ -546,7 +546,7 @@ class patch extends viewModelBase {
         if (status.OperationProgress != null) {
             var progressValue = Math.round(100 * (status.OperationProgress.ProcessedEntries / status.OperationProgress.TotalEntries));
             this.patchingProgress(progressValue);
-            this.patchingProgressText(status.OperationProgress.ProcessedEntries + " / " + status.OperationProgress.TotalEntries + " (" + progressValue + "%)");
+            this.patchingProgressText(status.OperationProgress.ProcessedEntries.toLocaleString() + " / " + status.OperationProgress.TotalEntries.toLocaleString() + " (" + progressValue + "%)");
         }
 
         if (status.Completed) {
