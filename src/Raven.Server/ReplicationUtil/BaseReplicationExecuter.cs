@@ -3,7 +3,7 @@ using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents;
 
-namespace Raven.Server.Replication
+namespace Raven.Server.ReplicationUtil
 {
     public abstract class BaseReplicationExecuter : IDisposable
     {
@@ -82,7 +82,7 @@ namespace Raven.Server.Replication
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             try
             {

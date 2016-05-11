@@ -83,7 +83,9 @@ namespace Raven.Abstractions.Data
         public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
 
         public const string IsReplicatedUrlParamName = "is-replicated";
-        
+
+        public const string TenantIdKey = "Database-Tenant-Id";
+
         // TODO: Delete this, we don't have system database anymore
         public const string SystemDatabase = "<system>";
 
@@ -269,6 +271,18 @@ namespace Raven.Abstractions.Data
             public const string RavenVersioningPrefix = "Raven/Versioning/";
 
             public const string RavenVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+        }
+
+        public class DocumentReplication
+        {
+            public const string DocumentChangeVectorKey = "Raven-Document-Change-Vector";
+
+            public const string DocumentReplicationTenantChangeVector = "Raven/DocumentReplication/TenantData";
+
+            public const string DocumentReplicationConfiguration = "Raven/DocumentReplication/Configuration";
+
+            //among others stuff, this will return node's change vector
+            public const string DocumentReplicationStatus = "Raven/DocumentReplication/Status"; 
         }
 
         public class SqlReplication

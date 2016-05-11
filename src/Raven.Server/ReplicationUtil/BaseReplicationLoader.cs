@@ -4,18 +4,18 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents;
 
-namespace Raven.Server.Replication
+namespace Raven.Server.ReplicationUtil
 {
     public abstract class BaseReplicationLoader : IDisposable
     {
-        protected readonly ILog Log;
+        protected readonly ILog _log;
         protected readonly DocumentDatabase _database;
         public readonly List<BaseReplicationExecuter> Replications = new List<BaseReplicationExecuter>();
 
         protected BaseReplicationLoader(DocumentDatabase database)
         {
             _database = database;
-            Log = LogManager.GetLogger(GetType());
+            _log = LogManager.GetLogger(GetType());
             _database.Notifications.OnDocumentChange += WakeReplication;
             _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
         }
@@ -42,8 +42,8 @@ namespace Raven.Server.Replication
 
                 LoadConfigurations();
 
-                if (Log.IsDebugEnabled)
-                    Log.Debug(() => $"Replication configuration was changed: {notification.Key}");
+                if (_log.IsDebugEnabled)
+                    _log.Debug(() => $"Replication configuration was changed: {notification.Key}");
             }
         }
 

@@ -8,6 +8,7 @@ using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -39,6 +40,7 @@ namespace Raven.Server.Documents
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
+            DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
 
             Metrics = new MetricsCountersManager(metricsScheduler);
@@ -65,6 +67,9 @@ namespace Raven.Server.Documents
 
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
+        public DocumentReplicationLoader DocumentReplicationLoader { get; }
+
+
         public void Initialize()
         {
             DocumentsStorage.Initialize();
@@ -81,6 +86,8 @@ namespace Raven.Server.Documents
         {
             _indexStoreTask = IndexStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
+            DocumentReplicationLoader.Initialize();
+
             DocumentTombstoneCleaner.Initialize();
 
             try
@@ -96,8 +103,10 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _databaseShutdown.Cancel();
+            DocumentReplicationLoader.Dispose();
 
             var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(DocumentDatabase)}");
+            
 
             if (_indexStoreTask != null)
             {

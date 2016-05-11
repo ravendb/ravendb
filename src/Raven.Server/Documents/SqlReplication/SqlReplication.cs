@@ -7,7 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
-using Raven.Server.Replication;
+using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;

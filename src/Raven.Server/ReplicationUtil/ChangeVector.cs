@@ -2,10 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 using Raven.Abstractions.Extensions;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Replication
+namespace Raven.Server.ReplicationUtil
 {
     public enum ChangeVectorCompareStatus : short
     {
@@ -17,7 +20,40 @@ namespace Raven.Server.Replication
 
     public class ChangeVector : IEnumerable<KeyValuePair<string,long>>, IEquatable<ChangeVector>
     {
-        private readonly Dictionary<string,long> _etagsByServerIDs = new Dictionary<string, long>();
+        private readonly Dictionary<string,long> _etagsByServerIDs;
+
+        public ChangeVector()
+        {
+            _etagsByServerIDs = new Dictionary<string, long>();
+        }
+
+        public ChangeVector(Dictionary<string, long> etagsByServerIDs)
+        {
+            _etagsByServerIDs = etagsByServerIDs;
+        }
+
+        public static ChangeVector FromBlittable(JsonOperationContext context, BlittableJsonReaderObject blittable)
+        {
+            var fromBlittable = new ChangeVector();
+            foreach (var prop in blittable.GetPropertyNames())
+            {
+                long val;
+                if (blittable.TryGet(prop, out val))
+                    fromBlittable[prop] = val;
+            }
+
+            return fromBlittable;
+        }
+
+        public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, string id)
+        {
+            var obj = new DynamicJsonValue();
+            
+            foreach (var kvp in _etagsByServerIDs)
+                obj[kvp.Key] = kvp.Value;
+
+            return context.ReadObject(obj, id);
+        }
 
         public long this[string serverId]
         {

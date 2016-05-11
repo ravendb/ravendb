@@ -49,9 +49,16 @@ namespace Raven.Client.Connection.Async
 
         public async Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false, CancellationToken token = default(CancellationToken))
         {
-            using (var req = adminRequest.DeleteDatabase(databaseName, hardDelete))
+            try
             {
-                await req.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                using (var req = adminRequest.DeleteDatabase(databaseName, hardDelete))
+                {
+                    await req.ExecuteRequestAsync().WithCancellation(token).ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                throw;
             }
         }
 
