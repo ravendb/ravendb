@@ -250,7 +250,7 @@ namespace Raven.Database.Indexing
                         Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete,
                         IntPtr.Zero,
                         Win32NativeFileCreationDisposition.OpenExisting,
-                        Win32NativeFileAttributes.RandomAccess,
+                        Win32NativeFileAttributes.None,
                         IntPtr.Zero);
 
                     if (fileHandle.IsInvalid)
