@@ -25,12 +25,16 @@ import queryUtil = require("common/queryUtil");
 import recentPatchesStorage = require("common/recentPatchesStorage");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 
+type indexInfo = {
+    name: string;
+    isMapReduce: boolean;
+}
 
 class patch extends viewModelBase {
 
     displayName = "patch";
-    indexNames = ko.observableArray<string>([]);
-    indexNamesToSelect: KnockoutComputed<string[]>;
+    indices = ko.observableArray<indexInfo>([]);
+    indicesToSelect: KnockoutComputed<indexInfo[]>;
     collections = ko.observableArray<collection>([]);
     collectionToSelect: KnockoutComputed<collection[]>;
 
@@ -60,6 +64,7 @@ class patch extends viewModelBase {
     outputLog = ko.observableArray<string>();
 
     isExecuteAllowed: KnockoutComputed<boolean>;
+    isMapReduceIndexSelected: KnockoutComputed<boolean>;
     documentKey = ko.observable<string>();
     keyOfTestedDocument: KnockoutComputed<string>;
 
@@ -116,13 +121,13 @@ class patch extends viewModelBase {
             .where(indexName => indexName != null)
             .subscribe(indexName => this.fetchIndexFields(indexName));
 
-        this.indexNamesToSelect = ko.computed(() => {
-            var indexNames = this.indexNames();
+        this.indicesToSelect = ko.computed(() => {
+            var indicies = this.indices();
             var patchDocument = this.patchDocument();
-            if (indexNames.length === 0 || !patchDocument)
+            if (indicies.length === 0 || !patchDocument)
                 return [];
 
-            return indexNames.filter(x => x !== patchDocument.selectedItem());
+            return indicies.filter(x => x.name !== patchDocument.selectedItem());
         });
 
         this.collectionToSelect = ko.computed(() => {
@@ -137,7 +142,7 @@ class patch extends viewModelBase {
         this.showDocumentsPreview = ko.computed(() => {
             if (!this.patchDocument()) {
                 return false;
-    }
+            }
             var indexPath = this.patchDocument().isIndexPatch();
             var collectionPath = this.patchDocument().isCollectionPatch();
             return indexPath || collectionPath;
@@ -167,6 +172,17 @@ class patch extends viewModelBase {
         });
 
         this.isExecuteAllowed = ko.computed(() => !!this.patchDocument().script() && !!this.beforePatchDoc());
+        this.isMapReduceIndexSelected = ko.computed(() => {
+            if (this.patchDocument().patchOnOption() !== "Index") {
+                return false;
+            }
+            var indexName = this.selectedIndex();
+            var usedIndex = this.indices().first(x => x.name === indexName);
+            if (usedIndex) { 
+                return usedIndex.isMapReduce;
+            }
+            return false;
+        })
         this.keyOfTestedDocument = ko.computed(() => {
             switch (this.patchDocument().patchOnOption()) {
                 case "Collection":
@@ -329,9 +345,14 @@ class patch extends viewModelBase {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((results: databaseStatisticsDto) => {
-                this.indexNames(results.Indexes.map(i => i.Name));
-                if (this.indexNames().length > 0) {
-                    this.setSelectedIndex(this.indexNames().first());
+                this.indices(results.Indexes.map(i => {
+                    return {
+                        name: i.Name,
+                        isMapReduce: i.IsMapReduce
+                    }
+                }));
+                if (this.indices().length > 0) {
+                    this.setSelectedIndex(this.indices().first().name);
                 }
             });
     }
