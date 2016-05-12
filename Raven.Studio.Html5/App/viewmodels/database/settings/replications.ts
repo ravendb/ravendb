@@ -68,12 +68,12 @@ class replications extends viewModelBase {
             }
         });
 
-        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
-            return 'all';
-
         // ReSharper disable once ConditionIsAlwaysConst
         if (countOfSkipIndexReplication === 0)
             return 'none';
+
+        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
+            return 'all';
 
         return 'mixed';
     }
