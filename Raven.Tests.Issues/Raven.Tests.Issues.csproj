@@ -136,7 +136,6 @@
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
     <Compile Include="RavenDb4583.cs" />
-    <Compile Include="NewIndexOptimizationIssue.cs" />
     <Compile Include="RavenDB-4563.cs" />
     <Compile Include="RavenDB-3460.cs" />
     <Compile Include="RavenDB-3736_2.cs" />
