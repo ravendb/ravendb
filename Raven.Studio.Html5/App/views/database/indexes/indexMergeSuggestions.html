@@ -23,9 +23,9 @@
             <h4 class="panel-title text-info">Suggestions</h4>
         </div>
         <div class="panel-body" data-bind="visible: suggestions().length == 0">
-            <h4 class="text-info"> No merge suggestions availiable.</h4>
+            <h3 class="text-info text-center"> No merge suggestions availiable.</h3>
         </div>
-        
+
         <div class="panel-group panel-body" id="accordion" data-bind="foreach: suggestions, visible: suggestions().length > 0">
             <div data-bind="if: $data.isSurpassingIndex()">
                 <div class="panel panel-default">
@@ -45,7 +45,7 @@
                     </div>
                 </div>
             </div>
-            <div data-bind="if: $data.isSurpassingIndex() == false">
+            <div data-bind="ifnot: $data.isSurpassingIndex()">
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h4 class="panel-title">
@@ -65,69 +65,77 @@
                 </div>
             </div>
         </div>
-        <div class="panel index-group panel-default">
-            <div class="panel-heading">
-                <h4 class="panel-title text-info">
-                    <a href="#collapseUnmergable" data-toggle="collapse" >Unmergable (<span data-bind="text: unmergables().length"></span>)</a>
-                </h4>
-            </div>
-            <div class="panel-collapse collapse" id="collapseUnmergable">
-                <div class="panel-body">
-                    <ul data-bind="foreach: unmergables">
-                        <li>
-                            <span class="index-name" data-bind="text: indexName"></span>
-                            <span>: </span>
-                            <span data-bind="text: reason"></span>
-                        </li>
-                    </ul>
-                </div>
+    </div>
+
+    <div class="panel index-group panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title text-info">
+                <a href="#collapseUnmergable" data-toggle="collapse">Unmergable (<span data-bind="text: unmergables().length"></span>)</a>
+            </h4>
+        </div>
+        <div class="panel-collapse collapse" id="collapseUnmergable">
+            <div class="panel-body">
+                <table class="table table-striped table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Index name</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody data-bind="foreach: unmergables">
+                        <tr>
+                            <td data-bind="text: indexName"></td>
+                            <td data-bind="text: reason"></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    
-        <div class="panel index-group panel-default"  data-bind="visible: idleOrAbandonedIndexes().length > 0">
-            <div class="panel-heading">
-                <div class="pull-right indexGroup-actions-container">
-                    <button class="btn btn-danger btn-sm" data-bind="click: deleteAllIdleOrAbandoned" title="Delete all idle or abandoned indexes">
-                        <i class="fa fa-trash-o"></i>
-                    </button>
-                </div>
-                <h4 class="panel-title text-info">Idle or Abandoned</h4>
+    </div>
+
+    <div class="panel index-group panel-default" data-bind="visible: idleOrAbandonedIndexes().length > 0">
+        <div class="panel-heading">
+            <div class="pull-right indexGroup-actions-container">
+                <button class="btn btn-danger btn-sm" data-bind="click: deleteAllIdleOrAbandoned" title="Delete all idle or abandoned indexes">
+                    <i class="fa fa-trash-o"></i>
+                </button>
             </div>
-            <div class="panel-body">
-                <ul data-bind="foreach: idleOrAbandonedIndexes">
-                    <li>
-                        <span class="index-name" data-bind="text: Name"></span>
-                        <span>: </span>
-                        <span data-bind="text: Priority"></span>
-                        <button class="btn btn-danger btn-sm" data-bind="click: $root.deleteIndex.bind($root, Name)" title="Delete index">
-                            <i class="fa fa-trash-o"></i>
-                        </button>
-                    </li>
-                </ul>
-            </div>
+            <h4 class="panel-title text-info">Idle or Abandoned</h4>
         </div>
-    
-        <div class="panel index-group panel-default" data-bind="visible: notUsedForLastWeek().length > 0">
-            <div class="panel-heading">
-                <div class="pull-right indexGroup-actions-container" >
-                    <button class="btn btn-danger btn-sm" data-bind="click: deleteAllNotUsedForWeek" title="Delete all indexes not used within last week">
+        <div class="panel-body">
+            <ul data-bind="foreach: idleOrAbandonedIndexes">
+                <li>
+                    <span class="index-name" data-bind="text: Name"></span>
+                    <span>: </span>
+                    <span data-bind="text: Priority"></span>
+                    <button class="btn btn-danger btn-sm" data-bind="click: $root.deleteIndex.bind($root, Name)" title="Delete index">
                         <i class="fa fa-trash-o"></i>
                     </button>
-                </div>
-                <h4 class="panel-title text-info">Not used for over a week.</h4>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="panel index-group panel-default" data-bind="visible: notUsedForLastWeek().length > 0">
+        <div class="panel-heading">
+            <div class="pull-right indexGroup-actions-container">
+                <button class="btn btn-danger btn-sm" data-bind="click: deleteAllNotUsedForWeek" title="Delete all indexes not used within last week">
+                    <i class="fa fa-trash-o"></i>
+                </button>
             </div>
-            <div class="panel-body">
-                <ul data-bind="foreach: notUsedForLastWeek">
-                    <li>
-                        <span class="index-name" data-bind="text: Name"></span>
-                        <span>: </span>
-                        <span data-bind="text: LastQueryTimestampText"></span>
-                        <button class="btn btn-danger btn-sm" data-bind="click: $root.deleteIndex.bind($root, Name)" title="Delete index">
-                            <i class="fa fa-trash-o"></i>
-                        </button>
-                    </li>
-                </ul>
-            </div>
+            <h4 class="panel-title text-info">Not used for over a week.</h4>
+        </div>
+        <div class="panel-body">
+            <ul data-bind="foreach: notUsedForLastWeek">
+                <li>
+                    <span class="index-name" data-bind="text: Name"></span>
+                    <span>: </span>
+                    <span data-bind="text: LastQueryTimestampText"></span>
+                    <button class="btn btn-danger btn-sm" data-bind="click: $root.deleteIndex.bind($root, Name)" title="Delete index">
+                        <i class="fa fa-trash-o"></i>
+                    </button>
+                </li>
+            </ul>
         </div>
     </div>
 </div>
