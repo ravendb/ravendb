@@ -246,7 +246,7 @@ namespace Raven.Client.Connection.Implementation
                     Response = exception.Response;
                     ResponseStatusCode = Response.StatusCode;
                     throw exception;
-                } 
+                }
                 catch (TaskCanceledException e)
                 {
                     var exception = ErrorResponseException.FromException(e);
@@ -316,6 +316,10 @@ namespace Raven.Client.Connection.Implementation
                     throw;
                 }
                 catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException)
                 {
                     throw;
                 }
@@ -987,7 +991,7 @@ namespace Raven.Client.Connection.Implementation
             if (httpClient != null)
             {
                 if (criticalError == false)
-                factory.httpClientCache.ReleaseClient(httpClient, _credentials);
+                    factory.httpClientCache.ReleaseClient(httpClient, _credentials);
                 else
                     httpClient.Dispose();
 

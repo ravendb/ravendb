@@ -572,6 +572,12 @@ namespace Raven.Database.Indexing
                                 }
                             }
                         }
+                        catch (OperationCanceledException)
+                        {
+                            //do not add error if this exception happens,
+                            //since this exception can happen during normal code-flow
+                            throw;
+                        }
                         catch (Exception e)
                         {
                             var invalidSpatialShapeException = e as InvalidSpatialShapException;
