@@ -7174,7 +7174,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 .indexes-container .index-group .panel-heading .indexGroup-actions-container,
 #index-merge-suggestions .index-group .panel-heading .indexGroup-actions-container {
   display: none;
-  padding-top: 5px;
+  padding-top: 3px;
 }
 .indexes-container .index-group .panel-heading:hover .indexGroup-actions-container,
 #index-merge-suggestions .index-group .panel-heading:hover .indexGroup-actions-container {

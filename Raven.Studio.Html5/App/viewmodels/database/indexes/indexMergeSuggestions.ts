@@ -6,7 +6,6 @@ import mergedIndexesStorage = require("common/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import changeSubscription = require('common/changeSubscription');
-import shell = require("viewmodels/shell");
 import moment = require("moment");
 import dialog = require("plugins/dialog");
 import changesContext = require("common/changesContext");
