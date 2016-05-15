@@ -272,7 +272,6 @@ namespace Raven.Server.Documents.SqlReplication
         {
             _cancellationTokenSource.Cancel();
             _disposed = true;
-            base.Dispose();
         }
 
         public bool ValidateName()

@@ -17,11 +17,8 @@ namespace Raven.Server.Documents.Replication
     {
         private const int MaxSupportedReplicationDestinations = int.MaxValue; //TODO: limit it or make it configurable?
 
-        public ChangeVector TenantChangeVector { get; private set; }
-
         public DocumentReplicationLoader(DocumentDatabase database) : base(database)
         {
-            TenantChangeVector = new ChangeVector();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -29,14 +26,7 @@ namespace Raven.Server.Documents.Replication
         {
             return systemDocumentKey.Equals(Constants.DocumentReplication.DocumentReplicationConfiguration,
                 StringComparison.OrdinalIgnoreCase);
-        }
-
-        internal void PersistTenantChangeVector(DocumentsOperationContext context)
-        {
-            var changeVectorId = Constants.DocumentReplication.DocumentReplicationTenantChangeVector;
-            var changeVector = TenantChangeVector.ToBlittable(context, changeVectorId);
-            _database.DocumentsStorage.Put(context, changeVectorId, null, changeVector);
-        }
+        }      
 
         protected override void LoadConfigurations()
         {
@@ -53,8 +43,6 @@ namespace Raven.Server.Documents.Replication
 
                 var tenantChangeVectorDocument = _database.DocumentsStorage.Get(context,
                     Constants.DocumentReplication.DocumentReplicationTenantChangeVector);
-
-                TenantChangeVector = ChangeVector.FromBlittable(context,tenantChangeVectorDocument.Data);
 
                 var configuration = JsonDeserialization.DocumentReplicationConfiguration(configurationDocument.Data);				
                 //TODO: make sure that destinations are unique (check uniqueness for urls?)

@@ -524,7 +524,6 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(1, out size);
             result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
-            result.ChangeVector = ChangeVector.FromBlittable(context,new BlittableJsonReaderObject(tvr.Read(4, out size), size, context));
 
             return result;
         }
@@ -661,10 +660,10 @@ namespace Raven.Server.Documents
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
                     
-            var changeVector = _documentDatabase.
-                    DocumentReplicationLoader.
-                    TenantChangeVector.
-                    ToBlittable(context, string.Empty);
+//            var changeVector = _documentDatabase.
+//                    DocumentReplicationLoader.
+//                    TenantChangeVector.
+//                    ToBlittable(context, string.Empty);
             
             var tbv = new TableValueBuilder
             {
@@ -672,7 +671,7 @@ namespace Raven.Server.Documents
                 {(byte*) &newEtagBigEndian , sizeof (long)}, //1
                 {keyPtr, keySize}, //2
                 {document.BasePointer, document.Size}, //3
-                {changeVector.BasePointer, changeVector.Size} //4
+                //{changeVector.BasePointer, changeVector.Size} //4
             };			
 
             var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort)lowerSize));
