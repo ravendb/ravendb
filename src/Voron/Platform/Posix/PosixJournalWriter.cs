@@ -163,5 +163,18 @@ namespace Voron.Platform.Posix
             }
             return true;
         }
+
+        public unsafe void WriteBuffer(long position, byte* srcPosition, int sizeToWrite)
+        {
+            var offset = Convert.ToUInt64(sizeToWrite);
+
+            var result = Syscall.pwrite(_fd, srcPosition, (ulong)sizeToWrite, (long)offset);
+
+            if (result == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
+        }
     }
 }

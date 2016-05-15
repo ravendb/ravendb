@@ -294,17 +294,12 @@ namespace Voron
             return new Transaction(NewLowLevelTransaction(TransactionFlags.Read));
         }
 
-        public Transaction WriteTransaction(bool lazyTransaction = false)
+        public Transaction WriteTransaction()
         {
-            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, null, lazyTransaction));
+            return new Transaction(NewLowLevelTransaction(TransactionFlags.ReadWrite, null));
         }
 
-        public void WriteLazyBufferToFile()
-        {
-            _journal.WriteLazyBufferToFile();
-        }
-
-        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null, bool lazyTransaction = false)
+        internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
             try
@@ -338,7 +333,7 @@ namespace Voron
                 try
                 {
                     long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
-                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling, lazyTransaction);
+                    tx = new LowLevelTransaction(this, txId, flags, _freeSpaceHandling);
                 }
                 finally
                 {

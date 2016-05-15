@@ -51,7 +51,7 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
 
         public TransactionFlags Flags { get; private set; }
-        public bool IsLazyTransaction { get; private set; }
+        public bool IsLazyTransaction { get; set; }
 
 
         internal bool CreatedByJournalApplicator;
@@ -85,7 +85,7 @@ namespace Voron.Impl
             get { return _txHeader->Hash; }
         }
 
-        public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, bool lazyTransaction)
+        public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
         {
             _dataPager = env.Options.DataPager;
             _env = env;
@@ -93,7 +93,6 @@ namespace Voron.Impl
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
             Flags = flags;
-            IsLazyTransaction = lazyTransaction;
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
 
             foreach (var scratchPagerState in scratchPagerStates.Values)
@@ -516,7 +515,8 @@ namespace Voron.Impl
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
 
-            if (_allocatedPagesInTransaction + _overflowPagesInTransaction > 0) // nothing changed in this transaction
+            if (_allocatedPagesInTransaction + _overflowPagesInTransaction > 0 || // nothing changed in this transaction
+                (IsLazyTransaction == false && _journal != null && _journal.HasDataInLazyTxBuffer()))  // allow call to writeToJournal for flushing lazy tx
             {
                 _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
                 FlushedToJournal = true;

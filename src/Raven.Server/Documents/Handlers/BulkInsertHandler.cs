@@ -50,8 +50,12 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 DocumentsOperationContext context;
+                DocumentsOperationContext forLazyContext;
+
+                // Add "forLazy" read transaction to avoid ApplyLogsToDataFile
+                using (ContextPool.AllocateOperationContext(out forLazyContext))
+                using (forLazyContext.OpenReadTransaction())
                 using (ContextPool.AllocateOperationContext(out context))
-                using (context.CreateLazyDocumentsOperation(ContextPool))
                 {
                     while (_fullBuffers.IsCompleted == false)
                     {
@@ -68,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                             Log.Debug($"Starting bulk insert batch with size {current.Used:#,#;;0} bytes");
                         int count = 0;
                         var sp = Stopwatch.StartNew();
-                        using (var tx = context.OpenWriteTransaction())
+                        using (var tx = context.OpenLazyWriteTransaction())
                         {
                             byte* docPtr = (byte*)current.Buffer.Address;
                             var end = docPtr + current.Used;
@@ -76,7 +80,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 count++;
                                 var size = *(int*)docPtr;
-                                docPtr += sizeof(int);
+                                docPtr += sizeof (int);
                                 if (size + docPtr > end) //TODO: Better error
                                     throw new InvalidDataException(
                                         "The blittable size specified is more than the available data, aborting...");
@@ -99,8 +103,15 @@ namespace Raven.Server.Documents.Handlers
                         }
                         lastHeartbeat = SendHeartbeatIfNecessary(lastHeartbeat);
                         if (Log.IsDebugEnabled)
-                            Log.Debug($"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
+                            Log.Debug(
+                                $"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
 
+                    }
+
+                    using (var tx = context.OpenWriteTransaction())
+                    // ADIADI :: lazy transaction. need to force flush in the end
+                    {
+                        tx.Commit();
                     }
                 }
             }

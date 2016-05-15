@@ -193,6 +193,40 @@ namespace Voron.Platform.Win32
             }
         }
 
+        public void WriteBuffer(long position, byte* srcPointer, int sizeToWrite)
+        {
+            if (Disposed)
+                throw new ObjectDisposedException("Win32JournalWriter");
+
+            int written;
+
+            _nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
+            _nativeOverlapped->OffsetHigh = (int)(position >> 32);
+            _nativeOverlapped->EventHandle = IntPtr.Zero;
+
+            var operationCompleted = Win32NativeFileMethods.WriteFile(_handle, srcPointer, sizeToWrite, out written, _nativeOverlapped);
+
+            uint lpNumberOfBytesWritten;
+
+            if (operationCompleted)
+            {
+                if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+                    throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                return;
+            }
+
+            switch (Marshal.GetLastWin32Error())
+            {
+                case Win32NativeFileMethods.ErrorSuccess:
+                case Win32NativeFileMethods.ErrorIOPending:
+                    if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+                        throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                    break;
+                default:
+                    throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+            }
+        }
+
         public void Dispose()
         {
             Disposed = true;

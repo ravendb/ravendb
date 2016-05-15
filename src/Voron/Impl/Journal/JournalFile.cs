@@ -14,9 +14,14 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Schema;
 using Voron.Exceptions;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Util;
+using Sparrow.Platform;
+using Voron.Platform.Posix;
+using Voron.Platform.Win32;
 
 namespace Voron.Impl.Journal
 {
@@ -29,13 +34,6 @@ namespace Voron.Impl.Journal
         private readonly PageTable _pageTranslationTable = new PageTable();
         private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
         private readonly object _locker = new object();
-
-        public class LazyBuffer
-        {
-            public long? Position;
-            public List<IntPtr[]> PagesList = new List<IntPtr[]>();
-        }
-        private LazyBuffer lazyBuffer = new LazyBuffer();
 
         public JournalFile(IJournalWriter journalWriter, long journalNumber)
         {
@@ -139,7 +137,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal. returns write page position
         /// </summary>
-        public long Write(LowLevelTransaction tx, IntPtr[] pages)
+        public long Write(LowLevelTransaction tx, IntPtr[] pages, LazyTransactionBuffer lazyTransactionScratch)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var unused = new HashSet<PagePosition>();
@@ -158,18 +156,18 @@ namespace Voron.Impl.Journal
 
             var position = pageWritePos * tx.Environment.Options.PageSize;
 
-            if (tx.IsLazyTransaction == false && lazyBuffer.Position == null)
+            if (tx.IsLazyTransaction == false && lazyTransactionScratch.HasDataInBuffer() == false)
             {
                 _journalWriter.WriteGather(position, pages);
             }
             else
             {
-                if (lazyBuffer.Position == null)
-                    lazyBuffer.Position = position;
-                lazyBuffer.PagesList.Add(pages);
+                lazyTransactionScratch.AddToBuffer(position, pages);
 
-                if (tx.IsLazyTransaction == false)
-                    WriteLazyBufferToFile();
+                if (tx.IsLazyTransaction == false) // non lazy tx will add itself to the buffer and the flush scratch to journal
+                {
+                    lazyTransactionScratch.WriteBufferToFile(this);
+                }
             }
 
             return pageWritePos;
@@ -282,28 +280,9 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void WriteLazyBufferToFile()
+        public void WriteBuffer(long destPosition, byte* srcPointer, int sizeToWrite)
         {
-            if (lazyBuffer.Position == null)
-                return;
-
-            int sizeOfArray = 0;
-            lazyBuffer.PagesList.ForEach(p => sizeOfArray += p.Length);
-            IntPtr[] pages = new IntPtr[sizeOfArray];
-            sizeOfArray = 0;
-            lazyBuffer.PagesList.ForEach(p =>
-            {
-                for (var i = 0; i < p.Length; i++)
-                {
-                    pages[i + sizeOfArray] = p[i];
-                }
-                sizeOfArray += p.Length;
-            });
-
-            _journalWriter.WriteGather(lazyBuffer.Position.Value, pages);
-                
-            lazyBuffer.Position = null;
-            lazyBuffer.PagesList.Clear();
+            _journalWriter.WriteBuffer(destPosition, srcPointer, sizeToWrite);
         }
     }
 }
