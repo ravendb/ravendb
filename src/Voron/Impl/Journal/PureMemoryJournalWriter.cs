@@ -29,10 +29,10 @@ namespace Voron.Impl.Journal
         public PureMemoryJournalWriter(StorageEnvironmentOptions options, long journalSize)
         {
             _options = options;
-            NumberOfAllocatedPages = journalSize/options.PageSize;
+            NumberOfAllocatedPages = (int)(journalSize/options.PageSize);
         }
 
-        public long NumberOfAllocatedPages { get; private set; }
+        public int NumberOfAllocatedPages { get; }
         public bool Disposed { get; private set; }
         public bool DeleteOnClose { get; set; }
 

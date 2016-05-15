@@ -111,7 +111,7 @@ namespace Voron.Impl.Backup
 
 								Debug.Assert(journalPart != null);
 
-								var pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
+								long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
 								if (journalFile.Number == lastWrittenLogFile)
 									pagesToCopy = lastWrittenLogPage + 1;
 

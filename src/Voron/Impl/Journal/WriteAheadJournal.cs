@@ -46,16 +46,15 @@ namespace Voron.Impl.Journal
         private readonly HeaderAccessor _headerAccessor;
         private readonly IVirtualPager _compressionPager;
 
-        private readonly LazyTransactionBuffer _lazyTransactionBuffer;
+        private LazyTransactionBuffer _lazyTransactionBuffer;
 
-        public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer != null && _lazyTransactionBuffer.HasDataInBuffer();
+        public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
             _dataPager = _env.Options.DataPager;
             _currentJournalFileSize = env.Options.InitialLogFileSize;
-            _lazyTransactionBuffer = new LazyTransactionBuffer(env.Options);
             _headerAccessor = env.HeaderAccessor;
             _updateLogInfo = header =>
             {
@@ -322,7 +321,11 @@ namespace Voron.Impl.Journal
             disposed = true;
 
             // we cannot dispose the journal until we are done with all of the pending writes
-            _lazyTransactionBuffer.Dispose();
+            if (_lazyTransactionBuffer != null)
+            {
+                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer.Dispose();
+            }
             _compressionPager.Dispose();
             _lz4.Dispose();
 
@@ -841,14 +844,14 @@ namespace Voron.Impl.Journal
         {
             var pages = CompressPages(tx, pageCount, _compressionPager);
 
-            if (tx.IsLazyTransaction)
+            if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
             {
-                Console.WriteLine("ADIADI :: lazy tx");
+                _lazyTransactionBuffer = new LazyTransactionBuffer(_env.Options);
             }
 
             if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
             {
-                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
                 CurrentFile = NextFile(pages.Length);
             }
 
@@ -856,7 +859,7 @@ namespace Voron.Impl.Journal
 
             if (CurrentFile.AvailablePages == 0)
             {
-                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
                 CurrentFile = null;
             }
         }

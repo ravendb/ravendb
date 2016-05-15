@@ -50,7 +50,7 @@ namespace Voron.Impl
         private readonly StorageEnvironmentState _state;
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
 
-        public TransactionFlags Flags { get; private set; }
+        public TransactionFlags Flags { get; }
         public bool IsLazyTransaction { get; set; }
 
 

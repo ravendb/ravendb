@@ -156,22 +156,30 @@ namespace Voron.Impl.Journal
 
             var position = pageWritePos * tx.Environment.Options.PageSize;
 
-            if (tx.IsLazyTransaction == false && lazyTransactionScratch.HasDataInBuffer() == false)
+            if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
                 _journalWriter.WriteGather(position, pages);
             }
             else
             {
+                if (lazyTransactionScratch == null)
+                    throw new InvalidOperationException("lazyTransactionScratch cannot be null if the transaction is lazy (or a previous one was)");
+                lazyTransactionScratch.EnsureSize(_journalWriter.NumberOfAllocatedPages);
                 lazyTransactionScratch.AddToBuffer(position, pages);
 
-                if (tx.IsLazyTransaction == false) // non lazy tx will add itself to the buffer and the flush scratch to journal
+                // non lazy tx will add itself to the buffer and then flush scratch to journal
+                if (tx.IsLazyTransaction == false)
                 {
                     lazyTransactionScratch.WriteBufferToFile(this);
+                }
+                else 
+                {
+                    lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
                 }
             }
 
             return pageWritePos;
-        }      
+        }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
         {
@@ -190,7 +198,7 @@ namespace Voron.Impl.Journal
             }
 
             var txPages = tx.GetTransactionPages();
-            foreach ( var txPage in txPages )
+            foreach (var txPage in txPages)
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var pageNumber = scratchPage.PageNumber;
@@ -233,7 +241,7 @@ namespace Voron.Impl.Journal
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
-        
+
         public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId, bool forceToFreeAllPages = false)
         {
             if (tx == null) throw new ArgumentNullException(nameof(tx));

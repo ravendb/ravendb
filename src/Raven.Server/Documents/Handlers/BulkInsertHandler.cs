@@ -50,11 +50,7 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 DocumentsOperationContext context;
-                DocumentsOperationContext forLazyContext;
 
-                // Add "forLazy" read transaction to avoid ApplyLogsToDataFile
-                using (ContextPool.AllocateOperationContext(out forLazyContext))
-                using (forLazyContext.OpenReadTransaction())
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     while (_fullBuffers.IsCompleted == false)
@@ -72,8 +68,10 @@ namespace Raven.Server.Documents.Handlers
                             Log.Debug($"Starting bulk insert batch with size {current.Used:#,#;;0} bytes");
                         int count = 0;
                         var sp = Stopwatch.StartNew();
-                        using (var tx = context.OpenLazyWriteTransaction())
+                        using (var tx = context.OpenWriteTransaction())
                         {
+                            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
+
                             byte* docPtr = (byte*)current.Buffer.Address;
                             var end = docPtr + current.Used;
                             while (docPtr < end)
@@ -109,13 +107,14 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     using (var tx = context.OpenWriteTransaction())
-                    // ADIADI :: lazy transaction. need to force flush in the end
                     {
+                        // this non lazy transaction forces the journal to actually
+                        // flush everything
                         tx.Commit();
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _fullBuffers.CompleteAdding();
                 throw;

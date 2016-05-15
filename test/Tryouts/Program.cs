@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices.ComTypes;
@@ -30,10 +31,21 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            using (var x = new AlphaNumericSorting())
+            var ds = new DocumentStore
             {
-                x.dynamic_query_should_work().Wait();
-            }
+                Url = "http://127.0.0.1:8080",
+                DefaultDatabase = "test"
+            };
+            ds.Initialize();
+            //ds.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+            //{
+            //    Id = "test",
+            //    Settings = new Dictionary<string, string>
+            //    {
+            //        {"Raven/DataDir","~/Test" }
+            //    }
+            //});
+            BulkInsert(ds, 1024*1024).Wait();
         }
 
         private static async Task DoWork()

@@ -25,13 +25,6 @@ namespace Raven.Server.ServerWide.Context
         {
             return new RavenTransaction(_environment.WriteTransaction());
         }
-
-        protected override RavenTransaction CreateLazyWriteTransaction()
-        {
-            var newTx = new RavenTransaction(_environment.WriteTransaction());
-            newTx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
-            return newTx;
-        }
     }
 
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
@@ -56,8 +49,6 @@ namespace Raven.Server.ServerWide.Context
 
         protected abstract TTransaction CreateWriteTransaction();
 
-        protected abstract TTransaction CreateLazyWriteTransaction();
-
         public virtual RavenTransaction OpenWriteTransaction()
         {
             if (Transaction != null && Transaction.Disposed == false)
@@ -65,15 +56,6 @@ namespace Raven.Server.ServerWide.Context
                 throw new InvalidOperationException("Transaction is already opened");
             }
             return Transaction = CreateWriteTransaction();
-        }
-
-        public virtual RavenTransaction OpenLazyWriteTransaction()
-        {
-            if (Transaction != null && Transaction.Disposed == false)
-            {
-                throw new InvalidOperationException("Transaction is already opened");
-            }
-            return Transaction = CreateLazyWriteTransaction();
         }
 
         public override void Reset()

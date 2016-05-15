@@ -32,12 +32,5 @@ namespace Raven.Server.ServerWide.Context
         {
             return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.Notifications);
         }
-
-        protected override DocumentsTransaction CreateLazyWriteTransaction()
-        {
-            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.Notifications);
-            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
-            return tx;
-        }
     }
 }

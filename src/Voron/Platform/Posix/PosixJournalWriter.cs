@@ -47,7 +47,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
 
-            NumberOfAllocatedPages = journalSize / _options.PageSize;
+            NumberOfAllocatedPages = (int)(journalSize/_options.PageSize);
         }
 
         public void Dispose()
@@ -128,7 +128,7 @@ namespace Voron.Platform.Posix
             }
         }
 
-        public long NumberOfAllocatedPages { get; private set; }
+        public int NumberOfAllocatedPages { get; }
 
         public bool Disposed { get; private set; }
 
