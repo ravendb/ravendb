@@ -4,13 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-
 using Raven.Abstractions.Data;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Logging;
-using Raven.Server.Json;
-using Raven.Server.ReplicationUtil;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -659,11 +655,7 @@ namespace Raven.Server.Documents
 
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
-                    
-//            var changeVector = _documentDatabase.
-//                    DocumentReplicationLoader.
-//                    TenantChangeVector.
-//                    ToBlittable(context, string.Empty);
+                   
             
             var tbv = new TableValueBuilder
             {
@@ -671,7 +663,6 @@ namespace Raven.Server.Documents
                 {(byte*) &newEtagBigEndian , sizeof (long)}, //1
                 {keyPtr, keySize}, //2
                 {document.BasePointer, document.Size}, //3
-                //{changeVector.BasePointer, changeVector.Size} //4
             };			
 
             var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort)lowerSize));

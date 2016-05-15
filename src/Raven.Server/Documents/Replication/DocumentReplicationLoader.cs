@@ -21,7 +21,6 @@ namespace Raven.Server.Documents.Replication
         {
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected override bool ShouldReloadConfiguration(string systemDocumentKey)
         {
             return systemDocumentKey.Equals(Constants.DocumentReplication.DocumentReplicationConfiguration,

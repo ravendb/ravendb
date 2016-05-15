@@ -103,10 +103,12 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _databaseShutdown.Cancel();
-            DocumentReplicationLoader.Dispose();
-
             var exceptionAggregator = new ExceptionAggregator(Log, $"Could not dispose {nameof(DocumentDatabase)}");
             
+            exceptionAggregator.Execute(() =>
+            {
+                DocumentReplicationLoader.Dispose();
+            });
 
             if (_indexStoreTask != null)
             {
