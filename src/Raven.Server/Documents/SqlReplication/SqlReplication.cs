@@ -268,10 +268,11 @@ namespace Raven.Server.Documents.SqlReplication
             return false;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _cancellationTokenSource.Cancel();
             _disposed = true;
+            base.Dispose();
         }
 
         public bool ValidateName()
