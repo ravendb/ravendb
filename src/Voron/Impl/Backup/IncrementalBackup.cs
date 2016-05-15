@@ -94,7 +94,7 @@ namespace Voron.Impl.Backup
 								usedJournals.Add(journalFile);
 
 								var startBackupAt = 0L;
-								var pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
+								long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
 								if (journalFile.Number == backupInfo.LastBackedUpJournal)
 								{
 									startBackupAt = backupInfo.LastBackedUpJournalPage + 1;

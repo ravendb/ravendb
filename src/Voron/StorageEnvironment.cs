@@ -48,6 +48,7 @@ namespace Voron
         private int _sizeOfUnflushedTransactionsInJournalFile;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
+
         public Guid DbId { get; set; }
 
         public StorageEnvironmentState State { get; private set; }

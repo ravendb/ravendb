@@ -47,7 +47,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
 
-            NumberOfAllocatedPages = journalSize / _options.PageSize;
+            NumberOfAllocatedPages = (int)(journalSize/_options.PageSize);
         }
 
         public void Dispose()
@@ -128,7 +128,7 @@ namespace Voron.Platform.Posix
             }
         }
 
-        public long NumberOfAllocatedPages { get; private set; }
+        public int NumberOfAllocatedPages { get; }
 
         public bool Disposed { get; private set; }
 
@@ -162,6 +162,19 @@ namespace Voron.Platform.Posix
                 position += result;
             }
             return true;
+        }
+
+        public unsafe void WriteBuffer(long position, byte* srcPosition, int sizeToWrite)
+        {
+            var offset = Convert.ToUInt64(sizeToWrite);
+
+            var result = Syscall.pwrite(_fd, srcPosition, (ulong)sizeToWrite, (long)offset);
+
+            if (result == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
         }
     }
 }

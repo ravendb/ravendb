@@ -14,9 +14,14 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Schema;
 using Voron.Exceptions;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Util;
+using Sparrow.Platform;
+using Voron.Platform.Posix;
+using Voron.Platform.Win32;
 
 namespace Voron.Impl.Journal
 {
@@ -132,7 +137,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal. returns write page position
         /// </summary>
-        public long Write(LowLevelTransaction tx, IntPtr[] pages)
+        public long Write(LowLevelTransaction tx, IntPtr[] pages, LazyTransactionBuffer lazyTransactionScratch)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
             var unused = new HashSet<PagePosition>();
@@ -150,10 +155,31 @@ namespace Voron.Impl.Journal
             }
 
             var position = pageWritePos * tx.Environment.Options.PageSize;
-            _journalWriter.WriteGather(position, pages);
+
+            if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
+            {
+                _journalWriter.WriteGather(position, pages);
+            }
+            else
+            {
+                if (lazyTransactionScratch == null)
+                    throw new InvalidOperationException("lazyTransactionScratch cannot be null if the transaction is lazy (or a previous one was)");
+                lazyTransactionScratch.EnsureSize(_journalWriter.NumberOfAllocatedPages);
+                lazyTransactionScratch.AddToBuffer(position, pages);
+
+                // non lazy tx will add itself to the buffer and then flush scratch to journal
+                if (tx.IsLazyTransaction == false)
+                {
+                    lazyTransactionScratch.WriteBufferToFile(this);
+                }
+                else 
+                {
+                    lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
+                }
+            }
 
             return pageWritePos;
-        }      
+        }
 
         private void UpdatePageTranslationTable(LowLevelTransaction tx, HashSet<PagePosition> unused, Dictionary<long, PagePosition> ptt)
         {
@@ -172,7 +198,7 @@ namespace Voron.Impl.Journal
             }
 
             var txPages = tx.GetTransactionPages();
-            foreach ( var txPage in txPages )
+            foreach (var txPage in txPages)
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var pageNumber = scratchPage.PageNumber;
@@ -215,7 +241,7 @@ namespace Voron.Impl.Journal
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
-        
+
         public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId, bool forceToFreeAllPages = false)
         {
             if (tx == null) throw new ArgumentNullException(nameof(tx));
@@ -260,6 +286,11 @@ namespace Voron.Impl.Journal
 
                 tx.Environment.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx.Id);
             }
+        }
+
+        public void WriteBuffer(long destPosition, byte* srcPointer, int sizeToWrite)
+        {
+            _journalWriter.WriteBuffer(destPosition, srcPointer, sizeToWrite);
         }
     }
 }

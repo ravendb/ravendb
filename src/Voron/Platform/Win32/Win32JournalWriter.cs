@@ -16,7 +16,7 @@ namespace Voron.Platform.Win32
     /// <summary>
     /// This class assumes only a single writer at any given point in time
     /// This require _external_ synchronization
-    /// </summary>
+    /// </summary>S
     public unsafe class Win32FileJournalWriter : IJournalWriter
     {
         private readonly StorageEnvironmentOptions _options;
@@ -46,7 +46,7 @@ namespace Voron.Platform.Win32
 
             Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
-            NumberOfAllocatedPages = journalSize / _options.PageSize;
+            NumberOfAllocatedPages = (int)(journalSize / _options.PageSize);
 
             _nativeOverlapped = (NativeOverlapped*) Marshal.AllocHGlobal(sizeof (NativeOverlapped));
 
@@ -141,7 +141,7 @@ namespace Voron.Platform.Win32
             return physicalPages;
         }
 
-        public long NumberOfAllocatedPages { get; private set; }
+        public int NumberOfAllocatedPages { get; }
         public bool DeleteOnClose { get; set; }
 
         public IVirtualPager CreatePager()
@@ -193,12 +193,45 @@ namespace Voron.Platform.Win32
             }
         }
 
+        public void WriteBuffer(long position, byte* srcPointer, int sizeToWrite)
+        {
+            if (Disposed)
+                throw new ObjectDisposedException("Win32JournalWriter");
+
+            int written;
+
+            _nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
+            _nativeOverlapped->OffsetHigh = (int)(position >> 32);
+            _nativeOverlapped->EventHandle = IntPtr.Zero;
+
+            var operationCompleted = Win32NativeFileMethods.WriteFile(_handle, srcPointer, sizeToWrite, out written, _nativeOverlapped);
+
+            uint lpNumberOfBytesWritten;
+
+            if (operationCompleted)
+            {
+                if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+                    throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                return;
+            }
+
+            switch (Marshal.GetLastWin32Error())
+            {
+                case Win32NativeFileMethods.ErrorSuccess:
+                case Win32NativeFileMethods.ErrorIOPending:
+                    if (Win32NativeFileMethods.GetOverlappedResult(_handle, _nativeOverlapped, out lpNumberOfBytesWritten, true) == false)
+                        throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+                    break;
+                default:
+                    throw new VoronUnrecoverableErrorException("Could not write lazy buffer to journal " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
+            }
+        }
+
         public void Dispose()
         {
             Disposed = true;
             GC.SuppressFinalize(this);
-            if (_readHandle != null)
-                _readHandle.Dispose();
+            _readHandle?.Dispose();
             _handle.Dispose();
             if (_nativeOverlapped != null)
             {

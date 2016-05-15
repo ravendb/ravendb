@@ -183,9 +183,9 @@ namespace Voron.Data.BTrees
             if (AbstractPager.IsKeySizeValid(key.Size) == false)
                 throw new ArgumentException($"Key size is too big, must be at most {AbstractPager.GetMaxKeySize()} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}", nameof(key));
 
-            Lazy<TreeCursor> lazy;
+            Func<TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var foundPage = FindPageFor(key, out node, out lazy);
+            var foundPage = FindPageFor(key, out node, out cursorConstructor);
 
             var page = ModifyPage(foundPage);
 
@@ -235,7 +235,7 @@ namespace Voron.Data.BTrees
             byte* dataPos;
             if (page.HasSpaceFor(_llt, key, len) == false)
             {
-                using (var cursor = lazy.Value)
+                using (var cursor = cursorConstructor())
                 {
                     cursor.Update(cursor.Pages.First, page);
 
@@ -369,7 +369,19 @@ namespace Voron.Data.BTrees
             }
         }
 
-        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Lazy<TreeCursor> cursor)
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
+        {
+            TreePage p;
+
+            if (TryUseRecentTransactionPage(key, out p, out node))
+            {
+                return p;
+            }
+
+            return SearchForPage(key, out node);
+        }
+
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<TreeCursor> cursor)
         {
             TreePage p;
 
@@ -381,11 +393,12 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, out cursor, out node);
         }
 
-        private TreePage SearchForPage(Slice key, out Lazy<TreeCursor> cursor, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
         {
             var p = _llt.GetReadOnlyTreePage(State.RootPageNumber);
-            var c = new TreeCursor();
-            c.Push(p);
+
+            var cursorPath = new List<long>();
+            cursorPath.Add(p.PageNumber);
 
             bool rightmostPage = true;
             bool leftmostPage = true;
@@ -432,7 +445,7 @@ namespace Voron.Data.BTrees
                 Debug.Assert(pageNode->PageNumber == p.PageNumber,
                     string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
 
-                c.Push(p);
+                cursorPath.Add(p.PageNumber);
             }
 
             if (p.IsLeaf == false)
@@ -440,13 +453,106 @@ namespace Voron.Data.BTrees
 
             node = p.Search(key); // will set the LastSearchPosition
 
-            AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
+            AddToRecentlyFoundPages(cursorPath, p, leftmostPage, rightmostPage);
 
-            cursor = new Lazy<TreeCursor>(() => c);
             return p;
         }
 
-        private void AddToRecentlyFoundPages(TreeCursor c, TreePage p, bool? leftmostPage, bool? rightmostPage)
+        private TreePage SearchForPage(Slice key, out Func<TreeCursor> cursorConstructor, out TreeNodeHeader* node)
+        {
+            var p = _llt.GetReadOnlyTreePage(State.RootPageNumber);
+
+            var cursor = new TreeCursor();
+            cursor.Push(p);
+
+            bool rightmostPage = true;
+            bool leftmostPage = true;
+
+            while ((p.TreeFlags & TreePageFlags.Branch) == TreePageFlags.Branch)
+            {
+                int nodePos;
+                if (key.Options == SliceOptions.BeforeAllKeys)
+                {
+                    p.LastSearchPosition = nodePos = 0;
+                    rightmostPage = false;
+                }
+                else if (key.Options == SliceOptions.AfterAllKeys)
+                {
+                    p.LastSearchPosition = nodePos = (ushort)(p.NumberOfEntries - 1);
+                    leftmostPage = false;
+                }
+                else
+                {
+                    if (p.Search(key) != null)
+                    {
+                        nodePos = p.LastSearchPosition;
+                        if (p.LastMatch != 0)
+                        {
+                            nodePos--;
+                            p.LastSearchPosition--;
+                        }
+
+                        if (nodePos != 0)
+                            leftmostPage = false;
+
+                        rightmostPage = false;
+                    }
+                    else
+                    {
+                        nodePos = (ushort)(p.LastSearchPosition - 1);
+
+                        leftmostPage = false;
+                    }
+                }
+
+                var pageNode = p.GetNode(nodePos);
+                p = _llt.GetReadOnlyTreePage(pageNode->PageNumber);
+                Debug.Assert(pageNode->PageNumber == p.PageNumber,
+                    string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
+
+                cursor.Push(p);
+            }
+
+            cursorConstructor = () => cursor;
+
+            if (p.IsLeaf == false)
+                throw new InvalidDataException("Index points to a non leaf page");
+
+            node = p.Search(key); // will set the LastSearchPosition
+
+            AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
+
+            return p;
+        }
+
+        private void AddToRecentlyFoundPages(List<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
+        {
+            Slice firstKey;
+            if (leftmostPage == true)
+            {
+                firstKey = Slice.BeforeAllKeys;
+            }
+            else
+            {
+                firstKey = p.GetNodeKey(0);
+            }
+
+            Slice lastKey;
+            if (rightmostPage == true)
+            {
+                lastKey = Slice.AfterAllKeys;
+            }
+            else
+            {
+                lastKey = p.GetNodeKey(p.NumberOfEntries - 1);
+            }
+
+            var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, c.ToArray());
+
+            RecentlyFoundPages.Add(foundPage);
+        }
+
+        private void AddToRecentlyFoundPages(TreeCursor c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
             Slice firstKey;
             if (leftmostPage == true)
@@ -483,7 +589,39 @@ namespace Voron.Data.BTrees
             RecentlyFoundPages.Add(foundPage);
         }
 
-        private bool TryUseRecentTransactionPage(Slice key, out Lazy<TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
+        private bool TryUseRecentTransactionPage(Slice key, out TreePage page, out TreeNodeHeader* node)
+        {
+            node = null;
+            page = null;
+
+            var recentPages = RecentlyFoundPages;
+            if (recentPages == null)
+                return false;
+
+            var foundPage = recentPages.Find(key);
+            if (foundPage == null)
+                return false;
+
+            if (foundPage.Page != null)
+            {
+                // we can't share the same instance, Page instance may be modified by
+                // concurrently run iterators
+                page = new TreePage(foundPage.Page.Base, foundPage.Page.Source, foundPage.Page.PageSize);
+            }
+            else
+            {
+                page = _llt.GetReadOnlyTreePage(foundPage.Number);
+            }
+
+            if (page.IsLeaf == false)
+                throw new InvalidDataException("Index points to a non leaf page");
+
+            node = page.Search(key); // will set the LastSearchPosition
+
+            return true;
+        }
+
+        private bool TryUseRecentTransactionPage(Slice key, out Func<TreeCursor> cursor, out TreePage page, out TreeNodeHeader* node)
         {
             node = null;
             page = null;
@@ -517,7 +655,8 @@ namespace Voron.Data.BTrees
 
             var cursorPath = foundPage.CursorPath;
             var pageCopy = page;
-            cursor = new Lazy<TreeCursor>(() =>
+
+            cursor = () =>
             {
                 var c = new TreeCursor();
                 foreach (var p in cursorPath)
@@ -548,9 +687,8 @@ namespace Voron.Data.BTrees
                         c.Push(cursorPage);
                     }
                 }
-
                 return c;
-            });
+            };
 
             return true;
         }
@@ -607,9 +745,9 @@ namespace Voron.Data.BTrees
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
 
             State.IsModified = true;
-            Lazy<TreeCursor> lazy;
+            Func<TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var page = FindPageFor(key, out node, out lazy);
+            var page = FindPageFor(key, out node, out cursorConstructor);
 
             if (page.LastMatch != 0)
                 return; // not an exact match, can't delete
@@ -622,7 +760,7 @@ namespace Voron.Data.BTrees
 
             CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
-            using (var cursor = lazy.Value)
+            using (var cursor = cursorConstructor())
             {
                 var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
                 var changedPage = page;
@@ -630,7 +768,6 @@ namespace Voron.Data.BTrees
                 {
                     changedPage = treeRebalancer.Execute(changedPage);
                 }
-
             }
 
             page.DebugValidate(_llt, State.RootPageNumber);
@@ -643,9 +780,8 @@ namespace Voron.Data.BTrees
 
         public ReadResult Read(Slice key)
         {
-            Lazy<TreeCursor> lazy;
             TreeNodeHeader* node;
-            var p = FindPageFor(key, out node, out lazy);
+            var p = FindPageFor(key, out node);
 
             if (p.LastMatch != 0)
                 return null;
@@ -655,9 +791,8 @@ namespace Voron.Data.BTrees
 
         public int GetDataSize(Slice key)
         {
-            Lazy<TreeCursor> lazy;
             TreeNodeHeader* node;
-            var p = FindPageFor(key, out node, out lazy);
+            var p = FindPageFor(key, out node);
             if (p == null || p.LastMatch != 0)
                 return -1;
 
@@ -669,31 +804,34 @@ namespace Voron.Data.BTrees
 
         public long GetParentPageOf(TreePage page)
         {
-            Lazy<TreeCursor> lazy;
+            Func<TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var p = FindPageFor(page.IsLeaf ? page.GetNodeKey(0) : page.GetNodeKey(1), out node, out lazy);
+            var p = FindPageFor(page.IsLeaf ? page.GetNodeKey(0) : page.GetNodeKey(1), out node, out cursorConstructor);
             if (p == null || p.LastMatch != 0)
                 return -1;
 
-            var treeCursor = lazy.Value;
-            while (treeCursor.PageCount > 0)
+            using (var cursor = cursorConstructor())
             {
-                if (treeCursor.CurrentPage.PageNumber == page.PageNumber)
+                while (cursor.PageCount > 0)
                 {
-                    if (treeCursor.PageCount == 1)
-                        return -1;// root page
-                    return treeCursor.ParentPage.PageNumber;
+                    if (cursor.CurrentPage.PageNumber == page.PageNumber)
+                    {
+                        if (cursor.PageCount == 1)
+                            return -1;// root page
+
+                        return cursor.ParentPage.PageNumber;
+                    }
+                    cursor.Pop();
                 }
-                treeCursor.Pop();
             }
+
             return -1;
         }
 
         public ushort ReadVersion(Slice key)
         {
-            Lazy<TreeCursor> lazy;
             TreeNodeHeader* node;
-            var p = FindPageFor(key, out node, out lazy);
+            var p = FindPageFor(key, out node);
             if (p == null || p.LastMatch != 0)
                 return 0;
 
@@ -705,9 +843,8 @@ namespace Voron.Data.BTrees
 
         internal byte* DirectRead(Slice key)
         {
-            Lazy<TreeCursor> lazy;
             TreeNodeHeader* node;
-            var p = FindPageFor(key, out node, out lazy);
+            var p = FindPageFor(key, out node);
             if (p == null || p.LastMatch != 0)
                 return null;
 

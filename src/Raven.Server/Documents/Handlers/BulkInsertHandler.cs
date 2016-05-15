@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 DocumentsOperationContext context;
+
                 using (ContextPool.AllocateOperationContext(out context))
                 {
                     while (_fullBuffers.IsCompleted == false)
@@ -69,13 +70,15 @@ namespace Raven.Server.Documents.Handlers
                         var sp = Stopwatch.StartNew();
                         using (var tx = context.OpenWriteTransaction())
                         {
+                            tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
+
                             byte* docPtr = (byte*)current.Buffer.Address;
                             var end = docPtr + current.Used;
                             while (docPtr < end)
                             {
                                 count++;
                                 var size = *(int*)docPtr;
-                                docPtr += sizeof(int);
+                                docPtr += sizeof (int);
                                 if (size + docPtr > end) //TODO: Better error
                                     throw new InvalidDataException(
                                         "The blittable size specified is more than the available data, aborting...");
@@ -98,8 +101,16 @@ namespace Raven.Server.Documents.Handlers
                         }
                         lastHeartbeat = SendHeartbeatIfNecessary(lastHeartbeat);
                         if (Log.IsDebugEnabled)
-                            Log.Debug($"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
+                            Log.Debug(
+                                $"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
 
+                    }
+
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        // this non lazy transaction forces the journal to actually
+                        // flush everything
+                        tx.Commit();
                     }
                 }
             }

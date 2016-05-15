@@ -10,6 +10,7 @@ using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Sparrow.Compression;
@@ -17,6 +18,8 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Platform.Posix;
+using Voron.Platform.Win32;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -42,6 +45,10 @@ namespace Voron.Impl.Journal
 
         private readonly HeaderAccessor _headerAccessor;
         private readonly IVirtualPager _compressionPager;
+
+        private LazyTransactionBuffer _lazyTransactionBuffer;
+
+        public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         public WriteAheadJournal(StorageEnvironment env)
         {
@@ -297,7 +304,7 @@ namespace Voron.Impl.Journal
                 {
                     var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos);
 
-                    Debug.Assert(page.PageNumber == pageNumber);
+                     Debug.Assert(page.PageNumber == pageNumber);
 
                     return page;
                 }
@@ -314,7 +321,11 @@ namespace Voron.Impl.Journal
             disposed = true;
 
             // we cannot dispose the journal until we are done with all of the pending writes
-
+            if (_lazyTransactionBuffer != null)
+            {
+                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer.Dispose();
+            }
             _compressionPager.Dispose();
             _lz4.Dispose();
 
@@ -833,15 +844,24 @@ namespace Voron.Impl.Journal
         {
             var pages = CompressPages(tx, pageCount, _compressionPager);
 
+            if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
+            {
+                _lazyTransactionBuffer = new LazyTransactionBuffer(_env.Options);
+            }
+
             if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
             {
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
                 CurrentFile = NextFile(pages.Length);
             }
 
-            CurrentFile.Write(tx, pages);
+            CurrentFile.Write(tx, pages, _lazyTransactionBuffer);
 
             if (CurrentFile.AvailablePages == 0)
+            {
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
                 CurrentFile = null;
+            }
         }
 
         private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, IVirtualPager compressionPager)

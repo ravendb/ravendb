@@ -29,10 +29,10 @@ namespace Voron.Impl.Journal
         public PureMemoryJournalWriter(StorageEnvironmentOptions options, long journalSize)
         {
             _options = options;
-            NumberOfAllocatedPages = journalSize/options.PageSize;
+            NumberOfAllocatedPages = (int)(journalSize/options.PageSize);
         }
 
-        public long NumberOfAllocatedPages { get; private set; }
+        public int NumberOfAllocatedPages { get; }
         public bool Disposed { get; private set; }
         public bool DeleteOnClose { get; set; }
 
@@ -70,6 +70,34 @@ namespace Voron.Impl.Journal
                     return true;
             }
             return false;
+        }
+
+        public unsafe void WriteBuffer(long position, byte* srcPointer, int sizeToWrite)
+        {
+            _locker.EnterWriteLock();
+            try
+            {
+                if (position != _lastPos)
+                    throw new InvalidOperationException("Journal writes must be to the next location in the journal");
+
+                _lastPos += sizeToWrite;
+
+                var handle = Marshal.AllocHGlobal(sizeToWrite);
+
+                var buffer = new Buffer
+                {
+                    Handle = handle,
+                    Pointer = (byte*)handle.ToPointer(),
+                    SizeInPages = sizeToWrite / _options.PageSize
+                };
+                _buffers = _buffers.Append(buffer);
+
+                Memory.Copy(buffer.Pointer, (byte*)srcPointer, sizeToWrite);
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
         }
 
         public void Dispose()
