@@ -24,7 +24,7 @@
     "netcoreapp1.0": {
       "dependencies": {
         "xunit": "2.1.0",
-        "dotnet-test-xunit": "1.0.0-rc2-181531-19",
+        "dotnet-test-xunit": "1.0.0-rc2-*",
 
         "NETStandard.Library": "1.5.0-rc2-*",
 
