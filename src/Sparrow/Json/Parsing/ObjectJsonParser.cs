@@ -283,9 +283,9 @@ namespace Sparrow.Json.Parsing
                     return;
                 }
 
-                if (current is int)
+                if (current is int || current is byte || current is short)
                 {
-                    _state.Long = (int)current;
+                    _state.Long = Convert.ToInt32(current);
                     _state.CurrentTokenType = JsonParserToken.Integer;
                     return;
                 }

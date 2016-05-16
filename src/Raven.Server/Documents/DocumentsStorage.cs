@@ -176,36 +176,27 @@ namespace Raven.Server.Documents
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public long? GetChangeVectorForCurrentDb(DocumentsOperationContext context)
+        private const int GuidSize = 16;
+        public long? GetChangeVectorEntryFor(DocumentsOperationContext context, Guid dbId)
         {
-            return GetChangeVectorFor(context,Environment.DbId);
-        }
-
-        public long? GetChangeVectorFor(DocumentsOperationContext context, Guid dbId)
-        {			
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
 
             //not sure if possible to reduce allocations here
-            var readResult = tree.Read(new Slice(dbId.ToByteArray()));
 
+            var dbIdPtr = (byte*)&dbId;
+            var readResult = tree.Read(new Slice(dbIdPtr, GuidSize));
             return readResult?.Reader.ReadBigEndianInt64();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetChangeVectorForCurrentDb(DocumentsOperationContext context, long val)
-        {
-            SetChangeVectorFor(context, Environment.DbId, val);
-        }
-
-        public void SetChangeVectorFor(DocumentsOperationContext context, Guid dbId, long val)
+        public void SetChangeVectorEntryFor(DocumentsOperationContext context, Guid dbId, long val)
         {
             //not sure if possible to reduce allocations here
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
             var sliceWriter = new SliceWriter(context.GetManagedBuffer());
             sliceWriter.WriteBigEndian(val);
 
-            tree.Add(new Slice(dbId.ToByteArray()), sliceWriter.CreateSlice());
+            var dbIdPtr = (byte*)&dbId;
+            tree.Add(new Slice(dbIdPtr, GuidSize), sliceWriter.CreateSlice());
         }
 
         public static long ReadLastEtag(Transaction tx)
@@ -738,9 +729,9 @@ namespace Raven.Server.Documents
                 IsSystemDocument = isSystemDocument,
             });
 
-            var vectorValue = GetChangeVectorForCurrentDb(context);
+            var vectorValue = GetChangeVectorEntryForCurrentDb(context);
             if(vectorValue.HasValue)
-                SetChangeVectorForCurrentDb(context,newEtag);
+                SetChangeVectorEntryForCurrentDb(context,newEtag);
 
             return new PutResult
             {

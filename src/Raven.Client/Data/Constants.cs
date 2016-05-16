@@ -275,7 +275,7 @@ namespace Raven.Abstractions.Data
 
         public class DocumentReplication
         {
-            public const string DocumentChangeVectorKey = "Raven-Document-Change-Vector";
+            public const string DocumentChangeVector = "Raven-Document-Change-Vector";
 
             public const string DocumentReplicationTenantChangeVector = "Raven/DocumentReplication/TenantData";
 
