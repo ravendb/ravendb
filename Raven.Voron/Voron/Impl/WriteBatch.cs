@@ -157,11 +157,14 @@ namespace Voron.Impl
             AddOperation(batchOperation);
         }
 
-        public void Delete(Slice key, string treeName, ushort? version = null)
+        public void Delete(Slice key, string treeName, ushort? version = null, bool shouldIgnoreConcurrencyExceptions = false)
         {
             AssertValidRemove(treeName);
 
-            AddOperation(BatchOperation.Delete(key, version, treeName));
+            var batchOperation = BatchOperation.Delete(key, version, treeName);
+            if (shouldIgnoreConcurrencyExceptions)
+                batchOperation.SetIgnoreExceptionOnExecution<ConcurrencyException>();
+            AddOperation(batchOperation);
         }
 
         private static void AssertValidRemove(string treeName)
