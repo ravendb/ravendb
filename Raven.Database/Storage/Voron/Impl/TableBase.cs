@@ -124,9 +124,9 @@ namespace Raven.Database.Storage.Voron.Impl
             writeBatch.Delete((Slice)key, TableName, expectedVersion);
         }
 
-        public virtual void Delete(WriteBatch writeBatch, Slice key, ushort? expectedVersion = null)
+        public virtual void Delete(WriteBatch writeBatch, Slice key, ushort? expectedVersion = null, bool shouldIgnoreConcurrencyExceptions = false)
         {
-            writeBatch.Delete(key, TableName, expectedVersion);
+            writeBatch.Delete(key, TableName, expectedVersion, shouldIgnoreConcurrencyExceptions);
         }
 
         public virtual void MultiDelete(WriteBatch writeBatch, Slice key, Slice value, ushort? expectedVersion = null)
