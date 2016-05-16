@@ -2,20 +2,31 @@
   "version": "4.0.0-*",
   "description": "Raven.Server is the database server for RavenDB",
   "authors": [ "Hibernating Rhinos" ],
-  "tags": [ "database", "nosql", "doc db" ],
-  "projectUrl": "https://ravendb.net",
 
-
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/metrics.net/Src/Metrics/**/*.cs" ],
-
-  "compilationOptions": {
-    "emitEntryPoint": true,
-    "allowUnsafe": true
+  "packOptions": {
+    "tags": [ "database", "nosql", "doc db" ],
+    "projectUrl": "https://ravendb.net"
   },
 
-  "resource": [
-    "Documents/Patch/*.js"
-  ],
+  "buildOptions": {
+    "allowUnsafe": true,
+    "emitEntryPoint": true,
+    "define": [ "PORTABLE" ],
+    "compile": {
+      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/metrics.net/Src/Metrics/**/*.cs" ]
+    },
+    "embed": {
+      "include": [ "Documents/Patch/*.js" ]
+    }
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
 
   "dependencies": {
     "Jint": "2.8.1",

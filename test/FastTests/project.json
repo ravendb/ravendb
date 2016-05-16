@@ -1,14 +1,26 @@
 {
   "version": "4.0.0-*",
-  "compilationOptions": {
+
+  "buildOptions": {
     "allowUnsafe": true,
-    "warningsAsErrors": true
+    "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs" ]
+    },
+    "embed": [
+      "**/*.json",
+      "Voron/Bugs/Data/*.txt",
+      "**/*.ravendump"
+    ]
   },
-  "resource": [
-    "**/*.json",
-    "Voron/Bugs/Data/*.txt",
-    "**/*.ravendump"
-  ],
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
 
   "testRunner": "xunit",
 

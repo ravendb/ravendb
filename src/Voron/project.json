@@ -2,14 +2,27 @@
   "version": "4.0.0-*",
   "description": "Voron - Low level storage engine",
   "authors": [ "Hibernating Rhinos" ],
-  "tags": [ "storage", "acid", "voron", "ravendb", "nosql" ],
-  "projectUrl": "",
-  "licenseUrl": "",
-  "compilationOptions": {
-    "allowUnsafe": true,
-    "warningsAsErrors": true
+
+  "packOptions": {
+    "tags": [ "storage", "acid", "voron", "ravendb", "nosql" ]
   },
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+
+  "buildOptions": {
+    "allowUnsafe": true,
+    "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
+    }
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
+
   "frameworks": {
     "netcoreapp1.0": {
       "dependencies": {

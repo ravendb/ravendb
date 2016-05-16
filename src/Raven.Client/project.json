@@ -2,19 +2,36 @@
   "version": "4.0.0-*",
   "description": "Raven.Client is the client library for accessing RavenDB",
   "authors": [ "Hibernating Rhinos" ],
-  "tags": [ "database", "nosql", "doc db" ],
-  "projectUrl": "https://ravendb.net",
+
+
+  "packOptions": {
+    "tags": [ "database", "nosql", "doc db" ],
+    "projectUrl": "https://ravendb.net"
+  },
+
+  "buildOptions": {
+    "allowUnsafe": true,
+    "define": [ "PORTABLE" ],
+    "compile": {
+      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs" ],
+      "exclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ]
+    }
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
 
   "dependencies": {
     "Sparrow": "4.0.0-*"
   },
-  "compilationOptions": {"allowUnsafe": true},
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs"],
-  "compileExclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ],
 
   "frameworks": {
     "netcoreapp1.0": {
-      "compilationOptions": { "define": [ "PORTABLE" ] },
       "dependencies": {
         "Microsoft.CSharp": "4.0.1-rc2-*",
         "Microsoft.Extensions.Configuration": "1.0.0-rc2-*",

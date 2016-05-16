@@ -3,13 +3,23 @@
   "commands": {
     "Tryouts": "Tryouts"
   },
-  "compilationOptions": {
+
+  "buildOptions": {
     "allowUnsafe": true,
-    "warningsAsErrors": false,
-    "emitEntryPoint": true
+    "warningsAsErrors": true,
+    "emitEntryPoint": true,
+    "compile": {
+      "include": [ "**/*.cs" ]
+    }
   },
-  "resource": [
-  ],
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
 
   "frameworks": {
     "netcoreapp1.0": {

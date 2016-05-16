@@ -1,8 +1,21 @@
 ﻿{
   "version": "4.0.0-*",
-  "compilationOptions": {
+
+  "buildOptions": {
     "allowUnsafe": true,
-    "emitEntryPoint": true
+    "emitEntryPoint": true,
+    "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs" ]
+    }
+  },
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
   },
 
   "dependencies": {

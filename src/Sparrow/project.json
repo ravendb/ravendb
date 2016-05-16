@@ -1,14 +1,26 @@
 {
-  "version": "4.0.0-*",
-  "compilationOptions": {
+  "buildOptions": {
     "allowUnsafe": true,
-    "warningsAsErrors": true
+    "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
+    }
   },
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+ 
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
+
+  "dependencies": {
+    "DotNetCross.Memory.Unsafe": "0.2.3.2"
+  },
   "frameworks": {
     "netcoreapp1.0": {
       "dependencies": {
-        "DotNetCross.Memory.Unsafe": "0.2.3",
         "Microsoft.AspNetCore.WebSockets.Server": "0.1.0-rc2-*",
         "Microsoft.CSharp": "4.0.1-rc2-*",
         "NETStandard.Library": "1.5.0-rc2-*",
@@ -19,6 +31,5 @@
       "imports": "dnxcore50"
     }
   },
-  "dependencies": {
-  }
+  "version": "4.0.0-*"
 }
