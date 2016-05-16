@@ -1,10 +1,10 @@
 {
-  "version": "1.14.0",
+  "version": "1.15.0",
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "bin": {
-        "assembly": "dnxcore50\\NetTopologySuite.dll",
-        "pdb": "dnxcore50\\NetTopologySuite.pdb"
+        "assembly": "netcoreapp1.0\\NetTopologySuite.dll",
+        "pdb": "netcoreapp1.0\\NetTopologySuite.pdb"
       }
     }
   }

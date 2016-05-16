@@ -6,24 +6,19 @@
   },
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "System.Collections.Concurrent": "4.0.11-beta-23516",
-        "System.Diagnostics.Debug": "4.0.11-beta-23516",
-        "System.Diagnostics.Contracts": "4.0.1-beta-23516",
-        "System.Runtime.InteropServices.RuntimeInformation": "4.0.0-beta-23516",
-        "Microsoft.AspNet.Hosting": "1.0.0-rc1-final",
-        "Microsoft.AspNet.Server.Kestrel": "1.0.0-rc1-final",
-        "Microsoft.Extensions.Configuration.FileProviderExtensions": "1.0.0-rc1-final",
-        "Microsoft.Extensions.Configuration.Json": "1.0.0-rc1-final",
-        "Microsoft.AspNet.WebSockets.Server": "1.0.0-rc1-final",
-        "NLog": "4.4.0-*"
-      }
+        "DotNetCross.Memory.Unsafe": "0.2.3",
+        "Microsoft.AspNetCore.WebSockets.Server": "0.1.0-rc2-*",
+        "Microsoft.CSharp": "4.0.1-rc2-*",
+        "NETStandard.Library": "1.5.0-rc2-*",
+        "NLog": "4.4.0-*",
+        "System.Diagnostics.Contracts": "4.0.1-rc2-*",
+        "System.Numerics.Vectors": "4.1.1-rc2-*"
+      },
+      "imports": "dnxcore50"
     }
   },
   "dependencies": {
-    "DotNetCross.Memory.Unsafe": "0.2.3",
-    "System.Numerics.Vectors": "4.1.1-beta-23516"
   }
 }

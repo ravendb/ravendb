@@ -161,10 +161,7 @@ namespace Raven.Abstractions.Extensions
             return (T)self.Deserialize(reader, typeof(T));
         }
 
-        private static readonly IContractResolver contractResolver = new DefaultServerContractResolver()
-        {
-            DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-        };
+        private static readonly IContractResolver contractResolver = new DefaultServerContractResolver();
 
         private class DefaultServerContractResolver : DefaultContractResolver
         {

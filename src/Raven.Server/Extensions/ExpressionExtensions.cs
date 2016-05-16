@@ -89,11 +89,8 @@ namespace Raven.Server.Extensions
 
         public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', char collectionSeparator = ',')
         {
-#if !DNXCORE50
-            var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(CultureInfo.InvariantCulture), collectionSeparator.ToString(CultureInfo.InvariantCulture));
-#else
             var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(), collectionSeparator.ToString());
-#endif
+
             propertyPathExpressionVisitor.Visit(expression);
 
             var builder = new StringBuilder();

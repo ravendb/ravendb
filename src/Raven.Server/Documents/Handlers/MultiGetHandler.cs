@@ -4,10 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.IO;
 using System.Threading.Tasks;
 
-using Microsoft.AspNet.Http;
-
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Data;
 using Raven.Server.Routing;
 using Raven.Server.Web;
@@ -35,9 +37,13 @@ namespace Raven.Server.Documents.Handlers
 
                     HttpContext.Response.StatusCode = 200;
 
+                    var features = new FeatureCollection(HttpContext.Features);
+                    features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature(HttpContext.Response.Body));
+                    var httpContext = new DefaultHttpContext(features);
+
                     for (int i = 0; i < requests.Length; i++)
                     {
-                        var request = (BlittableJsonReaderObject) requests[i];
+                        var request = (BlittableJsonReaderObject)requests[i];
 
                         if (i != 0)
                             writer.WriteComma();
@@ -67,9 +73,9 @@ namespace Raven.Server.Documents.Handlers
                         writer.WritePropertyName(resultProperty);
                         writer.Flush();
 
-                        HttpContext.Request.QueryString = new QueryString(query);
-                        HttpContext.Response.Headers.Clear();
-                        HttpContext.Request.Headers.Clear();
+                        httpContext.Request.Headers.Clear();
+                        httpContext.Response.Headers.Clear();
+                        httpContext.Request.QueryString = new QueryString(query);
                         BlittableJsonReaderObject headers;
                         if (request.TryGet(nameof(GetRequest.Headers), out headers))
                         {
@@ -82,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
                                 if (string.IsNullOrWhiteSpace(value))
                                     continue;
 
-                                HttpContext.Request.Headers.Add(header, value);
+                                httpContext.Request.Headers.Add(header, value);
                             }
                         }
 
@@ -91,19 +97,19 @@ namespace Raven.Server.Documents.Handlers
                             Database = Database,
                             RavenServer = Server,
                             RouteMatch = localMatch,
-                            HttpContext = HttpContext,
+                            HttpContext = httpContext,
                             AllowResponseCompression = false
                         });
 
                         writer.WriteComma();
                         writer.WritePropertyName(statusProperty);
-                        writer.WriteInteger(HttpContext.Response.StatusCode);
+                        writer.WriteInteger(httpContext.Response.StatusCode);
                         writer.WriteComma();
 
                         writer.WritePropertyName(headersProperty);
                         writer.WriteStartObject();
                         bool headerStart = true;
-                        foreach (var header in HttpContext.Response.Headers)
+                        foreach (var header in httpContext.Response.Headers)
                         {
                             foreach (var value in header.Value)
                             {
@@ -121,6 +127,29 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndArray();
                 }
             }
+        }
+
+        private class MultiGetHttpResponseFeature : IHttpResponseFeature
+        {
+            public MultiGetHttpResponseFeature(Stream body)
+            {
+                Body = body;
+                Headers = new HeaderDictionary();
+            }
+
+            public void OnStarting(Func<object, Task> callback, object state)
+            {
+            }
+
+            public void OnCompleted(Func<object, Task> callback, object state)
+            {
+            }
+
+            public int StatusCode { get; set; }
+            public string ReasonPhrase { get; set; }
+            public IHeaderDictionary Headers { get; set; }
+            public Stream Body { get; set; }
+            public bool HasStarted { get; private set; }
         }
     }
 }

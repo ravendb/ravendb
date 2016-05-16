@@ -18,7 +18,7 @@
   ],
 
   "dependencies": {
-    "Jint": "2.7.1",
+    "Jint": "2.8.1",
     "Lucene.Net": "3.0.4-*",
     "Lucene.Net.Contrib.Spatial.NTS": "3.0.4-*",
     "Raven.Client": "4.0.0-*",
@@ -31,22 +31,27 @@
   },
 
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
+      "compilationOptions": { "define": [ ] },
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "System.Net.Http": "4.0.1-beta-23516",
-        "System.Collections": "4.0.11-beta-23516",
-        "System.Console": "4.0.0-beta-23516",
-        "System.Linq": "4.0.1-beta-23516",
-        "System.Threading": "4.0.11-beta-23516",
-        "Microsoft.AspNet.Hosting": "1.0.0-rc1-final",
-        "Microsoft.AspNet.Server.Kestrel": "1.0.0-rc1-final",
-        "Microsoft.Extensions.Configuration.FileProviderExtensions": "1.0.0-rc1-final",
-        "Microsoft.Extensions.Configuration.Json": "1.0.0-rc1-final",
-        "Microsoft.AspNet.WebSockets.Server": "1.0.0-rc1-final",
-        "NLog": "4.4.0-*",
-        "System.Data.SqlClient": "4.0.0-beta-*"
-      }
+        "Microsoft.AspNetCore.Server.Kestrel": "1.0.0-rc2-*",
+        "Microsoft.CSharp": "4.0.1-rc2-*",
+        "Microsoft.Extensions.Configuration.Json": "1.0.0-rc2-*",
+        "Microsoft.Extensions.Configuration.CommandLine": "1.0.0-rc2-*",
+        "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.0.0-rc2-*",
+        "NETStandard.Library": "1.5.0-rc2-*",
+        "System.ComponentModel": "4.0.1-rc2-*",
+        "System.Data.SqlClient": "4.1.0-rc2-*",
+        "System.Threading.Tasks.Parallel": "4.0.1-rc2-*",
+
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0-rc2-*"
+        }
+      },
+      "imports": [
+        "dnxcore50"
+      ]
     }
   },
   "userSecretsId": "aspnet5-Raven.Server-20160308043041"

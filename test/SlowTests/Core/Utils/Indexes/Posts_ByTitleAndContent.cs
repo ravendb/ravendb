@@ -1,6 +1,3 @@
-#if !DNXCORE50
-using Lucene.Net.Analysis;
-#endif
 using System.Linq;
 
 using Raven.Abstractions.Indexing;
@@ -25,13 +22,9 @@ namespace SlowTests.Core.Utils.Indexes
             Stores.Add(x => x.Title, FieldStorage.Yes);
             Stores.Add(x => x.Desc, FieldStorage.Yes);
 
-#if !DNXCORE50
-            Analyzers.Add(x => x.Title, typeof(SimpleAnalyzer).FullName);
-            Analyzers.Add(x => x.Desc, typeof(SimpleAnalyzer).FullName);
-#else
-            Analyzers.Add(x => x.Title, "Lucene.Net.Analysis.SimpleAnalyzer");
-            Analyzers.Add(x => x.Desc, "Lucene.Net.Analysis.SimpleAnalyzer");
-#endif
+            Analyzers.Add(x => x.Title, typeof(Lucene.Net.Analysis.SimpleAnalyzer).FullName);
+            Analyzers.Add(x => x.Desc, typeof(Lucene.Net.Analysis.SimpleAnalyzer).FullName);
+
         }
     }
 }

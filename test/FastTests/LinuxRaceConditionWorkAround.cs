@@ -1,5 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
-using Voron.Platform.Posix;
+﻿using Voron.Platform.Posix;
 using Platform = Sparrow.Platform.Platform;
 
 namespace FastTests

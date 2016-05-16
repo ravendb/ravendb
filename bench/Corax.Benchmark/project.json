@@ -7,7 +7,8 @@
 
   "dependencies": {
     "Raven.Server": "4.0.0-*",
-    "Sparrow": "4.0.0-*"
+    "Sparrow": "4.0.0-*",
+    "Voron": "4.0.0-*"
   },
 
   "commands": {
@@ -15,16 +16,20 @@
   },
 
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "System.Collections": "4.0.11-beta-23516",
-        "System.Console": "4.0.0-beta-23516",
-        "System.Linq": "4.0.1-beta-23516",
-        "System.Threading": "4.0.11-beta-23516",
-        "System.Threading.ThreadPool": "4.0.10-beta-23516",
-        "Voron": "4.0.0-*"
-      }
+        "Microsoft.CSharp": "4.0.1-rc2-*",
+        "NETStandard.Library": "1.5.0-rc2-*",
+
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0-rc2-*"
+        }
+      },
+      "imports": [
+        "dotnet5.4",
+        "portable-dnxcore50+net45+win8+wp8+wpa81"
+      ]
     }
   }
 }

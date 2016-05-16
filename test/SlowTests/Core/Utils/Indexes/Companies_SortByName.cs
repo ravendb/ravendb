@@ -4,6 +4,7 @@
 //  </copyright>
 // ----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 
 using Raven.Abstractions.Indexing;
@@ -24,11 +25,9 @@ namespace SlowTests.Core.Utils.Indexes
 
             Sort(c => c.Name, SortOptions.String);
 
-#if !DNXCORE50
-            Analyzers.Add(c => c.Name, typeof(Raven.Database.Indexing.Collation.Cultures.PlCollationAnalyzer).ToString());
-#else
-            Analyzers.Add(c => c.Name, "Raven.Database.Indexing.Collation.Cultures.PlCollationAnalyzer");
-#endif
+            throw new NotImplementedException();
+
+            //Analyzers.Add(c => c.Name, typeof(Raven.Database.Indexing.Collation.Cultures.PlCollationAnalyzer).ToString());
         }
     }
 }
