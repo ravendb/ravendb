@@ -10,7 +10,6 @@ using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -40,16 +39,13 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
-using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
-using Raven.Abstractions.Threading;
 using Raven.Database.Common;
 using Raven.Database.Raft;
 using Raven.Database.Server.WebApi;
-using Raven.Json.Linq;
 
 namespace Raven.Database
 {
@@ -92,6 +88,7 @@ namespace Raven.Database
         private readonly DocumentDatabaseInitializer initializer;
 
         private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
+        public readonly FixedSizeConcurrentQueue<AutoTunerDecisionDescription> AutoTuningTrace = new FixedSizeConcurrentQueue<AutoTunerDecisionDescription>(100);
 
         private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
 
@@ -1406,7 +1403,7 @@ namespace Raven.Database
                     {
                         database.StopIndexingWorkers(false);
 
-                        var alertTitle = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int) (notification.FreeSpaceInPercentage*100), thresholdInMb);
+                        var alertTitle = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb);
                         Log.Error(alertTitle);
 
                         database.AddAlert(new Alert
@@ -1421,7 +1418,7 @@ namespace Raven.Database
                     {
                         if (freeSpaceInMb <= warningThresholdInMb)
                         {
-                            var alertTitle = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int) (notification.FreeSpaceInPercentage*100), thresholdInMb);
+                            var alertTitle = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space. Indexing will be disabled when it reaches {3}MB.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb);
                             Log.Warn(alertTitle);
 
                             database.AddAlert(new Alert
@@ -1455,7 +1452,7 @@ namespace Raven.Database
             if (MappingThreadPool != null)
                 return;
 
-            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
+            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token,this, "Map Thread Pool", new[]
             {
                 new Action(() => indexingExecuter.Execute())
             });
@@ -1473,7 +1470,7 @@ namespace Raven.Database
             if (ReducingThreadPool != null)
                 return;
 
-            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token,this, "Reduce Thread Pool", new[]
             {
                 new Action(() => ReducingExecuter.Execute())
             });

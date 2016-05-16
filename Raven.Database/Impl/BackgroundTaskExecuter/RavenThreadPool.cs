@@ -3,8 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -27,6 +29,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         private readonly ILog logger = LogManager.GetCurrentClassLogger();
         public readonly string Name;
         private int _currentWorkingThreadsAmount;
+        private readonly DocumentDatabase database;
         public ThreadLocal<bool> _freedThreadsValue = new ThreadLocal<bool>(true);
         public int _partialMaxWait = 2500;
         private int _partialMaxWaitChangeFlag = 1;
@@ -34,7 +37,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
         private ThreadData[] _threads;
         public int UnstoppableTasksCount;
 
-        public RavenThreadPool(int maxLevelOfParallelism, CancellationToken ct, string name = "RavenThreadPool",
+        public RavenThreadPool(int maxLevelOfParallelism, CancellationToken ct,DocumentDatabase database, string name = "RavenThreadPool",
             Action[] longRunningActions = null)
         {
             _createLinkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -83,6 +86,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 };
             }
             _currentWorkingThreadsAmount = maxLevelOfParallelism;
+            this.database = database;
             CpuStatistics.RegisterCpuUsageHandler(this);
         }
 
@@ -121,6 +125,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         if (thread.Thread.Priority != ThreadPriority.Normal)
                             continue;
 
+                        var reason = string.Format("Reduced thread #{0} priority was changed to below normal priority {1} because of high CPU Usage", thread.Thread.ManagedThreadId, ThreadPriority.BelowNormal);
+                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         thread.Thread.Priority = ThreadPriority.BelowNormal;
                         return;
                     }
@@ -128,7 +134,10 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     if (_currentWorkingThreadsAmount > (UnstoppableTasksCount + 1))
                     {
                         _threads[_currentWorkingThreadsAmount - 1].StopWork.Reset();
+                        var prevThreads = _currentWorkingThreadsAmount;
                         _currentWorkingThreadsAmount--;
+                        var reason = string.Format("Current working threads amount was decreased from {0} to {1} because of high CPU Usage", prevThreads, _currentWorkingThreadsAmount);
+                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                     }
                 }
                 catch (Exception e)
@@ -150,7 +159,10 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     if (_currentWorkingThreadsAmount < _threads.Length)
                     {
                         _threads[_currentWorkingThreadsAmount].StopWork.Set();
+                        var prevThreads = _currentWorkingThreadsAmount;
                         _currentWorkingThreadsAmount++;
+                        var reason = string.Format("Current working threads amount was increased from {0} to {1} because of low CPU Usage", prevThreads, _currentWorkingThreadsAmount);
+                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         return;
                     }
 
@@ -161,6 +173,8 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         if (thread.Thread.Priority != ThreadPriority.BelowNormal)
                             continue;
 
+                        var reason = string.Format("Thread #{0} priority was changed to normal priority {1} because of low CPU Usage", thread.Thread.ManagedThreadId, ThreadPriority.Normal);
+                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         thread.Thread.Priority = ThreadPriority.Normal;
                         return;
                     }

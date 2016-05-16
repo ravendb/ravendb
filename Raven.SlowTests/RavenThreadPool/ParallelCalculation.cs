@@ -13,23 +13,23 @@ using Xunit;
 
 namespace Raven.SlowTests.RavenThreadPool
 {
-    public class ParallelCalculation:RavenTest
+    public class ParallelCalculation : RavenTest
     {
         [Fact]
         public void OneLevelParallelCalculation()
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token))
+            using (var tp = new RTP(8, cts.Token, null))
             {
                 long sum = 0;
                 tp.Start();
                 var range = Enumerable.Range(0, 100000).ToList();
                 tp.ExecuteBatch(range, (int input) =>
                 {
-                    Interlocked.Add(ref sum, (long) input);
+                    Interlocked.Add(ref sum, (long)input);
                 });
-                var expectedSum = range.Sum(x => (long) x);
+                var expectedSum = range.Sum(x => (long)x);
                 Assert.Equal(expectedSum, sum);
             }
         }
@@ -39,7 +39,7 @@ namespace Raven.SlowTests.RavenThreadPool
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token))
+            using (var tp = new RTP(8, cts.Token, null))
             {
                 long sum = 0;
                 tp.Start();
@@ -50,27 +50,27 @@ namespace Raven.SlowTests.RavenThreadPool
                 {
                     while (input.MoveNext())
                     {
-                        Interlocked.Add(ref sum, (long) input.Current);
+                        Interlocked.Add(ref sum, (long)input.Current);
                     }
                 });
 
 
-                var expectedSum = range.Sum(x => (long) x);
+                var expectedSum = range.Sum(x => (long)x);
                 Assert.Equal(expectedSum, sum);
             }
         }
-        
+
         [Fact]
         public void OneLevelParallelBulkCalculation()
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token))
+            using (var tp = new RTP(8, cts.Token, null))
             {
                 long sum = 0;
                 tp.Start();
                 var range = Enumerable.Range(0, 100000).ToList();
-                var expectedSum = range.Sum(x => (long) x);
+                var expectedSum = range.Sum(x => (long)x);
                 for (int i = 1; i <= 1024; i++)
                 {
                     var sp = Stopwatch.StartNew();
@@ -78,7 +78,7 @@ namespace Raven.SlowTests.RavenThreadPool
                     {
                         while (input.MoveNext())
                         {
-                            Interlocked.Add(ref sum, (long) input.Current);
+                            Interlocked.Add(ref sum, (long)input.Current);
                         }
 
                     }, i);
@@ -88,14 +88,14 @@ namespace Raven.SlowTests.RavenThreadPool
                 }
             }
         }
-        
+
 
         [Fact]
         public void ThrottlingTest()
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token).Start())
+            using (var tp = new RTP(8, cts.Token, null).Start())
             {
                 var threadPoolStats = tp.GetThreadPoolStats();
 
@@ -132,7 +132,7 @@ namespace Raven.SlowTests.RavenThreadPool
                     tp.HandleLowCpuUsage();
                     threadPoolStats = tp.GetThreadPoolStats();
 
-                    Assert.Equal(i+1, threadPoolStats.ConcurrentWorkingThreadsAmount);
+                    Assert.Equal(i + 1, threadPoolStats.ConcurrentWorkingThreadsAmount);
                 }
 
                 for (var i = 1; i <= 8; i++)
@@ -145,7 +145,7 @@ namespace Raven.SlowTests.RavenThreadPool
                     threadPrioritiesCounts.TryGetValue(ThreadPriority.BelowNormal, out belowNormalPrioritiesCount);
 
                     Assert.Equal(i, normalPrioritiesCount);
-                    Assert.Equal(8-i, belowNormalPrioritiesCount);
+                    Assert.Equal(8 - i, belowNormalPrioritiesCount);
                     Assert.Equal(8, threadPoolStats.ConcurrentWorkingThreadsAmount);
                 }
             }
@@ -156,7 +156,7 @@ namespace Raven.SlowTests.RavenThreadPool
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token).Start())
+            using (var tp = new RTP(8, cts.Token, null).Start())
             {
                 var array = Enumerable.Range(0, 6).ToList();
                 var stats = tp.GetThreadPoolStats();
@@ -166,28 +166,28 @@ namespace Raven.SlowTests.RavenThreadPool
                 {
                     tp.ExecuteBatch(array, (int x) =>
                     {
-                        Thread.Sleep(x*1000);
-                    },allowPartialBatchResumption:true);
+                        Thread.Sleep(x * 1000);
+                    }, allowPartialBatchResumption: true);
                     stats = tp.GetThreadPoolStats();
 
                     Debug.Print(stats.PartialMaxWait.ToString());
                 }
             }
         }
-        
+
         [Fact]
         public void OneLevelParallelCalculationWithPartialResumption()
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token).Start())
+            using (var tp = new RTP(8, cts.Token, null).Start())
             {
                 long sum = 0;
                 var range = Enumerable.Range(1, 6).ToList();
                 tp.ExecuteBatch(range, (int input) =>
                 {
-                    Interlocked.Add(ref sum, (long) input);
-                    Thread.Sleep((int)Math.Pow(input,4) *5);
+                    Interlocked.Add(ref sum, (long)input);
+                    Thread.Sleep((int)Math.Pow(input, 4) * 5);
                 }, allowPartialBatchResumption: true);
                 var waitingTasksAmount = tp.GetAllWaitingTasks().Count();
                 var runnintTasksAmount = tp.RunningTasksAmount;
@@ -196,17 +196,17 @@ namespace Raven.SlowTests.RavenThreadPool
                 {
                     Thread.Sleep(100);
                 }
-                var expectedSum = range.Sum(x => (long) x);
+                var expectedSum = range.Sum(x => (long)x);
                 Assert.Equal(expectedSum, sum);
             }
         }
-        
+
         [Fact]
         public void TwoLevelParallelCalculation()
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token))
+            using (var tp = new RTP(8, cts.Token, null))
             {
                 long sum = 0;
                 tp.Start();
@@ -214,11 +214,11 @@ namespace Raven.SlowTests.RavenThreadPool
                 tp.ExecuteBatch(range, (int input) =>
                 {
                     var innerRange = Enumerable.Range(0, 100).ToList();
-                    tp.ExecuteBatch(innerRange, (int innerInput) => Interlocked.Add(ref sum, (long) input));
+                    tp.ExecuteBatch(innerRange, (int innerInput) => Interlocked.Add(ref sum, (long)input));
 
                 });
-                var expectedSum = range.Sum(x => (long) x);
-                Assert.Equal(100*expectedSum, sum);
+                var expectedSum = range.Sum(x => (long)x);
+                Assert.Equal(100 * expectedSum, sum);
             }
         }
 
@@ -227,7 +227,7 @@ namespace Raven.SlowTests.RavenThreadPool
         {
             var cts = new CancellationTokenSource();
 
-            using (var tp = new RTP(8, cts.Token))
+            using (var tp = new RTP(8, cts.Token, null))
             {
                 long sum = 0;
                 tp.Start();
@@ -242,11 +242,11 @@ namespace Raven.SlowTests.RavenThreadPool
                     {
                         inputAsList.Add(input.Current);
                     }
-                    tp.ExecuteBatch(inputAsList, x => Interlocked.Add(ref sum, (long) x));
+                    tp.ExecuteBatch(inputAsList, x => Interlocked.Add(ref sum, (long)x));
                 });
 
 
-                var expectedSum = range.Sum(x => (long) x);
+                var expectedSum = range.Sum(x => (long)x);
                 Assert.Equal(expectedSum, sum);
             }
         }

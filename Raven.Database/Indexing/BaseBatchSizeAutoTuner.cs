@@ -5,7 +5,7 @@ using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
-
+using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 
@@ -29,23 +29,29 @@ namespace Raven.Database.Indexing
             this.context = context;
             FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
             maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb;
-// ReSharper disable once DoNotCallOverridableMethodsInConstructor
+            // ReSharper disable once DoNotCallOverridableMethodsInConstructor
             NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;
             MemoryStatistics.RegisterLowMemoryHandler(this);
             context.TransactionalStorage.RegisterTransactionalStorageNotificationHandler(this);
             _currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
         }
 
-    
-        public void HandleLowMemory()
+
+        public LowMemoryHandlerStatistics HandleLowMemory()
         {
-            ReduceBatchSizeIfCloseToMemoryCeiling(true);
+            var prev = NumberOfItemsToProcessInSingleBatch;
+            NumberOfItemsToProcessInSingleBatch = CalculateReductionOfItemsInSingleBatch();
+            if (prev != NumberOfItemsToProcessInSingleBatch)
+            {
+                return new LowMemoryHandlerStatistics
+                {
+                    DatabaseName = context.DatabaseName,
+                    Summary = $"Reduced batch size from {prev:#,#} to {NumberOfItemsToProcessInSingleBatch:#,#}"
+                }; 
+            }
+            return new LowMemoryHandlerStatistics();
         }
 
-        public void SoftMemoryRelease()
-        {
-            
-        }
 
         public void HandleTransactionalStorageNotification()
         {
@@ -57,7 +63,7 @@ namespace Raven.Database.Indexing
             return new LowMemoryHandlerStatistics
             {
                 EstimatedUsedMemory = 0,
-                Name = GetName,
+                Name = Name,
                 DatabaseName = context.DatabaseName,
                 Metadata = new
                 {
@@ -85,7 +91,10 @@ namespace Raven.Database.Indexing
                 if (ConsiderDecreasingBatchSize(amountOfItemsToProcess, processingDuration))
                     return;
                 if (ConsiderIncreasingBatchSize(amountOfItemsToProcess, size, processingDuration))
+                {
                     lastIncrease = SystemTime.UtcNow;
+                }
+
             }
             finally
             {
@@ -145,7 +154,7 @@ namespace Raven.Database.Indexing
             // For the details, that means that we'll double the sizes until we get to 32K items, then increase
             // it by 16K each time we need to increase. That is much more gradual and will let us more time to 
             // see if we don't want to increase things.
-            if (maybeNewSize > MaxNumberOfItems/4)
+            if (maybeNewSize > MaxNumberOfItems / 4)
             {
                 var stepSize = MaxNumberOfItems / 8;
                 if (stepSize < InitialNumberOfItems)
@@ -211,9 +220,11 @@ namespace Raven.Database.Indexing
             }
 
             // we are still too high, let us reduce the size and see what is going on.
+            var prev = NumberOfItemsToProcessInSingleBatch;
             NumberOfItemsToProcessInSingleBatch = CalculateReductionOfItemsInSingleBatch();
 
-
+            var reason = string.Format("Batch size is close to memory ceiling, NumberOfItemsToProcessInSingleBatch was reduced from {0:##,###;;0} to {1:##,###;;0}", prev, NumberOfItemsToProcessInSingleBatch);
+            context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
             return true;
         }
 
@@ -239,11 +250,17 @@ namespace Raven.Database.Indexing
 
                 // we are at the configured minimum, nothing to do
                 if (NumberOfItemsToProcessInSingleBatch == InitialNumberOfItems)
+                {
                     return true;
+                }
+
 
                 // we were above the max/2 the last few times, we can't reduce the work load now
-                if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToProcessInSingleBatch/2))
+                if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToProcessInSingleBatch / 2))
+                {
                     return true;
+                }
+
             }
 
             var old = NumberOfItemsToProcessInSingleBatch;
@@ -268,13 +285,17 @@ namespace Raven.Database.Indexing
         {
             var minNumberOfItemsToProcess = InitialNumberOfItems;
             if (IsProcessingUsingTooMuchMemory)
+            {
+
                 minNumberOfItemsToProcess /= 4;
+            }
+
 
             // we have had a couple of times were we didn't get to the current max, so we can probably
             // reduce the max again now, this will reduce the memory consumption eventually, and will cause 
             // faster indexing times in case we get a big batch again
             // * if indexing is using too much memory --> probably we have very large documents in the index, so let it reduce to 1 if needed
-            return Math.Max(minNumberOfItemsToProcess, NumberOfItemsToProcessInSingleBatch/2);
+            return Math.Max(minNumberOfItemsToProcess, NumberOfItemsToProcessInSingleBatch / 2);
         }
 
         /// <summary>
@@ -285,13 +306,27 @@ namespace Raven.Database.Indexing
         {
             var newNumberOfItemsToProcess = Math.Min(InitialNumberOfItems, NumberOfItemsToProcessInSingleBatch);
             if (IsProcessingUsingTooMuchMemory) //if using too much memory, decrease number of items in each batch
+            {
+                var prevNum = newNumberOfItemsToProcess;
                 newNumberOfItemsToProcess /= 4;
+                var reason = string.Format("Using too much memory, NumberOfItemsToProcess was decreased from {0} to {1}", prevNum, newNumberOfItemsToProcess);
+                context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
+            }
+
             else
+            {
+                var preNum = newNumberOfItemsToProcess;
                 newNumberOfItemsToProcess /= 2; // we hit OOME so we should rapidly decrease batch size even when process is not using too much memory
+                var reason = string.Format("we hit OOME so we should decrease batch size even when process is not using too much memory. NumberOfItemsToProcess was decreased from {0} to {1}", preNum, newNumberOfItemsToProcess);
+                context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, reason));
+            }
+
 
             // first thing to do, reset the number of items per batch
+            var prev = NumberOfItemsToProcessInSingleBatch;
             NumberOfItemsToProcessInSingleBatch = newNumberOfItemsToProcess > 0 ? newNumberOfItemsToProcess : 1;
-
+            var res = $"Number of items per batch was reset from {prev} to {NumberOfItemsToProcessInSingleBatch}";
+            context.Database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, context.DatabaseName, res));
             // now, we need to be more conservative about how we are increasing memory usage, so instead of increasing
             // every time we hit the limit twice, we will increase every time we hit it three times, then 5, 9, etc
 
@@ -303,9 +338,9 @@ namespace Raven.Database.Indexing
         protected abstract int MaxNumberOfItems { get; }
         protected abstract int CurrentNumberOfItems { get; set; }
         protected abstract int LastAmountOfItemsToRemember { get; set; }
-        public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }		
+        public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }
         protected abstract void RecordAmountOfItems(int numberOfItems);
         protected abstract IEnumerable<int> GetLastAmountOfItems();
-        protected abstract string GetName { get; }
+        protected abstract string Name { get; }
     }
 }

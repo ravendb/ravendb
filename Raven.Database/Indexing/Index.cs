@@ -2081,15 +2081,16 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void HandleLowMemory()
+        public LowMemoryHandlerStatistics HandleLowMemory()
         {
             bool tryEnter = false;
+            var res = new LowMemoryHandlerStatistics();
             try
             {
                 tryEnter = Monitor.TryEnter(writeLock);
 
                 if (tryEnter == false)
-                    return;
+                    return res;
 
                 try
                 {
@@ -2105,17 +2106,18 @@ namespace Raven.Database.Indexing
                     logIndexing.ErrorException("Error while writing in memory index to disk.", e);
                 }
                 RecreateSearcher();
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = $"CachedIndexedTerms:{PublicName}",
+                    DatabaseName = context.DatabaseName,
+                    Summary = $"Writing in memory index {IndexId} to disk, recreating index readers and writers, freeing write and read cache"
+                };
             }
             finally
             {
                 if (tryEnter)
                     Monitor.Exit(writeLock);
             }
-        }
-
-        public void SoftMemoryRelease()
-        {
-
         }
 
         public LowMemoryHandlerStatistics GetStats()

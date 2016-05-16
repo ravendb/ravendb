@@ -26,15 +26,6 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Config
 {
-
-    public class cpuUsageCallsRecord
-
-    {
-        public DateTime StartedAt { get; set; }
-        public string Reason { get; set; }
-
-    }
-
     public static class CpuStatistics
     {
         private const float HighNotificationThreshold = 0.8f;
@@ -97,7 +88,7 @@ namespace Raven.Database.Config
             }.Start();
         }
 
-        private static void HandleCpuUsage(float usageInPercents)
+        public static void HandleCpuUsage(float usageInPercents)
         {
 
             var stats = new cpuUsageCallsRecord

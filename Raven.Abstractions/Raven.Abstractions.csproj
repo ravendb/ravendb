@@ -162,6 +162,7 @@
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
     <Compile Include="Data\AutoTunerDescionDescription.cs" />
+    <Compile Include="Data\AutoTunerInfo.cs" />
     <Compile Include="Data\BulkOperationOptions.cs" />
     <Compile Include="Data\BulkOperationProgress.cs" />
     <Compile Include="Data\CompactStatus.cs" />
