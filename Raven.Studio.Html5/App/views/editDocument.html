@@ -42,7 +42,7 @@
             <div class="btn-group" data-bind="with: docsList">
                 <button type="button" class="btn btn-default" data-bind="click: $root.firstDocument.bind($root), attr:{ disabled: $root.isFirstDocumenNavtDisabled }" title="Go to first document (Alt+Home)"><i class="fa fa-step-backward"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.previousDocumentOrLast.bind($root)" title="Go to previous document (Alt+PageUp)"><i class="fa fa-caret-left"></i></button>
-                <button type="button" class="btn btn-default" data-bind="text: 'Doc ' + (currentItemIndex() + 1) + ' of ' + totalResultCount().toLocaleString()"></button>
+                <button type="button" class="btn btn-default" data-bind="text: 'Doc ' + (currentItemIndex() + 1).toLocaleString() + ' of ' + totalResultCount().toLocaleString()"></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.nextDocumentOrFirst.bind($root)" title="Go to next document (Alt+PageDown)"><i class="fa fa-caret-right"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.lastDocument.bind($root), attr:{ disabled: $root.isLastDocumentNavDisabled }" title="Go to last document (Alt+End)"><i class="fa fa-step-forward"></i></button>
 
