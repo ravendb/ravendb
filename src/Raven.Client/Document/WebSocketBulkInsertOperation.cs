@@ -6,6 +6,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -34,6 +35,7 @@ namespace Raven.Client.Document
             // we use a stack based back end to ensure that we always use the active buffers
             new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
         private readonly Task _writeToServerTask;
+        private DateTime _lastHeartbeat;
 
 
         ~WebSocketBulkInsertOperation()
@@ -143,6 +145,7 @@ namespace Raven.Client.Document
                 result = await _connection.ReceiveAsync(new ArraySegment<byte>(closeBuffer), _cts.Token);
                 if (result.MessageType != WebSocketMessageType.Text)
                     break;
+                _lastHeartbeat = SystemTime.UtcNow;
                 msg = Encoding.UTF8.GetString(closeBuffer, 0, result.Count);
             }
             while (msg == "Heartbeat");
@@ -264,13 +267,19 @@ namespace Raven.Client.Document
                     //In general, 1 minute should be more than enough for the 
                     //server to finish its stuff and get back to client
 
-                    //TODO: Even if the server sends heartbeats, we still getting timeout here because
-                    //TODO: we aren't checking
-                    var timeoutTask = Task.Delay(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-
-                    var res = await Task.WhenAny(timeoutTask, _getServerResponseTask);
-                    if (timeoutTask == res)
-                        throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
+                    var timeDelay = Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30);
+                    while (true)
+                    {
+                        var timeoutTask = Task.Delay(timeDelay);
+                        var res = await Task.WhenAny(timeoutTask, _getServerResponseTask);
+                        if (timeoutTask != res)
+                            break;
+                        if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(30))
+                        {
+                            // throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
+                            Console.WriteLine("Waiting too much without heartbeat");
+                        }
+                    }
                 }
                 finally
                 {
