@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Abstractions.Data;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -157,7 +155,6 @@ namespace Raven.Server.Documents
                     tx.CreateTree("Identities");
                     tx.CreateTree("Tombstones");
                     tx.CreateTree("ChangeVector");
-
                     _docsSchema.Create(tx, SystemDocumentsCollection);
                     _lastEtag = ReadLastEtag(tx);
 
@@ -177,11 +174,39 @@ namespace Raven.Server.Documents
         }
 
         private const int GuidSize = 16;
+        public IEnumerable<Tuple<ArraySegment<byte>, long>> GetChangeVector(DocumentsOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
+            using (var iter = tree.Iterate())
+            {
+                if(iter.Seek(Slice.BeforeAllKeys) == false)
+                    yield break;
+                do
+                {
+                    //memory-wise, it is probably not the most efficient way to do this
+                    var key = iter.CurrentKey.CreateReader().ReadBytes(GuidSize);
+                    var value = iter.CreateReaderForCurrent().ReadBigEndianInt64();
+                    yield return Tuple.Create(key, value);
+                } while (iter.MoveNext());
+            }
+        }
+
+        public void SetChangeVector(DocumentsOperationContext context, 
+                        IEnumerable<Tuple<ArraySegment<byte>, long>> changeVector)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");		    
+            foreach (var entry in changeVector)
+            {
+                var sliceWriter = new SliceWriter(context.GetManagedBuffer());
+                sliceWriter.WriteBigEndian(entry.Item2);
+
+                tree.Add(new Slice(entry.Item1.Array), sliceWriter.CreateSlice());
+            }
+        }
+
         public long? GetChangeVectorEntryFor(DocumentsOperationContext context, Guid dbId)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-
-            //not sure if possible to reduce allocations here
 
             var dbIdPtr = (byte*)&dbId;
             var readResult = tree.Read(new Slice(dbIdPtr, GuidSize));
@@ -190,7 +215,6 @@ namespace Raven.Server.Documents
 
         public void SetChangeVectorEntryFor(DocumentsOperationContext context, Guid dbId, long val)
         {
-            //not sure if possible to reduce allocations here
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
             var sliceWriter = new SliceWriter(context.GetManagedBuffer());
             sliceWriter.WriteBigEndian(val);
@@ -728,10 +752,6 @@ namespace Raven.Server.Documents
                 Type = DocumentChangeTypes.Put,
                 IsSystemDocument = isSystemDocument,
             });
-
-            var vectorValue = GetChangeVectorEntryForCurrentDb(context);
-            if(vectorValue.HasValue)
-                SetChangeVectorEntryForCurrentDb(context,newEtag);
 
             return new PutResult
             {

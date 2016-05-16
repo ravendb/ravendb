@@ -32,6 +32,7 @@ namespace Sparrow.Json
           //  _types = parent._mem + pos + arraySizeOffset + _count * _currentOffsetSize;
         }
 
+        public byte* DataStart => _dataStart;
         public int Length => _count;
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
