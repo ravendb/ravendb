@@ -391,7 +391,7 @@ namespace Voron
             }
 
             Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, totalPages);
-            if (tx.IsLazyTransaction)
+            if (tx.IsLazyTransaction == false)
                 _flushWriter.Set();
         }
 
