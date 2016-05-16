@@ -147,6 +147,7 @@ namespace Raven.Client.Document
                     break;
                 _lastHeartbeat = SystemTime.UtcNow;
                 msg = Encoding.UTF8.GetString(closeBuffer, 0, result.Count);
+                Console.WriteLine($"Got {msg} from server");
             }
             while (msg == "Heartbeat");
 
