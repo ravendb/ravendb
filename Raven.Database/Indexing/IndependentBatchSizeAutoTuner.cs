@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing
             yield return lastAmount;
         }
 
-        protected override string GetName
+        protected override string Name
         {
             get { return "IndependentBatchSizeAutoTuner"; }
         }

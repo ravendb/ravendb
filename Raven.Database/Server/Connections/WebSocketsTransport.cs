@@ -67,9 +67,10 @@ namespace Raven.Database.Server.Connections
             public static readonly DisconnectWebSockets Instance = new DisconnectWebSockets();
             
 
-            public void HandleLowMemory()
+            public LowMemoryHandlerStatistics HandleLowMemory()
             {
                 SoftMemoryRelease();
+                return new LowMemoryHandlerStatistics();
             }
 
             public void SoftMemoryRelease()

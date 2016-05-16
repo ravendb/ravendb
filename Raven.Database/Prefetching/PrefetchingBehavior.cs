@@ -317,7 +317,7 @@ namespace Raven.Database.Prefetching
                 var nextEtagToIndex = GetNextDocEtag(etag);
                 var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
 
-                if (firstEtagInQueue == null || 
+                if (firstEtagInQueue == null ||
                    (firstEtagInQueue != nextEtagToIndex && prefetchingQueue.DocumentExists(nextEtagToIndex) == false))
                 {
                     // if we have no results, and there is a future batch for it, we would wait for the results
@@ -611,61 +611,61 @@ namespace Raven.Database.Prefetching
             long currentlyUsedBatchSizesInBytes = autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum();
 
             using (DocumentCacher.SkipSetDocumentsInDocumentCache())
-            context.TransactionalStorage.Batch(actions =>
-            {
+                context.TransactionalStorage.Batch(actions =>
+                {
                 //limit how much data we load from disk --> better adhere to memory limits
                 var totalSizeAllowedToLoadInBytes =
-                    (context.Configuration.DynamicMemoryLimitForProcessing) -
-                    (prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
+                        (context.Configuration.DynamicMemoryLimitForProcessing) -
+                        (prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
 
                 // at any rate, we will load a min of 512Kb docs
                 long maxSize = Math.Max(
-                    Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
-                    1024 * 512);
+                        Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
+                        1024 * 512);
 
-                var sp = Stopwatch.StartNew();
-                var totalSize = 0L;
-                var largestDocSize = 0L;
-                string largestDocKey = null;
-                jsonDocs = actions.Documents
-                    .GetDocumentsAfter(
-                        etag,
-                        GetNumberOfItemsToProcessInSingleBatch(),
-                        cancellationToken,
-                        maxSize,
-                        untilEtag,
-                        autoTuner.FetchingDocumentsFromDiskTimeout,
-                        earlyExit: earlyExit
-                    )
-                    .Where(x => x != null)
-                    .Select(doc =>
-                    {
-                        if (largestDocSize < doc.SerializedSizeOnDisk)
+                    var sp = Stopwatch.StartNew();
+                    var totalSize = 0L;
+                    var largestDocSize = 0L;
+                    string largestDocKey = null;
+                    jsonDocs = actions.Documents
+                        .GetDocumentsAfter(
+                            etag,
+                            GetNumberOfItemsToProcessInSingleBatch(),
+                            cancellationToken,
+                            maxSize,
+                            untilEtag,
+                            autoTuner.FetchingDocumentsFromDiskTimeout,
+                            earlyExit: earlyExit
+                        )
+                        .Where(x => x != null)
+                        .Select(doc =>
                         {
-                            largestDocSize = doc.SerializedSizeOnDisk;
-                            largestDocKey = doc.Key;
-                        }
+                            if (largestDocSize < doc.SerializedSizeOnDisk)
+                            {
+                                largestDocSize = doc.SerializedSizeOnDisk;
+                                largestDocKey = doc.Key;
+                            }
 
-                        totalSize += doc.SerializedSizeOnDisk;
-                        JsonDocument.EnsureIdInMetadata(doc);
-                        return doc;
-                    })
-                    .ToList();
+                            totalSize += doc.SerializedSizeOnDisk;
+                            JsonDocument.EnsureIdInMetadata(doc);
+                            return doc;
+                        })
+                        .ToList();
 
-                loadTimes.Enqueue(new DiskFetchPerformanceStats
-                {
-                    LoadingTimeInMillseconds = sp.ElapsedMilliseconds,
-                    NumberOfDocuments = jsonDocs.Count,
-                    TotalSize = totalSize,
-                    LargestDocSize = largestDocSize,
-                    LargestDocKey = largestDocKey
+                    loadTimes.Enqueue(new DiskFetchPerformanceStats
+                    {
+                        LoadingTimeInMillseconds = sp.ElapsedMilliseconds,
+                        NumberOfDocuments = jsonDocs.Count,
+                        TotalSize = totalSize,
+                        LargestDocSize = largestDocSize,
+                        LargestDocKey = largestDocKey
+                    });
+                    while (loadTimes.Count > 10)
+                    {
+                        DiskFetchPerformanceStats _;
+                        loadTimes.TryDequeue(out _);
+                    }
                 });
-                while (loadTimes.Count > 10)
-                {
-                    DiskFetchPerformanceStats _;
-                    loadTimes.TryDequeue(out _);
-                }
-            });
 
             return jsonDocs;
         }
@@ -1453,14 +1453,18 @@ namespace Raven.Database.Prefetching
             autoTuner.HandleOutOfMemory();
         }
 
-        public void HandleLowMemory()
+        public LowMemoryHandlerStatistics HandleLowMemory()
         {
+            var futureIndexBatchesSize = futureIndexBatches.Sum(x => x.Value.Task.IsCompleted ? x.Value.Task.Result.Sum(y => y.SerializedSizeOnDisk) : 0);
+            var futureIndexBatchesDocCount = futureIndexBatches.Sum(x => x.Value.Task.IsCompleted ? x.Value.Task.Result.Count : 0);
             ClearQueueAndFutureBatches();
-        }
 
-        public void SoftMemoryRelease()
-        {
-
+            return new LowMemoryHandlerStatistics
+            {
+                Name = "PrefetchingBehavior",
+                DatabaseName = context.DatabaseName,
+                Summary = $"Clear queue and future batches. Deleted {futureIndexBatchesDocCount} future index batches documents with {futureIndexBatchesSize} size "
+            };
         }
 
         public LowMemoryHandlerStatistics GetStats()

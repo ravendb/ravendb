@@ -723,6 +723,7 @@ namespace Raven.Database.Server.Controllers.Admin
             Database.StopIndexingWorkers(true);
         }
 
+
         [HttpPost]
         [RavenRoute("admin/startReducing")]
         [RavenRoute("databases/{databaseName}/admin/startReducing")]
@@ -739,6 +740,18 @@ namespace Raven.Database.Server.Controllers.Admin
             Database.StopReduceWorkers();
         }
 
+        [HttpGet]
+        [RavenRoute("admin/debug/auto-tuning-info")]
+        [RavenRoute("databases/{databaseName}/admin/debug/auto-tuning-info")]
+        public HttpResponseMessage DebugAutoTuningInfo()
+        {
+            return GetMessageWithObject(new AutoTunerInfo()
+            {
+                Reason = Database.AutoTuningTrace.ToList(),
+                LowMemoryCallsRecords = MemoryStatistics.LowMemoryCallRecords.ToList(),
+                CpuUsageCallsRecords = CpuStatistics.cpuUsageCallsRecords.ToList()
+            });
+        }
 
         [HttpGet]
         [RavenRoute("admin/stats")]
@@ -891,9 +904,9 @@ namespace Raven.Database.Server.Controllers.Admin
             switch (mode)
             {
                 case "user":
-                    return GetMessageWithObject(new {Valid = AccountVerifier.UserExists(principal) });
+                    return GetMessageWithObject(new { Valid = AccountVerifier.UserExists(principal) });
                 case "group":
-                    return GetMessageWithObject(new {Valid = AccountVerifier.GroupExists(principal) });
+                    return GetMessageWithObject(new { Valid = AccountVerifier.GroupExists(principal) });
                 default:
                     return GetMessageWithString("Unhandled mode: " + mode, HttpStatusCode.BadRequest);
             }
