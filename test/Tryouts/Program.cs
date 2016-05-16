@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Linq;
@@ -104,7 +105,7 @@ namespace Tryouts
                 for (int i = 0; i < numOfItems; i++)
                 {
                     if (i % 100000 == 0)
-                        Console.WriteLine(i);
+                        Console.WriteLine(i.ToString("#,#"));
                     var entity = new User
                     {
                         FirstName = $"{i}",
@@ -118,7 +119,7 @@ DAASF CM,XIhn f,mvLJ oiu9 IOPop oiJOIPjiopPOJPOJ POJ LK",
                     await bulkInsert.StoreAsync(entity, $"users/{Id++}");
                 }
             }
-            Console.WriteLine("\r\ndone in " + sp.Elapsed);
+            Console.WriteLine("\r\ndone in " + sp.Elapsed + " rate of " + (Math.Round(numOfItems / sp.Elapsed.TotalSeconds, 2).ToString("#,#.##")) + " docs / sec");
         }
     }
 }
