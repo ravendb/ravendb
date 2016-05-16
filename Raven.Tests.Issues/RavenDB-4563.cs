@@ -54,12 +54,10 @@ namespace Raven.Tests.Issues
                             case 2:
                                 Assert.Equal("Could not get token for bulk insert", exp.Message);
                                 Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
-                                Assert.Equal("Unable to connect to the remote server", exp.InnerException.InnerException.Message);
                                 break;
                             case 3:
                                 Assert.Equal("Could not get token for bulk insert", exp.Message);
                                 Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
-                                Assert.Equal("Unable to connect to the remote server", exp.InnerException.InnerException.Message);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

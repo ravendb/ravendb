@@ -307,6 +307,7 @@ namespace Raven.Database.Prefetching
             bool docsLoaded;
             int prefetchingQueueSizeInBytes;
             var prefetchingDurationTimer = Stopwatch.StartNew();
+            var lastTryMaybeAddFutureBatch = 1000L;
 
             // We take an snapshot because the implementation of accessing Values from a ConcurrentDictionary involves a lock.
             // Taking the snapshot should be safe enough.
@@ -357,22 +358,20 @@ namespace Raven.Database.Prefetching
 
                 docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
 
-                // we don't need to add a future batch to a prefetcher that
-                // gets the documents after commit -> the default one,
-                // except when we disabled collecting documents after commit
-                if (ShouldHandleUnusedDocumentsAddedAfterCommit == false ||
-                    DisableCollectingDocumentsAfterCommit)
-                {
-                    // we removed some documents from the queue
-                    // we'll try to create a new future batch, if possible
-                    MaybeAddFutureBatch(result.LastOrDefault());
-                }
-
                 if (docsLoaded)
                 {
                     etag = result[result.Count - 1].Etag;
                     if (IsDefault)
                         recentEtag = recentEtag.CompareTo(etag) < 0 ? etag : recentEtag;
+
+                    // we are going to run this approximately every second
+                    if (prefetchingDurationTimer.ElapsedMilliseconds - lastTryMaybeAddFutureBatch > 1000)
+                    {
+                        lastTryMaybeAddFutureBatch = prefetchingDurationTimer.ElapsedMilliseconds;
+                        // we removed some documents from the queue
+                        // we'll try to create a new future batch, if possible
+                        MaybeAddFutureBatch(result.LastOrDefault());
+                    }
                 }
                 prefetchingQueueSizeInBytes = prefetchingQueue.LoadedSize;
             }
@@ -382,6 +381,12 @@ namespace Raven.Database.Prefetching
                 docsLoaded &&
                 prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
                 ((prefetchingQueueSizeInBytes + currentlyUsedBatchSizesInBytes) < (context.Configuration.DynamicMemoryLimitForProcessing)));
+
+            if (docsLoaded)
+            {
+                // we'll try to create a new future batch, if possible
+                MaybeAddFutureBatch(result.LastOrDefault());
+            }
 
             return result;
         }
@@ -711,6 +716,15 @@ namespace Raven.Database.Prefetching
 
         private void MaybeAddFutureBatch(JsonDocument lastDocumentFromResult)
         {
+            if (ShouldHandleUnusedDocumentsAddedAfterCommit &&
+                DisableCollectingDocumentsAfterCommit == false)
+            {
+                // we don't need to add a future batch to a prefetcher that
+                // gets the documents after commit -> the default one,
+                // except when we disabled collecting documents after commit
+                return;
+            }
+
             var maxFutureBatch = GetCompletedFutureBatchWithMaxStartingEtag();
             if (maxFutureBatch != null)
             {
@@ -864,18 +878,15 @@ namespace Raven.Database.Prefetching
             Etag highestLoadedEtag = GetHighestEtag(past);
             Etag nextEtag = GetNextDocumentEtagFromDisk(highestLoadedEtag);
 
-            if (IsDefault && prefetchingQueue.DocumentExists(nextEtag))
+            if (prefetchingQueue.DocumentExists(nextEtag))
             {
-                //checking only for the default prefetcher:
-                //1) this case can rarely happen for the other prefetchers
-                //2) DocumentExists is o(log n)
-                log.Info("Skipping background prefetching because we already have a document with {0} etag in the queue.", nextEtag);
+                log.Info("Skipping background prefetching because we already have a document with {0} etag in the prefetching queue.", nextEtag);
                 return;
             }
 
             if (nextEtag == highestLoadedEtag)
             {
-                log.Info("Skipping background prefetching because we got no documents to fetch. last etag: {0}", nextEtag);
+                log.Info("Skipping background prefetching because we got no documents to fetch. Last etag: {0}", nextEtag);
                 return;
             }
 
