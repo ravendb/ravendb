@@ -501,10 +501,6 @@ namespace SlowTests.Core.Session
                     session.SaveChanges();
                 }
 
-#if !DNXCORE50
-                Server.Server.ResetNumberOfRequests();
-#endif
-
                 using (var session = store.OpenSession())
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);

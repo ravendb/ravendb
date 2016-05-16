@@ -71,21 +71,6 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         {
             return type.GetTypeInfo().IsSubclassOf(c);
         }
-
-#if !DNXCORE50
-        public static bool IsAssignableFrom(this Type type, Type c)
-        {
-            return type.GetTypeInfo().IsAssignableFrom(c.GetTypeInfo());
-        }
-
-        public static bool IsInstanceOfType(this Type type, object o)
-        {
-            if (o == null)
-                return false;
-
-            return IsAssignableFrom(type, o.GetType());
-        }
-#endif
 #endif
 
         public static MethodInfo Method(this Delegate d)
@@ -111,7 +96,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
             else if (memberInfo is MethodInfo)
                 return MemberTypes.Method;
             else
-                return MemberTypes.Other;
+                return MemberTypes.Custom;
 #endif
         }
 
@@ -244,18 +229,6 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
             return type.GetTypeInfo().CustomAttributes.Any(a => a.AttributeType == attributeType);
         }
 
-#if !DNXCORE50
-        public static MethodInfo GetMethod(this Type type, string name)
-        {
-            return type.GetMethod(name, DefaultFlags);
-        }
-
-        public static MethodInfo GetMethod(this Type type, string name, BindingFlags bindingFlags)
-        {
-            return type.GetTypeInfo().GetDeclaredMethod(name);
-        }
-#endif
-
         public static MethodInfo GetMethod(this Type type, IList<Type> parameterTypes)
         {
             return type.GetMethod(null, parameterTypes);
@@ -313,18 +286,6 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
                                                                       });
         }
 
-#if !DNXCORE50
-        public static IEnumerable<ConstructorInfo> GetConstructors(this Type type)
-        {
-            return type.GetConstructors(DefaultFlags);
-        }
-
-        public static IEnumerable<ConstructorInfo> GetConstructors(this Type type, BindingFlags bindingFlags)
-        {
-            return type.GetConstructors(bindingFlags, null);
-        }
-#endif
-
         private static IEnumerable<ConstructorInfo> GetConstructors(this Type type, BindingFlags bindingFlags, IList<Type> parameterTypes)
         {
             return type.GetTypeInfo().DeclaredConstructors.Where(c =>
@@ -358,27 +319,6 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         {
             return type.GetTypeInfo().GetMembersRecursive().Where(m => m.Name == member && TestAccessibility(m, bindingFlags)).ToArray();
         }
-
-#if !DNXCORE50
-        public static MemberInfo GetField(this Type type, string member)
-        {
-            return type.GetField(member, DefaultFlags);
-        }
-
-        public static MemberInfo GetField(this Type type, string member, BindingFlags bindingFlags)
-        {
-            return type.GetTypeInfo().GetDeclaredField(member);
-        }
-
-        public static IEnumerable<PropertyInfo> GetProperties(this Type type, BindingFlags bindingFlags)
-        {
-            IList<PropertyInfo> properties = (bindingFlags.HasFlag(BindingFlags.DeclaredOnly))
-                                                 ? type.GetTypeInfo().DeclaredProperties.ToList()
-                                                 : type.GetTypeInfo().GetPropertiesRecursive();
-
-            return properties.Where(p => TestAccessibility(p, bindingFlags));
-        }
-#endif
 
         private static IList<MemberInfo> GetMembersRecursive(this TypeInfo type)
         {
@@ -431,37 +371,6 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
             return fields;
         }
 
-#if !DNXCORE50
-        public static IEnumerable<MethodInfo> GetMethods(this Type type, BindingFlags bindingFlags)
-        {
-            return type.GetTypeInfo().DeclaredMethods;
-        }
-
-        public static PropertyInfo GetProperty(this Type type, string name)
-        {
-            return type.GetProperty(name, DefaultFlags);
-        }
-
-        public static PropertyInfo GetProperty(this Type type, string name, BindingFlags bindingFlags)
-        {
-            return type.GetTypeInfo().GetDeclaredProperty(name);
-        }
-
-        public static IEnumerable<FieldInfo> GetFields(this Type type)
-        {
-            return type.GetFields(DefaultFlags);
-        }
-
-        public static IEnumerable<FieldInfo> GetFields(this Type type, BindingFlags bindingFlags)
-        {
-            IList<FieldInfo> fields = (bindingFlags.HasFlag(BindingFlags.DeclaredOnly))
-                                          ? type.GetTypeInfo().DeclaredFields.ToList()
-                                          : type.GetTypeInfo().GetFieldsRecursive();
-
-            return fields.Where(f => TestAccessibility(f, bindingFlags)).ToList();
-        }
-#endif
-
         private static bool TestAccessibility(PropertyInfo member, BindingFlags bindingFlags)
         {
             if (member.GetMethod != null && TestAccessibility(member.GetMethod, bindingFlags))
@@ -512,23 +421,6 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 
             return visibility && instance;
         }
-
-#if !DNXCORE50
-        public static Type[] GetGenericArguments(this Type type)
-        {
-            return type.GetTypeInfo().GenericTypeArguments;
-        }
-
-        public static IEnumerable<Type> GetInterfaces(this Type type)
-        {
-            return type.GetTypeInfo().ImplementedInterfaces;
-        }
-
-        public static IEnumerable<MethodInfo> GetMethods(this Type type)
-        {
-            return type.GetTypeInfo().DeclaredMethods;
-        }
-#endif
 #endif
 
         public static bool IsAbstract(this Type type)

@@ -11,43 +11,16 @@
   },
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "dependencies": {
-        "Microsoft.Win32.Primitives": "4.0.1-beta-23516",
-
-        "System.Collections": "4.0.11-beta-23516",
-        "System.Collections.Immutable": "1.1.38-beta-23516",
-        "System.Collections.Concurrent": "4.0.11-beta-23516",
-        "System.Console": "4.0.0-beta-23516",
-
-        "System.Diagnostics.Tools": "4.0.1-beta-23516",
-        "System.Diagnostics.Debug": "4.0.11-beta-23516",
-        "System.Diagnostics.Process": "4.1.0-beta-23516",
-        "System.Diagnostics.StackTrace": "4.0.1-beta-23516",
-
-        "System.IO": "4.0.11-beta-23516",
-        "System.IO.Compression": "4.1.0-beta-23516",
-        "System.IO.MemoryMappedFiles": "4.0.0-beta-23516",
-        "System.IO.Compression.ZipFile": "4.0.1-beta-23516",
-        "System.IO.FileSystem.DriveInfo": "4.0.0-beta-23516",
-        "System.IO.FileSystem.Primitives": "4.0.1-beta-23516",
-
-        "System.Threading": "4.0.11-beta-23516",
-        "System.Threading.Tasks": "4.0.11-beta-23516",
-        "System.Threading.Tasks.Parallel": "4.0.1-beta-23516",
-        "System.Threading.Thread": "4.0.0-beta-23516",
-        "System.Threading.Overlapped": "4.0.1-beta-23516",
-
-        "System.Text.Encoding": "4.0.11-beta-23516",
-
-        "System.Runtime": "4.0.21-beta-23516",
-
-        "System.Reflection.TypeExtensions": "4.1.0-beta-23516",
-
-        "System.Runtime.InteropServices.RuntimeInformation": "4.0.0-beta-23516"
-
-
-      }
+        "Microsoft.CSharp": "4.0.1-rc2-*",
+        "NETStandard.Library": "1.5.0-rc2-*",
+        "System.Diagnostics.Process": "4.1.0-rc2-*",
+        "System.IO.FileSystem.DriveInfo": "4.0.0-rc2-*",
+        "System.IO.MemoryMappedFiles": "4.0.0-rc2-*",
+        "System.Threading.Overlapped": "4.0.1-rc2-*"
+      },
+      "imports": "dnxcore50"
     }
   },
   "dependencies": {

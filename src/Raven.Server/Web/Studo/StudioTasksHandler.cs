@@ -3,9 +3,9 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Http;
 using Raven.Abstractions.Data;
 using Raven.Server.Routing;
+using Microsoft.AspNetCore.Http;
 
 namespace Raven.Server.Web.Studo
 {

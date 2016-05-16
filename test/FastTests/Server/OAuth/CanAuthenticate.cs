@@ -9,13 +9,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Http;
+
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.OAuth;
 using Raven.Server.Config.Attributes;
-using Raven.Tests.Core;
+
 using Xunit;
 
 namespace FastTests.Server.OAuth

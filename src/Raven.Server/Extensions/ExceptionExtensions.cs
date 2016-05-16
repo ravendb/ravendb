@@ -1,7 +1,10 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -65,7 +68,6 @@ namespace Raven.Server.Extensions
 
         public static string TryReadResponseIfWebException(this Exception ex)
         {
-#if !DNXCORE50
             var webException = ex as WebException;
             if (webException != null && webException.Response != null)
             {
@@ -75,7 +77,6 @@ namespace Raven.Server.Extensions
                     return response;
                 }
             }
-#endif
 
             return string.Empty;
         }

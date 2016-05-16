@@ -1147,11 +1147,7 @@ namespace Raven.Client.Indexes
         /// </returns>
         protected override Expression VisitGoto(GotoExpression node)
         {
-#if !DNXCORE50
-            Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
-#else
             Out(node.Kind.ToString().ToLower());
-#endif
 
             DumpLabel(node.Target);
             if (node.Value != null)

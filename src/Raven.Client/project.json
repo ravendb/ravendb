@@ -6,48 +6,30 @@
   "projectUrl": "https://ravendb.net",
 
   "dependencies": {
-    "Microsoft.Win32.Primitives": "4.0.0",
     "Sparrow": "4.0.0-*"
   },
   "compilationOptions": {"allowUnsafe": true},
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs"],
   "compileExclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ],
 
-
   "frameworks": {
-    "dnxcore50": {
+    "netcoreapp1.0": {
       "compilationOptions": { "define": [ "PORTABLE" ] },
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "Microsoft.Framework.ConfigurationModel": "1.0.0-beta4",
-        "System.Collections": "4.0.11-beta-23516",
-        "System.Collections.Specialized": "4.0.1-beta-23516",
-        "System.Diagnostics.Process": "4.1.0-beta-23516",
-        "System.Diagnostics.StackTrace": "4.0.1-beta-23516",
-        "System.IO": "4.0.11-beta-23516",
-        "System.IO.Compression": "4.1.0-beta-23516",
-        "System.IO.FileSystem": "4.0.1-beta-23516",
-        "System.Console": "4.0.0-beta-23516",
-        "System.Linq": "4.0.1-beta-23516",
-        "System.Net.Http": "4.0.1-beta-23516",
-        "System.Net.Http.WinHttpHandler": "4.0.0-beta-23516",
-        "System.Net.NameResolution": "4.0.0-beta-23516",
-        "System.Reflection.TypeExtensions": "4.1.0-beta-23516",
-        "System.Runtime": "4.0.21-beta-23516",
-        "System.Security.Cryptography.Csp": "4.0.0-rc3-23727",
-        "System.Security.Cryptography.Algorithms": "4.0.0-rc3-23727",
-        "System.Security.Cryptography.Primitives": "4.0.0-rc3-23727",
-        "System.Security.Cryptography.Cng": "4.0.0-beta-23516",
-        "System.ServiceModel.Primitives": "4.1.0-beta-23516",
-        "System.Text.Encoding": "4.0.11-beta-23516",
-        "System.Text.Encoding.Extensions": "4.0.11-beta-23516",
-        "System.Text.RegularExpressions": "4.0.11-beta-23516",
-        "System.Threading.Thread": "4.0.0-beta-23516",
-        "System.Xml.XDocument": "4.0.11-beta-23516",
-        "System.AppContext": "4.0.1-beta-23516",
-        "System.Net.WebSockets.Client": "4.0.0-beta-23516"
+        "Microsoft.CSharp": "4.0.1-rc2-*",
+        "Microsoft.Extensions.Configuration": "1.0.0-rc2-*",
+        "NETStandard.Library": "1.5.0-rc2-*",
+        "System.Diagnostics.Process": "4.1.0-rc2-*",
+        "System.Net.NameResolution": "4.0.0-rc2-*",
+        "System.Net.WebSockets.Client": "4.0.0-rc2-*",
+        "System.Reflection.TypeExtensions": "4.1.0-rc2-*",
+        "Microsoft.Win32.Primitives": "4.0.1-rc2-*",
+        "System.Security.Cryptography.Cng": "4.1.0-rc2-*"
       },
-      "imports": "portable-net45+win8"
+      "imports": [
+        "dnxcore50",
+        "dotnet5.4"
+      ]
     }
   }
 }

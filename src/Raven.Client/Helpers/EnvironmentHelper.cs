@@ -25,11 +25,7 @@ namespace Raven.Client.Helpers
         {
             get
             {
-#if !DNXCORE50
                 return Environment.MachineName;
-#else
-                return Dns.GetHostName();
-#endif
             }
         }
     }

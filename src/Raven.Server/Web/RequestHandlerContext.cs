@@ -1,7 +1,7 @@
-using Microsoft.AspNet.Http;
+using Microsoft.AspNetCore.Http;
+
 using Raven.Server.Documents;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Web
 {

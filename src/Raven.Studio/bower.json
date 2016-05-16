@@ -35,6 +35,8 @@
   },
   "resolutions": {
     "jquery": "^2.2.0",
-    "requirejs": "^2.1.22"
+    "requirejs": "^2.1.22",
+    "knockout": ">= 2.0",
+    "lodash": "^4.11.1"
   }
 }
