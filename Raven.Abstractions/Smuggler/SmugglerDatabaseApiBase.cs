@@ -1155,6 +1155,8 @@ namespace Raven.Abstractions.Smuggler
 
             while (identities.MoveNext())
             {
+                if (identities.Current.Key.StartsWith("Raven/"))
+                    continue;
                 itemsToInsert.Add(identities.Current);
                 count++;
 
