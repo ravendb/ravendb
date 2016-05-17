@@ -46,7 +46,7 @@ namespace Tryouts
                             {
                                 createDb(store).Wait();
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 Console.WriteLine("createDb returned exception");
                             }

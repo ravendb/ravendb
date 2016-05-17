@@ -1,12 +1,22 @@
 {
   "version": "4.0.0-*",
-  "compilationOptions": {
+
+  "buildOptions": {
     "allowUnsafe": true,
-    "warningsAsErrors": true
+    "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs" ]
+    },
+    "embed": [ "Data/*.txt" ]
   },
-  "resource": [
-    "Data/*.txt"
-  ],
+
+  "configurations": {
+    "Release": {
+      "buildOptions": {
+        "optimize": true
+      }
+    }
+  },
 
   "testRunner": "xunit",
 
