@@ -6,10 +6,11 @@ using System.Text;
 namespace Sparrow.Json.Parsing
 {
     public unsafe class UnmanagedJsonParser : IJsonParser
-    {
+    {        
         private static readonly byte[] NaN = { (byte)'N', (byte)'a', (byte)'N' };
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
+        private readonly string _debugTag;
         private readonly UnmanagedWriteBuffer _stringBuffer;
         private string _doubleStringBuffer;
         private int _currentStrStart;
@@ -36,7 +37,8 @@ namespace Sparrow.Json.Parsing
         public UnmanagedJsonParser(JsonOperationContext ctx, JsonParserState state, string debugTag)
         {
             _state = state;
-            _stringBuffer = ctx.GetStream(debugTag);
+            _debugTag = debugTag;
+            _stringBuffer = ctx.GetStream();
         }
 
         public void SetBuffer(byte[] inputBuffer, int size)
