@@ -75,7 +75,7 @@ namespace Voron.Impl.Journal
                 return false;
 
             _recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
-            var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
+            var dataPage = _recoveryPager.AcquirePagePointer(null, _recoveryPage);
 
             UnmanagedMemory.Set(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
             if (current->Compressed)
@@ -85,7 +85,7 @@ namespace Voron.Impl.Journal
             }
             else
             {
-                Memory.Copy(dataPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+                Memory.Copy(dataPage, _pager.AcquirePagePointer(null, _readingPage), (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
             }
 
             var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();
@@ -95,7 +95,7 @@ namespace Voron.Impl.Journal
                 Debug.Assert(_pager.Disposed == false);
                 Debug.Assert(_recoveryPager.Disposed == false);
 
-                var page = _recoveryPager.Read(_recoveryPage);
+                var page = _recoveryPager.Read(null, _recoveryPage);
 
                 var pagePosition = new RecoveryPagePosition
                 {
@@ -146,7 +146,7 @@ namespace Voron.Impl.Journal
         {
             try
             {
-                LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
+                LZ4.Decode64(_pager.AcquirePagePointer(null, _readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
             }
             catch (Exception e)
             {
@@ -183,7 +183,7 @@ namespace Voron.Impl.Journal
 
         private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, out TransactionHeader* current)
         {
-            current = (TransactionHeader*)_pager.Read(_readingPage).Base;
+            current = (TransactionHeader*)_pager.Read(null, _readingPage).Base;
 
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
             {
@@ -246,7 +246,7 @@ namespace Voron.Impl.Journal
 
         private bool ValidatePagesCrc(StorageEnvironmentOptions options, int compressedPages, TransactionHeader* current)
         {
-            uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * AbstractPager.PageSize);
+            uint crc = Crc.Value(_pager.AcquirePagePointer(null, _readingPage), 0, compressedPages * AbstractPager.PageSize);
 
             if (crc != current->Crc)
             {

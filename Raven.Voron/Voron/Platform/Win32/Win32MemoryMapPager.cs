@@ -137,8 +137,7 @@ namespace Voron.Platform.Win32
 
             if (tx != null)
             {
-                newPagerState.AddRef();
-                tx.AddPagerState(newPagerState);
+                tx.EnsurePagerStateReference(newPagerState);
             }
 
             var tmp = PagerState;
@@ -252,14 +251,7 @@ namespace Voron.Platform.Win32
                 return "Unknown";
             return "MemMap: " + _fileInfo.Name;
         }
-
-        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
-        {
-            ThrowObjectDisposedIfNeeded();
-
-            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
-        }
-
+        
         public override void Sync()
         {
             ThrowObjectDisposedIfNeeded();
@@ -344,7 +336,7 @@ namespace Voron.Platform.Win32
                 list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
                 {
                     NumberOfBytes = (IntPtr)(sizeInPages * AbstractPager.PageSize),
-                    VirtualAddress = AcquirePagePointer(lastPage)
+                    VirtualAddress = AcquirePagePointer(null, lastPage)
                 });
                 lastPage = page.PageNumber;
                 sizeInPages = numberOfPagesInBatch;
@@ -356,7 +348,7 @@ namespace Voron.Platform.Win32
             list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
             {
                 NumberOfBytes = (IntPtr)(sizeInPages * PageSize),
-                VirtualAddress = AcquirePagePointer(lastPage)
+                VirtualAddress = AcquirePagePointer(null, lastPage)
             });
 
             fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = list.ToArray())
@@ -381,7 +373,7 @@ namespace Voron.Platform.Win32
                 // We are prefetching 4 pages that with 4Kb pages is 32Kb but the idea is to really get a few consecutive pages to 
                 // exploit locality regardless of the page size.
                 entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
-                entries[i].VirtualAddress = AcquirePagePointer(pagesToPrefetch[i]);
+                entries[i].VirtualAddress = AcquirePagePointer(null, pagesToPrefetch[i]);
             }
 
             fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entriesPtr = entries)

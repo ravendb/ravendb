@@ -8,8 +8,8 @@ namespace Voron.Impl.Paging
     {
         PagerState PagerState { get; }
 
-        byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
-        Page Read(long pageNumber, PagerState pagerState = null);
+        byte* AcquirePagePointer(Transaction tx, long pageNumber, PagerState pagerState = null);
+        Page Read(Transaction tx, long pageNumber, PagerState pagerState = null);
         void AllocateMorePages(Transaction tx, long newLength);
     
         bool Disposed { get; }
@@ -20,8 +20,6 @@ namespace Voron.Impl.Paging
 
         void Sync();
 
-        PagerState TransactionBegan();
-
         bool ShouldGoToOverflowPage(int len);
 
         int GetNumberOfOverflowPages(int overflowSize);
@@ -30,7 +28,6 @@ namespace Voron.Impl.Paging
         int Write(Page page, long? pageNumber = null);
 
         int WriteDirect(Page start, long pagePosition, int pagesToWrite);
-        Page GetWritable(long pageNumber);
 
         void TryPrefetchingWholeFile();
         void MaybePrefetchMemory(List<Page> sortedPages);

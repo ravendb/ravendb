@@ -118,7 +118,7 @@ namespace Voron.Tryout
                     Console.WriteLine(size);
                     pager.AllocateMorePages(null, size);
                     pager.EnsureContinuous(null, 0, (int) size / AbstractPager.PageSize);
-                    var p = pager.AcquirePagePointer(0);
+                    var p = pager.AcquirePagePointer(null, 0);
                     for (int i = 0; i < size; i++)
                     {
                         *(p + i) = 1;
@@ -142,7 +142,7 @@ namespace Voron.Tryout
                 File.Delete("test.p");
             var pager = new PosixMemoryMapPager("test.p");
             pager.EnsureContinuous(null, 0, 150);
-            var p = pager.AcquirePagePointer(0);
+            var p = pager.AcquirePagePointer(null, 0);
             for (int i = 0; i < 4096 * 150; i++)
             {
                 *(p + i) = 1;
