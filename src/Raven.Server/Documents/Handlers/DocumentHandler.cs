@@ -41,41 +41,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs/$", "GET")]
-        public Task GetOne()
-        {
-            var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
-
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                var document = Database.DocumentsStorage.Get(context, id);
-                if (document == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
-                }
-
-                if (GetLongFromHeaders("If-None-Match") == document.Etag)
-                {
-                    HttpContext.Response.StatusCode = 304;
-                    return Task.CompletedTask;
-                }
-
-                HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-                HttpContext.Response.Headers["ETag"] = document.Etag.ToString();
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteDocument(context, document, metadataOnly: metadataOnly);
-                }
-
-                return Task.CompletedTask;
-            }
-        }
-
         [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
         public Task Get()
         {

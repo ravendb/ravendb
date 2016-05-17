@@ -755,7 +755,7 @@ class appUrl {
     }
 
     static forDocumentRawData(db: database, docId:string): string {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs/" + docId;
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs?id=" + docId;
     }
 
     static forFilesystemFiles(fs: filesystem): string {
