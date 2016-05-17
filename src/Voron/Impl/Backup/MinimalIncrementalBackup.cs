@@ -95,7 +95,7 @@ namespace Voron.Impl.Backup
                             foreach (var pagePosition in reader.TransactionPageTranslation)
                             {
                                 var pageInJournal = pagePosition.Value.JournalPos;
-                                var page = recoveryPager.Read(pageInJournal);
+                                var page = recoveryPager.Read(null, pageInJournal);
                                 pageNumberToPageInScratch[pagePosition.Key] = pageInJournal;
                                 if (page.IsOverflow)
                                 {
@@ -151,7 +151,7 @@ namespace Voron.Impl.Backup
                             int start = 1;
                             foreach (var pageNum in partition)
                             {
-                                var p = recoveryPager.Read(pageNum);
+                                var p = recoveryPager.Read(null, pageNum);
                                 var size = 1;
                                 if (p.IsOverflow)
                                 {
@@ -161,13 +161,13 @@ namespace Voron.Impl.Backup
                                 totalNumberOfPages += size;
                                 finalPager.EnsureContinuous(start, size); //maybe increase size
 
-                                Memory.Copy(finalPager.AcquirePagePointer(start), p.Base, size * env.Options.PageSize);
+                                Memory.Copy(finalPager.AcquirePagePointer(null, start), p.Base, size * env.Options.PageSize);
 
                                 start += size;
                             }
 
 
-                            var txPage = finalPager.AcquirePagePointer(0);
+                            var txPage = finalPager.AcquirePagePointer(null, 0);
                             UnmanagedMemory.Set(txPage, 0, env.Options.PageSize);
                             var txHeader = (TransactionHeader*)txPage;
                             txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
@@ -180,13 +180,13 @@ namespace Voron.Impl.Backup
                             txHeader->TxMarker = TransactionMarker.Commit | TransactionMarker.Merged;
                             txHeader->Compressed = false;
                             txHeader->UncompressedSize = txHeader->CompressedSize = totalNumberOfPages * env.Options.PageSize;
-                            txHeader->Hash = Hashing.XXHash64.Calculate(finalPager.AcquirePagePointer(1), totalNumberOfPages * env.Options.PageSize);
+                            txHeader->Hash = Hashing.XXHash64.Calculate(finalPager.AcquirePagePointer(null, 1), totalNumberOfPages * env.Options.PageSize);
 
                             var entry = package.CreateEntry(string.Format("{0:D19}.merged-journal", nextJournalNum), compression);
                             nextJournalNum++;
                             using (var stream = entry.Open())
                             {
-                                copier.ToStream(finalPager.AcquirePagePointer(0), (totalNumberOfPages + 1) * env.Options.PageSize, stream);
+                                copier.ToStream(finalPager.AcquirePagePointer(null, 0), (totalNumberOfPages + 1) * env.Options.PageSize, stream);
                             }
                         }
 

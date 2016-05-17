@@ -156,7 +156,7 @@ namespace Voron.Impl.Journal
 
                     var pagesToWrite = journalReader
                         .TransactionPageTranslation
-                        .Select(kvp => recoveryPager.Read(kvp.Value.JournalPos))
+                        .Select(kvp => recoveryPager.Read(null, kvp.Value.JournalPos))
                         .OrderBy(x => x.PageNumber)
                         .ToList();
 
@@ -284,7 +284,7 @@ namespace Voron.Impl.Journal
                     PagePosition value;
                     if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                     {
-                        var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos, scratchPagerStates[value.ScratchNumber]);
+                        var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, scratchPagerStates[value.ScratchNumber]);
 
                         Debug.Assert(page.PageNumber == pageNumber);
 
@@ -302,7 +302,7 @@ namespace Voron.Impl.Journal
                 PagePosition value;
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                 {
-                    var page = _env.ScratchBufferPool.ReadPage(value.ScratchNumber, value.ScratchPos);
+                    var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos);
 
                      Debug.Assert(page.PageNumber == pageNumber);
 
@@ -636,7 +636,7 @@ namespace Voron.Impl.Journal
                                                             scratchPagerStates.Add(scratchNumber, pagerState);
                                                         }
 
-                                                        return scratchBufferPool.ReadPage(scratchNumber, x.Value.ScratchPos, pagerState);
+                                                        return scratchBufferPool.ReadPage(transaction, scratchNumber, x.Value.ScratchPos, pagerState);
                                                     })
                                                     .ToList();
 
@@ -675,14 +675,14 @@ namespace Voron.Impl.Journal
                 if (alreadyInWriteTx)
                 {
                     var pagerState = _waj._dataPager.EnsureContinuous(last.PageNumber, numberOfPagesInLastPage);
-                    transaction.AddPagerState(pagerState);
+                    transaction.EnsurePagerStateReference(pagerState);
                 }
                 else
                 {
                     using (var tx = _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                     {
                         var pagerState = _waj._dataPager.EnsureContinuous(last.PageNumber, numberOfPagesInLastPage);
-                        tx.AddPagerState(pagerState);
+                        tx.EnsurePagerStateReference(pagerState);
 
                         tx.Commit();
                     }
@@ -880,18 +880,18 @@ namespace Voron.Impl.Journal
             // The pages required includes the intermediate pages and the required output pages. 
             var pagesRequired = (dataPagesCount + outputBufferInPages);
             var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
-            tx.AddPagerState(pagerState);
+            tx.EnsurePagerStateReference(pagerState);
                         
             // We get the pointer to the compression buffer, which will be the buffer that will hold the whole thing.
-            var outputBuffer = compressionPager.AcquirePagePointer(dataPagesCount);
+            var outputBuffer = compressionPager.AcquirePagePointer(tx, dataPagesCount);
             
             // Where we are going to store the input data continously to compress it afterwards.             
-            var tempBuffer = compressionPager.AcquirePagePointer(0);           
+            var tempBuffer = compressionPager.AcquirePagePointer(tx, 0);           
             var txPages = tx.GetTransactionPages();
             var write = tempBuffer;
             foreach ( var txPage in txPages )
             {
-                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var count = txPage.NumberOfPages * pageSize;
                 Memory.Copy(write, scratchPage, count);
                 write += count;
@@ -911,7 +911,7 @@ namespace Voron.Impl.Journal
             }     
 
             var txHeaderPage = tx.GetTransactionHeaderPage();
-            var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txHeaderPage.ScratchFileNumber, txHeaderPage.PositionInScratchBuffer);
+            var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txHeaderPage.ScratchFileNumber, txHeaderPage.PositionInScratchBuffer);
             var txHeader = (TransactionHeader*)txHeaderBase;
             txHeader->Compressed = true;
             txHeader->CompressedSize = len;

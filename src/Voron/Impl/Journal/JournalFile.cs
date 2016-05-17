@@ -190,7 +190,7 @@ namespace Voron.Impl.Journal
             var txPages = tx.GetTransactionPages();
             foreach (var txPage in txPages)
             {
-                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var pageNumber = scratchPage.PageNumber;
 
                 PagePosition value;

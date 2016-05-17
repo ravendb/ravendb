@@ -112,7 +112,20 @@ namespace Voron.Impl.Paging
 
         protected abstract string GetSourceName();
 
-        public abstract byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
+        public virtual byte* AcquirePagePointer(LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+        {
+            if (Disposed)
+                ThrowAlreadyDisposedException();
+
+            if (pageNumber > NumberOfAllocatedPages)
+                ThrowOnInvalidPageNumber(pageNumber);
+
+            var state = pagerState ?? PagerState;
+
+            tx?.EnsurePagerStateReference(state);
+
+            return state.MapBase + pageNumber * PageSize;
+        }
 
         public abstract void Sync();
 

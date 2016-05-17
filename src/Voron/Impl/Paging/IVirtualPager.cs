@@ -18,7 +18,7 @@ namespace Voron.Impl.Paging
         int NodeMaxSize { get; }
         int PageMaxSpace { get; }
         string DebugInfo { get; }
-        byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
+        byte* AcquirePagePointer(LowLevelTransaction tx, long pageNumber, PagerState pagerState = null);
         void Sync();
         PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages);
         int WriteDirect(byte* p, long pagePosition, int pagesToWrite);
@@ -26,14 +26,14 @@ namespace Voron.Impl.Paging
 
     public static unsafe class VirtualPagerLegacyExtensions
     {
-        public static Page ReadPage(this IVirtualPager pager, long pageNumber, PagerState pagerState = null)
+        public static Page ReadPage(this IVirtualPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
         {
-            return new Page(pager.AcquirePagePointer(pageNumber, pagerState), pager);
+            return new Page(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager);
         }
 
-        public static TreePage Read(this IVirtualPager pager, long pageNumber, PagerState pagerState = null)
+        public static TreePage Read(this IVirtualPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
         {
-            return new TreePage(pager.AcquirePagePointer(pageNumber, pagerState), pager.DebugInfo, pager.PageSize);
+            return new TreePage(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager.DebugInfo, pager.PageSize);
         }
 
         public static bool WillRequireExtension(this IVirtualPager pager, long requestedPageNumber, int numberOfPages)
@@ -132,7 +132,7 @@ namespace Voron.Impl.Paging
                 list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
                 {
                     NumberOfBytes = (IntPtr) (sizeInPages*pager.PageSize),
-                    VirtualAddress = pager.AcquirePagePointer(lastPage)
+                    VirtualAddress = pager.AcquirePagePointer(null, lastPage)
                 });
                 lastPage = page.PageNumber;
                 sizeInPages = numberOfPagesInBatch;
@@ -144,7 +144,7 @@ namespace Voron.Impl.Paging
             list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
             {
                 NumberOfBytes = (IntPtr) (sizeInPages*pager.PageSize),
-                VirtualAddress = pager.AcquirePagePointer(lastPage)
+                VirtualAddress = pager.AcquirePagePointer(null, lastPage)
             });
 
             fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = list.ToArray())

@@ -160,17 +160,6 @@ namespace Voron.Platform.Posix
             return newPager;
         }
 
-
-        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
-        {
-            if (Disposed)
-                ThrowAlreadyDisposedException();
-            if (pageNumber > NumberOfAllocatedPages)
-                ThrowOnInvalidPageNumber(pageNumber);
-
-            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
-        }
-
         public override void Sync()
         {
             //TODO: Is it worth it to change to just one call for msync for the entire file?
