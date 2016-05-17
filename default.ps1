@@ -269,6 +269,7 @@ task CopyMonitor {
     Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\amd64 $build_dir\Output\Monitor\amd64 -recurse
     Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\x86 $build_dir\Output\Monitor\x86 -recurse
     Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.exe $build_dir\Output\Monitor
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Microsoft.Diagnostics.Tracing.TraceEvent.dll  $build_dir\Output\Monitor
 }
 
 task CopySmuggler {
