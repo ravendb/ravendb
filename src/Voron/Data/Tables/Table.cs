@@ -321,7 +321,7 @@ namespace Voron.Data.Tables
 
             byte* pos;
             long id;
-            if (size < ActiveDataSmallSection.MaxItemSize)
+            if (size + sizeof(RawDataSection.RawDataEntrySizes) < ActiveDataSmallSection.MaxItemSize)
             {
                 id = AllocateFromSmallActiveSection(size);
 
