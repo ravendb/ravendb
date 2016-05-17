@@ -1,14 +1,10 @@
 // -----------------------------------------------------------------------
-//  <copyright file="AaronSt.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ValerioBorioni.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Document;
 using Raven.Tests.Common;
-
 using Xunit;
 using System.Net;
 using System.IO;
