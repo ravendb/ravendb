@@ -66,7 +66,7 @@ namespace Voron.Impl.Journal
                     {
                         try
                         {
-                            var dest = _env.ScratchBufferPool.AcquirePagePointer(decompressBuffer.ScratchFileNumber, decompressBuffer.PositionInScratchBuffer);
+                            var dest = _env.ScratchBufferPool.AcquirePagePointer(tx, decompressBuffer.ScratchFileNumber, decompressBuffer.PositionInScratchBuffer);
                             LZ4.Decode64(dataPages, transactionHeader->CompressedSize, dest, transactionHeader->UncompressedSize, true);
                         }
                         catch (Exception e)

@@ -67,7 +67,7 @@ namespace Voron.Impl.Paging
 
         public long NumberOfAllocatedPages { get; protected set; }
 
-        public Page Read(long pageNumber, PagerState pagerState = null)
+        public Page Read(Transaction tx, long pageNumber, PagerState pagerState = null)
         {
             ThrowObjectDisposedIfNeeded();
             
@@ -77,23 +77,10 @@ namespace Voron.Impl.Paging
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
             }
 
-            return new Page(AcquirePagePointer(pageNumber, pagerState), _source, PageSize);
+            return new Page(AcquirePagePointer(tx, pageNumber, pagerState), _source, PageSize);
         }
 
         protected abstract string GetSourceName();
-
-        public virtual Page GetWritable(long pageNumber)
-        {
-            ThrowObjectDisposedIfNeeded();
-            
-            if (pageNumber + 1 > NumberOfAllocatedPages)
-            {
-                throw new InvalidOperationException("Cannot get page number " + pageNumber +
-                                                    " because number of allocated pages is " + NumberOfAllocatedPages);
-            }
-
-            return new Page(AcquirePagePointer(pageNumber), _source, PageSize);
-        }
 
         public virtual void TryPrefetchingWholeFile()
         {
@@ -110,18 +97,19 @@ namespace Voron.Impl.Paging
             // do nothing
         }
 
-        public abstract byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
-
-        public abstract void Sync();
-
-        public virtual PagerState TransactionBegan()
+        public virtual byte* AcquirePagePointer(Transaction tx, long pageNumber, PagerState pagerState = null)
         {
             ThrowObjectDisposedIfNeeded();
 
-            var state = PagerState;
-            state.AddRef();
-            return state;
+            var state = pagerState ?? PagerState;
+
+            if (tx != null)
+                tx.EnsurePagerStateReference(state);
+
+            return state.MapBase + pageNumber * PageSize;
         }
+
+        public abstract void Sync();
 
         public bool WillRequireExtension(long requestedPageNumber, int numberOfPages)
         {

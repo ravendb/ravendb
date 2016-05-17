@@ -439,8 +439,7 @@ namespace Voron
                 }
 
                 _activeTransactions.Add(tx);
-                var state = _dataPager.TransactionBegan();
-                tx.AddPagerState(state);
+                tx.EnsurePagerStateReference(_dataPager.PagerState);
 
                 if (flags == TransactionFlags.ReadWrite)
                 {

@@ -23,7 +23,7 @@ namespace Voron.Impl.Paging
             return "FragmentedPureMemoryPager";
         }
 
-        public override unsafe byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
+        public override unsafe byte* AcquirePagePointer(Transaction tx, long pageNumber, PagerState pagerState = null)
         {
             long page = 0;
             foreach (var buffer in _buffers)

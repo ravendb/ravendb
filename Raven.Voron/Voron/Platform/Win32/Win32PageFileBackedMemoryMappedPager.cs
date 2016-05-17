@@ -46,11 +46,6 @@ namespace Voron.Platform.Win32
             return "MemMapInSystemPage: " +  _name  + " " + _instanceId + ", Size : " + _totalAllocationSize;
         }
 
-        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
-        {
-            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
-        }
-
         public override void Sync()
         {
             // nothing to do here, we are already synced to memory, and we 
@@ -83,8 +78,7 @@ namespace Voron.Platform.Win32
                 newPagerState.AddRef();
                 if (tx != null)
                 {
-                    newPagerState.AddRef();
-                    tx.AddPagerState(newPagerState);
+                    tx.EnsurePagerStateReference(newPagerState);
                 }
                 // we always share the same memory mapped files references between all pages, since to close them 
                 // would be to lose all the memory associated with them

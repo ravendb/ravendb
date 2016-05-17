@@ -98,7 +98,7 @@ namespace Voron.Impl.Backup
                             using (var dataStream = dataPart.Open())
                             {
                                 // now can copy everything else
-                                var firstDataPage = dataPager.Read(0);
+                                var firstDataPage = dataPager.Read(null, 0);
 
                                 copier.ToStream(firstDataPage.Base, AbstractPager.PageSize * allocatedPages, dataStream);
                             }
