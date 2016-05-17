@@ -43,7 +43,7 @@
 
   "frameworks": {
     "netcoreapp1.0": {
-      "compilationOptions": { "define": [ ] },
+      "buildOptions": { "define": [ ] },
       "dependencies": {
         "Microsoft.AspNetCore.Server.Kestrel": "1.0.0-rc2-*",
         "Microsoft.CSharp": "4.0.1-rc2-*",
