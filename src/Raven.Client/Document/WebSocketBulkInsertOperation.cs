@@ -75,24 +75,28 @@ namespace Raven.Client.Document
             {
                 _buffers.Add(new MemoryStream());
             }
-
+            
             _socketConnectionTask = _connection.ConnectAsync(uriBuilder.Uri, this._cts.Token);
             _getServerResponseTask = GetServerResponse();
-            _writeToServerTask = Task.Run(async () => await WriteToServer());
+            _writeToServerTask = Task.Run(async () => await WriteToServer().ConfigureAwait(false));
+            
         }
 
         private async Task<int> WriteToServer()
         {
+            
             const string DebugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
             var buffer = _jsonOperationContext.GetManagedBuffer();
             using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, DebugTag))
             {
+                
                 while (_documents.IsCompleted == false)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-
+                    
                     MemoryStream jsonBuffer;
+
                     try
                     {
                         jsonBuffer = _documents.Take();
@@ -101,6 +105,7 @@ namespace Raven.Client.Document
                     {
                         break;
                     }
+                    
                     using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk, DebugTag,
                         jsonParser, jsonParserState))
@@ -123,12 +128,13 @@ namespace Raven.Client.Document
                         builder.CopyTo(_networkBuffer);
 
                     }
-
+                    
                     if (_networkBuffer.Length > 32 * 1024)
                     {
                         await FlushBufferAsync();
                     }
                 }
+                
                 await FlushBufferAsync();
             }
             return 0;
@@ -145,9 +151,8 @@ namespace Raven.Client.Document
                 result = await _connection.ReceiveAsync(new ArraySegment<byte>(closeBuffer), _cts.Token);
                 if (result.MessageType != WebSocketMessageType.Text)
                     break;
-                _lastHeartbeat = SystemTime.UtcNow;
                 msg = Encoding.UTF8.GetString(closeBuffer, 0, result.Count);
-                Console.WriteLine($"Got {msg} from server");
+                _lastHeartbeat = SystemTime.UtcNow;
             }
             while (msg == "Heartbeat");
 
@@ -189,9 +194,9 @@ namespace Raven.Client.Document
         public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
         {
             _cts.Token.ThrowIfCancellationRequested();
-
+            
             await _socketConnectionTask.ConfigureAwait(false);
-
+            
             if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
             {
                 await _getServerResponseTask;
@@ -209,7 +214,7 @@ namespace Raven.Client.Document
                 // we can only get here if we closed the connection
                 throw new ObjectDisposedException(nameof(WebSocketBulkInsertOperation));
             }
-
+           
             metadata[Constants.MetadataDocId] = id;
             data[Constants.Metadata] = metadata;
 
@@ -226,6 +231,8 @@ namespace Raven.Client.Document
             ArraySegment<byte> segment;
             _networkBuffer.Position = 0;
             _networkBuffer.TryGetBuffer(out segment);
+
+            await _socketConnectionTask.ConfigureAwait(false);
 
             await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
                 .ConfigureAwait(false);
@@ -255,13 +262,10 @@ namespace Raven.Client.Document
                     }
                     catch
                     {
-                        await _connection.CloseOutputAsync(WebSocketCloseStatus.InternalServerError, "Error sending documents",
-                                _cts.Token)
-                                .ConfigureAwait(false);
+                        await SendCloseMessage("Error sending documents").ConfigureAwait(false);
                         throw;
                     }
-                    await _connection.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Finished bulk-insert", _cts.Token)
-                        .ConfigureAwait(false);
+                    await SendCloseMessage("Finished bulk-insert").ConfigureAwait(false);
 
                     //Make sure that if the server goes down 
                     //in the last moment, we do not get stuck here.
@@ -277,8 +281,7 @@ namespace Raven.Client.Document
                             break;
                         if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(30))
                         {
-                            // throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
-                            Console.WriteLine("Waiting too much without heartbeat");
+                            throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
                         }
                     }
                 }
@@ -295,6 +298,23 @@ namespace Raven.Client.Document
                 _unmanagedBuffersPool?.Dispose();
                 _unmanagedBuffersPool = null;
                 GC.SuppressFinalize(this);
+            }
+        }
+
+        private async Task SendCloseMessage(string closeMessage)
+        {
+            if (_connection.State != WebSocketState.Open)
+                return;
+            try
+            {
+                await _connection.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
+                    closeMessage,
+                    _cts.Token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // ignoring this error
             }
         }
 
