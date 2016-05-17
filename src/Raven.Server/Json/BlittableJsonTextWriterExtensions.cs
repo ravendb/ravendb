@@ -820,7 +820,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        private static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
+        public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
         {
             document.EnsureMetadata();
             if (metadataOnly)
