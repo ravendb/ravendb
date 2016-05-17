@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new ArgumentException("You must specify at least one field.", nameof(fields));
         }
 
-        protected override void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
         }

@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase); ;
         }
 
-        protected override void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
 

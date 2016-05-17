@@ -80,12 +80,12 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteInteger((int)LockMode);
             writer.WriteComma();
 
-            PersisFields(context, writer);
+            PersistFields(context, writer);
 
             writer.WriteEndObject();
         }
 
-        protected abstract void PersisFields(TransactionOperationContext context, BlittableJsonTextWriter writer);
+        protected abstract void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer);
 
         protected void PersistMapFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {

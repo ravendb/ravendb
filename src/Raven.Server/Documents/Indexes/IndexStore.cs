@@ -107,12 +107,17 @@ namespace Raven.Server.Documents.Indexes
 
                 Index index;
 
-                if (definition is AutoMapIndexDefinition)
-                    index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition)definition, _documentDatabase);
-                else if (definition is AutoMapReduceIndexDefinition)
-                    index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
+                var indexDefinition = definition as AutoMapIndexDefinition;
+                if (indexDefinition != null)
+                    index = AutoMapIndex.CreateNew(indexId, indexDefinition, _documentDatabase);
                 else
-                    throw new NotImplementedException("Unknown index definition type: ");
+                {
+                    var reduceIndexDefinition = definition as AutoMapReduceIndexDefinition;
+                    if (reduceIndexDefinition != null)
+                        index = AutoMapReduceIndex.CreateNew(indexId, reduceIndexDefinition, _documentDatabase);
+                    else
+                        throw new NotImplementedException("Unknown index definition type: ");
+                }
 
                 if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                     index.Start();
