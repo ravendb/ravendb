@@ -28,6 +28,11 @@ namespace Raven.Abstractions.Exceptions
             }
         }
 
+        public bool TryPeek(out T outObj)
+        {
+            return inner.TryPeek(out outObj);
+        }
+
         public IEnumerator<T> GetEnumerator()
         {
             return inner.GetEnumerator();

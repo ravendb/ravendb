@@ -749,7 +749,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 Reason = Database.AutoTuningTrace.ToList(),
                 LowMemoryCallsRecords = MemoryStatistics.LowMemoryCallRecords.ToList(),
-                CpuUsageCallsRecords = CpuStatistics.cpuUsageCallsRecords.ToList()
+                CpuUsageCallsRecords = CpuStatistics.CpuUsageCallsRecordsQueue.ToList()
             });
         }
 

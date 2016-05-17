@@ -44,7 +44,7 @@ namespace Raven.Database.Config
         private static bool dynamicLoadBalancing;
 
         public static double Average { get; private set; }
-        public static readonly FixedSizeConcurrentQueue<cpuUsageCallsRecord> cpuUsageCallsRecords = new FixedSizeConcurrentQueue<cpuUsageCallsRecord>(100);
+        public static readonly FixedSizeConcurrentQueue<CpuUsageCallsRecord> CpuUsageCallsRecordsQueue = new FixedSizeConcurrentQueue<CpuUsageCallsRecord>(100);
 
         static CpuStatistics()
         {
@@ -91,7 +91,7 @@ namespace Raven.Database.Config
         public static void HandleCpuUsage(float usageInPercents)
         {
 
-            var stats = new cpuUsageCallsRecord
+            var stats = new CpuUsageCallsRecord
             {
                 StartedAt = SystemTime.UtcNow,
             };
@@ -109,33 +109,33 @@ namespace Raven.Database.Config
             if (average < 0)
                 return; // there was an error in getting the CPU stats, ignoring
 
-            var enumerator = cpuUsageCallsRecords.GetEnumerator();
+            CpuUsageCallsRecord cpuUsage;
+            CpuUsageCallsRecordsQueue.TryPeek(out cpuUsage);
 
             if (average >= HighNotificationThreshold)
             {
-
-                if (!enumerator.Current.Reason.Equals("High CPU usage"))
+                if (cpuUsage?.Reason != CpuUsageLevel.HighCpuUsage)
                 {
-                    stats.Reason = "High CPU usage";
-                    cpuUsageCallsRecords.Enqueue(stats);
+                    stats.Reason = CpuUsageLevel.HighCpuUsage;
+                    CpuUsageCallsRecordsQueue.Enqueue(stats);
                 }
                 RunCpuUsageHandlers(handler => handler.HandleHighCpuUsage());
             }
             else if (average < LowNotificationThreshold)
             {
-                if (!enumerator.Current.Reason.Equals("Low CPU usage"))
+                if (cpuUsage?.Reason != CpuUsageLevel.LowCpuUsage)
                 {
-                    stats.Reason = "Low CPU usage";
-                    cpuUsageCallsRecords.Enqueue(stats);
+                    stats.Reason = CpuUsageLevel.LowCpuUsage;
+                    CpuUsageCallsRecordsQueue.Enqueue(stats);
                 }
                 RunCpuUsageHandlers(handler => handler.HandleLowCpuUsage());
             }
             //Normal CPU usage
-            else if (!enumerator.Current.Reason.Equals("Normal CPU usage"))
+            else if (cpuUsage?.Reason != CpuUsageLevel.NormalCpuUsage)
             {
 
-                stats.Reason = "Normal CPU usage";
-                cpuUsageCallsRecords.Enqueue(stats);
+                stats.Reason = CpuUsageLevel.NormalCpuUsage;
+                CpuUsageCallsRecordsQueue.Enqueue(stats);
 
             }
 
