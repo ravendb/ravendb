@@ -40,7 +40,7 @@ namespace Raven.Database.Server
                 throw new InvalidOperationException("Http server is already running");
 
             var schema = config.Encryption.UseSsl ? "https" : "http";
-            var hostName = config.HostName ?? "+";
+            var hostName = config.HostName == null || config.HostName == "localhost" ? "+" : config.HostName;
             var url = string.Format("{0}://{1}:{2}", schema, hostName, config.Port);
             server = WebApp.Start(url, app => //TODO DH: configuration.ServerUrl doesn't bind properly
             {
