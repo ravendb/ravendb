@@ -159,7 +159,7 @@ class documents extends viewModelBase {
         this.createKeyboardShortcut("DELETE", () => this.getDocumentsGrid().deleteSelectedItems(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, D", () => this.copySelectedDocs(), docsPageSelector);
         this.createKeyboardShortcut("Ctrl+C, I",() => this.copySelectedDocIds(), docsPageSelector);
-        this.registerCollectionsResize();
+        //TODO: this.registerCollectionsResize();
     }
 
     deactivate() {

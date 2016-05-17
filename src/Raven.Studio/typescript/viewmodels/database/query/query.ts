@@ -279,7 +279,12 @@ class query extends viewModelBase {
     }
     
     private fetchAllTransformers(db: database): JQueryPromise<any> {
+        this.allTransformers([]);
         var deferred = $.Deferred();
+        deferred.resolve();
+        return deferred;
+        /* TODO:
+        
 
         new getTransformersCommand(db)
             .execute()
@@ -289,6 +294,7 @@ class query extends viewModelBase {
             });
 
         return deferred;
+        */
     }
 
     private fetchAllCollections(db: database): JQueryPromise<any> {
@@ -355,6 +361,7 @@ class query extends viewModelBase {
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
+        /* TODO
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
             var firstIndexName = this.indexes.first().name;
             this.setSelectedIndex(firstIndexName);
@@ -368,7 +375,7 @@ class query extends viewModelBase {
             } else {
                 this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
-        }
+        }*/
     }
 
     focusOnQuery() {
@@ -444,7 +451,11 @@ class query extends viewModelBase {
 
             this.rawJsonUrl(appUrl.forResourceQuery(database) + queryCommand.getUrl());
             this.csvUrl(queryCommand.getCsvUrl());
-            this.exportUrl = ko.computed(() => (appUrl.forResourceQuery(database) + this.csvUrl() + (this.token() ? "&singleUseAuthToken=" + this.token().Token : "")));
+            this.exportUrl = ko.computed(() => {
+                return (appUrl.forResourceQuery(database) +
+                    this.csvUrl() +
+                    (this.token() ? "&singleUseAuthToken=" + this.token().Token : ""));
+            });
 
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator, this.isCacheDisable());
