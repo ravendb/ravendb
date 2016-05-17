@@ -253,8 +253,10 @@ namespace Raven.Server.Web
 
         protected DisposableAction TrackRequestTime()
         {
-            var sw = Stopwatch.StartNew();
-            return new DisposableAction(() => HttpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture)));
+            HttpContext.Response.Headers.Add(Constants.Headers.RequestTime, "1");
+            return null; // TODO [ppekrol] we cannot write Headers after response have started without buffering
+            //var sw = Stopwatch.StartNew();
+            //return new DisposableAction(() => HttpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture)));
         }
     }
 }
