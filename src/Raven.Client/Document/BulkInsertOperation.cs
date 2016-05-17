@@ -73,6 +73,13 @@ namespace Raven.Client.Document
             return id;
         }
 
+        public async Task StoreAsync(RavenJObject doc, RavenJObject metadata, string id)
+        {
+            OnBeforeEntityInsert(id, doc, metadata);
+
+            await Operation.WriteAsync(id, metadata, doc).ConfigureAwait(false);
+        }
+
         public async Task StoreAsync(object entity, string id)
         {
             var metadata = new RavenJObject();
