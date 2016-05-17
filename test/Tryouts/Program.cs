@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -24,7 +24,9 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Data;
+using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Server.Documents.Indexes.Static;
 using Voron;
 using JsonToken = Raven.Imports.Newtonsoft.Json.JsonToken;
 
@@ -44,30 +46,17 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-
-            var store = new DocumentStore
+            var compiler = new StaticIndexCompiler();
+            var indexDefinition = new IndexDefinition
             {
-                Url = "http://localhost:8080/",
-                DefaultDatabase = "BenchmarkDB"
+                Name = "Orders_ByName",
+                Maps =
+                {
+                    "from order in docs.Orders select new { order.Name };"
+                }
             };
-            store.Initialize();
-            
-            store.DatabaseCommands.GlobalAdmin.DeleteDatabase("BenchmarkDB", true);
-            createNewDB(store);
 
-            var importTask = importData(store);
-           
-            try
-            {
-                importTask.Wait();
-            }
-            catch (Exception)
-            {
-                Console.WriteLine(importTask.Exception);
-            }
-
-
-
+            compiler.Compile(indexDefinition);
         }
 
         private static void createNewDB(DocumentStore store)

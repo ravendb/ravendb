@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using Microsoft.CodeAnalysis;
@@ -17,60 +22,76 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly SyntaxTrivia _tab = SyntaxFactory.Whitespace(@"    ");
 
+        private static  MetadataReference[] references =
+            {
+                MetadataReference.CreateFromFile(typeof (object).GetTypeInfo().Assembly.Location),
+                MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
+                MetadataReference.CreateFromFile(typeof (Enumerable).GetTypeInfo().Assembly.Location),
+                MetadataReference.CreateFromFile(typeof (StaticIndexCompiler).GetTypeInfo().Assembly.Location),
+            };
+
+        private static SyntaxTree baseSyntaxTree = CSharpSyntaxTree.ParseText(@"
+
+using System;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
+
+namespace Raven.Server.Documents.Indexes.Static.Generated
+{
+    public class WillBeReplaced : StaticIndexBase
+    {
+        public WillBeReplaced()
+        {
+        }
+    }
+}
+
+");
+
+
         public void Compile(IndexDefinition definition)
         {
-            var name = GetCSharpSafeName(definition);
-            var className = SyntaxFactory.Identifier(SyntaxTriviaList.Empty, name, SyntaxTriviaList.Empty);
-            var classModifiers = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.PublicKeyword, SyntaxTriviaList.Create(SyntaxFactory.Space)));
+            var cSharpSafeName = GetCSharpSafeName(definition);
+            var syntaxNode = new ChangeClassName(cSharpSafeName).Visit(baseSyntaxTree.GetRoot());
 
-            var classKeyword = SyntaxFactory.Token(
-                SyntaxTriviaList.Empty,
-                SyntaxKind.ClassKeyword,
-                SyntaxTriviaList.Create(SyntaxFactory.Space));
+            var syntaxTree = SyntaxFactory.SyntaxTree(syntaxNode);
 
-            var baseClassName = SyntaxFactory.IdentifierName(SyntaxFactory.Identifier(SyntaxTriviaList.Empty, nameof(StaticIndexBase), SyntaxTriviaList.Create(SyntaxFactory.LineFeed)));
-            var baseList = SyntaxFactory.BaseList(SyntaxFactory.SingletonSeparatedList<BaseTypeSyntax>(SyntaxFactory.SimpleBaseType(baseClassName)))
-                .WithColonToken(SyntaxFactory.Token(SyntaxTriviaList.Create(SyntaxFactory.Space), SyntaxKind.ColonToken, SyntaxTriviaList.Create(SyntaxFactory.Space)));
+            CSharpCompilation compilation = CSharpCompilation.Create(
+                assemblyName: definition.Name + ".index.dll",
+                syntaxTrees: new[] { syntaxTree },
+                references: references,
+                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-            var @class = SyntaxFactory
-                .ClassDeclaration(className)
-                .WithModifiers(classModifiers)
-                .WithKeyword(classKeyword)
-                .WithBaseList(baseList)
-                .WithOpenBraceToken(SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.OpenBraceToken, SyntaxTriviaList.Create(SyntaxFactory.LineFeed)))
-                .WithMembers(GenerateMembers(name, definition))
-                .WithCloseBraceToken(SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.CloseBraceToken, SyntaxTriviaList.Create(SyntaxFactory.LineFeed)));
+            var asm = new MemoryStream();
+            var pdb = new MemoryStream();
 
-            var z = @class.ToFullString();
-        }
+            var result = compilation.Emit(asm, pdb);
 
-        private SyntaxList<MemberDeclarationSyntax> GenerateMembers(string className, IndexDefinition definition)
-        {
-            var body = SyntaxFactory.Block()
-                .WithOpenBraceToken(SyntaxFactory.Token(SyntaxTriviaList.Empty, SyntaxKind.OpenBraceToken, SyntaxTriviaList.Create(SyntaxFactory.LineFeed)))
-                .WithStatements(GenerateStatements(definition))
-                .WithCloseBraceToken(SyntaxFactory.Token(SyntaxTriviaList.Create(_tab), SyntaxKind.CloseBraceToken, SyntaxTriviaList.Create(SyntaxFactory.LineFeed)))
-                .WithLeadingTrivia(SyntaxFactory.LineFeed, _tab);
+            if (result.Success == false)
+            {
+                IEnumerable<Diagnostic> failures = result.Diagnostics.Where(diagnostic =>
+                 diagnostic.IsWarningAsError ||
+                 diagnostic.Severity == DiagnosticSeverity.Error);
 
-            var ctor = SyntaxFactory.ConstructorDeclaration(SyntaxFactory.Identifier(SyntaxTriviaList.Empty, className, SyntaxTriviaList.Empty))
-                .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxTriviaList.Create(_tab), SyntaxKind.PublicKeyword, SyntaxTriviaList.Create(SyntaxFactory.Space))))
-                .WithBody(body);
+                var sb = new StringBuilder();
+                sb.AppendLine($"Failed to compile index {definition.Name}");
+                sb.AppendLine();
+                foreach (Diagnostic diagnostic in failures)
+                {
+                    sb.AppendLine($"{diagnostic.Id}: {diagnostic.GetMessage(CultureInfo.InvariantCulture)}");
+                }
 
-            var members = new List<MemberDeclarationSyntax> { ctor };
+                throw new IndexCompilationException(sb.ToString());
+            }
+            asm.Position = 0;
+            pdb.Position = 0;
+            var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm,pdb);
 
-            return SyntaxFactory.List(members);
-        }
+            var type = indexAssembly.GetType("Raven.Server.Documents.Indexes.Static.Generated." + cSharpSafeName);
 
-        private SyntaxList<StatementSyntax> GenerateStatements(IndexDefinition definition)
-        {
-            var mapFunctions = HandleMaps(definition);
+            var index = (StaticIndexBase)Activator.CreateInstance(type);
 
-            return SyntaxFactory.List(mapFunctions);
-        }
 
-        private IEnumerable<StatementSyntax> HandleMaps(IndexDefinition definition)
-        {
-            return definition.Maps.SelectMany(map => HandleMap(map, definition));
         }
 
         private List<StatementSyntax> HandleMap(string map, IndexDefinition definition)
@@ -106,6 +127,21 @@ namespace Raven.Server.Documents.Indexes.Static
         private string GetCSharpSafeName(IndexDefinition definition)
         {
             return $"Index_{Regex.Replace(definition.Name, @"[^\w\d]", "_")}";
+        }
+    }
+
+    internal class ChangeClassName : CSharpSyntaxRewriter
+    {
+        private readonly string _name;
+
+        public ChangeClassName(string name)
+        {
+            _name = name;
+        }
+
+        public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
+        {
+            return node.WithIdentifier(SyntaxFactory.Identifier(_name));
         }
     }
 
