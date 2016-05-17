@@ -34,7 +34,6 @@ namespace Raven.Database.FileSystem.Controllers
     {
 
         [HttpGet]
-        [RavenRoute("studio-tasks/check-sufficient-diskspace")]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/check-sufficient-diskspace")]
         public async Task<HttpResponseMessage> CheckSufficientDiskspaceBeforeImport(long fileSize)
         {
