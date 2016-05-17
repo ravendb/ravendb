@@ -153,8 +153,7 @@ class shell extends viewModelBase {
     static clusterMode = ko.observable<boolean>(false);
     isInCluster = ko.computed(() => shell.clusterMode());
     serverBuildVersion = ko.observable<serverBuildVersionDto>();
-    static serverMainVersion = ko.observable<number>(4);
-    static serverMinorVersion = ko.observable<number>(5);
+    static serverMainVersion = ko.observable<number>(3);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
    
     windowHeightObservable: KnockoutObservable<number>;
@@ -1071,12 +1070,11 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto) => {
                 this.serverBuildVersion(serverBuildResult);
 
-                var assemblyVersion = serverBuildResult.ProductVersion.split("/")[0].trim();
-                var assemblyVersionTokens = assemblyVersion.split(".");
-                shell.serverMainVersion(parseInt(assemblyVersionTokens[0]));
-                shell.serverMinorVersion(parseInt(assemblyVersionTokens[1]));
-
                 var currentBuildVersion = serverBuildResult.BuildVersion;
+                if (currentBuildVersion !== 13) {
+                    shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+                }
+
                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
                     new getLatestServerBuildVersionCommand(true, 35000, 39999) //pass false as a parameter to get the latest unstable
                         .execute()
