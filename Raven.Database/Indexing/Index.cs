@@ -565,6 +565,7 @@ namespace Raven.Database.Indexing
                         {
                             //do not add error if this exception happens,
                             //since this exception can happen during normal code-flow
+                            throw;
                         }
                         catch (Exception e)
                         {
