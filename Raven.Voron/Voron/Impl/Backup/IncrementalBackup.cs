@@ -283,7 +283,7 @@ namespace Voron.Impl.Backup
                                         foreach (var translation in reader.TransactionPageTranslation)
                                         {
                                             var pageInJournal = translation.Value.JournalPos;
-                                            var page = recoveryPager.Read(pageInJournal);
+                                            var page = recoveryPager.Read(null, pageInJournal);
                                             pagesToWrite[translation.Key] = page;
 
                                             if (page.IsOverflow)

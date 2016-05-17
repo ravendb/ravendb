@@ -209,8 +209,7 @@ namespace Voron.Impl.Scratch
 
                     try
                     {
-                        current.File.PagerState.AddRef();
-                        tx.AddPagerState(current.File.PagerState);
+                        tx.EnsurePagerStateReference(_current.File.PagerState);
 
                         return current.File.Allocate(tx, numberOfPages, size);
                     }
@@ -311,25 +310,25 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page ReadPage(int scratchNumber, long p, PagerState pagerState = null)
+        public Page ReadPage(Transaction tx, int scratchNumber, long p, PagerState pagerState = null)
         {
             ScratchBufferItem item = lastScratchBuffer;
             if (item.Number != scratchNumber)
                 item = _scratchBuffers[scratchNumber];
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.ReadPage(p, pagerState);
+            return bufferFile.ReadPage(tx, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointer(int scratchNumber, long p)
+        public byte* AcquirePagePointer(Transaction tx, int scratchNumber, long p)
         {
             ScratchBufferItem item = lastScratchBuffer;
             if (item.Number != scratchNumber)
                 item = _scratchBuffers[scratchNumber];
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.AcquirePagePointer(p);       
+            return bufferFile.AcquirePagePointer(tx, p);       
         }
     }
 }
