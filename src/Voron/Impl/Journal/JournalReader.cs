@@ -83,7 +83,7 @@ namespace Voron.Impl.Journal
             if (current->Compressed)
             {
                 _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount));
-                outputPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
+                outputPage = _recoveryPager.AcquirePagePointer(null, _recoveryPage);
                 UnmanagedMemory.Set(outputPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
 
                 // Compressed transactions will put the TransactionHeader in the same page of the data. 
@@ -93,10 +93,10 @@ namespace Voron.Impl.Journal
             else
             {
                 _recoveryPager.EnsureContinuous(_recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
-                outputPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
+                outputPage = _recoveryPager.AcquirePagePointer(null, _recoveryPage);
                 UnmanagedMemory.Set(outputPage, 0, (current->PageCount + current->OverflowPageCount) * options.PageSize);
 
-                Memory.Copy(outputPage, _pager.AcquirePagePointer(_readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
+                Memory.Copy(outputPage, _pager.AcquirePagePointer(null, _readingPage), (current->PageCount + current->OverflowPageCount) * options.PageSize);
             }
 
             var tempTransactionPageTranslaction = new Dictionary<long, RecoveryPagePosition>();
@@ -106,7 +106,7 @@ namespace Voron.Impl.Journal
                 Debug.Assert(_pager.Disposed == false);
                 Debug.Assert(_recoveryPager.Disposed == false);
 
-                var page = _recoveryPager.Read(_recoveryPage);
+                var page = _recoveryPager.Read(null, _recoveryPage);
 
                 var pagePosition = new RecoveryPagePosition
                 {
@@ -157,7 +157,7 @@ namespace Voron.Impl.Journal
         {
             try
             {
-                byte* dataPtr = _pager.AcquirePagePointer(_readingPage) + sizeof(TransactionHeader);
+                byte* dataPtr = _pager.AcquirePagePointer(null, _readingPage) + sizeof(TransactionHeader);
                 LZ4.Decode64(dataPtr, current->CompressedSize, outputPage, current->UncompressedSize, true);
             }
             catch (Exception e)
@@ -195,7 +195,7 @@ namespace Voron.Impl.Journal
 
         private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, out TransactionHeader* current)
         {
-            current = (TransactionHeader*)_pager.Read(_readingPage).Base;
+            current = (TransactionHeader*)_pager.Read(null, _readingPage).Base;
 
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
             {
@@ -258,7 +258,7 @@ namespace Voron.Impl.Journal
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
             // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
-            byte* dataPtr = _pager.AcquirePagePointer(_readingPage) + (current->Compressed == true ? sizeof(TransactionHeader) : 0);
+            byte* dataPtr = _pager.AcquirePagePointer(null, _readingPage) + (current->Compressed == true ? sizeof(TransactionHeader) : 0);
 
             ulong hash = Hashing.XXHash64.Calculate(dataPtr, current->Compressed == true ? current->CompressedSize : current->UncompressedSize);
             if (hash != current->Hash)

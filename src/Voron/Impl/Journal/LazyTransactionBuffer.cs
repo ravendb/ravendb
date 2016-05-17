@@ -53,7 +53,7 @@ namespace Voron.Impl.Journal
         {
             if (_firstPositionInJournalFile != null)
             {
-                journalFile.WriteBuffer(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(0),
+                journalFile.WriteBuffer(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),
                     _lastUsedPage * _options.DataPager.PageSize);
             }
 

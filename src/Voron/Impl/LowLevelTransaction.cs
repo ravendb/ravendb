@@ -144,7 +144,7 @@ namespace Voron.Impl
         private void InitTransactionHeader()
         {
             var allocation = _env.ScratchBufferPool.Allocate(this, 1);
-            var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
+            var page = _env.ScratchBufferPool.ReadPage(this, allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
 
             _transactionHeaderPage = allocation;
 
@@ -254,12 +254,12 @@ namespace Voron.Impl
                     }
                 }
 
-                p = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
                 Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
             }
             else
             {
-                p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.ReadPage(pageNumber);
+                p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.ReadPage(this, pageNumber);
                 Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
             }            
 
@@ -353,7 +353,7 @@ namespace Voron.Impl
             if (numberOfPages > 1)
                 _dirtyOverflowPages.Add(pageNumber + 1, numberOfPages - 1);
 
-            var newPage = _env.ScratchBufferPool.ReadPage(pageFromScratchBuffer.ScratchFileNumber,
+            var newPage = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
@@ -390,7 +390,7 @@ namespace Voron.Impl
                 _dirtyOverflowPages.Remove(pageNumber + i);
                 _dirtyPages.Add(pageNumber + i);
 
-                var newPage = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer + i);
+                var newPage = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer + i);
                 newPage.PageNumber = pageNumber + i;
                 newPage.Flags = PageFlags.Single;
             }
@@ -403,7 +403,7 @@ namespace Voron.Impl
             var pageNums = new HashSet<long>();
             foreach (var txPage in _transactionPages)
             {
-                var scratchPage = Environment.ScratchBufferPool.ReadPage(txPage.ScratchFileNumber,
+                var scratchPage = Environment.ScratchBufferPool.ReadPage(this, txPage.ScratchFileNumber,
                     txPage.PositionInScratchBuffer);
                 if (pageNums.Add(scratchPage.PageNumber) == false)
                     throw new InvalidDataException("Duplicate page in transaction: " + scratchPage.PageNumber);
@@ -563,13 +563,13 @@ namespace Voron.Impl
         }
 
 
-        internal void AddPagerState(PagerState state)
+        internal void EnsurePagerStateReference(PagerState state)
         {
             if (state == null)
                 return;
 
-            state.AddRef();
-            _pagerStates.Add(state);
+            if (_pagerStates.Add(state))
+                state.AddRef();
         }
     }
 }

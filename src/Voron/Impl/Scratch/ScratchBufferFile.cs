@@ -58,7 +58,7 @@ namespace Voron.Impl.Scratch
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
         {
             var pagerState = _scratchPager.EnsureContinuous(_lastUsedPage, sizeToAllocate);
-            tx.AddPagerState(pagerState);
+            tx.EnsurePagerStateReference(pagerState);
 
             var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, sizeToAllocate, numberOfPages);
 
@@ -200,14 +200,14 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public Page ReadPage(long p, PagerState pagerState = null)
+        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
         {
-            return new Page(_scratchPager.AcquirePagePointer(p, pagerState), _scratchPager);
+            return new Page(_scratchPager.AcquirePagePointer(tx, p, pagerState), _scratchPager);
         }
 
-        public byte* AcquirePagePointer(long p)
+        public byte* AcquirePagePointer(LowLevelTransaction tx, long p)
         {
-            return _scratchPager.AcquirePagePointer(p);
+            return _scratchPager.AcquirePagePointer(tx, p);
         }
 
         public long ActivelyUsedBytes(long oldestActiveTransaction)

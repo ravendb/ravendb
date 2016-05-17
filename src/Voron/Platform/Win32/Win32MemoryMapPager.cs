@@ -236,17 +236,6 @@ namespace Voron.Platform.Win32
             return "MemMap: " + _fileInfo.FullName;
         }
 
-        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
-        {
-            if (Disposed)
-                ThrowAlreadyDisposedException();
-
-            if (pageNumber > NumberOfAllocatedPages)
-                ThrowOnInvalidPageNumber(pageNumber);
-
-            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
-        }
-
         public override void Sync()
         {
             if (Disposed)
