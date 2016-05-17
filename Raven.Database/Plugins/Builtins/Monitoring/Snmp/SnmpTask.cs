@@ -76,14 +76,11 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("monitoring", out monitoring))
             {
                 bool active;
-                if (bool.TryParse(monitoring, out active))
+                if (bool.TryParse(monitoring, out active) && active)
                     return true;
             }
-            if (ValidateLicense.CurrentLicense.Status.Equals("AGPL - Open Source"))
-            {
-                return true;
-            }
-            return false;
+
+            return ValidateLicense.CurrentLicense.Status.Equals("AGPL - Open Source");
         }
 
         private void AddDatabaseIfNecessary(string databaseName)
