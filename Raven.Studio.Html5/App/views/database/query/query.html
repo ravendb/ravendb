@@ -141,7 +141,7 @@
     <br />
     <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set.</div>
 
-    <form class="form-horizontal" role="form" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <form class="form-horizontal container-fluid" role="form" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <div class="form-group">
             <label id="indexQueryLabelContainer" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index Query" data-trigger="hover">
                 <span id="indexQueryLabel" class="help-cursor">
@@ -162,76 +162,81 @@
             <label class="col-sm-1 control-label">
                 Sort By
             </label>
-            <div class="col-md-9" data-bind="foreach: sortBys">
-                <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5" style="padding-left: 0">
-                    <div class="panel panel-default">
-                        <div class="panel-body">
-                            <div>
-                                <button type="button" class="close" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">
-                                    <i class="fa fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="col-md-11">
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                        <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
+            <div class="col-md-9" >
+                <div class="row" data-bind="foreach: sortBys">
+                    <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5">
+                        <div class="panel panel-default">
+                            <div class="panel-body">
+                                <div>
+                                    <button type="button" class="close" data-bind="click: $root.removeSortBy.bind($root, $data)" title="Remove this sort from the query">
+                                        <i class="fa fa-times"></i>
                                     </button>
-                                    <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
-                                        <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
-                                    </ul>
                                 </div>
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                        <span data-bind="visible: isAscending() && !isRange()">Ascending</span>
-                                        <span data-bind="visible: !isAscending() && !isRange()">Descending</span>
-                                        <span data-bind="visible: isAscending() && isRange()">Range Ascending</span>
-                                        <span data-bind="visible: !isAscending() && isRange()">Range Descending</span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" role="menu">
-                                        <li data-bind="if: !(isAscending() && isRange() == false)">
-                                            <a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(false); }">Ascending</a>
-                                        </li>
-                                        <li data-bind="if: !(isAscending() == false && isRange() == false)">
-                                            <a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Descending</a>
-                                        </li>
-                                        <li data-bind="if: !(isAscending() && isRange()) ">
-                                            <a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(true); }">Range Ascending</a>
-                                        </li>
-                                        <li data-bind="if: !(isAscending() == false && isRange())">
-                                            <a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(true); }">Range Descending</a>
-                                        </li>
-                                    </ul>
+                                <div class="col-md-11">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="text: fieldNameOrDefault"></span> <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.indexFields">
+                                            <li><a href="#" data-bind="text: $data, click: $parent.fieldName.bind($data)"></a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="visible: isAscending() && !isRange()">Ascending</span>
+                                            <span data-bind="visible: !isAscending() && !isRange()">Descending</span>
+                                            <span data-bind="visible: isAscending() && isRange()">Range Ascending</span>
+                                            <span data-bind="visible: !isAscending() && isRange()">Range Descending</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li data-bind="if: !(isAscending() && isRange() == false)">
+                                                <a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(false); }">Ascending</a>
+                                            </li>
+                                            <li data-bind="if: !(isAscending() == false && isRange() == false)">
+                                                <a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(false); }">Descending</a>
+                                            </li>
+                                            <li data-bind="if: !(isAscending() && isRange()) ">
+                                                <a href="#" data-bind="click: function() { $data.isAscending(true); $data.isRange(true); }">Range Ascending</a>
+                                            </li>
+                                            <li data-bind="if: !(isAscending() == false && isRange())">
+                                                <a href="#" data-bind="click: function() { $data.isAscending(false); $data.isRange(true); }">Range Descending</a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
+                                <div class="clearfix"></div>
                             </div>
-                            <div class="clearfix"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-group" data-bind="visible: transformer() != null">
+        <div class="form-group" data-bind="visible: transformer()">
             <label id="indexQueryLabelContainer" style="overflow-x: hidden; text-overflow: ellipsis;" class="col-md-1 control-label">
                 <span>Transformer</span>
             </label>
             <div class="col-xs-12 col-sm-9 col-md-6 col-lg-3">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        <div class="btn-group col-md-11">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="text: transformer() && transformer().name() ? transformer().name() : 'Select a transformer'"></span> <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
-                                <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>
-                            </ul>
+                        <div class="row">
+                            <div class="btn-group col-md-11">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    <span data-bind="text: transformer() && transformer().name() ? transformer().name() : 'Select a transformer'"></span> <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.allTransformers">
+                                    <li><a href="#" data-bind="text: name, click: $root.selectTransformer.bind($root, $data)"></a></li>
+                                </ul>
 
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="close" data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <button type="button" class="close" data-bind="click: $root.removeTransformer.bind($root)" title="Remove this transformer from the query">
-                                <i class="fa fa-times"></i>
-                            </button>
-                        </div>
+                        
                         <div class="clearfix"></div>
                     </div>
                     <!-- ko if: typeof transformer() !== "undefined" && transformer() != null && transformer().extractInputs().length > 0 -->
@@ -240,7 +245,7 @@
                             <div class="clearfix"></div>
                             <div id="transformerParams" data-bind="foreach: transformer().extractInputs()">
                                 <div class="form-group row">
-                                    <label data-bind="text: 'Parameter: '+$data.name" class="control-label"></label>
+                                    <label data-bind="text: 'Parameter: '+ $data.name" class="control-label"></label>
                                     <input type="text" class="form-control transformer_param_flag" data-bind="attr: { name: $data.name, required: $data.hasDefault ? null : '' }, event: { change: $root.runQuery.bind($root) }" />
                                 </div>
                             </div>
@@ -250,16 +255,15 @@
                 </div>
             </div>
         </div>
-        <!--<ul class="list-group" data-bind="foreach: relatedDocumentHrefs">
-            <li class="list-group-item"><a data-bind="text:$data.id, attr:{href:$data.href}"></a></li>
-        </ul>-->
+
         <!-- Warning should apear here-->
         <div class="form-group" data-bind="visible:containsAsterixQuery()">
-            <span class="fa fa-warning col-md-offset-1 text-danger">  The Query contains '*.*', did you intend to use '*:*' ?</span>
+            <span class="col-md-offset-1 col-md-10 text-danger"><i class="fa fa-warning"></i>  The Query contains '*.*', did you intend to use '*:*' ?</span>
         </div>
         <div class="form-group" data-bind="visible:isWarning()">
-            <span class="fa fa-warning col-md-offset-1 text-danger" data-bind="text:warningText()"></span>
+            <span class="col-md-offset-1 col-md-10 text-danger" ><i class="fa fa-warning"></i> <span data-bind="text:warningText()"></span></span>
         </div>
+
         <!-- query predefined filters should apear here -->
         <div class="form-group">
             <label class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index Query Search Filters" data-trigger="hover">
@@ -267,7 +271,7 @@
                     Query Filters
                 </span>            
             </label>
-            <div class="row" style="padding: 0 10px 0 10px">
+            <div class="col-md-11">
                 <div class="btn-group">
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span data-bind="text:searchField()"></span>
@@ -282,32 +286,33 @@
                     <button id="inCollection" type="button" class="btn btn-default" data-bind="click: fieldValueInMethod, enable: searchField() !=='Select field'">In filter</button>
                 </div>
             </div>
+           
         </div>            
-            <div class="form-group">
-                <div class="form-group" data-bind="if:(isTestIndex() == false && !!$root.queryStats() && $root.queryStats().IsStale == true)">
-                    <span class="col-md-offset-1 text-danger">Index is stale, possibly not all results presented</span>
-                </div>
+        <div class="form-group">
+            <div class="form-group" data-bind="if:(isTestIndex() == false && !!$root.queryStats() && $root.queryStats().IsStale == true)">
+                <span class="col-md-offset-1 text-danger">Index is stale, possibly not all results presented</span>
             </div>
-            <div class="form-group">
-                <div class="form-group col-md-12">
-                    <label id="indexQueryLabelContainer" class="control-label col-md-1">
-                        Results
-                    </label>
-                    <div class="col-md-11 query-results">
-                        <div id="queryResultsPanel" class="panel panel-default">
-                            <div class="panel-body" data-bind="visible: isLoading">
-                                <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+        </div>
+        <div class="form-group">
+            <div class="form-group col-md-12">
+                <label id="indexQueryLabelContainer" class="control-label col-md-1">
+                    Results
+                </label>
+                <div class="col-md-11 query-results">
+                    <div id="queryResultsPanel" class="panel panel-default">
+                        <div class="panel-body" data-bind="visible: isLoading">
+                            <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
+                                <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>
                             </div>
-                            <div class="panel-body">
-                                <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
-                                    <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>
-                                </div>
-                                <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce: isIndexMapReduce, collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
-                            </div>
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce: isIndexMapReduce, collections: collections, contextMenuOptions: ['copyitems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
                         </div>
                     </div>
                 </div>
-
             </div>
-</form>
+
+        </div>
+    </form>
 </div>

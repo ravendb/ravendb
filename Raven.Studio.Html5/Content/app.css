@@ -9026,6 +9026,9 @@ a.global_help_link:focus {
 .panel.panel-wo-margin {
   margin: 0;
 }
+.panel-group.panel-group-wo-margin {
+  margin: 0;
+}
 /* Override default awesome bootstrap checkbox style - start */
 .checkbox label::after {
   padding-top: 3px !important;

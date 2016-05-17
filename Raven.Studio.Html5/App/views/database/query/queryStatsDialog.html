@@ -6,45 +6,47 @@
         <h4 class="modal-title">Query Stats</h4>
     </div>
     <div class="modal-body" data-bind="with: queryStats">
-
         
-        <div class="row">
-            <div>
-                <div class="form-group">
-                    <div class="row">
-                        <strong class="col-sm-3">Total Results:</strong>
-                        <span class="col-sm-9" data-bind="text: !!TotalResults ? TotalResults.toLocaleString() : 0"></span>
-                    </div>
-                    <div class="row">
-                        <strong class="col-sm-3">Status</strong>
-                        <span class="col-sm-9" data-bind="text: IsStale === true ? 'Stale' : 'Up to date'"></span>
-                    </div>
-                    <div class="row">
-                        <strong class="col-sm-3">Duration:</strong>
-                        <span class="col-sm-9" data-bind="text: ((typeof (DurationMilliseconds) !== 'undefined') ? DurationMilliseconds : '??? ') + 'ms'"></span>
-                    </div>
-                    <div class="row">
-                        <strong class="col-sm-3">Index:</strong>
-                        <span class="col-sm-9">
-                            <a target='_blank' data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl}">Click Here</a>
-                        </span>
-                    </div>
-                    <div class="row" data-bind="visible:$root.didDynamicChangeIndex === true">
-                        <strong class="col-sm-3">
-                            Index Explain:
-                        </strong>
-                        <span class="col-sm-9">
-                            <a target='_blank' data-bind="attr: { href: $root.rawJsonUrl  + '&explain=true'}">Click Here</a>
-                        </span>
-                    </div>
-                    <div class="row">
-                        <strong class="col-sm-3">ETag:</strong>
-                        <span class="col-sm-9" data-bind="text: ResultEtag"></span>
-                    </div>
+        <form class="form-horizontal" role="form">
+            <div class="form-group">
+                <label class="col-md-3 control-label">Total Results:</label>
+                <div class="col-md-9">
+                    <p class="form-control-static" data-bind="text: !!TotalResults ? TotalResults.toLocaleString() : 0"></p>
                 </div>
-               
             </div>
-        </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Status</label>
+                <div class="col-md-9">
+                    <p class="form-control-static" data-bind="text: IsStale ? 'Stale' : 'Up to date'"></p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Duration:</label>
+                <div class="col-md-9">
+                    <p class="form-control-static" data-bind="text: ((typeof (DurationMilliseconds) !== 'undefined') ? DurationMilliseconds : '??? ') + 'ms'"></p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Index:</label>
+                <div class="col-md-9">
+                    <p class="form-control-static"><a target="_blank" data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl}">Click Here</a></p>
+                </div>
+            </div>
+            <div class="form-group" data-bind="visible: $root.didDynamicChangeIndex">
+                <label class="col-md-3 control-label">Index Explain:</label>
+                <div class="col-md-9">
+                    <p class="form-control-static">
+                        <a target='_blank' data-bind="attr: { href: $root.rawJsonUrl  + '&explain=true'}">Click Here</a>
+                    </p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">ETag:</label>
+                <div class="col-md-9">
+                    <p class="form-control-static" data-bind="text: ResultEtag"></p>
+                </div>
+            </div>
+        </form>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-bind="click: cancel">OK</button>
