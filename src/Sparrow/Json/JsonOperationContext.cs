@@ -124,8 +124,7 @@ namespace Sparrow.Json
         /// <summary>
         /// Generates new unmanaged stream. Should be disposed at the end of the usage.
         /// </summary>
-        /// <param name="documentId"></param>
-        public UnmanagedWriteBuffer GetStream(string documentId)
+        public UnmanagedWriteBuffer GetStream()
         {
             return new UnmanagedWriteBuffer(this, GetMemory(_lastStreamSize));
         }

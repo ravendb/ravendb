@@ -27,7 +27,7 @@ namespace Sparrow.Json
         {
             _reader = reader;
             _debugTag = debugTag;
-            _stream = context.GetStream(debugTag);
+            _stream = context.GetStream();
             _context = context;
             _mode = mode;
             _state = state;
