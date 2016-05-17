@@ -4,6 +4,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
@@ -11,6 +13,8 @@ using System.Threading.Tasks;
 using FastTests.Client.BulkInsert;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Voron.RawData;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Client;
@@ -46,17 +50,73 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
+
+            //             MetadataReference[] References =
+            //            {
+            //                MetadataReference.CreateFromFile(typeof (object).GetTypeInfo().Assembly.Location),
+            //                MetadataReference.CreateFromFile(typeof (Enumerable).GetTypeInfo().Assembly.Location),
+            //                MetadataReference.CreateFromFile(typeof (DynamicAttribute).GetTypeInfo().Assembly.Location),
+            //                MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
+            //                MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
+            //            };
+
+            //            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(@"
+            //public class MyClass
+            //{
+            //    public void Method(dynamic a)
+            //    {
+            //        a.Run();
+            //    }
+            //}
+            //");
+            //            CSharpCompilation compilation = CSharpCompilation.Create(
+            //                 assemblyName: "test.dll",
+            //                 syntaxTrees: new[] { syntaxTree },
+            //                 references: References,
+            //                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            //                 );
+            //            var emitResult = compilation.Emit(new MemoryStream());
+            //            foreach (var diagnostic in emitResult.Diagnostics)
+            //            {
+            //                Console.WriteLine(diagnostic.ToString());
+            //            }
+            //            return;
+
+
             var compiler = new StaticIndexCompiler();
             var indexDefinition = new IndexDefinition
             {
                 Name = "Orders_ByName",
                 Maps =
                 {
-                    "from order in docs.Orders select new { order.Name };"
+                    "from order in docs.Orders select new { Mame = order.Name.ToUpper() };"
                 }
             };
 
-            compiler.Compile(indexDefinition);
+            var index = compiler.Compile(indexDefinition);
+
+            var orders = new[]
+            {
+                new Order {Name = "Oren"},
+                new Order {Name = "Pawel"},
+                new Order {Name = "Haim"},
+            };
+
+            foreach (var collectionMaps in index.Maps)
+            {
+                foreach (var map in collectionMaps.Value)
+                {
+                    foreach (var result in map(orders))
+                    {
+                        Console.WriteLine(result);
+                    }      
+                }
+            }
+        }
+
+        public class Order
+        {
+            public string Name;
         }
 
         private static void createNewDB(DocumentStore store)
