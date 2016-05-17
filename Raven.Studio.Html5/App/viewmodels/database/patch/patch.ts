@@ -198,9 +198,9 @@ class patch extends viewModelBase {
             if (firstCheckedOnList != null) {
                 this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
                     .done(document => {
+                        // load document directly from server as documents on list are loaded using doc-preview endpoint, which doesn't display entire document
+                        this.loadDocumentToTest(document.__metadata.id);
                         this.documentKey(document.__metadata.id);
-                        this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
-                        this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
                     });
             } else {
                 this.clearDocumentPreview();

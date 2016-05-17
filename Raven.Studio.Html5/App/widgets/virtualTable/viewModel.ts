@@ -796,7 +796,7 @@ class ctor {
 
     getColumnsNames() {
         var row = this.items.getAllCachedItems().first();
-        return row.getDocumentPropertyNames();
+        return row ? row.getDocumentPropertyNames() : [];
     }
 
     collectionExists(collectionName: string): boolean {
