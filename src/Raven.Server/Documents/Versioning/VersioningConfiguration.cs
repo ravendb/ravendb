@@ -3,14 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.Collections.Generic;
+
 namespace Raven.Server.Documents.Versioning
 {
     public class VersioningConfiguration
     {
-        public int? MaxRevisions { get; set; }
+        public VersioningConfigurationCollection Default { get; set; }
 
-        public bool Active { get; set; }
-
-        public bool PurgeOnDelete { get; set; }
+        public Dictionary<string, VersioningConfigurationCollection> Collections { get; set; }
     }
 }

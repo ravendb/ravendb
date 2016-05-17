@@ -18,16 +18,13 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentDatabase _database;
         private readonly TableSchema _docsSchema = new TableSchema();
 
-        private readonly Dictionary<string, VersioningConfiguration> _versioningConfiguration;
+        private readonly VersioningConfiguration _versioningConfiguration;
 
         private const string VersioningRevisionsCount = "_VersioningRevisionsCount";
 
-        // this is only modified by write transactions under lock
-        // no need to use thread safe ops
-        private long _lastEtag;
-        private readonly VersioningConfiguration _emptyConfiguration = new VersioningConfiguration();
+        private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
-        public VersioningStorage(DocumentDatabase database, Dictionary<string, VersioningConfiguration> versioningConfiguration)
+        public VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
         {
             _database = database;
             _versioningConfiguration = versioningConfiguration;
@@ -39,7 +36,6 @@ namespace Raven.Server.Documents.Versioning
             {
                 StartIndex = 0,
                 Count = 2,
-                IsGlobal = true,
             });
         }
 
@@ -63,31 +59,31 @@ namespace Raven.Server.Documents.Versioning
         {
         }
 
-        private VersioningConfiguration GetVersioningConfiguration(string collectionName)
+        private VersioningConfigurationCollection GetVersioningConfiguration(string collectionName)
         {
-            VersioningConfiguration configuration;
-            if (_versioningConfiguration.TryGetValue(collectionName, out configuration))
+            VersioningConfigurationCollection configuration;
+            if (_versioningConfiguration.Collections != null && _versioningConfiguration.Collections.TryGetValue(collectionName, out configuration))
             {
                 return configuration;
             }
 
-            if (_versioningConfiguration.TryGetValue("DefaultConfiguration", out configuration))
+            if (_versioningConfiguration.Default != null)
             {
-                return configuration;
+                return _versioningConfiguration.Default;
             }
 
             return _emptyConfiguration;
         }
 
-        public void PutVersion(DocumentsOperationContext context, string collectionName, string key, 
+        public void PutVersion(DocumentsOperationContext context, string collectionName, string key, long newEtagBigEndian,
             BlittableJsonReaderObject document, bool isSystemDocument)
         {
             if (isSystemDocument)
                 return;
 
-            bool enableVersioning = false;
+            var enableVersioning = false;
             BlittableJsonReaderObject metadata;
-            if (document != null && document.TryGet(Constants.Metadata, out metadata))
+            if (document.TryGet(Constants.Metadata, out metadata))
             {
                 if (metadata.TryGet(Constants.Versioning.RavenEnableVersioning, out enableVersioning))
                 {
@@ -116,9 +112,6 @@ namespace Raven.Server.Documents.Versioning
             byte* keyPtr;
             int keySize;
             DocumentsStorage.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
-
-            var newEtag = ++_lastEtag;
-            var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
 
             var tbv = new TableValueBuilder
             {
