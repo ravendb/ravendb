@@ -20,7 +20,7 @@ class queryIndexCommand extends commandBase {
     }
 
     getUrl() {
-        var url = "/indexes/" + this.indexName;
+        var url = "/queries/" + this.indexName;
         //var resultsTransformerUrlFragment = this.transformer && this.transformer.name() ? "&resultsTransformer=" + this.transformer.name() : ""; // This should not be urlEncoded, as it breaks the query.
         var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
         var urlArgs = this.urlEncodeArgs({

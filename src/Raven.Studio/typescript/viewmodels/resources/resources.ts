@@ -188,13 +188,11 @@ class resources extends viewModelBase {
     }
 
     private resourcesLoaded() {
-        /*
-
-        Show it only when cluster bundle is not present
+        //Show it only when cluster bundle is not present
         // If we have no databases (except system db), show the "create a new database" screen.
-        if (this.resources().length === 1 && this.isGlobalAdmin()) {
+        if (this.resources().length === 0 && this.isGlobalAdmin()) {
             this.newResource();
-        } */
+        } 
     }
 
     filterResources() {

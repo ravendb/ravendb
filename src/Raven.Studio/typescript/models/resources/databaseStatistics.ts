@@ -16,13 +16,13 @@ class databaseStatistics {
         this.databaseId(dto.DatabaseId);
 
 
-        this.countOfFilteredIndexesText(this.getItemCountText(dto.CountOfIndexesExcludingDisabledAndAbandoned, "index", "es"));
-        this.staleFilteredIndexesCountText(dto.CountOfStaleIndexesExcludingDisabledAndAbandoned.toLocaleString() + " stale");
-        this.errorsCountText(this.getItemCountText(dto.Errors.length, "error", "s"));
-        this.countOfDocumentsText(this.getItemCountText(dto.CountOfDocuments, "document", "s"));
-        this.countOfIndexesText(this.getItemCountText(dto.CountOfIndexes, "index", "es"));
-        this.staleIndexesCountText(dto.StaleIndexes.length.toLocaleString() + " stale");
-        this.errorsCountText(this.getItemCountText(dto.Errors.length, "error", "s"));
+        this.countOfFilteredIndexesText("0 indexes"); //TODO: this.getItemCountText(dto.CountOfIndexesExcludingDisabledAndAbandoned, "index", "es")
+        this.staleFilteredIndexesCountText("0 stale"); //TODO: dto.CountOfStaleIndexesExcludingDisabledAndAbandoned.toLocaleString() + " stale"
+        this.errorsCountText("0 errors"); //TODO: this.getItemCountText(dto.Errors.length, "error", "s")
+        this.countOfDocumentsText("0 documents"); //TODO: this.getItemCountText(dto.CountOfDocuments, "document", "s")
+        this.countOfIndexesText("0 indexes"); //TODO: this.getItemCountText(dto.CountOfIndexes, "index", "es")
+        this.staleIndexesCountText("0 stale"); //TODO: dto.StaleIndexes.length.toLocaleString() + " stale"
+        this.errorsCountText("0 errors"); //TODO: this.getItemCountText(dto.Errors.length, "error", "s")
     }
 
     private getItemCountText(itemCount: number, singularText: string, suffix: string): string {
