@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Server.Documents.Replication;
@@ -33,19 +34,31 @@ namespace Raven.Server.Json
 
         public static Func<BlittableJsonReaderObject,T> GenerateJsonDeserializationRoutine<T>()
         {
-            var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
-
-            var vars = new Dictionary<Type, ParameterExpression>();
-            var instance = Expression.New(typeof(T).GetConstructor(new Type[0]));
-            var propInit = new List<MemberBinding>();
-            foreach (var propertyInfo in typeof(T).GetProperties())
+            try
             {
-                propInit.Add(Expression.Bind(propertyInfo,GetValue(propertyInfo, json, vars)));
+                var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
+
+                var vars = new Dictionary<Type, ParameterExpression>();
+                var instance = Expression.New(typeof(T).GetConstructor(new Type[0]));
+                var propInit = new List<MemberBinding>();
+                foreach (var propertyInfo in typeof(T).GetProperties())
+                {
+                    if (propertyInfo.CanWrite == false)
+                        continue;
+                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo, json, vars)));
+                }
+
+                var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
+
+                return lambda.Compile();
             }
-
-            var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
-
-            return lambda.Compile();
+            catch (Exception e)
+            {
+                return o =>
+                {
+                    throw new InvalidOperationException($"Could not build json parser for {typeof (T).FullName}", e);
+                };
+            }
         }
 
         //TODO : consider refactoring JsonDeserialization::GetValue() to be more generic
