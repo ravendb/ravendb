@@ -7,10 +7,6 @@ class SubscriptionsTask extends viewModelBase {
 
     data = ko.observableArray<Subscription>();
 
-    constructor() {
-        super();
-    }
-
     activate(args) {
         super.activate(args);
         this.activeDatabase.subscribe(() => this.fetchSubscriptions());
@@ -36,7 +32,6 @@ class SubscriptionsTask extends viewModelBase {
             return new setSubscriptionCommand(db, subscription.subscriptionId, newAckEtag)
                 .execute()
                 .done(() => subscription.ackEtag(newAckEtag))
-                .fail(() => { })
                 .always(() => subscription.isChangeInProgress(false));
         }
         return null;

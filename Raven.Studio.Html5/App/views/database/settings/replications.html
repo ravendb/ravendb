@@ -17,7 +17,7 @@
             </div>
             <div class="panel-body">
                 <div class="form-group" data-bind="visible: hasGlobalValues">
-                    <div class="col-md-2">
+                    <div class="col-md-2 text-right">
                         <strong>Property</strong>
                     </div>
                     <div class="col-md-5">
@@ -31,8 +31,8 @@
                     <label for="conflictResolutionSelector" class="col-sm-2 control-label">Client failover behaviour</label>
                     <div class="col-sm-5">
                         <div class="btn-group" data-bind="with: replicationsSetup">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: $root.usingGlobal() == false">
-                                <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal()">
+                                <span data-bind="visible: !clientFailoverBehaviour()">Let client decide</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow reads from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
@@ -43,7 +43,7 @@
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, null)">Let client decide</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, '')">Let client decide</a></li>
                                 <li class="divider"></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')">Allow reads from secondaries when request time SLA threshold is reached</a></li>
@@ -58,7 +58,7 @@
                     <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues">
                         <div class="btn-group" data-bind="with: replicationsSetup">
                             <button disabled="disabled" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="visible: $root.globalClientFailoverBehaviour() == null">Let client decide</span>
+                                <span data-bind="visible: !$root.globalClientFailoverBehaviour()">Let client decide</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow reads from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: $root.globalClientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
@@ -73,12 +73,18 @@
                 </div>
                 <div data-bind="if: showRequestTimeoutRow()">
                     <div class="form-group">
-                        <label class="col-sm-2 control-label">Request Time SLA Threshold (ms)</label>
+                        <label class="col-sm-2 control-label">Request Time SLA Threshold</label>
                         <div class="col-sm-5">
-                            <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, visible: replicationsSetup().showRequestTimeSlaThreshold(),  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false" />
+                            <div class="input-group">
+                                <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, visible: replicationsSetup().showRequestTimeSlaThreshold(),  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false" />
+                                <span class="input-group-addon">ms</span>
+                            </div>
                         </div>
                         <div class="col-sm-5" data-bind="visible: $root.hasGlobalValues() && $root.globalClientRequestTimeSlaThreshold()">
-                            <input disabled="disabled" type="number" class="form-control" data-bind="value: $root.globalClientRequestTimeSlaThreshold()" />
+                            <div class="input-group">
+                                <input disabled="disabled" type="number" class="form-control" data-bind="value: $root.globalClientRequestTimeSlaThreshold()" />
+                                <span class="input-group-addon">ms</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -118,7 +124,7 @@
                 <div class="form-group">
                     <div class="col-sm-10 col-sm-offset-2">
                         <div class="checkbox">
-                            <input type="checkbox" id="globalSkipIndexReplicatonForAll" class="styled" data-bind="checked: skipIndexReplicationForAll">
+                            <input type="checkbox" id="globalSkipIndexReplicatonForAll" class="styled" data-bind="checked: skipIndexReplicationForAll, enable: !$root.usingGlobal()">
                             <label for="globalSkipIndexReplicatonForAll">Skip index replication for all destinations</label>
                         </div>
                     </div>
