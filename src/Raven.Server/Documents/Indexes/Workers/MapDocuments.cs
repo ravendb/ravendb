@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {document.Key}.");
 
                             collectionStats.RecordMapAttempt();
-
+                            var current = stateful.Current;
                             count++;
                             lastEtag = document.Etag;
 
