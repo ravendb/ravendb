@@ -62,6 +62,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                     {
                         foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
                         {
+                            //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
+                            //TODO: we flush the index
                             token.ThrowIfCancellationRequested();
 
                             if (indexWriter == null)
