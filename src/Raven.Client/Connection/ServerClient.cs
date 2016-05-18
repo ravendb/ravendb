@@ -87,6 +87,11 @@ namespace Raven.Client.Connection
                                  );
         }
 
+        public RavenJObject[] GetRevisionsFor(string key, int start, int pageSize)
+        {
+            return AsyncHelpers.RunSync(() => asyncServerClient.GetRevisionsForAsync(key, start, pageSize));
+        }
+
         public RavenJToken ExecuteGetRequest(string requestUrl)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.ExecuteGetRequest(requestUrl));
