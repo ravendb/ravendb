@@ -178,6 +178,8 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
 
+        public abstract bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
+
         public override int GetHashCode()
         {
             if (_cachedHashCode != null)

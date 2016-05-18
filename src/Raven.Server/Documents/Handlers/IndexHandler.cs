@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -20,6 +21,117 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/indexes", "PUT")]
+        public async Task Put()
+        {
+            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var indexDefinition = await ReadIndexDefinitionAsync(context, names[0]);
+
+                var indexId = Database.IndexStore.CreateIndex(indexDefinition);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(context.GetLazyString("Index"));
+                    writer.WriteString(context.GetLazyString(names[0]));
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(context.GetLazyString("IndexId"));
+                    writer.WriteInteger(indexId);
+
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        private async Task<IndexDefinition> ReadIndexDefinitionAsync(JsonOperationContext context, string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
+            string value;
+            int valueInt;
+            BlittableJsonReaderArray jsonArray;
+            BlittableJsonReaderObject jsonObject;
+
+            var json = await context.ReadForDiskAsync(RequestBodyStream(), name);
+
+            var indexDefinition = new IndexDefinition();
+            indexDefinition.Name = name;
+
+            if (json.TryGet(nameof(IndexDefinition.Fields), out jsonObject) && jsonObject != null)
+            {
+                indexDefinition.Fields = new Dictionary<string, IndexFieldOptions>();
+                foreach (var field in jsonObject.GetPropertyNames())
+                {
+                    var fieldJson = (BlittableJsonReaderObject)jsonObject[field];
+                    var fieldOptions = new IndexFieldOptions();
+
+                    if (fieldJson.TryGet(nameof(IndexFieldOptions.Analyzer), out value) && string.IsNullOrWhiteSpace(value) == false)
+                        fieldOptions.Analyzer = value;
+
+                    FieldIndexing indexing;
+                    if (fieldJson.TryGet(nameof(IndexFieldOptions.Indexing), out value) && Enum.TryParse(value, true, out indexing))
+                        fieldOptions.Indexing = indexing;
+
+                    SortOptions sortOptions;
+                    if (fieldJson.TryGet(nameof(IndexFieldOptions.Sort), out value) && Enum.TryParse(value, true, out sortOptions))
+                        fieldOptions.Sort = sortOptions;
+
+                    fieldOptions.Spatial = null; // TODO [ppekrol]
+
+                    FieldStorage storage;
+                    if (fieldJson.TryGet(nameof(IndexFieldOptions.Storage), out value) && Enum.TryParse(value, true, out storage))
+                        fieldOptions.Storage = storage;
+
+                    FieldTermVector termVector;
+                    if (fieldJson.TryGet(nameof(IndexFieldOptions.TermVector), out value) && Enum.TryParse(value, true, out termVector))
+                        fieldOptions.TermVector = termVector;
+
+                    bool valueBool;
+                    if (fieldJson.TryGet(nameof(IndexFieldOptions.Suggestions), out valueBool))
+                        fieldOptions.Suggestions = valueBool;
+
+                    indexDefinition.Fields[field] = fieldOptions;
+                }
+            }
+
+            indexDefinition.IndexId = -1;
+            indexDefinition.IndexVersion = -1;
+            indexDefinition.IsSideBySideIndex = false;
+            indexDefinition.IsTestIndex = false;
+
+            IndexLockMode lockMode;
+            if (json.TryGet(nameof(IndexDefinition.LockMode), out value) == false || Enum.TryParse(value, true, out lockMode) == false)
+                throw new ArgumentNullException(nameof(IndexDefinition.Type));
+            indexDefinition.LockMode = lockMode;
+
+            if (json.TryGet(nameof(IndexDefinition.Maps), out jsonArray))
+            {
+                indexDefinition.Maps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var map in jsonArray)
+                    indexDefinition.Maps.Add(map.ToString());
+            }
+
+            if (json.TryGet(nameof(IndexDefinition.MaxIndexOutputsPerDocument), out valueInt))
+                indexDefinition.MaxIndexOutputsPerDocument = valueInt;
+
+            if (json.TryGet(nameof(IndexDefinition.Reduce), out value) && string.IsNullOrWhiteSpace(value) == false)
+                indexDefinition.Reduce = value;
+
+            IndexType type;
+            if (json.TryGet(nameof(IndexDefinition.Type), out value) == false || Enum.TryParse(value, true, out type) == false)
+                throw new ArgumentNullException(nameof(IndexDefinition.Type));
+            indexDefinition.Type = type;
+
+            return indexDefinition;
+        }
+
         [RavenAction("/databases/*/indexes/source", "GET")]
         public Task Source()
         {

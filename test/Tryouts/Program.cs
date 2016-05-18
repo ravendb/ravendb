@@ -1,39 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net.WebSockets;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Client.BulkInsert;
-using FastTests.Server.Documents.Indexing;
-using FastTests.Voron.RawData;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
-using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Linq;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
-using SlowTests.Tests.Sorting;
-using Raven.Abstractions.Extensions;
-using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.Data;
 using Raven.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Documents.Indexes.Static;
-using Voron;
-using JsonToken = Raven.Imports.Newtonsoft.Json.JsonToken;
 
+using JsonToken = Raven.Imports.Newtonsoft.Json.JsonToken;
 
 namespace Tryouts
 {
@@ -82,8 +63,6 @@ namespace Tryouts
             //            }
             //            return;
 
-
-            var compiler = new StaticIndexCompiler();
             var indexDefinition = new IndexDefinition
             {
                 Name = "Orders_ByName",
@@ -93,7 +72,7 @@ namespace Tryouts
                 }
             };
 
-            var index = compiler.Compile(indexDefinition);
+            var index = StaticIndexCompiler.Compile(indexDefinition);
 
             var orders = new[]
             {
@@ -109,7 +88,7 @@ namespace Tryouts
                     foreach (var result in map(orders))
                     {
                         Console.WriteLine(result);
-                    }      
+                    }
                 }
             }
         }
@@ -136,15 +115,15 @@ namespace Tryouts
         {
             //using (var bulk = store.BulkInsert())
             {
-                
+
                 string filePath = @"C:\Users\ayende\Downloads\Dump of temp2, 2016-05-17 14-07.ravendump";
                 Stream dumpStream = File.OpenRead(filePath);
                 var gZipStream = new GZipStream(dumpStream, CompressionMode.Decompress, leaveOpen: true);
                 using (var streamReader = new StreamReader(gZipStream))
                 using (var reader = new RavenJsonTextReader(streamReader))
                 {
-                   
-                        if (reader.Read() == false /* { */|| reader.Read() == false /* prop*/)
+
+                    if (reader.Read() == false /* { */|| reader.Read() == false /* prop*/)
                         throw new InvalidOperationException("empty document?");
 
                     if (reader.TokenType != JsonToken.PropertyName)
@@ -169,10 +148,10 @@ namespace Tryouts
                         var key = metadata.Value<string>("@id");
                         document.Remove("@metadata");
 
-                       
-                            await store.AsyncDatabaseCommands.PutAsync(key, null, document, metadata);
-                            //await bulk.StoreAsync(document, metadata, key).ConfigureAwait(false);
-                            Console.WriteLine(key);
+
+                        await store.AsyncDatabaseCommands.PutAsync(key, null, document, metadata);
+                        //await bulk.StoreAsync(document, metadata, key).ConfigureAwait(false);
+                        Console.WriteLine(key);
                         if (reader.Read() == false)
                             throw new InvalidOperationException("corrupt document, array value");
                     }

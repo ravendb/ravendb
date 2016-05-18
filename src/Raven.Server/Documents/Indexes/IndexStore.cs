@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,9 +10,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
 using Sparrow.Platform;
@@ -85,12 +88,49 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
+        public int CreateIndex(IndexDefinition definition)
+        {
+            lock (_locker)
+            {
+                Index existingIndex;
+                ValidateIndexDefinition(definition.Name, out existingIndex);
+
+                switch (GetIndexCreationOptions(definition, existingIndex))
+                {
+                    case IndexCreationOptions.Noop:
+                        return existingIndex.IndexId;
+                    case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
+                        throw new NotImplementedException(); // TODO [ppekrol]
+                    case IndexCreationOptions.Update:
+                        DeleteIndex(existingIndex.IndexId);
+                        break;
+                }
+
+                var indexId = _indexes.GetNextIndexId();
+
+                Index index;
+
+                switch (definition.Type)
+                {
+                    case IndexType.Map:
+                        index = StaticMapIndex.CreateNew(indexId, definition, _documentDatabase);
+                        break;
+                    case IndexType.MapReduce:
+                        throw new NotSupportedException();
+                    default:
+                        throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
+                }
+
+                return CreateIndexInternal(index, indexId);
+            }
+        }
+
         public int CreateIndex(IndexDefinitionBase definition)
         {
             lock (_locker)
             {
                 Index existingIndex;
-                ValidateIndexDefinition(definition, out existingIndex);
+                ValidateIndexDefinition(definition.Name, out existingIndex);
 
                 switch (GetIndexCreationOptions(definition, existingIndex))
                 {
@@ -119,23 +159,30 @@ namespace Raven.Server.Documents.Indexes
                         throw new NotImplementedException("Unknown index definition type: ");
                 }
 
-                if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
-                    index.Start();
-
-                _indexes.Add(index);
-
-                _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
-                {
-                    Name = index.Name,
-                    Type = IndexChangeTypes.IndexAdded
-                });
-
-                return indexId;
+                return CreateIndexInternal(index, indexId);
             }
         }
 
-        private static IndexCreationOptions GetIndexCreationOptions(IndexDefinitionBase indexDefinition, Index existingIndex)
+        private int CreateIndexInternal(Index index, int indexId)
         {
+            Debug.Assert(index != null);
+            Debug.Assert(indexId > 0);
+
+            if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
+                index.Start();
+
+            _indexes.Add(index);
+
+            _documentDatabase.Notifications.RaiseNotifications(
+                new IndexChangeNotification { Name = index.Name, Type = IndexChangeTypes.IndexAdded });
+
+            return indexId;
+        }
+
+        private static IndexCreationOptions GetIndexCreationOptions(IndexDefinition indexDefinition, Index existingIndex)
+        {
+            // TODO [ppekrol] remove code duplication
+
             if (existingIndex == null)
                 return IndexCreationOptions.Create;
 
@@ -151,11 +198,30 @@ namespace Raven.Server.Documents.Indexes
                        : IndexCreationOptions.Update;
         }
 
-        private void ValidateIndexDefinition(IndexDefinitionBase indexDefinition, out Index existingIndex)
+        private static IndexCreationOptions GetIndexCreationOptions(IndexDefinitionBase indexDefinition, Index existingIndex)
         {
-            ValidateIndexName(indexDefinition.Name);
+            // TODO [ppekrol] remove code duplication
 
-            if (_indexes.TryGetByName(indexDefinition.Name, out existingIndex))
+            if (existingIndex == null)
+                return IndexCreationOptions.Create;
+
+            //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
+            //    return IndexCreationOptions.Update;
+
+            var equals = existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
+            if (equals)
+                return IndexCreationOptions.Noop;
+
+            return existingIndex.Definition.Equals(indexDefinition, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
+                       ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
+                       : IndexCreationOptions.Update;
+        }
+
+        private void ValidateIndexDefinition(string name, out Index existingIndex)
+        {
+            ValidateIndexName(name);
+
+            if (_indexes.TryGetByName(name, out existingIndex))
             {
                 switch (existingIndex.Definition.LockMode)
                 {
@@ -164,7 +230,7 @@ namespace Raven.Server.Documents.Indexes
                     case IndexLockMode.LockedIgnore:
                         return;
                     case IndexLockMode.LockedError:
-                        throw new InvalidOperationException("Can not overwrite locked index: " + indexDefinition.Name);
+                        throw new InvalidOperationException("Can not overwrite locked index: " + name);
                 }
             }
         }

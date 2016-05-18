@@ -1,37 +1,46 @@
-using System;
+﻿using System;
+
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Indexes.Errors
+namespace Raven.Server.Documents.Indexes.Static
 {
-    public class FaultyIndexDefinition : IndexDefinitionBase
+    public class StaticMapIndexDefinition : IndexDefinitionBase
     {
-        public FaultyIndexDefinition(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields) 
+        private IndexDefinition _definition;
+
+        public StaticMapIndexDefinition(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
             : base(name, collections, lockMode, mapFields)
         {
         }
 
+        public StaticMapIndexDefinition(IndexDefinition definition, string[] collections)
+            : base(definition.Name, collections, definition.LockMode, null)
+        {
+            _definition = definition;
+        }
+
         protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+            throw new System.NotImplementedException();
         }
 
         protected override void FillIndexDefinition(IndexDefinition indexDefinition)
         {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+            throw new System.NotImplementedException();
         }
 
         public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
         {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+            throw new System.NotImplementedException();
         }
 
         public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
         {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+            throw new NotImplementedException();
         }
     }
 }

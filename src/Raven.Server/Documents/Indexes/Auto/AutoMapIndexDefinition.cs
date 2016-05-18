@@ -52,6 +52,11 @@ namespace Raven.Server.Documents.Indexes.Auto
             return true;
         }
 
+        public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        {
+            return false;
+        }
+
         public static AutoMapIndexDefinition Load(StorageEnvironment environment)
         {
             using (var pool = new UnmanagedBuffersPool(nameof(AutoMapIndexDefinition)))
