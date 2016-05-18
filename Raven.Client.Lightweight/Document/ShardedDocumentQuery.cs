@@ -18,6 +18,7 @@ using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Document
 {
@@ -274,6 +275,63 @@ namespace Raven.Client.Document
         protected override Task<QueryOperation> ExecuteActualQueryAsync()
         {
             throw new NotSupportedException();
+        }
+
+        public override IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+        {
+            var documentQuery = new ShardedDocumentQuery<TTransformerResult>(theSession,
+                getShardsToOperateOn,
+                shardStrategy,
+                indexName,
+                fieldsToFetch,
+                projectionFields,
+                queryListeners,
+                isMapReduce)
+            {
+                pageSize = pageSize,
+                queryText = new StringBuilder(queryText.ToString()),
+                start = start,
+                timeout = timeout,
+                cutoff = cutoff,
+                cutoffEtag = cutoffEtag,
+                queryStats = queryStats,
+                theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
+                sortByHints = sortByHints,
+                orderByFields = orderByFields,
+                isDistinct = isDistinct,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                transformResultsFunc = transformResultsFunc,
+                includes = new HashSet<string>(includes),
+                rootTypes = { typeof(T) },
+                beforeQueryExecutionAction = beforeQueryExecutionAction,
+                afterQueryExecutedCallback = afterQueryExecutedCallback,
+                afterStreamExecutedCallback = afterStreamExecutedCallback,
+                defaultField = defaultField,
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags,
+                distanceErrorPct = distanceErrorPct,
+                isSpatialQuery = isSpatialQuery,
+                negate = negate,
+                queryShape = queryShape,
+                spatialFieldName = spatialFieldName,
+                spatialRelation = spatialRelation,
+                spatialUnits = spatialUnits,
+                databaseCommands = databaseCommands,
+                indexQuery = indexQuery,
+                disableEntitiesTracking = disableEntitiesTracking,
+                disableCaching = disableCaching,
+                showQueryTimings = showQueryTimings,
+                shouldExplainScores = shouldExplainScores,
+                resultsTransformer = new TTransformer().TransformerName,
+                transformerParameters = transformerParameters,
+                defaultOperator = defaultOperator,
+                highlighterKeyName = highlighterKeyName,
+                lastEquality = lastEquality
+
+            };
+            return documentQuery;
         }
     }
 }
