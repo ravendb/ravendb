@@ -70,45 +70,13 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
                 {
-                    int lockModeAsInt;
-                    reader.TryGet(nameof(LockMode), out lockModeAsInt);
+                    var lockMode = ReadLockMode(reader);
+                    var collections = ReadCollections(reader);
+                    var fields = ReadMapFields(reader);
 
-                    BlittableJsonReaderArray jsonArray;
-                    reader.TryGet(nameof(Collections), out jsonArray);
-
-                    var collection = jsonArray.GetStringByIndex(0);
-
-                    reader.TryGet(nameof(MapFields), out jsonArray);
-
-                    var fields = new IndexField[jsonArray.Length];
-                    for (var i = 0; i < jsonArray.Length; i++)
+                    return new AutoMapIndexDefinition(collections[0], fields)
                     {
-                        var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
-
-                        string name;
-                        json.TryGet(nameof(IndexField.Name), out name);
-
-                        bool highlighted;
-                        json.TryGet(nameof(IndexField.Highlighted), out highlighted);
-
-                        int sortOptionAsInt;
-                        json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
-
-                        var field = new IndexField
-                        {
-                            Name = name,
-                            Highlighted = highlighted,
-                            Storage = FieldStorage.No,
-                            SortOption = (SortOptions?)sortOptionAsInt,
-                            Indexing = FieldIndexing.Default
-                        };
-
-                        fields[i] = field;
-                    }
-
-                    return new AutoMapIndexDefinition(collection, fields)
-                    {
-                        LockMode = (IndexLockMode)lockModeAsInt
+                        LockMode = lockMode
                     };
                 }
             }

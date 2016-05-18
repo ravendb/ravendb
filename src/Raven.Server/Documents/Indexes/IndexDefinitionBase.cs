@@ -69,11 +69,18 @@ namespace Raven.Server.Documents.Indexes
         {
             writer.WriteStartObject();
 
-            var collection = Collections.First();
-
             writer.WritePropertyName(context.GetLazyString(nameof(Collections)));
             writer.WriteStartArray();
-            writer.WriteString(context.GetLazyString(collection));
+            var isFirst = true;
+            foreach (var collection in Collections)
+            {
+                if (isFirst == false)
+                    writer.WriteComma();
+
+                isFirst = false;
+                writer.WriteString(context.GetLazyString(collection));
+            }
+
             writer.WriteEndArray();
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyString(nameof(LockMode)));
@@ -208,6 +215,63 @@ namespace Raven.Server.Documents.Indexes
                 return null;
 
             return name;
+        }
+
+        protected static string[] ReadCollections(BlittableJsonReaderObject reader)
+        {
+            BlittableJsonReaderArray jsonArray;
+            if (reader.TryGet(nameof(Collections), out jsonArray) == false || jsonArray.Length == 0)
+                throw new InvalidOperationException("No persisted collections");
+
+            var result = new string[jsonArray.Length];
+            for (var i = 0; i < jsonArray.Length; i++)
+                result[i] = jsonArray.GetStringByIndex(i);
+
+            return result;
+        }
+
+        protected static IndexLockMode ReadLockMode(BlittableJsonReaderObject reader)
+        {
+            int lockModeAsInt;
+            if (reader.TryGet(nameof(LockMode), out lockModeAsInt) == false)
+                throw new InvalidOperationException("No persisted lock mode");
+
+            return (IndexLockMode)lockModeAsInt;
+        }
+
+        protected static IndexField[] ReadMapFields(BlittableJsonReaderObject reader)
+        {
+            BlittableJsonReaderArray jsonArray;
+            if (reader.TryGet(nameof(MapFields), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted lock mode");
+
+            var fields = new IndexField[jsonArray.Length];
+            for (var i = 0; i < jsonArray.Length; i++)
+            {
+                var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
+
+                string name;
+                json.TryGet(nameof(IndexField.Name), out name);
+
+                bool highlighted;
+                json.TryGet(nameof(IndexField.Highlighted), out highlighted);
+
+                int sortOptionAsInt;
+                json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
+
+                var field = new IndexField
+                {
+                    Name = name,
+                    Highlighted = highlighted,
+                    Storage = FieldStorage.No,
+                    SortOption = (SortOptions?)sortOptionAsInt,
+                    Indexing = FieldIndexing.Default
+                };
+
+                fields[i] = field;
+            }
+
+            return fields;
         }
     }
 }

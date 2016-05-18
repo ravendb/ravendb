@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -32,6 +34,27 @@ namespace Raven.Server.Documents.Indexes
         {
             Indexing = FieldIndexing.Default;
             Storage = FieldStorage.No;
+        }
+
+        public static IndexField Create(string name, IndexFieldOptions options)
+        {
+            var field = new IndexField();
+            field.Name = name;
+            field.Analyzer = options.Analyzer;
+
+            if (options.Indexing.HasValue)
+                field.Indexing = options.Indexing.Value;
+
+            field.SortOption = options.Sort;
+
+            if (options.Storage.HasValue)
+                field.Storage = options.Storage.Value;
+
+            // options.TermVector // TODO [ppekrol]
+            // options.Suggestions // TODO [ppekrol]
+            // options.Spatial // TODO [ppekrol]
+
+            return field;
         }
 
         protected bool Equals(IndexField other)

@@ -31,6 +31,14 @@ namespace Raven.Server.Documents.Handlers
             {
                 var indexDefinition = await ReadIndexDefinitionAsync(context, names[0]);
 
+                switch (indexDefinition.Type)
+                {
+                    case IndexType.AutoMap:
+                    case IndexType.AutoMapReduce:
+                    case IndexType.Unknown:
+                        throw new InvalidOperationException($"Cannot PUT {indexDefinition.Type} index");
+                }
+
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -118,7 +126,7 @@ namespace Raven.Server.Documents.Handlers
                     indexDefinition.Maps.Add(map.ToString());
             }
 
-            if (json.TryGet(nameof(IndexDefinition.MaxIndexOutputsPerDocument), out valueInt))
+            if (json.TryGet(nameof(IndexDefinition.MaxIndexOutputsPerDocument), out value) && int.TryParse(value, out valueInt))
                 indexDefinition.MaxIndexOutputsPerDocument = valueInt;
 
             if (json.TryGet(nameof(IndexDefinition.Reduce), out value) && string.IsNullOrWhiteSpace(value) == false)
