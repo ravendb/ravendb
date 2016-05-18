@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     const string BulkInsertDocumentDebugTag = "bulk/insert/document";
-                    using (var stream = context.GetStream(BulkInsertDocumentDebugTag))
+                    using (var stream = context.GetStream())
                     {
                         var current = _freeBuffers.Take();
                         int count = 0;
