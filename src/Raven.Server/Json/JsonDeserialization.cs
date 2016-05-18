@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
 using Sparrow.Json;
@@ -11,12 +12,12 @@ using Sparrow.Json;
 namespace Raven.Server.Json
 {
     public static class JsonDeserialization
-    {
-        public static readonly Func<BlittableJsonReaderObject, DocumentReplicationConfiguration>
-            DocumentReplicationConfiguration = GenerateJsonDeserializationRoutine<DocumentReplicationConfiguration>();
+    {		
+        public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
 
-        public static readonly Func<BlittableJsonReaderObject, DocumentReplicationDestination>
-            DocumentReplicationDestination = GenerateJsonDeserializationRoutine<DocumentReplicationDestination>();
+        public static readonly Func<BlittableJsonReaderObject, ReplicationClientConfiguration> ReplicationClientConfiguration = GenerateJsonDeserializationRoutine<ReplicationClientConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, ReplicationDestination> ReplicationDestination = GenerateJsonDeserializationRoutine<ReplicationDestination>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
 
@@ -56,15 +57,15 @@ namespace Raven.Server.Json
             {
                 return Expression.Call(typeof (JsonDeserialization).GetMethod(nameof(ToDictionary)), json, Expression.Constant(propertyInfo.Name));
             }
-
-            if (propertyInfo.PropertyType == typeof (List<DocumentReplicationDestination>))
-            {
-                return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListReplicationDestinations)), json, Expression.Constant(propertyInfo.Name));
-            }
-
+           
             if (propertyInfo.PropertyType == typeof(List<SqlReplicationTable>))
             {
                 return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListSqlReplicationTable)), json, Expression.Constant(propertyInfo.Name));
+            }
+
+            if (propertyInfo.PropertyType == typeof(List<ReplicationDestination>))
+            {
+                return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListReplicationDestination)), json, Expression.Constant(propertyInfo.Name));
             }
 
             var value = GetParameter(propertyInfo.PropertyType, vars);
@@ -105,18 +106,17 @@ namespace Raven.Server.Json
             return dic;
         }
 
-        public static List<DocumentReplicationDestination> ToListReplicationDestinations(BlittableJsonReaderObject json, string name)
+        public static List<ReplicationDestination> ToListReplicationDestination(BlittableJsonReaderObject json, string name)
         {
-            var list = new List<DocumentReplicationDestination>();
+            var list = new List<ReplicationDestination>();
 
             BlittableJsonReaderArray array;
             if (json.TryGet(name, out array) == false)
                 return list;
 
             foreach (BlittableJsonReaderObject item in array.Items)
-            {
-                list.Add(DocumentReplicationDestination(item));
-            }
+                list.Add(ReplicationDestination(item));
+
             return list;
         }
 

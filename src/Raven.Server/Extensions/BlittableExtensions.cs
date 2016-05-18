@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using Lucene.Net.Search;
 using Raven.Abstractions.Data;
-using Raven.Server.ServerWide.Context;
-using Sparrow;
+using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 
 namespace Raven.Server
@@ -16,17 +12,21 @@ namespace Raven.Server
         /// <summary>
         /// Extract enumerable of change vector from document's metadata
         /// </summary>
-        /// <exception cref="InvalidDataException">Invalid data is encountered in the change vector.</exception>
-        public static IEnumerable<Tuple<BlittableJsonReaderArray, long>> EnumerateChangeVector(this BlittableJsonReaderObject document)
+        /// <exception cref="InvalidDataException">Invalid data is encountered in the change vector.</exception>        
+        public static ChangeVectorEntry[] EnumerateChangeVector(this BlittableJsonReaderObject document)
         {
+            //TODO: do not forget to investigate a bug in here
+            //(last result in the vector key seems corrupted)
             BlittableJsonReaderObject metadata;
             BlittableJsonReaderArray changeVector;
             if (document.TryGet(Constants.Metadata, out metadata) == false ||
                 metadata.TryGet(Constants.DocumentReplication.DocumentChangeVector,
                 out changeVector) == false)
             {
-                yield break;
+                return new ChangeVectorEntry[0];
             }
+
+            var results = new ChangeVectorEntry[changeVector.Length];
 
             for (int inx = 0; inx < changeVector.Length; inx++)
             {
@@ -38,17 +38,21 @@ namespace Raven.Server
                     throw new InvalidDataException($"Encountered invalid data in change vector. Expected BlittableJsonReaderObject, but found {changeVector[inx].GetType()}");
 
                 var key = vectorEntry.GetPropertyByIndex(0);
-                if(key.Item3.HasFlag(BlittableJsonToken.StartArray) == false)
-                    throw new InvalidDataException($"Encountered invalid data in extracting document change vector. Expected a json array, but found {key.Item3}");
+                if(key.Item3 != BlittableJsonToken.String)
+                    throw new InvalidDataException($"Encountered invalid data in extracting document change vector. Expected a string, but found {key.Item3}");
 
                 var val = vectorEntry.GetPropertyByIndex(1);
                 if(val.Item3 != BlittableJsonToken.Integer)
                     throw new InvalidDataException($"Encountered invalid data in extracting document change vector. Expected a number, but found {key.Item3}");
 
-                var byteArray = key.Item2 as BlittableJsonReaderArray;
-                yield return Tuple.Create(byteArray, (long)val.Item2);
+                results[inx] = new ChangeVectorEntry
+                {
+                    DbId = Guid.Parse(key.Item2.ToString()),
+                    Etag = (long)val.Item2
+                };
             }
 
+            return results;
         }
     }
 }

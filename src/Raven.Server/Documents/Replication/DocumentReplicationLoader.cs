@@ -2,15 +2,20 @@
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Server.Json;
 using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Replication
 {
     //TODO: add code to handle DocumentReplicationStatistics from each replication executer (also aggregation code?)
+    //TODO: add support to destinations changes, so they can be changed dynamically (added/removed)
     public class DocumentReplicationLoader : BaseReplicationLoader
     {
+        private ReplicationDocument _replicationDocument;
+        private readonly ConcurrentSet<Guid> _activeConnections = new ConcurrentSet<Guid>(); 
         private const int MaxSupportedReplicationDestinations = int.MaxValue; //TODO: limit it or make it configurable?
 
         public DocumentReplicationLoader(DocumentDatabase database) : base(database)
@@ -31,36 +36,53 @@ namespace Raven.Server.Documents.Replication
                 context.OpenReadTransaction();
 
                 var configurationDocument = _database.DocumentsStorage.Get(context,
-                    Constants.DocumentReplication.DocumentReplicationConfiguration);
+                    Constants.DocumentReplication.DocumentReplicationConfiguration);				
 
                 if (configurationDocument == null)
                     return;
 
-                var configuration = JsonDeserialization.DocumentReplicationConfiguration(configurationDocument.Data);				
-                //TODO: make sure that destinations are unique (check uniqueness for urls?)
-                //if there are destinations with non-unique urls, use the first instance
-                //also, if there are destinations with multiple non-unique urls, add relevant alert
-
-                //something like : 
-                //				_database.AddAlert(new Alert
-                //				{
-                //					Title = "Multiple non-unique destinations are configured. Using the first one.",
-                //					CreatedAt = DateTime.UtcNow
-                //				});
-
-                if (configuration.Destinations == null) //precaution, should not happen
+                try
                 {
-                    _log.Warn("Invalid configuration document, Destinations property must not be null. Replication will not be active");
-                    return;
+                    _replicationDocument = JsonDeserialization.ReplicationDocument(configurationDocument.Data);
+                    //the destinations here are the ones that are outbound..
+                    if (_replicationDocument.Destinations == null) //precaution, should not happen
+                    {
+                        _log.Warn(
+                            "Invalid configuration document, Destinations property must not be null. Replication will not be active");
+                    }
                 }
-
-                foreach (var destinationConfig in configuration.Destinations.Take(MaxSupportedReplicationDestinations))
-                {					
-                    var replicationExecuter = new DocumentReplicationExecuter(_database, destinationConfig);
-                    Replications.Add(replicationExecuter);
-                    replicationExecuter.Start();
-                }
+                catch (Exception e)
+                {
+                    _log.Error("failed to deserialize replication configuration document. This is something that is not supposed to happen. Reason:" + e);
+                }	           
             }
+        }
+
+        //inbound replication source will get it's ReplicationExecuter as well as
+        //the outgoing ones
+        public DocumentReplicationExecuter RegisterNewConnectionFrom(
+            Guid srcDbId, 
+            string srcUrl, 
+            string srcDbName, 
+            long lastSentEtag, 
+            out bool shouldConnectBack)
+        {
+            shouldConnectBack = false;
+
+            //prevent initiating two connections to the same db
+            if (!_activeConnections.TryAdd(srcDbId))
+                return null;
+
+            var destination = _replicationDocument.Destinations
+                .FirstOrDefault(x => x.Url.Equals(srcUrl, StringComparison.OrdinalIgnoreCase) &&
+                                     x.Database.Equals(srcDbName, StringComparison.OrdinalIgnoreCase));
+
+            if (destination != null)
+                shouldConnectBack = true;
+
+            var documentReplicationExecuter = new DocumentReplicationExecuter(_database, srcDbId, destination, lastSentEtag);
+            Replications.Add(documentReplicationExecuter);
+            return documentReplicationExecuter;
         }
     }
 }

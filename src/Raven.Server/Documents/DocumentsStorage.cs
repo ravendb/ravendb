@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -198,20 +199,15 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public void SetChangeVector(DocumentsOperationContext context, ChangeVectorEntry changeVectorEntry)
+        public void SetChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-            tree.Add(new Slice((byte*)&changeVectorEntry.DbId, (ushort)sizeof(Guid)), 
-                new Slice((byte*)&changeVectorEntry.Etag, (ushort)sizeof(Guid)));
-        }
-
-        public long? GetChangeVectorEntryFor(DocumentsOperationContext context, Guid dbId)
-        {
-            var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-
-            var dbIdPtr = (byte*)&dbId;
-            var readResult = tree.Read(new Slice(dbIdPtr, (ushort)sizeof (Guid)));
-            return readResult?.Reader.ReadBigEndianInt64();
+            for(int i = 0; i < changeVector.Length; i++)
+            {
+                var entry = changeVector[i];
+                tree.Add(new Slice((byte*)&entry.DbId, (ushort)sizeof(Guid)),
+                    new Slice((byte*)&entry.Etag, (ushort)sizeof(Guid)));
+            }
         }
 
         public static long ReadLastEtag(Transaction tx)

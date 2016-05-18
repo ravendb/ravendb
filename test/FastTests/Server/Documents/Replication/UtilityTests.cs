@@ -11,25 +11,13 @@ namespace FastTests.Server.Documents.Replication
 {
     public class UtilityTests : RavenTestBase
     {
-        [Fact]
-        public async Task Receive_replication_documents_should_work()
-        {
-            using (await GetDocumentStore(modifyDatabaseDocument: document => document.Id = "TestDB2"))
-            using (var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("TestDB2"))
-            {
-                DocumentsOperationContext context;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                {
-
-                }
-            }
-        }
+        public readonly string DbName = $"TestDB{Guid.NewGuid()}";
 
         [Fact]
         public async Task Extract_change_vector_from_document_metadata_should_work()
         {
-            using (await GetDocumentStore(modifyDatabaseDocument:document => document.Id = "TestDB"))
-            using (var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("TestDB"))
+            using (await GetDocumentStore(modifyDatabaseDocument:document => document.Id = DbName))
+            using (var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(DbName))
             {
                 DocumentsOperationContext context;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -41,17 +29,17 @@ namespace FastTests.Server.Documents.Replication
                     {
                         new DynamicJsonValue
                         {
-                            ["Key"] = new DynamicJsonArray(guid1.ToByteArray().Cast<object>()),
+                            ["Key"] = guid1.ToString(),
                             ["Value"] = 1L
                         },
                         new DynamicJsonValue
                         {
-                            ["Key"] = new DynamicJsonArray(guid2.ToByteArray().Cast<object>()),
+                            ["Key"] = guid2.ToString(),
                             ["Value"] = 3L
                         },
                         new DynamicJsonValue
                         {
-                            ["Key"] = new DynamicJsonArray(guid3.ToByteArray().Cast<object>()),
+                            ["Key"] = guid1.ToString(),
                             ["Value"] = 5L
                         },
                     };
@@ -67,14 +55,14 @@ namespace FastTests.Server.Documents.Replication
 
                     var changeVector = doc.EnumerateChangeVector().ToList();
 
-                    Assert.Equal(changeVector[0].Item1.Select(Convert.ToByte), guid1.ToByteArray());
-                    Assert.Equal(changeVector[0].Item2, 1L);
+                    Assert.Equal(changeVector[0].DbId, guid1);
+                    Assert.Equal(changeVector[0].Etag, 1L);
 
-                    Assert.Equal(changeVector[1].Item1.Select(Convert.ToByte), guid2.ToByteArray());
-                    Assert.Equal(changeVector[1].Item2, 3L);
+                    Assert.Equal(changeVector[1].DbId, guid2);
+                    Assert.Equal(changeVector[1].Etag, 3L);
 
-                    Assert.Equal(changeVector[2].Item1.Select(Convert.ToByte), guid3.ToByteArray());
-                    Assert.Equal(changeVector[2].Item2, 5L);
+                    Assert.Equal(changeVector[2].DbId, guid3);
+                    Assert.Equal(changeVector[2].Etag, 5L);
                 }
             }
         }

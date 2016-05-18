@@ -327,7 +327,10 @@ namespace Sparrow.Json
             }
         }
 
-        public async Task<BlittableJsonReaderObject> ReadFromWebSocket(WebSocket webSocket, string debugTag, CancellationToken cancellationToken)
+        public async Task<BlittableJsonReaderObject> ReadFromWebSocket(
+            WebSocket webSocket, 
+            string debugTag, 
+            CancellationToken cancellationToken)
         {
             var jsonParserState = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(this, jsonParserState, debugTag))
@@ -341,9 +344,7 @@ namespace Sparrow.Json
                 var result = await webSocket.ReceiveAsync(buffer, cancellationToken);
 
                 if (result.MessageType == WebSocketMessageType.Close)
-                {
                     return null;
-                }
 
                 parser.SetBuffer(buffer.Array, result.Count);
                 while (writer.Read() == false)
