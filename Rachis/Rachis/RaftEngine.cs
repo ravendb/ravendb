@@ -349,6 +349,25 @@ namespace Rachis
             return ModifyTopology(requestedTopology);
         }
 
+        public Task ModifyNodeVotingModeAsync(NodeConnectionInfo node, bool votingMode)
+        {
+            if (!_currentTopology.Contains(node.Name))
+                throw new InvalidOperationException("Node " + node.Name + " is not in the cluster");
+            var requestedTopology = new Topology(
+                _currentTopology.TopologyId,
+                votingMode ? _currentTopology.AllVotingNodes: _currentTopology.AllVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false),
+                votingMode ? _currentTopology.NonVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false):
+                _currentTopology.NonVotingNodes.Union(new[] { node}),
+                votingMode ? _currentTopology.PromotableNodes.Union(new [] {node}) : _currentTopology.PromotableNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false)
+                );
+
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info("ModifyNodeVotingModeAsync, requestedTopology: {0}", requestedTopology);
+            }
+            return ModifyTopology(requestedTopology);
+        }
+
         internal bool CurrentlyChangingTopology()
         {
             return Interlocked.CompareExchange(ref _changingTopology, null, null) == null;

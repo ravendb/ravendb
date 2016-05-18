@@ -3,16 +3,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using ICSharpCode.NRefactory.CSharp.Refactoring;
-using NLog;
+using System.Threading.Tasks;
+using Rachis.Storage;
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Metrics;
 using Raven.Database.Commercial;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -61,6 +59,11 @@ namespace Raven.Database.Plugins.Builtins
         /// </summary>
         private volatile static Timer licensingTimer;
 
+        /// <summary>
+        /// A static timer to disable databases when license expired.
+        /// </summary>
+        private volatile static Timer pollingLicenseStateTimer;
+
         public void Execute(RavenDBOptions serverOptions)
         {
             requestManger = serverOptions.RequestManager;
@@ -87,7 +90,7 @@ namespace Raven.Database.Plugins.Builtins
             });
         }
 
-        public void ActivateHotSpareLicense()
+        public async Task ActivateHotSpareLicense()
         {
             var id = GetLicenseId();
             var now = SystemTime.UtcNow;
@@ -112,13 +115,31 @@ namespace Raven.Database.Plugins.Builtins
                 doc.ActivationTime = now;
                 doc.ActivationMode = HotSpareLicenseDocument.HotSpareLicenseActivationMode.Activated;
             }
+            await ChangeHotSpareModeWithinCluster(false).ConfigureAwait(false);
             PutLicenseDocument(id,doc);			
-            DeactivateTimer();
+            DeactivateTimer();                        
             requestManger.IsInHotSpareMode = false;
             // next check time should be positive because we handle expired licensing already
             var nextCheckTime = ActivationTime - (now - doc.ActivationTime);
             licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(ActivationTimeoutCallback, nextCheckTime.Value, NonRecurringTimeSpan);
         }
+
+        private async Task ChangeHotSpareModeWithinCluster(bool hotSpareMode)
+        {
+            //If we are in a cluster we want the leader to aprrove the activation
+            //We don't want to save the license document before we are approved 
+            var clusterManager = landlord.SystemDatabase?.ClusterManager?.Value;
+            if (clusterManager != null && (clusterManager.Engine.CurrentTopology?.ToString() != Topology.EmptyTopology))
+            {
+                var res = await clusterManager.Client.SendVotingModeChangeRequestAsync(clusterManager.Engine.Options.SelfConnection, !hotSpareMode).ConfigureAwait(false);
+                //We are in a cluster but we failed to be activated by the leader
+                if (!res)
+                {
+                    throw new Exception($"Hot Spare server failed to be activated because the server is in a cluster and there is no quorum to add it.");
+                }
+            }
+        }
+
         public bool IsActivationExpired(string id)
         {
             var doc = GetOrCreateLicenseDocument(id);
@@ -135,7 +156,7 @@ namespace Raven.Database.Plugins.Builtins
         private const string multipleActivationMessage = "Multiple activation of hot spare license detected.";
         private const string multipleActivationTitle = "Multiple hot spare activation";
 
-        public void EnableTestModeForHotSpareLicense()
+        public async Task EnableTestModeForHotSpareLicense()
         {
             var id = GetLicenseId();
             if (string.IsNullOrEmpty(id))
@@ -152,6 +173,7 @@ namespace Raven.Database.Plugins.Builtins
                 RaiseAlert(RanOutOfTestAllowanceMessage,RanOutOfTestAllowanceTitle, AlertLevel.Warning);
                 return;
             }
+            await ChangeHotSpareModeWithinCluster(false).ConfigureAwait(false);
             doc.RemainingTestActivations--;
             PutLicenseDocument(id, doc);	
             DeactivateTimer();
@@ -169,12 +191,46 @@ namespace Raven.Database.Plugins.Builtins
             return doc.RemainingTestActivations <= 0;
         }
 
-        public void CheckHotSpareLicenseStats()
+        /// <summary>
+        /// Invokes ChangeHotSpareModeWithinCluster and in the case of failure sets a timer to call 
+        /// CheckHotSpareLicenseStats again within a minute.
+        /// </summary>
+        /// <param name="hotSpareMode">the state we want to set the hotSpare to</param>
+        /// <returns>true if the state was changed without throwing</returns>
+        private bool ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(bool hotSpareMode)
+        {
+            try
+            {
+                Abstractions.Util.AsyncHelpers.RunSync(() => ChangeHotSpareModeWithinCluster(hotSpareMode));
+            }
+            catch
+            {
+                if(pollingLicenseStateTimer == null)
+                    //the reason we fail here is only because we are running within a cluster and could not get the leader to approve our voting state
+                    pollingLicenseStateTimer = landlord.SystemDatabase.TimerManager.NewTimer(CheckHotSpareLicenseStats, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+                return false;
+            }
+            if (pollingLicenseStateTimer != null)
+                try
+                {
+                    landlord.SystemDatabase.TimerManager.ReleaseTimer(pollingLicenseStateTimer);
+                }
+                catch (InvalidOperationException)
+                {
+                    //shouldn't happen...
+                    pollingLicenseStateTimer.Dispose();
+                }
+            return true;
+        }
+
+        public void CheckHotSpareLicenseStats(object state = null)
         {
             var id = GetLicenseId();
             // Non-comercial license with hot spare history
             if (id == null && CheckForHotSpareFootprintAndReport())
             {
+                if(!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true)) 
+                    return;
                 requestManger.IsInHotSpareMode = true;
                 return;
             }
@@ -188,6 +244,8 @@ namespace Raven.Database.Plugins.Builtins
                     log.Warn(ExpiredHotSpareLicensingUssageMessage);
                     RaiseAlert(ExpiredHotSpareLicensingUssageMessage,ExpiredHotSpareLicenseTitle, AlertLevel.Warning);
                     ReportLicensingUsage(id, ReportHotSpareUssage.ActivationMode.ExpiredActivation);
+                    if (!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true))
+                        return;
                     requestManger.IsInHotSpareMode = true;
                     return;
                 }
@@ -197,10 +255,14 @@ namespace Raven.Database.Plugins.Builtins
                     var exparationTime = ActivationTime - (SystemTime.UtcNow - doc.ActivationTime.Value);					
                     exparationTime = (exparationTime > TimeSpan.Zero) ? exparationTime : TimeSpan.Zero;
                     DeactivateTimer();
+                    if (!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(false))
+                        return;
                     requestManger.IsInHotSpareMode = false;
                     licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(ActivationTimeoutCallback, exparationTime, NonRecurringTimeSpan);
                     return;
                 }
+                if (!ChangeHotSpareModeWithinClusterForCheckHotSpareLicenseStats(true))
+                    return;
                 //not activated or back from testing
                 requestManger.IsInHotSpareMode = true;
                 return;
@@ -365,6 +427,16 @@ namespace Raven.Database.Plugins.Builtins
             DeactivateTimer();
             if (LicenseEqual(newLicense, licensingStatus))
             {
+                try
+                {
+                    Abstractions.Util.AsyncHelpers.RunSync(()=>ChangeHotSpareModeWithinCluster(true));
+                }
+                catch
+                {
+                    //the reason we fail here is only because we are running within a cluster and could not get the leader to approve our voting state
+                    licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(ActivationTimeoutCallback, TimeSpan.FromMinutes(1), NonRecurringTimeSpan);
+                    return;
+                }
                 requestManger.IsInHotSpareMode = true;
                 ReportUsageOfExpiredHotSpareLicense(ReportHotSpareUssage.ActivationMode.ExpiredActivation, licensingStatus.Attributes["UserId"]);				
                 return;
@@ -377,6 +449,16 @@ namespace Raven.Database.Plugins.Builtins
         {
             licensingStatus = GetLicensingStatus();
             DeactivateTimer();
+            try
+            {
+                Abstractions.Util.AsyncHelpers.RunSync(() => ChangeHotSpareModeWithinCluster(true));
+            }
+            catch
+            {
+                //the reason we fail here is only because we are running within a cluster and could not get the leader to approve our voting state
+                licensingTimer = landlord.SystemDatabase.TimerManager.NewTimer(TestTimeoutCallback, TimeSpan.FromMinutes(1), NonRecurringTimeSpan);
+                return;
+            }
             requestManger.IsInHotSpareMode = true;
             CheckHotSpareLicenseStats();
         }

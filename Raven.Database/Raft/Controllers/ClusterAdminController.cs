@@ -4,19 +4,17 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
-
+using Rachis;
 using Rachis.Transport;
-
+using Rachis.Utils;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Extensions;
 using Raven.Database.Raft.Dto;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers.Admin;
@@ -150,9 +148,10 @@ namespace Raven.Database.Raft.Controllers
 
             var topology = ClusterManager.Engine.CurrentTopology;
 
+            CanJoinResult canJoinResult = CanJoinResult.CanJoin;
             if (forced == false)
             {
-                var canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
+                canJoinResult = await ClusterManager.Client.SendCanJoinAsync(nodeConnectionInfo).ConfigureAwait(false);
                 switch (canJoinResult)
                 {
                     case CanJoinResult.IsNonEmpty:
@@ -170,8 +169,22 @@ namespace Raven.Database.Raft.Controllers
             
             if (topology.Contains(nodeConnectionInfo.Name))
                 return GetEmptyMessage(HttpStatusCode.NotModified);
-            
-            await ClusterManager.Client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
+            //We call this endpoint twice once from the studio and once from the non leader server
+            // here i check if i'm not the leader then i'll add my voting state to the leader.
+            bool nonVoting;
+            if (ClusterManager.Engine.State != RaftEngineState.Leader)
+                nonVoting = RequestManager.IsInHotSpareMode;
+            else
+            {
+                var nonVotingStr = GetQueryStringValue("nonVoting");
+                //this is when we are called from the studio
+                if (String.IsNullOrEmpty(nonVotingStr) && canJoinResult == CanJoinResult.CanJoinAsNonVoter)
+                {
+                    nonVoting = true;
+                }
+                else bool.TryParse(nonVotingStr, out nonVoting);
+            }
+            await ClusterManager.Client.SendJoinServerAsync(nodeConnectionInfo,nonVoting).ConfigureAwait(false);
             return GetEmptyMessage();
         }
 
@@ -209,8 +222,11 @@ namespace Raven.Database.Raft.Controllers
             {
                 return GetMessageWithStringAsTask("Can't join node to cluster. Node is not empty", HttpStatusCode.Conflict);
             }
+            //if i'm hot spare i should be joined as a non-voter
+            if (RequestManager.IsInHotSpareMode)
+                return GetMessageWithStringAsTask("NonVoter", HttpStatusCode.Accepted);
 
-            return GetEmptyMessageAsTask(HttpStatusCode.Accepted);
+            return GetMessageWithStringAsTask("Voter", HttpStatusCode.Accepted);
         }
 
         [HttpGet]
@@ -229,6 +245,21 @@ namespace Raven.Database.Raft.Controllers
             {
                 Removed = name
             });
+        }
+
+        [HttpPost]
+        [RavenRoute("admin/cluster/changeVotingMode")]
+        public async Task<HttpResponseMessage> ChangeVotingMode([FromUri] bool isVoting)
+        {
+            var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
+            //if i'm the leader and i was just requested to stop been a voter than i should step down
+            if (nodeConnectionInfo == ClusterManager.Engine.Options.SelfConnection && !isVoting)
+                await ClusterManager.Engine.StepDownAsync().ConfigureAwait(false);
+            if (ClusterManager.Engine.State != RaftEngineState.Leader)
+                throw new NotLeadingException($"Node {ClusterManager.Engine.Name} Got a request to change voting state of node " +
+                                              $"{nodeConnectionInfo.Name} to {isVoting}, but it is not currently the leader.");
+            await ClusterManager.Engine.ModifyNodeVotingModeAsync(nodeConnectionInfo, isVoting).ConfigureAwait(false);
+            return GetEmptyMessage();
         }
     }
 }

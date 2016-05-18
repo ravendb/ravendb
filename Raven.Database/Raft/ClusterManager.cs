@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Storage;
@@ -38,19 +37,19 @@ namespace Raven.Database.Raft
         public ClusterTopology GetTopology()
         {
             return new ClusterTopology
-                   {
-                       CurrentLeader = Engine.CurrentLeader,
-                       CurrentTerm = Engine.PersistentState.CurrentTerm,
-                       State = Engine.State.ToString(),
-                       CommitIndex = Engine.CommitIndex,
-                       AllVotingNodes = Engine.CurrentTopology.AllVotingNodes.ToArray(),
-                       PromotableNodes = Engine.CurrentTopology.PromotableNodes.ToArray(),
-                       NonVotingNodes = Engine.CurrentTopology.NonVotingNodes.ToArray(),
-                       TopologyId = Engine.CurrentTopology.TopologyId
-                   };
+            {
+                CurrentLeader = Engine.CurrentLeader,
+                CurrentTerm = Engine.PersistentState.CurrentTerm,
+                State = Engine.State.ToString(),
+                CommitIndex = Engine.CommitIndex,
+                AllVotingNodes = Engine.CurrentTopology.AllVotingNodes.ToArray(),
+                PromotableNodes = Engine.CurrentTopology.PromotableNodes.ToArray(),
+                NonVotingNodes = Engine.CurrentTopology.NonVotingNodes.ToArray(),
+                TopologyId = Engine.CurrentTopology.TopologyId
+            };
         }
 
-        public void InitializeTopology(NodeConnectionInfo nodeConnection = null, bool isPartOfExistingCluster = false,bool forceCandidateState = false)
+        public void InitializeTopology(NodeConnectionInfo nodeConnection = null, bool isPartOfExistingCluster = false, bool forceCandidateState = false)
         {
             var topologyId = Guid.NewGuid();
             var topology = new Topology(topologyId, new List<NodeConnectionInfo> { nodeConnection ?? Engine.Options.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
@@ -112,7 +111,7 @@ namespace Raven.Database.Raft
             foreach (var database in databases)
             {
                 var settings = database.Value<RavenJObject>("Settings");
-                
+
                 if (settings != null && settings.ContainsKey(Constants.Cluster.NonClusterDatabaseMarker))
                 {
                     settings.Remove(Constants.Cluster.NonClusterDatabaseMarker);
