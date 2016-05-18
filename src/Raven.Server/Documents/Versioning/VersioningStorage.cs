@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Voron;
 using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Versioning
@@ -30,12 +32,12 @@ namespace Raven.Server.Documents.Versioning
             _versioningConfiguration = versioningConfiguration;
 
             // The documents schema is as follows
-            // 4 fields (lowered key, etag, lazy string key, document)
+            // 5 fields (lowered key, recored separator, etag, lazy string key, document)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             _docsSchema.DefineIndex("KeyAndEtag", new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
-                Count = 2,
+                Count = 3,
             });
         }
 
@@ -113,9 +115,12 @@ namespace Raven.Server.Documents.Versioning
             int keySize;
             DocumentsStorage.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
+            byte recordSeperator = 30;
+
             var tbv = new TableValueBuilder
             {
                 {lowerKey, lowerSize},
+                {&recordSeperator, sizeof(char)},
                 {(byte*)&newEtagBigEndian, sizeof(long)},
                 {keyPtr, keySize},
                 {document.BasePointer, document.Size}
@@ -164,6 +169,77 @@ namespace Raven.Server.Documents.Versioning
 
             var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
             table.SeekForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key /* todo, lowered*/, startsWith: true);
+        }
+
+        public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string id, int start, int take)
+        {
+            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+
+            var prefixSlice = GetSliceFromKey(context, id);
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekByPrimaryKey(prefixSlice))
+            {
+                var document = TableValueToDocument(context, result);
+
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
+                yield return document;
+            }
+        }
+
+        public static Slice GetSliceFromKey(DocumentsOperationContext context, string key)
+        {
+            var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
+            if (byteCount > 255)
+                throw new ArgumentException(
+                    $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{key}'.",
+                    nameof(key));
+
+            int size;
+            var buffer = context.GetNativeTempBuffer(
+                byteCount
+                + sizeof(char) * key.Length // for the lower calls
+                + sizeof(char) * 2 // for the record separator
+                , out size);
+
+            fixed (char* pChars = key)
+            {
+                var destChars = (char*)buffer;
+                for (var i = 0; i < key.Length; i++)
+                {
+                    destChars[i] = char.ToLowerInvariant(pChars[i]);
+                }
+                destChars[key.Length] = (char)30;
+
+                var keyBytes = buffer + sizeof(char) + key.Length * sizeof(char);
+
+                size = Encoding.UTF8.GetBytes(destChars, key.Length + 1, keyBytes, byteCount + 1);
+                return new Slice(keyBytes, (ushort)size);
+            }
+        }
+
+        private static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
+        {
+            var result = new Document
+            {
+                StorageId = tvr.Id
+            };
+            int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
+            var ptr = tvr.Read(3, out size);
+            byte offset;
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Key = new LazyStringValue(null, ptr + offset, size, context);
+            ptr = tvr.Read(2, out size);
+            result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+            result.Data = new BlittableJsonReaderObject(tvr.Read(4, out size), size, context);
+
+            return result;
         }
     }
 }
