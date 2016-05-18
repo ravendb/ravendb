@@ -40,11 +40,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    //TODO: Kestrel bug https://github.com/aspnet/KestrelHttpServer/issues/617
-                    //TODO: requires us to do this
-                    var method = context.Request.Method.Trim();
-                    
-                    await router.HandlePath(context, method, context.Request.Path.Value);
+                    await router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 }
                 catch (Exception e)
                 {
