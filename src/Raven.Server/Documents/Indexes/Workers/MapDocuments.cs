@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     using (databaseContext.OpenReadTransaction())
                     {
-                        foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
+                        foreach (var document in _index.EnumerateMap(_documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize), collection))
                         {
                             token.ThrowIfCancellationRequested();
 

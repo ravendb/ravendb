@@ -65,6 +65,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return _mapReduceWorkContext;
         }
 
+        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection)
+        {
+            return documents;
+        }
+
         public override unsafe void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(tombstone.Key, sizeof(ulong));

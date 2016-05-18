@@ -1,58 +1,42 @@
-﻿using System.Linq;
-
+﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Workers;
-using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Results;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class StaticMapIndex : Index<StaticMapIndexDefinition>
+    public class StaticMapIndex : MapIndexBase<StaticMapIndexDefinition>
     {
-        public StaticMapIndex(int indexId, StaticMapIndexDefinition definition)
+        private readonly StaticIndexBase _compiled;
+
+        public StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.Map, definition)
         {
+            _compiled = compiled;
         }
 
-        protected override IIndexingWork[] CreateIndexWorkExecutors()
+        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection)
         {
-            throw new System.NotImplementedException();
-        }
+            foreach (var map in _compiled.Maps[collection])
+            {
+                // ReSharper disable once PossibleMultipleEnumeration
+                var enumerator = map(documents).GetEnumerator();
 
-        public override void HandleDelete(
-            DocumentTombstone tombstone,
-            IndexWriteOperation writer,
-            TransactionOperationContext indexContext,
-            IndexingStatsScope stats)
-        {
-            throw new System.NotImplementedException();
-        }
+                while (enumerator.MoveNext())
+                {
+                    var current = enumerator.Current;
 
-        public override void HandleMap(
-            Document document,
-            IndexWriteOperation writer,
-            TransactionOperationContext indexContext,
-            IndexingStatsScope stats)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override IQueryResultRetriever GetQueryResultRetriever(
-            DocumentsOperationContext documentsContext,
-            TransactionOperationContext indexContext,
-            FieldsToFetch fieldsToFetch)
-        {
-            throw new System.NotImplementedException();
+                    // TODO object to document donverter
+                    yield return new Document(); // TODO arek
+                }
+            }
         }
 
         public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
             var staticMapIndexDefinition = new StaticMapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray());
-            var instance = new StaticMapIndex(indexId, staticMapIndexDefinition);
+            var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             instance.Initialize(documentDatabase);
 
             return instance;

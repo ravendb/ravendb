@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -20,6 +21,11 @@ namespace Raven.Server.Documents.Indexes.Errors
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
+        {
+            throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
+        }
+
+        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index");
         }
