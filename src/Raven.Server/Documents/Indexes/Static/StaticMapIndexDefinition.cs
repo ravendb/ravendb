@@ -89,6 +89,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     var fields = ReadMapFields(reader).ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
 
                     var definition = new IndexDefinition();
+                    definition.Name = ReadName(reader);
                     definition.Maps = ReadMaps(reader);
                     definition.Fields = fields.ToDictionary(
                         x => x.Key,

@@ -40,6 +40,9 @@ namespace FastTests.Client.Indexing
                 var output = await store
                     .AsyncDatabaseCommands
                     .GetIndexAsync("Users_ByName");
+
+                Assert.Equal(1, output.IndexId);
+                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutput: false));
             }
         }
     }

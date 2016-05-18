@@ -110,6 +110,9 @@ namespace Raven.Server.Documents.Indexes
 
                 Index index;
 
+                if (definition.Type == IndexType.Unknown)
+                    definition.Type = definition.DetectIndexType();
+
                 switch (definition.Type)
                 {
                     case IndexType.Map:
@@ -453,7 +456,7 @@ namespace Raven.Server.Documents.Indexes
                         exceptions?.Add(e);
 
                         // TODO arek: I think we can ignore auto indexes here, however for static ones try to retrieve names
-                        var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadName(indexDirectory));
+                        var fakeIndex = new FaultyInMemoryIndex(indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory));
 
                         Log.ErrorException($"Could not open index with id {indexId}. Created in-memory, fake instance: {fakeIndex.Name}", e);
                         // TODO arek: add alert

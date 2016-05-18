@@ -31,14 +31,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 var indexDefinition = await ReadIndexDefinitionAsync(context, names[0]);
 
-                switch (indexDefinition.Type)
-                {
-                    case IndexType.AutoMap:
-                    case IndexType.AutoMapReduce:
-                    case IndexType.Unknown:
-                        throw new InvalidOperationException($"Cannot PUT {indexDefinition.Type} index");
-                }
-
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

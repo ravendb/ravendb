@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticMapIndexDefinition = StaticMapIndexDefinition.Load(environment);
             var staticIndex = IndexCompilationCache.GetIndexInstance(staticMapIndexDefinition.IndexDefinition);
 
-            var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, null);
+            var instance = new StaticMapIndex(indexId, staticMapIndexDefinition, staticIndex);
             instance.Initialize(environment, documentDatabase);
 
             return instance;

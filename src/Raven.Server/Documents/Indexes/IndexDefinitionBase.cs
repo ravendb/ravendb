@@ -69,6 +69,10 @@ namespace Raven.Server.Documents.Indexes
         {
             writer.WriteStartObject();
 
+            writer.WritePropertyName(context.GetLazyString(nameof(Name)));
+            writer.WriteString(context.GetLazyString(Name));
+            writer.WriteComma();
+
             writer.WritePropertyName(context.GetLazyString(nameof(Collections)));
             writer.WriteStartArray();
             var isFirst = true;
@@ -204,7 +208,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public static string TryReadName(DirectoryInfo directory)
+        public static string TryReadNameFromMetadataFile(DirectoryInfo directory)
         {
             var metadataFile = Path.Combine(directory.FullName, MetadataFileName);
             if (File.Exists(metadataFile) == false)
@@ -213,6 +217,15 @@ namespace Raven.Server.Documents.Indexes
             var name = File.ReadAllText(metadataFile, Encoding.UTF8);
             if (string.IsNullOrWhiteSpace(name))
                 return null;
+
+            return name;
+        }
+
+        protected static string ReadName(BlittableJsonReaderObject reader)
+        {
+            string name;
+            if (reader.TryGet(nameof(Name), out name) == false || string.IsNullOrWhiteSpace(name))
+                throw new InvalidOperationException("No persisted name");
 
             return name;
         }
