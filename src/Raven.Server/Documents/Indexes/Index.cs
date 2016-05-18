@@ -19,6 +19,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
@@ -122,6 +123,8 @@ namespace Raven.Server.Documents.Indexes
                         return AutoMapIndex.Open(indexId, environment, documentDatabase);
                     case IndexType.AutoMapReduce:
                         return AutoMapReduceIndex.Open(indexId, environment, documentDatabase);
+                    case IndexType.Map:
+                        return StaticMapIndex.Open(indexId, environment, documentDatabase);
                     default:
                         throw new NotImplementedException();
                 }
@@ -314,7 +317,7 @@ namespace Raven.Server.Documents.Indexes
                     _contextPool?.Dispose();
                     _contextPool = null;
                 });
-                
+
                 exceptionAggregator.ThrowIfNeeded();
             }
         }
@@ -553,6 +556,8 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
+
+        public abstract IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
 
         public abstract void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 

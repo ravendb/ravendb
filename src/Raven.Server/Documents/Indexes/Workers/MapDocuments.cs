@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     using (databaseContext.OpenReadTransaction())
                     {
-                        foreach (var document in _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize))
+                        foreach (var document in _index.EnumerateMap(_documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize), collection, indexContext))
                         {
                             //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
                             //TODO: we flush the index

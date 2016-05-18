@@ -24,8 +24,11 @@ namespace Raven.Server.Documents.Indexes.Static
             list.AddRange(definition.Maps);
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
+
+            // TODO [ppekrol] add field options
+
             var key = new CacheKey(list);
-            Func<StaticIndexBase> createIndex = () => new StaticIndexCompiler().Compile(definition);
+            Func<StaticIndexBase> createIndex = () => StaticIndexCompiler.Compile(definition);
             var result = Cache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));
             return result.Value;
         }

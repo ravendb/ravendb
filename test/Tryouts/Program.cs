@@ -1,40 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net.WebSockets;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+<<<<<<< HEAD
 using FastTests.Client.BulkInsert;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
 using FastTests.Voron.RawData;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+=======
+
+>>>>>>> c28a72ed531a8373a40873155dae8a363c13987f
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
-using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Linq;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
-using SlowTests.Tests.Sorting;
-using Raven.Abstractions.Extensions;
-using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Abstractions.FileSystem;
-using Raven.Client.Data;
 using Raven.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Documents.Indexes.Static;
-using Voron;
-using JsonToken = Raven.Imports.Newtonsoft.Json.JsonToken;
 
+using JsonToken = Raven.Imports.Newtonsoft.Json.JsonToken;
 
 namespace Tryouts
 {
@@ -83,7 +72,38 @@ namespace Tryouts
             //            }
             //            return;
 
+<<<<<<< HEAD
             new BasicDynamicMapReduceQueries().Can_project_in_map_reduce().Wait();
+=======
+            var indexDefinition = new IndexDefinition
+            {
+                Name = "Orders_ByName",
+                Maps =
+                {
+                    "from order in docs.Orders select new { Mame = order.Name.ToUpper() };"
+                }
+            };
+
+            var index = StaticIndexCompiler.Compile(indexDefinition);
+
+            var orders = new[]
+            {
+                new Order {Name = "Oren"},
+                new Order {Name = "Pawel"},
+                new Order {Name = "Haim"},
+            };
+
+            foreach (var collectionMaps in index.Maps)
+            {
+                foreach (var map in collectionMaps.Value)
+                {
+                    foreach (var result in map(orders))
+                    {
+                        Console.WriteLine(result);
+                    }
+                }
+            }
+>>>>>>> c28a72ed531a8373a40873155dae8a363c13987f
         }
 
         public class Order
@@ -108,15 +128,15 @@ namespace Tryouts
         {
             //using (var bulk = store.BulkInsert())
             {
-                
+
                 string filePath = @"C:\Users\ayende\Downloads\Dump of temp2, 2016-05-17 14-07.ravendump";
                 Stream dumpStream = File.OpenRead(filePath);
                 var gZipStream = new GZipStream(dumpStream, CompressionMode.Decompress, leaveOpen: true);
                 using (var streamReader = new StreamReader(gZipStream))
                 using (var reader = new RavenJsonTextReader(streamReader))
                 {
-                   
-                        if (reader.Read() == false /* { */|| reader.Read() == false /* prop*/)
+
+                    if (reader.Read() == false /* { */|| reader.Read() == false /* prop*/)
                         throw new InvalidOperationException("empty document?");
 
                     if (reader.TokenType != JsonToken.PropertyName)
@@ -141,10 +161,10 @@ namespace Tryouts
                         var key = metadata.Value<string>("@id");
                         document.Remove("@metadata");
 
-                       
-                            await store.AsyncDatabaseCommands.PutAsync(key, null, document, metadata);
-                            //await bulk.StoreAsync(document, metadata, key).ConfigureAwait(false);
-                            Console.WriteLine(key);
+
+                        await store.AsyncDatabaseCommands.PutAsync(key, null, document, metadata);
+                        //await bulk.StoreAsync(document, metadata, key).ConfigureAwait(false);
+                        Console.WriteLine(key);
                         if (reader.Read() == false)
                             throw new InvalidOperationException("corrupt document, array value");
                     }

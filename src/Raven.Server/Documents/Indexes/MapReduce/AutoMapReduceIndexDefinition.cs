@@ -77,6 +77,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
         {
+            // TODO arek
+            return false;
+        }
+
+        public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        {
             return false;
         }
 

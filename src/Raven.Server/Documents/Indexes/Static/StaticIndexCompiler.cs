@@ -16,7 +16,7 @@ using Raven.Client.Indexing;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class StaticIndexCompiler
+    public static class StaticIndexCompiler
     {
         private static readonly MetadataReference[] References =
             {
@@ -46,10 +46,10 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
 }
 
 ");
-        public StaticIndexBase Compile(IndexDefinition definition)
+        public static StaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition);
-            var syntaxNode = new TrnasformIndexClass(cSharpSafeName, definition).Visit(BaseSyntaxTree.GetRoot());
+            var syntaxNode = new TransformIndexClass(cSharpSafeName, definition).Visit(BaseSyntaxTree.GetRoot());
 
             var syntaxTree = SyntaxFactory.SyntaxTree(syntaxNode.NormalizeWhitespace());
 
@@ -95,25 +95,24 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
 
             var index = (StaticIndexBase)Activator.CreateInstance(type);
 
-            index.Definition = definition;
             index.Source = code;
 
             return index;
         }
 
 
-        private string GetCSharpSafeName(IndexDefinition definition)
+        private static string GetCSharpSafeName(IndexDefinition definition)
         {
             return $"Index_{Regex.Replace(definition.Name, @"[^\w\d]", "_")}";
         }
     }
 
-    internal class TrnasformIndexClass : CSharpSyntaxRewriter
+    internal class TransformIndexClass : CSharpSyntaxRewriter
     {
         private readonly IndexDefinition _definition;
         private readonly SyntaxToken _name;
 
-        public TrnasformIndexClass(string name, IndexDefinition definition)
+        public TransformIndexClass(string name, IndexDefinition definition)
         {
             _definition = definition;
             _name = SyntaxFactory.Identifier(name);
@@ -135,6 +134,7 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
 
             return node.WithIdentifier(_name);
         }
+
         private InvocationExpressionSyntax HandleMap(string map)
         {
             try

@@ -28,5 +28,10 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
+
+        public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        {
+            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+        }
     }
 }

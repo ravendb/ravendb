@@ -11,8 +11,6 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         public readonly Dictionary<string, IndexingFunc[]> Maps = new Dictionary<string, IndexingFunc[]>(StringComparer.OrdinalIgnoreCase);
 
-        public IndexDefinition Definition;
-
         public string Source;
 
         public void AddMap(string collection, IndexingFunc map)

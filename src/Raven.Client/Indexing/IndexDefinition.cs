@@ -237,6 +237,17 @@ namespace Raven.Client.Indexing
                 Fields.Remove(key);
         }
 
+        public IndexType DetectIndexType()
+        {
+            if (Type != IndexType.Unknown)
+                return Type;
+
+            if (string.IsNullOrWhiteSpace(Reduce))
+                return IndexType.Map;
+
+            return IndexType.MapReduce;
+        }
+
         public override string ToString()
         {
             return Name;
