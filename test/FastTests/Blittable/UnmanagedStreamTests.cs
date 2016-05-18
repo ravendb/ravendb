@@ -18,7 +18,7 @@ namespace FastTests.Blittable
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
             using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
-                var newStream = ctx.GetStream("tst");
+                var newStream = ctx.GetStream();
                 var buffer = new byte[1337];
                 new Random(1337).NextBytes(buffer);
                 fixed (byte* p = buffer)
@@ -50,7 +50,7 @@ namespace FastTests.Blittable
                 using(var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
-                var newStream = ctx.GetStream("tst");
+                var newStream = ctx.GetStream();
                 var totalSize = 0;
                 var rand = new Random();
                 for (var i = 1; i < 5000; i+=500)
@@ -104,7 +104,7 @@ namespace FastTests.Blittable
             using(var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
-                var newStream = ctx.GetStream("tst");
+                var newStream = ctx.GetStream();
                 var rand = new Random();
                 for (var i = 5000; i > 1; i-=500)
                 {
@@ -141,7 +141,7 @@ namespace FastTests.Blittable
             using (var ctx = new JsonOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
-                var newStream = ctx.GetStream("tst");
+                var newStream = ctx.GetStream();
                 var rand = new Random();
                 for (var i = 1; i < 5000; i+=500)
                 {
