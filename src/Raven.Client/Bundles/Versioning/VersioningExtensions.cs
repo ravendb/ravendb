@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Document;
 using Raven.Client.Document.Async;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Bundles.Versioning
 {
@@ -11,47 +12,19 @@ namespace Raven.Client.Bundles.Versioning
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging).
         /// </summary>
-        public static T[] GetRevisionsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
+        public static RavenJObject[] GetRevisionsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
         {
-            var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)session);
-            var jsonDocuments = ((DocumentSession)session).DatabaseCommands.StartsWith(id + "/revisions/", null, start, pageSize);
-            return jsonDocuments
-                .Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
-                .ToArray();
-        }
-
-        /// <summary>
-        /// Returns all revision document keys for specified document (with paging).
-        /// </summary>
-        public static string[] GetRevisionIdsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
-        {
-            var jsonDocuments = ((DocumentSession)session).DatabaseCommands.StartsWith(id + "/revisions/", null, start, pageSize, metadataOnly: true);
-            return jsonDocuments
-                .Select(document => document.Key)
-                .ToArray();
+            var jsonDocuments = ((DocumentSession)session).DatabaseCommands.GetRevisionsFor(id + "/revisions/", start, pageSize);
+            return jsonDocuments.ToArray();
         }
 
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging).
         /// </summary>
-        public static async Task<T[]> GetRevisionsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start, int pageSize)
+        public static async Task<RavenJObject[]> GetRevisionsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start, int pageSize)
         {
-            var inMemoryDocumentSessionOperations = (InMemoryDocumentSessionOperations)session;
-            var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetRevisionsForAsync(id + "/revisions/", null, start, pageSize).ConfigureAwait(false);
-            return jsonDocuments
-                .Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
-                .ToArray();
-        }
-
-        /// <summary>
-        /// Returns all revision document keys for specified document (with paging).
-        /// </summary>
-        public static async Task<string[]> GetRevisionIdsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start, int pageSize)
-        {
-            var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.StartsWithAsync(id + "/revisions/", null, start, pageSize, metadataOnly: true).ConfigureAwait(false);
-            return jsonDocuments
-                .Select(document => document.Key)
-                .ToArray();
+            var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetRevisionsForAsync(id + "/revisions/", start, pageSize).ConfigureAwait(false);
+            return jsonDocuments.ToArray();
         }
     }
 }
