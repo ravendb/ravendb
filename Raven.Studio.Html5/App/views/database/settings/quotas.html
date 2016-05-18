@@ -17,21 +17,20 @@
                 </span>
             </div>
             <div class="panel-body">
-                
                 <div class="form-group" data-bind="visible: hasGlobalValues">
-                    <div class="col-md-4 control-label">
-                        <strong>Property</strong>
-                    </div>
-                    <div class="col-md-4">
-                        <strong>Effective value</strong>
-                    </div>
-                    <div class="col-md-4">
-                       <strong>Global value</strong>
-                    </div>
+                    <label class="col-md-4 text-right">
+                        Property
+                    </label>
+                    <label class="col-md-4">
+                        Effective value
+                    </label>
+                    <label class="col-md-4">
+                       Global value
+                    </label>
                 </div>
 
                 <div class="form-group">
-                    <div class="col-md-4 control-label">Maximum size:</div>
+                    <label class="col-md-4 control-label">Maximum size:</label>
                     <div class="col-md-4">
                         <div class="input-group" data-bind="with: maximumSize">
                             <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
@@ -47,7 +46,7 @@
                 </div>
 
                 <div class="form-group">
-                    <div class="col-md-4 control-label">Warning limit threshold:</div>
+                    <label class="col-md-4 control-label">Warning limit threshold:</label>
                     <div class="col-md-4">
                         <div class="input-group" data-bind="with: warningLimitThreshold">
                             <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
@@ -63,7 +62,7 @@
                 </div>
 
                 <div class="form-group">
-                    <div class="col-md-4 control-label">Maximum number of docs:</div>
+                    <label class="col-md-4 control-label">Maximum number of docs:</label>
                     <div class="col-md-4">
                         <div class="input-group" data-bind="with: maxNumberOfDocs">
                             <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />
@@ -79,7 +78,7 @@
                 </div>
 
                 <div class="form-group">
-                    <div class="col-md-4 control-label">Warning threshold for docs:</div>
+                    <label class="col-md-4 control-label">Warning threshold for docs:</label>
                     <div class="col-md-4">
                         <div class="input-group" data-bind="with: warningThresholdForDocs">
                             <input required type="number" class="form-control" min="0" data-bind="numericValue: effectiveValue, enable: $root.usingGlobal() == false, valueUpdate: 'afterkeydown'" />

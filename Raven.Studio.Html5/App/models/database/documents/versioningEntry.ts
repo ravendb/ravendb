@@ -78,6 +78,8 @@ class versioningEntry implements copyFromParentDto<versioningEntry> {
         this.collection(parent.collection());
         this.maxRevisions(parent.maxRevisions());
         this.exclude(parent.exclude());
+        this.excludeUnlessExplicit(parent.excludeUnlessExplicit());
+        this.purgeOnDelete(parent.purgeOnDelete());
         this.fromDatabase(true);
         this.__metadata = parent.__metadata;
     }
