@@ -978,7 +978,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [Fact(Skip = "There is a race condition here that needs fixing")]
         public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted()
         {
             using (var database = CreateDocumentDatabase())
