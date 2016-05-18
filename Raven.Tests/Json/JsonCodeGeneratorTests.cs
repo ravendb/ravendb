@@ -377,6 +377,29 @@ namespace Raven.Tests.Json
         }
 
         [Fact]
+        public void JsonCodeGenerator_WithEmptyArray()
+        {
+            var obj = new WithArrayOfBasics
+            {
+                Ints = new int[] { }
+            };
+
+            var generator = new JsonCodeGenerator("csharp");
+            var classTypes = generator.GenerateClassesTypesFromObject("Root", JsonExtensions.ToJObject(obj))
+                                      .ToLookup(x => x.Name);
+
+            Assert.Equal(1, classTypes.Count());
+
+            var clazz = classTypes["Root"].Single() as JsonCodeGenerator.ClassType;
+            Assert.NotNull(clazz);
+
+            Assert.Equal("object", clazz.Properties["Ints"].Name);
+            Assert.True(clazz.Properties["Ints"].IsArray);
+            Assert.True(clazz.Properties["Ints"].IsPrimitive);
+
+        }
+
+        [Fact]
         public void JsonCodeGenerator_WithArrayOfBasics()
         {
             var obj = new WithArrayOfBasics()

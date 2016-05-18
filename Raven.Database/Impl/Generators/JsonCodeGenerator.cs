@@ -333,16 +333,25 @@ namespace Raven.Database.Impl.Generators
                         fields[pair.Key] = new FieldType(type.Name, type.IsArray);
                         break;
                     case JTokenType.Array:
-                        var guessedType = GuessTokenTypeFromArray(pair.Key, (RavenJArray)(pair.Value));
-                        if (guessedType is ClassType)
+                        var array = (RavenJArray) pair.Value;
+                        if (array.Length == 0)
                         {
-                            // We will defer the analysis and create a new name;
-                            fields[pair.Key] = new FieldType(guessedType.Name, true);
+                            fields[pair.Key] = new FieldType("object", true, true);
                         }
                         else
                         {
-                            fields[pair.Key] = new FieldType(guessedType.Name, true, true);
+                            var guessedType = GuessTokenTypeFromArray(pair.Key, array);
+                            if (guessedType is ClassType)
+                            {
+                                // We will defer the analysis and create a new name;
+                                fields[pair.Key] = new FieldType(guessedType.Name, true);
+                            }
+                            else
+                            {
+                                fields[pair.Key] = new FieldType(guessedType.Name, true, true);
+                            }
                         }
+                        
                         break;
 
                     default:
