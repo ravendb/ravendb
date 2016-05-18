@@ -220,7 +220,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpGet]
         [RavenRoute("admin/activate-hotspare")]
-        public HttpResponseMessage ActivateHotSpare()
+        public async Task<HttpResponseMessage> ActivateHotSpare()
         {
             //making sure this endpoint is not invoked on non hot spare license.
             var status = ValidateLicense.CurrentLicense;
@@ -244,7 +244,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     };
                 }
             }
-            RequestManager.HotSpareValidator.ActivateHotSpareLicense();
+            await RequestManager.HotSpareValidator.ActivateHotSpareLicense().ConfigureAwait(false);
             return GetEmptyMessage();
         }
 
