@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client.BulkInsert;
 using FastTests.Server.Documents.Indexing;
+using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
 using FastTests.Voron.RawData;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -82,36 +83,7 @@ namespace Tryouts
             //            }
             //            return;
 
-
-            var compiler = new StaticIndexCompiler();
-            var indexDefinition = new IndexDefinition
-            {
-                Name = "Orders_ByName",
-                Maps =
-                {
-                    "from order in docs.Orders select new { Mame = order.Name.ToUpper() };"
-                }
-            };
-
-            var index = compiler.Compile(indexDefinition);
-
-            var orders = new[]
-            {
-                new Order {Name = "Oren"},
-                new Order {Name = "Pawel"},
-                new Order {Name = "Haim"},
-            };
-
-            foreach (var collectionMaps in index.Maps)
-            {
-                foreach (var map in collectionMaps.Value)
-                {
-                    foreach (var result in map(orders))
-                    {
-                        Console.WriteLine(result);
-                    }      
-                }
-            }
+            new BasicDynamicMapReduceQueries().Can_project_in_map_reduce().Wait();
         }
 
         public class Order
