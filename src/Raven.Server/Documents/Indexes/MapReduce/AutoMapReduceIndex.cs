@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return _mapReduceWorkContext;
         }
 
-        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection)
+        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             return documents;
         }

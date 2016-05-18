@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Data.Indexes;
+using Raven.Server.ServerWide.Context;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return instance;
         }
 
-        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection)
+        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             return documents;
         }
