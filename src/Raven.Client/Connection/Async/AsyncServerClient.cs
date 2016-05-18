@@ -1198,6 +1198,28 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
+        public Task<RavenJObject[]> GetRevisionsForAsync(string key, int start, int pageSize, CancellationToken token = default(CancellationToken))
+        {
+            return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
+            {
+                var actualStart = start;
+
+                var actualUrl = $"{operationMetadata.Url}/revisions?key={Uri.EscapeDataString(key)}&start={actualStart.ToInvariantString()}&pageSize={pageSize.ToInvariantString()}";
+
+                var @params = new CreateHttpJsonRequestParams(this, actualUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url));
+                using (var request = jsonRequestFactory.CreateHttpJsonRequest(@params.AddOperationHeaders(OperationsHeaders)))
+                {
+                    request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
+
+                    var result = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+
+                    var docResults = result.OfType<RavenJObject>().ToList();
+                    var results = docResults.Select(x => (RavenJObject)x.CloneToken()).ToArray();
+                    return results;
+                }
+            }, token);
+        }
+
         public Task<GetResponse[]> MultiGetAsync(GetRequest[] requests, CancellationToken token = default(CancellationToken))
         {
             return MultiGetAsyncInternal(requests, token, null);
