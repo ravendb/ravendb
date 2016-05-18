@@ -18,6 +18,7 @@ using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Document
 {
@@ -29,7 +30,7 @@ namespace Raven.Client.Document
         private readonly Func<ShardRequestData, IList<Tuple<string, IDatabaseCommands>>> getShardsToOperateOn;
         private readonly ShardStrategy shardStrategy;
         private List<QueryOperation> shardQueryOperations;
-        
+
         private IList<IDatabaseCommands> databaseCommands;
         private IList<IDatabaseCommands> ShardDatabaseCommands
         {
@@ -37,7 +38,7 @@ namespace Raven.Client.Document
             {
                 if (databaseCommands == null)
                 {
-                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData {EntityType = typeof (T), Query = IndexQuery, IndexName = indexName});
+                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery, IndexName = indexName });
                     databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
                 }
                 return databaseCommands;
@@ -57,9 +58,9 @@ namespace Raven.Client.Document
             : base(session
             , null
             , null
-            , indexName, 
+            , indexName,
             fieldsToFetch,
-            projectionFields, 
+            projectionFields,
             queryListeners,
             isMapReduce)
         {
@@ -90,7 +91,7 @@ namespace Raven.Client.Document
         {
             var documentQuery = new ShardedDocumentQuery<TProjection>(theSession,
                 getShardsToOperateOn,
-                shardStrategy, 
+                shardStrategy,
                 indexName,
                 fields,
                 projections,
@@ -112,7 +113,7 @@ namespace Raven.Client.Document
                 allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 transformResultsFunc = transformResultsFunc,
                 includes = new HashSet<string>(includes),
-                rootTypes = {typeof(T)},
+                rootTypes = { typeof(T) },
                 beforeQueryExecutionAction = beforeQueryExecutionAction,
                 afterQueryExecutedCallback = afterQueryExecutedCallback,
                 afterStreamExecutedCallback = afterStreamExecutedCallback,
@@ -138,7 +139,7 @@ namespace Raven.Client.Document
                 defaultOperator = defaultOperator,
                 highlighterKeyName = highlighterKeyName,
                 lastEquality = lastEquality
-                
+
             };
             return documentQuery;
         }
@@ -183,7 +184,7 @@ namespace Raven.Client.Document
 
             shardQueryOperations[0].ForceResult(mergedQueryResult);
             queryOperation = shardQueryOperations[0];
-            
+
             afterQueryExecutedCallback(mergedQueryResult);
         }
 
@@ -194,15 +195,15 @@ namespace Raven.Client.Document
             foreach (var shardQueryOperation in shardQueryOperations)
             {
                 var currentQueryResults = shardQueryOperation.CurrentQueryResults;
-                if(currentQueryResults == null)
+                if (currentQueryResults == null)
                     continue;
                 foreach (var include in currentQueryResults.Includes.Concat(currentQueryResults.Results))
                 {
                     var includeMetadata = include.Value<RavenJObject>(Constants.Metadata);
-                    if(includeMetadata == null)
+                    if (includeMetadata == null)
                         continue;
                     var id = includeMetadata.Value<string>("@id");
-                    if(id == null)
+                    if (id == null)
                         continue;
                     shardsPerId.GetOrAdd(id).Add(shardQueryOperation);
                 }
@@ -274,6 +275,63 @@ namespace Raven.Client.Document
         protected override Task<QueryOperation> ExecuteActualQueryAsync()
         {
             throw new NotSupportedException();
+        }
+
+        public override IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+        {
+            var documentQuery = new ShardedDocumentQuery<TTransformerResult>(theSession,
+                getShardsToOperateOn,
+                shardStrategy,
+                indexName,
+                fieldsToFetch,
+                projectionFields,
+                queryListeners,
+                isMapReduce)
+            {
+                pageSize = pageSize,
+                queryText = new StringBuilder(queryText.ToString()),
+                start = start,
+                timeout = timeout,
+                cutoff = cutoff,
+                cutoffEtag = cutoffEtag,
+                queryStats = queryStats,
+                theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
+                sortByHints = sortByHints,
+                orderByFields = orderByFields,
+                isDistinct = isDistinct,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                transformResultsFunc = transformResultsFunc,
+                includes = new HashSet<string>(includes),
+                rootTypes = { typeof(T) },
+                beforeQueryExecutionAction = beforeQueryExecutionAction,
+                afterQueryExecutedCallback = afterQueryExecutedCallback,
+                afterStreamExecutedCallback = afterStreamExecutedCallback,
+                defaultField = defaultField,
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags,
+                distanceErrorPct = distanceErrorPct,
+                isSpatialQuery = isSpatialQuery,
+                negate = negate,
+                queryShape = queryShape,
+                spatialFieldName = spatialFieldName,
+                spatialRelation = spatialRelation,
+                spatialUnits = spatialUnits,
+                databaseCommands = databaseCommands,
+                indexQuery = indexQuery,
+                disableEntitiesTracking = disableEntitiesTracking,
+                disableCaching = disableCaching,
+                showQueryTimings = showQueryTimings,
+                shouldExplainScores = shouldExplainScores,
+                resultsTransformer = new TTransformer().TransformerName,
+                transformerParameters = transformerParameters,
+                defaultOperator = defaultOperator,
+                highlighterKeyName = highlighterKeyName,
+                lastEquality = lastEquality
+
+            };
+            return documentQuery;
         }
     }
 }

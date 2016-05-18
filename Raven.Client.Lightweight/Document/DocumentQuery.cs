@@ -69,7 +69,7 @@ namespace Raven.Client.Document
             return this;
         }
 
-        public IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+        public virtual IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var documentQuery = new DocumentQuery<TTransformerResult>(theSession,
