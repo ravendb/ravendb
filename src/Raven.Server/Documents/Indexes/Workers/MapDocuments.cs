@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Logging;
@@ -32,6 +34,31 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "Map";
 
+        public class StatefulEnumerator : IEnumerable<Document>
+        {
+            private readonly IEnumerable<Document> _docs;
+            public Document Current;
+
+            public StatefulEnumerator(IEnumerable<Document> docs)
+            {
+                _docs = docs;
+            }
+
+            public IEnumerator<Document> GetEnumerator()
+            {
+                foreach (var document in _docs)
+                {
+                    Current = document;
+                    yield return document;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
+
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
@@ -60,7 +87,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     using (databaseContext.OpenReadTransaction())
                     {
-                        foreach (var document in _index.EnumerateMap(_documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize), collection, indexContext))
+                        var documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize);
+                        var stateful = new StatefulEnumerator(documents);
+                        foreach (var document in _index.EnumerateMap(stateful, collection, indexContext))
                         {
                             //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
                             //TODO: we flush the index
