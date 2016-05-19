@@ -20,6 +20,7 @@ import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import license = require("models/auth/license");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
+import NodeVotingModeCommand = require("../../commands/database/cluster/changeNodeVotingModeCommand");
 
 class cluster extends viewModelBase {
 
@@ -174,6 +175,17 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", "You are removing node " + node.uri() + " from cluster.")
             .done(() => {
                 new leaveRaftClusterCommand(appUrl.getSystemDatabase(), node.toDto())
+                    .execute()
+                    .done(() => setTimeout(() => this.refresh(), 500));
+        });
+    }
+
+    promoteNodeToVoter(node: nodeConnectionInfo) {
+        var nodeAsDto = node.toDto();
+        nodeAsDto.IsNoneVoter = false;
+        this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter.")
+            .done(() => {
+                new NodeVotingModeCommand(appUrl.getSystemDatabase(), nodeAsDto)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });

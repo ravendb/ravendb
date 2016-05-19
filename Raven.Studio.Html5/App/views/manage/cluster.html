@@ -62,7 +62,13 @@
                         </thead>
                         <tbody data-bind="foreach: topology().allNodes">
                             <tr>
-                                <td data-bind="text: state"></td>
+                                <td>
+
+                                    <div>
+                                        <label data-bind="text: state"></label>
+                                        <button data-bind="visible: state() === 'non-voting', click: $root.promoteNodeToVoter.bind($root)" class="btn btn-default">Promote</button> 
+                                    </div>
+                                </td>
                                 <td>
                                     <div data-bind="visible: status() === 'Online'" class=" text-success"><span class="fa fa-check"></span> Online</div>
                                     <div data-bind="visible: status() === 'Offline'" class=" text-danger"><span class="fa fa-times"></span> Offline</div>

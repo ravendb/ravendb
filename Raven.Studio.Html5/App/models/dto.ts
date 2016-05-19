@@ -1477,6 +1477,7 @@ interface nodeConnectionInfoDto {
     Password?: string;
     Domain?: string;
     ApiKey?: string;
+    IsNoneVoter : boolean;
 }
 
 interface clusterConfigurationDto {

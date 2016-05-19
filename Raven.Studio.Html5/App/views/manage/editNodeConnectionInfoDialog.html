@@ -13,7 +13,13 @@
             <div class="form-group">
                 <label class="col-sm-4 control-label">Url</label>
                 <div class="col-sm-7">
-                    <input type="text" class="form-control" data-bind="value: uri, valueUpdate: 'afterkeydown', enable: !$root.isUpdate()" />
+                    <input type="text" class="form-control" data-bind="value: uri, valueUpdate: 'afterkeydown', enable: !$root.isUpdate()"/>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-4 control-label">Is non voting</label>
+                <div class="col-sm-7">
+                    <input type="checkbox" class="form-control" data-bind="checked: isNonVoting" />
                 </div>
             </div>
             <div class="form-group">
