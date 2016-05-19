@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 writer.DeleteReduceResult(reduceKeyHash, stats);
 
-                                writer.IndexDocument(new Document
+                                writer.IndexDocument(reduceKeyHash, new Document
                                 {
                                     Key = reduceKeyHash,
                                     Data = result
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 {
                                     writer.DeleteReduceResult(reduceKeyHash, stats);
 
-                                    writer.IndexDocument(new Document
+                                    writer.IndexDocument(reduceKeyHash, new Document
                                     {
                                         Key = reduceKeyHash,
                                         Data = result

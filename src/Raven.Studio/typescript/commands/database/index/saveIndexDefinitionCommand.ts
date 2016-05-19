@@ -24,10 +24,11 @@ class saveIndexDefinitionCommand extends commandBase {
 
     private saveDefinition(): JQueryPromise<any> {
         var urlArgs = {
-            definition: "yes"
+            definition: "yes",
+            name: this.index.Name
         };
         var putArgs = JSON.stringify(this.index);
-        var url = "/indexes/" + this.index.Name + this.urlEncodeArgs(urlArgs);
+        var url = "/indexes" + this.urlEncodeArgs(urlArgs);
         return this.put(url, putArgs, this.db);
     }
 }

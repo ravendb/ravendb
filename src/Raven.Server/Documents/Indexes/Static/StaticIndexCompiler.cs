@@ -63,11 +63,11 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
                 );
 
             var asm = new MemoryStream();
-            var pdb = new MemoryStream();
+            //var pdb = new MemoryStream();
 
             var code = syntaxTree.ToString();
 
-            var result = compilation.Emit(asm, pdb);
+            var result = compilation.Emit(asm);
 
             if (result.Success == false)
             {
@@ -88,8 +88,9 @@ namespace Raven.Server.Documents.Indexes.Static.Generated
                 throw new IndexCompilationException(sb.ToString());
             }
             asm.Position = 0;
-            pdb.Position = 0;
-            var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
+            //pdb.Position = 0;
+            //var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm, pdb);
+            var indexAssembly = AssemblyLoadContext.Default.LoadFromStream(asm);
 
             var type = indexAssembly.GetType("Raven.Server.Documents.Indexes.Static.Generated." + cSharpSafeName);
 

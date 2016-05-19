@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Logging;
@@ -9,6 +7,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -33,31 +32,6 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         public string Name => "Map";
-
-        public class StatefulEnumerator : IEnumerable<Document>
-        {
-            private readonly IEnumerable<Document> _docs;
-            public Document Current;
-
-            public StatefulEnumerator(IEnumerable<Document> docs)
-            {
-                _docs = docs;
-            }
-
-            public IEnumerator<Document> GetEnumerator()
-            {
-                foreach (var document in _docs)
-                {
-                    Current = document;
-                    yield return document;
-                }
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-        }
 
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
@@ -88,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     using (databaseContext.OpenReadTransaction())
                     {
                         var documents = _documentsStorage.GetDocumentsAfter(databaseContext, collection, lastEtag + 1, 0, pageSize);
-                        var stateful = new StatefulEnumerator(documents);
+                        var stateful = new StatefulEnumerator<Document>(documents);
                         foreach (var document in _index.EnumerateMap(stateful, collection, indexContext))
                         {
                             //TODO: take into account time here, if we are on slow i/o system, we don't want to wait for 128K docs before
@@ -98,17 +72,19 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (indexWriter == null)
                                 indexWriter = writeOperation.Value;
 
+                            var current = stateful.Current;
+
                             if (Log.IsDebugEnabled)
-                                Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {document.Key}.");
+                                Log.Debug($"Executing map for '{_index.Name} ({_index.IndexId})'. Processing document: {current.Key}.");
 
                             collectionStats.RecordMapAttempt();
-                            var current = stateful.Current;
+
                             count++;
-                            lastEtag = document.Etag;
+                            lastEtag = current.Etag;
 
                             try
                             {
-                                _index.HandleMap(document, indexWriter, indexContext, collectionStats);
+                                _index.HandleMap(current.Key, document, indexWriter, indexContext, collectionStats);
 
                                 collectionStats.RecordMapSuccess();
                             }
@@ -116,9 +92,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 collectionStats.RecordMapError();
                                 if (Log.IsWarnEnabled)
-                                    Log.WarnException($"Failed to execute mapping function on '{document.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
+                                    Log.WarnException($"Failed to execute mapping function on '{current.Key}' for '{_index.Name} ({_index.IndexId})'.", e);
 
-                                collectionStats.AddMapError(document.Key, $"Failed to execute mapping function on {document.Key}. Message: {e.Message}");
+                                collectionStats.AddMapError(current.Key, $"Failed to execute mapping function on {current.Key}. Message: {e.Message}");
                             }
 
                             if (sw.Elapsed > timeoutProcessing)

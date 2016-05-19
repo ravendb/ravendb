@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = null
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.NullValue, result.GetField("Name").StringValue);
@@ -72,7 +72,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = string.Empty
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal(Constants.EmptyString, result.GetField("Name").StringValue);
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             {
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(1, result.GetFields().Count);
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
@@ -120,13 +120,13 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = "James"
             }, "users/1");
 
-            _sut.ConvertToCachedDocument(docWithName);
+            _sut.ConvertToCachedDocument(docWithName.Key, docWithName);
 
             var docWithoutName = create_doc(new DynamicJsonValue
             {
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(docWithoutName);
+            var result = _sut.ConvertToCachedDocument(docWithoutName.Key, docWithoutName);
 
             Assert.Equal(1, result.GetFields().Count);
             Assert.Equal("users/1", result.GetField(Constants.DocumentIdFieldName).StringValue);
@@ -150,7 +150,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = "Arek"
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.NotNull(result.GetField("Name"));
@@ -175,8 +175,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = "Arek"
             }, "users/1");
 
-            var result1 = _sut.ConvertToCachedDocument(doc1);
-            
+            var result1 = _sut.ConvertToCachedDocument(doc1.Key, doc1);
+
             Assert.Equal("Arek", result1.GetField("Name").ReaderValue.ReadToEnd());
             Assert.Equal("users/1", result1.GetField(Constants.DocumentIdFieldName).StringValue);
 
@@ -185,7 +185,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Name"] = "Pawel"
             }, "users/2");
 
-            var result2 = _sut.ConvertToCachedDocument(doc2);
+            var result2 = _sut.ConvertToCachedDocument(doc2.Key, doc2);
 
             Assert.Equal("Pawel", result2.GetField("Name").ReaderValue.ReadToEnd());
             Assert.Equal("users/2", result2.GetField(Constants.DocumentIdFieldName).StringValue);
@@ -220,7 +220,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 ["Age"] = 25,
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(5, result.GetFields().Count);
             Assert.NotNull(result.GetField("Weight"));
@@ -256,7 +256,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(2, result.GetFields().Count);
             Assert.Equal("NYC", result.GetField("Address_City").ReaderValue.ReadToEnd());
@@ -291,11 +291,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "users/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
-            
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
+
             Assert.Equal(4, result.GetFields().Count);
             Assert.Equal(2, result.GetFields("Friends_Name").Length);
-            
+
             Assert.Equal("Joe", result.GetFields("Friends_Name")[0].ReaderValue.ReadToEnd());
             Assert.Equal("John", result.GetFields("Friends_Name")[1].ReaderValue.ReadToEnd());
 
@@ -348,7 +348,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 }
             }, "companies/1");
 
-            var result = _sut.ConvertToCachedDocument(doc);
+            var result = _sut.ConvertToCachedDocument(doc.Key, doc);
 
             Assert.Equal(5, result.GetFields().Count);
             Assert.Equal(3, result.GetFields("Companies_Products_Name").Length);

@@ -5,6 +5,8 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
 
+using Sparrow.Json;
+
 namespace Raven.Server.Documents.Indexes
 {
     public abstract class MapIndexBase<T> : Index<T> where T : IndexDefinitionBase
@@ -27,9 +29,9 @@ namespace Raven.Server.Documents.Indexes
             writer.Delete(tombstone.Key, stats);
         }
 
-        public override void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.IndexDocument(document, stats);
+            writer.IndexDocument(key, document, stats);
 
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
         }

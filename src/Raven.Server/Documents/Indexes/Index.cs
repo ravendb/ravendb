@@ -557,11 +557,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
+        public abstract IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext);
 
         public abstract void HandleDelete(DocumentTombstone tombstone, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract void HandleMap(LazyStringValue key, object document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChangeNotification notification)
         {

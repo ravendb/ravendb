@@ -7,8 +7,18 @@ class getIndexDefinitionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<indexDefinitionContainerDto> {
-        var url = "/indexes/" + this.indexName + "?definition=yes";
-        return this.query(url, null, this.db);
+        var url = "/indexes";
+        var args = {
+            name: this.indexName
+        }
+        return this.query(url, args, this.db, (results: any[]) => {
+            if (results && results.length) {
+                return {
+                    Index: results[0]
+                };
+            }
+            return null;
+        });
     }
 }
 
