@@ -14,7 +14,7 @@ using Sparrow.Json;
 namespace Raven.Server.Json
 {
     public static class JsonDeserialization
-    {
+    {		
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationClientConfiguration> ReplicationClientConfiguration = GenerateJsonDeserializationRoutine<ReplicationClientConfiguration>();
@@ -41,31 +41,31 @@ namespace Raven.Server.Json
 
 
         
-        public static Func<BlittableJsonReaderObject,T> GenerateJsonDeserializationRoutine<T>()
+        public static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try
             {
-            var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
+                var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
 
-            var vars = new Dictionary<Type, ParameterExpression>();
-            var instance = Expression.New(typeof(T).GetConstructor(new Type[0]));
-            var propInit = new List<MemberBinding>();
-            foreach (var propertyInfo in typeof(T).GetProperties())
-            {
+                var vars = new Dictionary<Type, ParameterExpression>();
+                var instance = Expression.New(typeof(T).GetConstructor(new Type[0]));
+                var propInit = new List<MemberBinding>();
+                foreach (var propertyInfo in typeof(T).GetProperties())
+                {
                     if (propertyInfo.CanWrite == false)
                         continue;
-                propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo, json, vars)));
+                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo, json, vars)));
+                }
+
+                var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
+
+                return lambda.Compile();
             }
-
-            var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
-
-            return lambda.Compile();
-        }
             catch (Exception e)
             {
                 return o =>
                 {
-                    throw new InvalidOperationException($"Could not build json parser for {typeof (T).FullName}", e);
+                    throw new InvalidOperationException($"Could not build json parser for {typeof(T).FullName}", e);
                 };
             }
         }
@@ -89,6 +89,12 @@ namespace Raven.Server.Json
                     var convert = typeof(JsonDeserialization).GetMethod(nameof(GenerateJsonDeserializationRoutine)).MakeGenericMethod(valueType)
                         .Invoke(null, null);
 
+                    var constantExpression = Expression.Constant(convert);
+                    var methodToCall = typeof(JsonDeserialization).GetMethod(nameof(ToDictionary)).MakeGenericMethod(valueType);
+                    return Expression.Call(methodToCall, json, Expression.Constant(propertyInfo.Name), constantExpression);
+                }
+            }
+           
             if (propertyInfo.PropertyType == typeof(List<SqlReplicationTable>))
             {
                 return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListSqlReplicationTable)), json, Expression.Constant(propertyInfo.Name));
