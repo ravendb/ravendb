@@ -1,8 +1,9 @@
 using System;
 using System.IO;
+
 using Sparrow;
 
-namespace Raven.Server.Indexing.Corax
+namespace Raven.Server.Indexing
 {
     unsafe class MmapStream : Stream
     {

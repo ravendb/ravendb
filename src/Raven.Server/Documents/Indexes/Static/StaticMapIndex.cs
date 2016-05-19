@@ -6,6 +6,8 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Client.Linq;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -31,34 +33,15 @@ namespace Raven.Server.Documents.Indexes.Static
             return expando as ExpandoObject;
         }
 
-        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             var funcs = _compiled.Maps[collection];
 
             if (funcs.Length == 1)
             {
-                Document current = null;
-                foreach (var doc in funcs[0](documents.Select(x =>
+                foreach (var doc in funcs[0](documents.Select(x => new DynamicDocumentObject(x)))) // TODO [ppekrol] can we reuse DynamicDocumentObject
                 {
-                    current = x;
-                    return new DynamicDocumentObject(x);
-                })))
-                {
-                    var result = new DynamicJsonValue();
-
-                    foreach (var property in doc.GetType().GetProperties()) // TODO arek - temp solution
-                    {
-                        result[property.Name] = property.GetValue(doc);
-                    }
-
-                    var output = indexContext.ReadObject(result, "TODO"); // TODO arek - disposable object
-
-                    yield return new Document
-                    {
-                        Data = output,
-                        Key = current.Key,
-                        Etag = current.Etag
-                    };
+                    yield return doc;
                 }
 
                 yield break;

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using Raven.Server.Indexing.Corax;
+
+using Raven.Server.Indexing;
+
 using Sparrow.Json;
 
 namespace Raven.Server.Json

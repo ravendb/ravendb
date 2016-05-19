@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IndexType _indexType;
 
-        private readonly LuceneDocumentConverter _converter;
+        private readonly LuceneDocumentConverterBase _converter;
 
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
@@ -56,7 +56,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (mapReduceDef != null)
                 fields = fields.Union(mapReduceDef.GroupByFields.Values);
 
-            _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
+            switch (indexType)
+            {
+                case IndexType.AutoMap:
+                case IndexType.AutoMapReduce:
+                    _converter = new LuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
+                    break;
+                case IndexType.Map:
+                case IndexType.MapReduce:
+                    _converter = new AnonymousLuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
+                    break;
+                case IndexType.Unknown:
+                    _converter = null;
+                    break;
+                default:
+                    throw new NotSupportedException(indexType.ToString());
+            }
+
             _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
         }
 

@@ -9,6 +9,9 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+
+using Sparrow.Json;
+
 using Voron.Impl;
 
 using Constants = Raven.Abstractions.Data.Constants;
@@ -25,12 +28,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly string _name;
 
         private readonly LuceneIndexWriter _writer;
-        private readonly LuceneDocumentConverter _converter;
+        private readonly LuceneDocumentConverterBase _converter;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        public IndexWriteOperation(string name, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, LuceneDocumentConverter converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
+        public IndexWriteOperation(string name, Dictionary<string, IndexField> fields, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
         {
             _name = name;
             _converter = converter;
@@ -77,11 +80,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void IndexDocument(Document document, IndexingStatsScope stats)
+        public void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats)
         {
             global::Lucene.Net.Documents.Document luceneDoc;
             using (stats.For("Lucene_ConvertTo"))
-                luceneDoc = _converter.ConvertToCachedDocument(document);
+                luceneDoc = _converter.ConvertToCachedDocument(key, document);
 
             using (stats.For("Lucene_AddDocument"))
                 _writer.AddDocument(luceneDoc, _analyzer);
@@ -89,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             stats.RecordIndexingOutput(); // TODO [ppekrol] in future we will have to support multiple index outputs from single document
 
             if (_log.IsDebugEnabled)
-                _log.Debug($"Indexed document for '{_name}'. Key: {document.Key} Etag: {document.Etag}. Output: {luceneDoc}.");
+                _log.Debug($"Indexed document for '{_name}'. Key: {key}. Output: {luceneDoc}.");
         }
 
         public void Delete(string key, IndexingStatsScope stats)

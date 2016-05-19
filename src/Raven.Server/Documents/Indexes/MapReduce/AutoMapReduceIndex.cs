@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -65,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return _mapReduceWorkContext;
         }
 
-        public override IEnumerable<Document> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
+        public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
             return documents;
         }
@@ -90,8 +92,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.Key, sizeof(ulong));
         }
 
-        public override unsafe void HandleMap(Document document, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
+        public override unsafe void HandleMap(LazyStringValue key, object doc, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope collectionScope)
         {
+            var document = (Document)doc;
+            Debug.Assert(key == document.Key);
+
             var mappedResult = new DynamicJsonValue();
             var reduceKey = new DynamicJsonValue();
             foreach (var indexField in Definition.MapFields.Values)
