@@ -43,7 +43,12 @@ namespace Raven.Server.Documents.Queries
             }
             else
             {
-                throw new InvalidOperationException("We don't support querying of static indexes for now");
+                var index = GetIndex(indexName);
+                var etag = index.GetIndexEtag();
+                if (etag == existingResultEtag)
+                    return new DocumentQueryResult { NotModified = true };
+
+                return await index.Query(query, _documentsContext, token);
             }
 
             return result;
