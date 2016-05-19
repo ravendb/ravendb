@@ -137,6 +137,8 @@ namespace Raven.Database.Plugins.Builtins
                 {
                     throw new Exception($"Hot Spare server failed to be activated because the server is in a cluster and there is no quorum to add it.");
                 }
+                //updating the self connection to indicate the voting state of the node
+                clusterManager.Engine.Options.SelfConnection.IsNoneVoter = !hotSpareMode;
             }
         }
 

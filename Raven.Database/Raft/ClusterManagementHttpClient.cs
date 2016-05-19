@@ -132,24 +132,22 @@ namespace Raven.Database.Raft
             }
         }
 
-        public async Task SendJoinServerAsync(NodeConnectionInfo nodeConnectionInfo,bool nonVoting)
+        public async Task SendJoinServerAsync(NodeConnectionInfo nodeConnectionInfo)
         {
             try
             {
-                await raftEngine.AddToClusterAsync(nodeConnectionInfo, nonVoting).ConfigureAwait(false);
+                await raftEngine.AddToClusterAsync(nodeConnectionInfo).ConfigureAwait(false);
                 return;
             }
             catch (NotLeadingException)
             {
             }
-            await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo, nonVoting).ConfigureAwait(false);
+            await SendJoinServerInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), nodeConnectionInfo).ConfigureAwait(false);
         }
 
-        public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode,bool newNodeNotVoting = false)
+        public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
         {
             var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/join";
-            if (newNodeNotVoting)
-                url += "?nonVoting=true";
             using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
             {
                 var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(newNode))).ConfigureAwait(false);

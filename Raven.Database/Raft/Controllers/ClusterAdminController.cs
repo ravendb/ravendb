@@ -169,22 +169,10 @@ namespace Raven.Database.Raft.Controllers
             
             if (topology.Contains(nodeConnectionInfo.Name))
                 return GetEmptyMessage(HttpStatusCode.NotModified);
-            //We call this endpoint twice once from the studio and once from the non leader server
-            // here i check if i'm not the leader then i'll add my voting state to the leader.
-            bool nonVoting;
-            if (ClusterManager.Engine.State != RaftEngineState.Leader)
-                nonVoting = RequestManager.IsInHotSpareMode;
-            else
-            {
-                var nonVotingStr = GetQueryStringValue("nonVoting");
-                //this is when we are called from the studio
-                if (String.IsNullOrEmpty(nonVotingStr) && canJoinResult == CanJoinResult.CanJoinAsNonVoter)
-                {
-                    nonVoting = true;
-                }
-                else bool.TryParse(nonVotingStr, out nonVoting);
-            }
-            await ClusterManager.Client.SendJoinServerAsync(nodeConnectionInfo,nonVoting).ConfigureAwait(false);
+            //overriding user request since we know that this node can only join as non voter            
+            if (canJoinResult == CanJoinResult.CanJoinAsNonVoter)
+                nodeConnectionInfo.IsNoneVoter = true;
+            await ClusterManager.Client.SendJoinServerAsync(nodeConnectionInfo).ConfigureAwait(false);
             return GetEmptyMessage();
         }
 
