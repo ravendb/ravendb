@@ -1198,7 +1198,7 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public Task<RavenJObject[]> GetRevisionsForAsync(string key, int start, int pageSize, CancellationToken token = default(CancellationToken))
+        public Task<JsonDocument[]> GetRevisionsForAsync(string key, int start, int pageSize, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
@@ -1214,7 +1214,7 @@ namespace Raven.Client.Connection.Async
                     var result = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
                     var docResults = result.OfType<RavenJObject>().ToList();
-                    var results = docResults.Select(x => (RavenJObject)x.CloneToken()).ToArray();
+                    var results = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject)x.CloneToken())).ToArray();
                     return results;
                 }
             }, token);

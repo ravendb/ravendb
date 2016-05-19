@@ -532,7 +532,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, string skipAfter = null, CancellationToken token = default(CancellationToken));
 
-        Task<RavenJObject[]> GetRevisionsForAsync(string key, int start, int pageSize, CancellationToken token = default(CancellationToken));
+        Task<JsonDocument[]> GetRevisionsForAsync(string key, int start, int pageSize, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Streams the documents by etag OR starts with the prefix and match the matches
