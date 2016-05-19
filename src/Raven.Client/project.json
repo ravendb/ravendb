@@ -31,7 +31,7 @@
   },
 
   "frameworks": {
-    "netcoreapp1.0": {
+    "netstandard1.5": {
       "dependencies": {
         "Microsoft.CSharp": "4.0.1-rc2-*",
         "Microsoft.Extensions.Configuration": "1.0.0-rc2-*",
