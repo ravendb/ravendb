@@ -65,7 +65,7 @@ class indexDefinition {
     }
 
     isStoreAllFields(): boolean {
-        if (this.stores.hasOwnProperty("__all_fields")) {
+        if (this.stores && this.stores.hasOwnProperty("__all_fields")) {
             return this.stores["__all_fields"] === "Yes";
         }
 

@@ -11,9 +11,11 @@ class getIndexDefinitionCommand extends commandBase {
         var args = {
             name: this.indexName
         }
-        return this.query(url, args, this.db, (results: indexDefinitionContainerDto[]) => {
+        return this.query(url, args, this.db, (results: any[]) => {
             if (results && results.length) {
-                return results[0];
+                return {
+                    Index: results[0]
+                };
             }
             return null;
         });
