@@ -747,7 +747,7 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
-            VersioningStorage?.PutVersion(context, collectionName, key, newEtagBigEndian, document, isSystemDocument);
+            VersioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document, isSystemDocument);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
