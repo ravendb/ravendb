@@ -56,6 +56,7 @@
         "System.Threading.Tasks.Parallel": "4.0.1-rc2-*",
         "Microsoft.CodeAnalysis.CSharp": "1.3.0-beta1-*",
         "System.Runtime.Loader": "4.0.0-rc2-*",
+        "System.Reflection.Emit.Lightweight": "4.0.1-rc2-*",
 
         "Microsoft.NETCore.App": {
           "type": "platform",

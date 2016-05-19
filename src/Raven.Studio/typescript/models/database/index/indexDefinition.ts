@@ -44,7 +44,7 @@ class indexDefinition {
         this.isTestIndex(dto.IsTestIndex);
         this.isSideBySideIndex(dto.IsSideBySideIndex);
         this.isCompiled = dto.IsCompiled;
-        this.isMapReduce = dto.IsMapReduce;
+        this.isMapReduce = dto.IsMapReduce; 
         this.lockMode = dto.LockMode;
         this.map(dto.Map);
         this.maps(dto.Maps.map(m => ko.observable(m)));
@@ -91,7 +91,7 @@ class indexDefinition {
     toDto(): indexDefinitionDto {
         return {
             Analyzers: this.makeFieldObject(f => f.indexing() === "Analyzed", f => f.analyzer()),
-            Fields: this.fields(),
+            Fields: null,//this.fields(),
             Indexes: this.makeFieldObject(f => f.indexing() !== "Default", f => f.indexing()),
             InternalFieldsMapping: this.internalFieldsMapping,
             IsTestIndex: this.isTestIndex(),
