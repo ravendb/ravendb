@@ -23,7 +23,9 @@ namespace FastTests.Server.Documents.Versioning
                     {
                         ["Users"] = new VersioningConfigurationCollection
                         {
-                            Active = false,
+                            Active = true,
+                            PurgeOnDelete = true,
+                            MaxRevisions = 123
                         },
                         ["Comments"] = new VersioningConfigurationCollection
                         {
