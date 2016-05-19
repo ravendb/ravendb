@@ -6679,6 +6679,15 @@ body {
 .exceptionText {
   white-space: pre-wrap !important;
 }
+.sqlRepActions .fa-cogs {
+  color: grey;
+}
+.sqlRepActions .fa-cogs:hover {
+  color: black;
+}
+.sqlRepActions a {
+  cursor: pointer;
+}
 #sqlReplicationStats .sqlStatsPanel {
   overflow-x: auto;
   overflow-y: auto;
@@ -8576,7 +8585,6 @@ a.global_help_link:focus {
 }
 .alert-danger a {
   color: white;
-  text-decoration: underline;
 }
 .experimental {
   font-size: 9px;
