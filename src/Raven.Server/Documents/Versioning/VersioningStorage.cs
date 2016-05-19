@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Versioning
         private readonly VersioningConfiguration _versioningConfiguration;
 
         private const string VersioningRevisionsCount = "_VersioningRevisionsCount";
+        private const string VersioningRevisions = "_VersioningRevisions";
 
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents.Versioning
             if (enableVersioning == false && configuration.Active == false)
                 return;
 
-            var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
             var revisionsCount = IncrementCountOfRevisions(context, key, 1);
             DeleteOldRevisions(context, table, key, configuration.MaxRevisions, revisionsCount);
 
@@ -129,7 +130,7 @@ namespace Raven.Server.Documents.Versioning
             table.Insert(tbv);
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string key, int? maxRevisions, long revisionsCount)
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string key, long? maxRevisions, long revisionsCount)
         {
             if (maxRevisions.HasValue == false || maxRevisions.Value == int.MaxValue)
                 return;
@@ -167,28 +168,35 @@ namespace Raven.Server.Documents.Versioning
             if (configuration.PurgeOnDelete == false)
                 return;
 
-            var table = new Table(_docsSchema, "_revisions/" + collectionName, context.Transaction.InnerTransaction);
-            table.SeekForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key /* todo, lowered*/, startsWith: true);
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
+            var prefixSlice = GetSliceFromKey(context, key);
+            table.SeekForwardFrom(_docsSchema.Indexes["KeyAndEtag"], prefixSlice, startsWith: true);
+            // todo: delete
         }
 
-        public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string id, int start, int take)
+        public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
         {
-            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+            var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
 
-            var prefixSlice = GetSliceFromKey(context, id);
+            var prefixSlice = GetSliceFromKey(context, key);
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekByPrimaryKey(prefixSlice))
+            foreach (var sr in table.SeekForwardFrom(_docsSchema.Indexes["KeyAndEtag"], prefixSlice, startsWith: true))
             {
-                var document = TableValueToDocument(context, result);
-
-                if (start > 0)
+                foreach (var tvr in sr.Results)
                 {
-                    start--;
-                    continue;
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+                    if (take-- <= 0)
+                        yield break;
+
+                    var document = TableValueToDocument(context, tvr);
+                    yield return document;
                 }
-                if (take-- <= 0)
+                if (take <= 0)
                     yield break;
-                yield return document;
             }
         }
 
