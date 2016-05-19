@@ -487,7 +487,7 @@ namespace Raven.Client.Connection
         /// </param>
         JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, string skipAfter = null);
 
-        RavenJObject[] GetRevisionsFor(string key, int start, int pageSize);
+        JsonDocument[] GetRevisionsFor(string key, int start, int pageSize);
 
         /// <summary>
         ///     Streams the documents by etag OR starts with the prefix and match the matches
