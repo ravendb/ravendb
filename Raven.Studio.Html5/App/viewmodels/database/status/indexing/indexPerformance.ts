@@ -787,6 +787,7 @@ class metrics extends viewModelBase {
 
         var indexCount = self.selectedReduceIndexes().length;
 
+        console.log("yreducescale = " + self.selectedReduceIndexes());
         self.yReduceScale = d3.scale.ordinal()
             .domain(self.selectedReduceIndexes())
             .rangeBands([self.reduceGroupOffset, self.reduceGroupOffset + indexCount * (self.yBarHeight + self.yBarMargin * 2)]);
@@ -920,7 +921,6 @@ class metrics extends viewModelBase {
                 (d: indexNameAndMapPerformanceStats) =>
                     "translate(" + self.xScale(self.isoFormat.parse(d.stats.Started)) + "," + self.yMapScale(d.indexName) + ")");
 
-        
         opTransition.select('.main_bar')
             .attr('width', (d: indexNameAndMapPerformanceStats) => self.xScaleExtent(d.stats.DurationMilliseconds));
         
@@ -1033,11 +1033,17 @@ class metrics extends viewModelBase {
 
         var opTransition =
             op
-                .selectAll('.op')
+                .selectAll('.op') 
                 .transition()
                 .attr("transform",
-                (d: reduceLevelPeformanceStatsDto) =>
-                    "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
+                (d: reduceLevelPeformanceStatsDto) => {
+                    if (d.parent.indexName === "Orders/ByCompany") {
+                        console.log(d);    
+                    }
+                    console.log(d.parent.indexName);
+                    console.log(self.yReduceScale(d.parent.indexName));
+                     return "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")";
+                });
 
         opTransition.select('.main_bar')
             .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));
@@ -1152,6 +1158,7 @@ class metrics extends viewModelBase {
         batches
             .select('rect')
             .transition()
+            .attr('x', d => self.xScale(d.CacheTimestamp))
             .attr('width', d => self.xScaleExtent(d.DurationMs));
 
         var enteringOps = batches

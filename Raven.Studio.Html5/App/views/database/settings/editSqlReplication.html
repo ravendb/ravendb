@@ -142,7 +142,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <button class="col-sm-4 btn" data-toggle="button" data-bind="attr:{title:('Switch to ' + ($root.isBasicView() === true?'Advanced':'Basic') + ' mode')}, click: function(){$root.isBasicView.toggle();}, css:{active: !$root.isBasicView() === true}">
+                    <button class="col-sm-4 btn btn-default"  data-bind="attr:{title:('Switch to ' + ($root.isBasicView()?'Advanced':'Basic') + ' mode')}, css: { active: !$root.isBasicView() }, click: $root.toggleBasicMode.bind($root)">
                         <i class="fa fa-cogs"></i> Show advanced settings
                     </button>
                 </div>

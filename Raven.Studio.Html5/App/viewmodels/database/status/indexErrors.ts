@@ -3,7 +3,6 @@ import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCom
 import changesContext = require("common/changesContext");
 import moment = require("moment");
 import changeSubscription = require("common/changeSubscription");
-import shell = require("viewmodels/shell");
 
 class indexErrors extends viewModelBase {
 
@@ -22,7 +21,7 @@ class indexErrors extends viewModelBase {
 
     createNotifications(): Array<changeSubscription> {
         return [
-            changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.fetchIndexErrors()),
+            changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.fetchIndexErrors())
         ];
     }
 

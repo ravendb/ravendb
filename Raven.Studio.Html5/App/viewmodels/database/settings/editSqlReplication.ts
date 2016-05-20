@@ -61,11 +61,15 @@ class editSqlReplication extends viewModelBase {
         this.sqlReplicationName = ko.computed(() => (!!this.editedReplication() && !this.isEditingNewReplication()) ? this.editedReplication().name() : null);
     }
 
+    toggleBasicMode() {
+        this.isBasicView(!this.isBasicView());
+    }
+
     private addScriptLabelPopover() {
         var popOverSettings: PopoverOptions = {
             html: true,
             trigger: 'hover',
-            content: 'Replication scripts use JScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.Lines.length,<br/>   TotalCost: 0<br/>};<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.Lines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.Lines[i];<br/>   <span class="code-keyword">var</span> lineCost = ((line.Quantity * line.PricePerUnit) * (1 - line.Discount));<br/>   orderData.TotalCost += lineCost;<br/><br/>   replicateToOrderLines({<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: lineCost<br/>   });<br/>}<br/><br/>replicateToOrders(orderData);</pre>',
+            content: 'Replication scripts use JavaScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.Lines.length,<br/>   TotalCost: 0<br/>};<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.Lines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.Lines[i];<br/>   <span class="code-keyword">var</span> lineCost = ((line.Quantity * line.PricePerUnit) <br />                     * (1 - line.Discount));<br/>   orderData.TotalCost += lineCost;<br/><br/>   replicateToOrderLines({<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: lineCost<br/>   });<br/>}<br/><br/>replicateToOrders(orderData);</pre>',
             selector: '.script-label',
             placement: "right"
         };
