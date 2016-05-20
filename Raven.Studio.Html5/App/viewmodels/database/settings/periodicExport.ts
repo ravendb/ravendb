@@ -20,10 +20,16 @@ class periodicExport extends viewModelBase {
     hasGlobalValues = ko.observable<boolean>(false);
     isForbidden = ko.observable<boolean>(false);
     
+    showOnDiskExportRow: KnockoutComputed<boolean>;
 
     constructor() {
         super();
         this.activeDatabase.subscribe((db: database) => this.isForbidden(!db.isAdminCurrentTenant()));
+        this.showOnDiskExportRow = ko.computed(() => {
+            var localSetting = this.backupSetup() && this.backupSetup().onDiskExportEnabled();
+            var globalSetting = this.hasGlobalValues() && this.globalBackupSetup().onDiskExportEnabled();
+            return localSetting || globalSetting;
+        });
     }
 
     attached() {

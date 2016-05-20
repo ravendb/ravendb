@@ -6902,14 +6902,6 @@ body {
 .vertical-navbar-menu-item a {
   padding: 0 0 0 0;
 }
-.panel span {
-  overflow: hidden;
-  -ms-text-overflow: ellipsis;
-  -o-text-overflow: ellipsis;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: auto;
-}
 .page {
   padding: 0 10px 20px 10px;
   width: 98%;
@@ -7704,6 +7696,9 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   left: 40%;
   z-index: 2000;
   width: 400px;
+}
+#editSQLReplication .btn:focus {
+  outline: 0;
 }
 #editDocumentContainer:focus {
   outline: 0;

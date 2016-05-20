@@ -75,8 +75,8 @@
                     <div class="form-group">
                         <label class="col-sm-2 control-label">Request Time SLA Threshold</label>
                         <div class="col-sm-5">
-                            <div class="input-group">
-                                <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, visible: replicationsSetup().showRequestTimeSlaThreshold(),  valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false" />
+                            <div class="input-group" data-bind="visible: replicationsSetup().showRequestTimeSlaThreshold()">
+                                <input type="number" class="form-control" data-bind="value: replicationsSetup().requestTimeSlaThreshold, valueUpdate: 'afterkeydown', enable: $root.usingGlobal() == false" />
                                 <span class="input-group-addon">ms</span>
                             </div>
                         </div>
