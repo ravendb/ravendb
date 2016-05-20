@@ -63,11 +63,7 @@
                         <tbody data-bind="foreach: topology().allNodes">
                             <tr>
                                 <td>
-
-                                    <div>
-                                        <label data-bind="text: state"></label>
-                                        <button data-bind="visible: state() === 'non-voting', click: $root.promoteNodeToVoter.bind($root)" class="btn btn-default">Promote</button> 
-                                    </div>
+                                    <label data-bind="text: state"></label>
                                 </td>
                                 <td>
                                     <div data-bind="visible: status() === 'Online'" class=" text-success"><span class="fa fa-check"></span> Online</div>
@@ -76,7 +72,10 @@
                                     <div data-bind="visible: status() === 'Loading'"><span class="fa fa-spin fa-spinner"></span> Loading...</div>
                                 </td>
                                 <td data-bind="text: uri"></td>
-                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()"><button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button></td>
+                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()">
+                                    <button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button>
+                                    <button data-bind="visible: state() === 'non-voting', click: $root.promoteNodeToVoter.bind($root)" class="btn btn-default"><i class="fa fa-arrow-up"></i> Promote</button> 
+                                </td>
                                 <td data-bind="visible: !$root.settingsAccess.isReadOnly()"><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
                             </tr>
                         </tbody>

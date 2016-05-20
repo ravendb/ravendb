@@ -17,12 +17,6 @@
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-4 control-label">Is non voting</label>
-                <div class="col-sm-7">
-                    <input type="checkbox" class="form-control" data-bind="checked: isNonVoting" />
-                </div>
-            </div>
-            <div class="form-group">
                 <label class="col-sm-4 control-label">Credentials</label>
                 <div class="col-sm-7">
                     <div class="btn-group">
@@ -66,6 +60,14 @@
                     <label class="col-sm-4 control-label">API Key</label>
                     <div class="col-sm-7">
                         <input required type="text" class="form-control" data-bind="value: apiKey, valueUpdate: 'afterkeydown'"/>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-7 col-sm-offset-4">
+                    <div class="checkbox">
+                        <input type="checkbox" id="votingNode" class="form-control" data-bind="checked: !isNonVoting()" />
+                        <label for="votingNode">Voting node</label>
                     </div>
                 </div>
             </div>
