@@ -17,7 +17,7 @@ class licenseInformation extends viewModelBase {
     attached() {
         super.attached();
 
-        if (!this.settingsAccess.canReadOrWrite()) {
+        if (this.settingsAccess.canReadOrWrite()) {
             this.checkConnectivity()
                 .done((result) => {
                     this.connectivityStatus(result ? "success" : "failed");
