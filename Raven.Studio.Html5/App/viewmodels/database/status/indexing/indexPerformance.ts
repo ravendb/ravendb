@@ -787,7 +787,6 @@ class metrics extends viewModelBase {
 
         var indexCount = self.selectedReduceIndexes().length;
 
-        console.log("yreducescale = " + self.selectedReduceIndexes());
         self.yReduceScale = d3.scale.ordinal()
             .domain(self.selectedReduceIndexes())
             .rangeBands([self.reduceGroupOffset, self.reduceGroupOffset + indexCount * (self.yBarHeight + self.yBarMargin * 2)]);
@@ -1037,11 +1036,6 @@ class metrics extends viewModelBase {
                 .transition()
                 .attr("transform",
                 (d: reduceLevelPeformanceStatsDto) => {
-                    if (d.parent.indexName === "Orders/ByCompany") {
-                        console.log(d);    
-                    }
-                    console.log(d.parent.indexName);
-                    console.log(self.yReduceScale(d.parent.indexName));
                      return "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")";
                 });
 
