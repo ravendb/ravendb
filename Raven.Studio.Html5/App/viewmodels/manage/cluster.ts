@@ -20,7 +20,7 @@ import shell = require("viewmodels/shell");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import license = require("models/auth/license");
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import NodeVotingModeCommand = require("../../commands/database/cluster/changeNodeVotingModeCommand");
+import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
 
 class cluster extends viewModelBase {
 
@@ -185,7 +185,7 @@ class cluster extends viewModelBase {
         nodeAsDto.IsNoneVoter = false;
         this.confirmationMessage("Are you sure?", "You are promoting node " + node.uri() + " to voter.")
             .done(() => {
-                new NodeVotingModeCommand(appUrl.getSystemDatabase(), nodeAsDto)
+                new changeNodeVotingModeCommand(appUrl.getSystemDatabase(), nodeAsDto)
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
