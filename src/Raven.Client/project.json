@@ -41,7 +41,9 @@
         "System.Net.WebSockets.Client": "4.0.0-rc2-*",
         "System.Reflection.TypeExtensions": "4.1.0-rc2-*",
         "Microsoft.Win32.Primitives": "4.0.1-rc2-*",
-        "System.Security.Cryptography.Cng": "4.1.0-rc2-*"
+        "System.Security.Cryptography.Cng": "4.1.0-rc2-*",
+        "System.ServiceModel.Primitives": "4.1.0-rc2-*",
+        "System.Linq.Queryable": "4.0.1-rc2-*"
       },
       "imports": [
         "dnxcore50",
