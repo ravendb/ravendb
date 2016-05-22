@@ -70,6 +70,11 @@ namespace Raven.Imports.Newtonsoft.Json
             _chars = new char[4097];
         }
 
+        public void ResetState()
+        {
+             _currentState = JsonReader.State.Start;
+        }
+
         internal void SetCharBuffer(char[] chars)
         {
             _chars = chars;

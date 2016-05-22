@@ -40,7 +40,7 @@ namespace Raven.Client.Document
 
             nonGenericCriteria.Collection = documentStore.Conventions.GetTypeTagName(typeof(T));
             nonGenericCriteria.KeyStartsWith = criteria.KeyStartsWith;
-            
+            nonGenericCriteria.StartEtag = criteria.StartEtag;
             nonGenericCriteria.FilterJavaScript = criteria.FilterJavaScript;
 
             return CreateAsync(nonGenericCriteria, startEtag, database);
