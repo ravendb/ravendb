@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Versioning
 
         private readonly VersioningConfiguration _versioningConfiguration;
 
-        private const string VersioningRevisionsCount = "_VersioningRevisionsCount";
-        private const string VersioningRevisions = "_VersioningRevisions";
+        private const string VersioningRevisions = "VersioningRevisions";
+        private const string VersioningRevisionsCount = "VersioningRevisionsCount";
 
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
@@ -40,6 +40,17 @@ namespace Raven.Server.Documents.Versioning
                 StartIndex = 0,
                 Count = 3,
             });
+
+            // TODO: Move code to bundle initialize event
+            using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
+            {
+                tx.CreateTree(VersioningRevisions);
+                _docsSchema.Create(tx, VersioningRevisions);
+
+                tx.CreateTree(VersioningRevisionsCount);
+
+                tx.Commit();
+            }
         }
 
         public static VersioningStorage LoadConfigurations(DocumentDatabase database)
