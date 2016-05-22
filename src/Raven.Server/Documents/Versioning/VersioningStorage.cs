@@ -118,8 +118,9 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
-            var revisionsCount = IncrementCountOfRevisions(context, key, 1);
-            DeleteOldRevisions(context, table, key, configuration.MaxRevisions, revisionsCount);
+            var prefixSlice = GetSliceFromKey(context, key);
+            var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
+            DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
 
             byte* lowerKey;
             int lowerSize;
@@ -141,7 +142,7 @@ namespace Raven.Server.Documents.Versioning
             table.Insert(tbv);
         }
 
-        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, string key, long? maxRevisions, long revisionsCount)
+        private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long? maxRevisions, long revisionsCount)
         {
             if (maxRevisions.HasValue == false || maxRevisions.Value == int.MaxValue)
                 return;
@@ -150,25 +151,24 @@ namespace Raven.Server.Documents.Versioning
             if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var prefixSlice = GetSliceFromKey(context, key);
             var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], prefixSlice, numberOfRevisionsToDelete);
             Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
-            IncrementCountOfRevisions(context, key, -deletedRevisionsCount);
+            IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
 
-        private long IncrementCountOfRevisions(DocumentsOperationContext context, string key, long delta)
+        private long IncrementCountOfRevisions(DocumentsOperationContext context, Slice prefixedLoweredKey, long delta)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(VersioningRevisionsCount);
-            return numbers.Increment(key, delta);
+            return numbers.Increment(prefixedLoweredKey, delta);
         }
 
-        private void DeleteCountOfRevisions(DocumentsOperationContext context, string key)
+        private void DeleteCountOfRevisions(DocumentsOperationContext context, Slice prefixedLoweredKey)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(VersioningRevisionsCount);
-            numbers.Delete(key);
+            numbers.Delete(prefixedLoweredKey);
         }
 
-        public void Delete(DocumentsOperationContext context, string collectionName, string key, Document document, bool isSystemDocument)
+        public void Delete(DocumentsOperationContext context, string collectionName, string key, bool isSystemDocument)
         {
             if (isSystemDocument)
                 return;
@@ -182,8 +182,8 @@ namespace Raven.Server.Documents.Versioning
 
             var table = new Table(_docsSchema, VersioningRevisions, context.Transaction.InnerTransaction);
             var prefixSlice = GetSliceFromKey(context, key);
-            table.SeekForwardFrom(_docsSchema.Indexes["KeyAndEtag"], prefixSlice, startsWith: true);
-            // todo: delete
+            table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], prefixSlice, long.MaxValue);
+            DeleteCountOfRevisions(context, prefixSlice);
         }
 
         public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
