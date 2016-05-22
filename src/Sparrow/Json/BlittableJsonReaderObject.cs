@@ -248,17 +248,18 @@ namespace Sparrow.Json
             }
             else
             {
+                var type = typeof (T);
                 try
                 {
                     // todo: review this, is it good enough?
                     if (typeof(T).GetTypeInfo().IsEnum)
                         result = Enum.Parse(typeof(T), result.ToString());
 
-                    obj = result == null ? default(T) : (T)Convert.ChangeType(result, typeof(T));
+                    obj = (T)Convert.ChangeType(result, Nullable.GetUnderlyingType(type) ?? type);
                 }
                 catch (Exception e)
                 {
-                    throw new FormatException($"Could not convert {result.GetType().FullName} to {typeof (T).FullName}",e);
+                    throw new FormatException($"Could not convert {result.GetType().FullName} to {type.FullName}",e);
                 }
             }
         }
