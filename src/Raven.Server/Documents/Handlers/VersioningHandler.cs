@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteDocuments(context, revisions, false, start, take);
+                    writer.WriteDocuments(context, revisions, false);
                 }
             }
 
