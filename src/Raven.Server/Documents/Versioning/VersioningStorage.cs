@@ -8,6 +8,7 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 
@@ -99,17 +100,26 @@ namespace Raven.Server.Documents.Versioning
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Metadata, out metadata))
             {
-                if (metadata.TryGet(Constants.Versioning.RavenEnableVersioning, out enableVersioning))
-                {
-                    metadata.Modifications.Remove(Constants.Versioning.RavenEnableVersioning);
-                }
-
                 bool disableVersioning;
                 if (metadata.TryGet(Constants.Versioning.RavenDisableVersioning, out disableVersioning))
                 {
-                    metadata.Modifications.Remove(Constants.Versioning.RavenDisableVersioning);
+                    DynamicJsonValue mutatedMetadata;
+                    Debug.Assert(metadata.Modifications == null);
+                    // TODO: Is the the correct usage, e.g. why we need to initialize the DynamicJsonValue with a metadata?
+                    metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
+                    mutatedMetadata.Remove(Constants.Versioning.RavenDisableVersioning);
                     if (disableVersioning)
                         return;
+                }
+
+                /* TODO: Should honor both RavenDisableVersioning and RavenEnableVersioning by the order is exist in metadata? */
+
+                if (metadata.TryGet(Constants.Versioning.RavenEnableVersioning, out enableVersioning))
+                {
+                    DynamicJsonValue mutatedMetadata;
+                    Debug.Assert(metadata.Modifications == null);
+                    metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
+                    mutatedMetadata.Remove(Constants.Versioning.RavenEnableVersioning);
                 }
             }
 
