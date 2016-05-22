@@ -7,7 +7,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Xunit;
 using Raven.Client.Bundles.Versioning;
 
@@ -156,291 +155,69 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
-        /*         [Fact]
-            public async Task Will_not_delete_revisions_if_parent_exists()
+        [Fact]
+        public async Task WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue()
+        {
+            using (var store = await GetDocumentStore())
             {
-                var company = new Company { Name = "Company Name" };
-                using (var store = await GetDocumentStore())
+                await SetupVersioning(store);
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    await SetupVersioning(store);
+                    var company = new Company {Name = "Hibernaitng Rhinos "};
+                    var user = new User {Name = "Fitzchak "};
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+                for (int i = 0; i < 10; i++)
+                {
                     using (var session = store.OpenAsyncSession())
                     {
-                    session.Store(company);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1/revisions/1");
-                    Assert.NotNull(doc);
-
-                    session.Advanced.Defer(new DeleteCommandData
-                    {
-                        Key = "companies/1/revisions/1",
-                        TransactionInformation = new TransactionInformation()
-                    });
-
-                    Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
-                }
-            }
-
-            [Fact]
-            public async Task Will_delete_revisions_if_version_is_deleted()
-            {
-                var company = new Company { Name = "Company Name" };
-                using (var store = await GetDocumentStore())
-                {
-                    await SetupVersioning(store);
-                    using (var session = store.OpenAsyncSession())
-                    {
-                    session.Store(company);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1/revisions/1");
-                    var comp = session.Load<object>("companies/1");
-                    Assert.NotNull(doc);
-
-                    session.Delete(comp);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1/revisions/1");
-                    Assert.NotNull(doc);
-
-                    session.Advanced.Defer(new DeleteCommandData
-                    {
-                        Key = "companies/1/revisions/1",
-                        TransactionInformation = new TransactionInformation()
-                    });
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1/revisions/1");
-                    Assert.Null(doc);
-                }
-            }
-
-            [Fact]
-            public async Task Will_delete_child_revisions_if_purge_is_true()
-            {
-                using (var store = await GetDocumentStore())
-                {
-                    await SetupVersioning(store);
-                    using (var session = store.OpenAsyncSession())
-                    {
-                    session.Store(new VersioningConfiguration
-                    {
-                        Exclude = false,
-                        PurgeOnDelete = true,
-                        Id = "Raven/Versioning/Companies"
-                    });
-
-                    session.SaveChanges();
-                }
-
-                var company = new Company { Name = "Company Name" };
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1");
-                    Assert.NotNull(doc);
-
-                    session.Delete(doc);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1/revisions/1");
-                    Assert.Null(doc);
-                }
-            }
-
-            [Fact]
-            public async Task Will_not_delete_child_revisions_if_purge_is_false()
-            {
-                using (var store = await GetDocumentStore())
-                {
-                    await SetupVersioning(store);
-                    using (var session = store.OpenAsyncSession())
-                    {
-                    session.Store(new VersioningConfiguration
-                    {
-                        Exclude = false,
-                        PurgeOnDelete = false,
-                        Id = "Raven/Versioning/Companies"
-                    });
-
-                    session.SaveChanges();
-                }
-
-                var company = new Company { Name = "Company Name" };
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1");
-                    Assert.NotNull(doc);
-
-                    session.Delete(doc);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<object>("companies/1/revisions/1");
-                    Assert.NotNull(doc);
-                }
-            }
-
-            [Fact]
-            public async Task After_a_put_delete_put_sequence_Will_continue_revision_numbers_from_last_value_if_purge_is_false()
-            {
-                using (var store = await GetDocumentStore())
-                {
-                    await SetupVersioning(store);
-                    using (var session = store.OpenAsyncSession())
-                    {
-                    session.Store(new VersioningConfiguration
-                    {
-                        Exclude = false,
-                        PurgeOnDelete = false,
-                        Id = "Raven/Versioning/Companies",
-                        MaxRevisions = 5
-                    });
-                    session.SaveChanges();
-                }
-
-                var company = new Company { Id = "companies/1", Name = "Company Name" };
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
-                    company.Name = "Company Name 2";
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<Company>("companies/1");
-                    var metadata = session.Advanced.GetMetadataFor(doc);
-                    Assert.Equal(2, metadata.Value<int>("Raven-Document-Revision"));
-
-                    session.Delete(doc);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
-
-                    var metadata = session.Advanced.GetMetadataFor(company);
-                    Assert.Equal(3, metadata.Value<int>("Raven-Document-Revision"));
-                }
-            }
-
-            [Fact, Trait("Category", "Smuggler")]
-            public async Task Previously_deleted_docs_will_survive_export_import_cycle_if_purge_is_false()
-            {
-                using (var store = await GetDocumentStore())
-                {
-                    await SetupVersioning(store);
-                    using (var session = store.OpenAsyncSession())
-                    {
-                    session.Store(new VersioningConfiguration
-                    {
-                        Exclude = false,
-                        PurgeOnDelete = false,
-                        Id = "Raven/Versioning/Companies",
-                        MaxRevisions = 5
-                    });
-                    session.SaveChanges();
-                }
-
-                var company = new Company { Id = "companies/1", Name = "Company Name" };
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Store(company);
-                    session.SaveChanges();
-                    company.Name = "Company Name 2";
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = session.Load<Company>("companies/1");
-                    Assert.Equal(2, session.Advanced.GetMetadataFor(doc).Value<int>("Raven-Document-Revision"));
-
-                    session.Delete(doc);
-                    session.SaveChanges();
-                }
-
-                var file = Path.GetTempFileName();
-                try
-                {
-                    new SmugglerDatabaseApi().ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait();
-
-                    using (var documentStore2 = CreateDocumentStore(port: 8078))
-                    {
-                        var importSmuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions()
-                        {
-                            ShouldDisableVersioningBundle = true
-                        });
-                        importSmuggler.ImportData(
-                            new SmugglerImportOptions<RavenConnectionStringOptions>
-                            {
-                                FromFile = file,
-                                To = new RavenConnectionStringOptions
-                                {
-                                    Url = documentStore2.Url,
-                                    Credentials = documentStore2.Credentials,
-                                    DefaultDatabase = documentStore2.DefaultDatabase
-                                }
-                            }).Wait();
-
-                        using (var session = documentStore2.OpenAsyncSession())
-                        {
-                            session.Store(company);
-                            session.SaveChanges();
-                            Assert.Equal(3, session.Advanced.GetMetadataFor(company).Value<int>("Raven-Document-Revision"));
-                        }
-
-                        using (var session = documentStore2.OpenAsyncSession())
-                        {
-                            var doc = session.Load<Company>("companies/1");
-                            doc.Name = "Company Name 3";
-                            session.SaveChanges();
-                            Assert.Equal(4, session.Advanced.GetMetadataFor(doc).Value<int>("Raven-Document-Revision"));
-                        }
+                        var company = await session.LoadAsync<Company>("companies/1");
+                        var user = await session.LoadAsync<User>("users/1");
+                        company.Name += i;
+                        user.Name += i;
+                        await session.StoreAsync(company);
+                        await session.StoreAsync(user);
+                        await session.SaveChangesAsync();
                     }
                 }
-                finally
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    if (File.Exists(file))
-                    {
-                        File.Delete(file);
-                    }
+                    var company = await session.LoadAsync<Company>("companies/1");
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.NotNull(company);
+                    Assert.NotNull(user);
+                    session.Delete(company);
+                    session.Delete(user);
+                    await session.SaveChangesAsync();
                 }
-            }*/
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
+                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    Assert.Equal(5, companies.Length);
+                    Assert.Empty(users);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company {Name = "New Company"}, "companies/1");
+                    await session.StoreAsync(new User {Name = "New User"}, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
+                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    Assert.Equal(5, companies.Length);
+                    Assert.Equal("New Company", companies.Last().Name);
+                    Assert.Equal(1, users.Length);
+                }
+            }
+        }
 
         public class Comment
         {
