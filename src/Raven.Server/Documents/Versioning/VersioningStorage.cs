@@ -180,6 +180,7 @@ namespace Raven.Server.Documents.Versioning
 
         public void Delete(DocumentsOperationContext context, string collectionName, string key, bool isSystemDocument)
         {
+            Debug.Assert(collectionName[0] != '@');
             if (isSystemDocument)
                 return;
 
