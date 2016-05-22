@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents;
+using Sparrow.Collections;
 
 namespace Raven.Server.ReplicationUtil
 {
@@ -10,7 +11,7 @@ namespace Raven.Server.ReplicationUtil
     {
         protected readonly ILog _log;
         protected readonly DocumentDatabase _database;
-        public readonly List<BaseReplicationExecuter> Replications = new List<BaseReplicationExecuter>();
+        public readonly ConcurrentSet<BaseReplicationExecuter> Replications = new ConcurrentSet<BaseReplicationExecuter>();
 
         protected BaseReplicationLoader(DocumentDatabase database)
         {
@@ -35,11 +36,9 @@ namespace Raven.Server.ReplicationUtil
             if (ShouldReloadConfiguration(notification.Key))
             {
                 foreach (var replication in Replications)
-                {
                     replication.Dispose();
-                }
-                Replications.Clear();
 
+                Replications.Clear();
                 LoadConfigurations();
 
                 if (_log.IsDebugEnabled)

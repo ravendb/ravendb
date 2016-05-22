@@ -6,7 +6,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Server.ReplicationUtil;
@@ -16,27 +18,31 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Replication
 {
     //TODO : add DocumentReplicationStatistics that will track operational data
-    //TODO : do not forget to handle authentication stuff
     public class DocumentReplicationExecuter: BaseReplicationExecuter
     {
-        private readonly ReplicationWebSocket _socket;
+        private readonly DocumentReplicationTransport _transport;
         private readonly Guid _srcDbId;
         private readonly ReplicationDestination _destination;
-        private long _lastSentEtag;
+        private long _lastEtag;
+
+        
 
         public DocumentReplicationExecuter(DocumentDatabase database, 
             Guid srcDbId, 
-            ReplicationDestination destination, 
-            long lastSentEtag) : base(database)
+            ReplicationDestination destination) : base(database)
         {
             _srcDbId = srcDbId;
             _destination = destination;
-            _lastSentEtag = lastSentEtag;
-            _socket = new ReplicationWebSocket(destination.Url);		
+            _transport = new DocumentReplicationTransport(destination.Url,_database.DatabaseShutdown);
+            DocumentsOperationContext context;
+            _database.DocumentsStorage.ContextPool.AllocateOperationContext(out context);
+
         }
 
         //if _destination == null --> the replication is only incoming, otherwise it is a two-way one
         public override string Name => _srcDbId + (_destination != null ? $"/{_destination.Url}" : string.Empty);
+
+        public Guid SrcDatabasebId => _srcDbId;
 
         //by design this method won't handle opening and commit of the transaction
         //(that should happen at the calling code)
@@ -45,40 +51,77 @@ namespace Raven.Server.Documents.Replication
         {
             var dbChangeVector = _database.DocumentsStorage.GetChangeVector(context);
             var changeVectorUpdated = false;
+            var maxReceivedChangeVector = new Dictionary<Guid,long>();
             for(int i = 0; i < docs.Count; i++)
             {
                 var doc = docs[i];
-                changeVectorUpdated = UpdateDbChangeVectorIfNeededFrom(doc,dbChangeVector);
+                var changeVector = doc.EnumerateChangeVector();
+                for (int j = 0; j < changeVector.Length; j++)
+                {
+                    var currentEntry = changeVector[j];
+                    long existingValue;
+                    if(!maxReceivedChangeVector.TryGetValue(currentEntry.DbId,out existingValue) ||
+                        existingValue < currentEntry.Etag)
+                            maxReceivedChangeVector[currentEntry.DbId] = currentEntry.Etag;
+                    else
+                        maxReceivedChangeVector.Add(currentEntry.DbId,currentEntry.Etag);
+                }
+
                 ReceiveReplicated(context, doc);
+            }
+
+            for (int i = 0; i < dbChangeVector.Length; i++)
+            {
+                var receivedVal = maxReceivedChangeVector.GetOrAdd(dbChangeVector[i].DbId, 0);
+                if (receivedVal > dbChangeVector[i].Etag)
+                {
+                    changeVectorUpdated = true;
+                    dbChangeVector[i].Etag = receivedVal;
+                }
             }
 
             if(changeVectorUpdated)
                 _database.DocumentsStorage.SetChangeVector(context,dbChangeVector);
         }
 
-        private bool UpdateDbChangeVectorIfNeededFrom(BlittableJsonReaderObject doc,ChangeVectorEntry[] dbChangeVector)
+        public override int GetHashCode()
         {
-            var docChangeVector = doc.EnumerateChangeVector();
-            var wasUpdated = false;
-            foreach (var entry in docChangeVector)
-            {
-                var indexOfDbEntry = dbChangeVector.IndexOf(e => e.DbId == entry.DbId);
-                if (indexOfDbEntry != -1 && dbChangeVector[indexOfDbEntry].Etag < entry.Etag)
-                {
-                    dbChangeVector[indexOfDbEntry].Etag = entry.Etag;
-                    wasUpdated = true;
-                }
-            }
+            return _srcDbId.GetHashCode() ^ _destination.Url.GetHashCode();
+        }
 
-            return wasUpdated;
+        public override bool Equals(object obj)
+        {
+            var otherExecuter = obj as DocumentReplicationExecuter;
+            if (otherExecuter == null)
+                return false;
+            return _srcDbId == otherExecuter._srcDbId &&
+                _destination.Url.Equals(otherExecuter._destination.Url, StringComparison.OrdinalIgnoreCase);
         }
 
         protected override void ExecuteReplicationOnce()
         {
-            
+            var lastSendEtag = _lastEtag;
+
+            //just for shorter code
+            var documentStorage = _database.DocumentsStorage;
+            //TODO: handle here properly last etag
+            //either add here negotiation for the etag, 
+            //or add etag tracking
+            DocumentsOperationContext context;			
+            using (documentStorage.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                //TODO: make replication batch size configurable
+                //also, perhaps there should be timers/heuristics
+                //that would dynamically resize batch size
+                var replicationBatch =
+                    documentStorage
+                        .GetDocumentsAfter(context, lastSendEtag, 0, 1024)
+                        .ToArray();
+                AsyncHelpers.RunSync(() => _transport.SendDocumentBatchAsync(replicationBatch, context));
+            }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ReceiveReplicated(DocumentsOperationContext context, BlittableJsonReaderObject doc)
         {
             var idAsObject = doc[Constants.DocumentIdFieldName];
@@ -91,7 +134,7 @@ namespace Raven.Server.Documents.Replication
 
         public override void Dispose()
         {
-            _socket.Dispose();
+            _transport.Dispose();
             base.Dispose();
         }
     }

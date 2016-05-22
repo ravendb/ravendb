@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
@@ -15,7 +16,6 @@ namespace Raven.Server.Documents.Replication
     public class DocumentReplicationLoader : BaseReplicationLoader
     {
         private ReplicationDocument _replicationDocument;
-        private readonly ConcurrentSet<Guid> _activeConnections = new ConcurrentSet<Guid>(); 
         private const int MaxSupportedReplicationDestinations = int.MaxValue; //TODO: limit it or make it configurable?
 
         public DocumentReplicationLoader(DocumentDatabase database) : base(database)
@@ -59,30 +59,39 @@ namespace Raven.Server.Documents.Replication
         }
 
         //inbound replication source will get it's ReplicationExecuter as well as
-        //the outgoing ones
+        //the outgoing ones		
         public DocumentReplicationExecuter RegisterNewConnectionFrom(
             Guid srcDbId, 
             string srcUrl, 
             string srcDbName, 
-            long lastSentEtag, 
             out bool shouldConnectBack)
         {
-            shouldConnectBack = false;
+            //since this should be done once per destination node, 
+            //the mutext is not likely to be a bottleneck
+            lock (Replications)
+            {
+                shouldConnectBack = false;
 
-            //prevent initiating two connections to the same db
-            if (!_activeConnections.TryAdd(srcDbId))
-                return null;
+                var destination = _replicationDocument.Destinations
+                    .FirstOrDefault(x => x.Url.Equals(srcUrl, StringComparison.OrdinalIgnoreCase) &&
+                                         x.Database.Equals(srcDbName, StringComparison.OrdinalIgnoreCase));
 
-            var destination = _replicationDocument.Destinations
-                .FirstOrDefault(x => x.Url.Equals(srcUrl, StringComparison.OrdinalIgnoreCase) &&
-                                     x.Database.Equals(srcDbName, StringComparison.OrdinalIgnoreCase));
+                if (destination != null)
+                    shouldConnectBack = true;
 
-            if (destination != null)
-                shouldConnectBack = true;
+                var documentReplicationExecuter = new DocumentReplicationExecuter(_database, srcDbId, destination);
+                Replications.Add(documentReplicationExecuter);
+                return documentReplicationExecuter;
+            }
+        }
 
-            var documentReplicationExecuter = new DocumentReplicationExecuter(_database, srcDbId, destination, lastSentEtag);
-            Replications.Add(documentReplicationExecuter);
-            return documentReplicationExecuter;
+        public void HandleConnectionDisconnection(DocumentReplicationExecuter replicationExecuter)
+        {
+            lock (Replications)
+            {
+                replicationExecuter.Dispose();
+                Replications.TryRemove(replicationExecuter);
+            }
         }
     }
 }

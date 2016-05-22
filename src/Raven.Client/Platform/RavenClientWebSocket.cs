@@ -8,8 +8,8 @@ namespace Raven.Client.Platform
 {
     public class RavenClientWebSocket : IDisposable
     {
-        private RavenUnixClientWebSocket unixInstance;
-        private ClientWebSocket winInstance;
+        private readonly RavenUnixClientWebSocket unixInstance;
+        private readonly ClientWebSocket winInstance;
 
         public RavenClientWebSocket()
         {

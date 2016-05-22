@@ -69,6 +69,16 @@ namespace Raven.Server.Json
                 false, cancellationToken).ConfigureAwait(false);
         }
 
+        private static readonly ArraySegment<byte> emptyBuffer = new ArraySegment<byte>();
+        public async Task WriteEndOfMessageAsync()
+        {
+            ThrowOnDisposed();
+
+            await _webSocket.SendAsync(emptyBuffer,
+                WebSocketMessageType.Text,
+                true, _cancellationToken).ConfigureAwait(false);
+        }
+
         public override void SetLength(long value)
         {
             throw new NotSupportedException("Makes no sense for a websocket stream");
@@ -137,10 +147,18 @@ namespace Raven.Server.Json
         public override void Flush()
         {
             ThrowOnDisposed();
+            if(_activeWriteTasks.Count > 0)
+                AsyncHelpers.RunSync(() =>
+                    Task.WhenAll(_activeWriteTasks)
+                        .ContinueWith(t => _activeWriteTasks.Clear(), _cancellationToken));
+        }
 
-            AsyncHelpers.RunSync(() =>
-                Task.WhenAll(_activeWriteTasks)
-                    .ContinueWith(t => _activeWriteTasks.Clear(), _cancellationToken));
+        public override async Task FlushAsync(CancellationToken cancellationToken)
+        {
+            if(_activeWriteTasks.Count > 0)
+                await Task.WhenAll(_activeWriteTasks)
+                          .ContinueWith(t => 
+                                _activeWriteTasks.Clear(), cancellationToken);
         }
 
         protected override void Dispose(bool disposing)
