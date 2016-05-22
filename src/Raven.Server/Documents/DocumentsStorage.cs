@@ -634,7 +634,7 @@ namespace Raven.Server.Documents
 
             CreateTombstone(context, table, doc, originalCollectionName);
 
-            VersioningStorage?.Delete(context, collectionName, key, doc, isSystemDocument);
+            VersioningStorage?.Delete(context, collectionName, key, isSystemDocument);
             table.Delete(doc.StorageId);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification

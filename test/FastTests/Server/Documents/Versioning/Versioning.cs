@@ -128,7 +128,6 @@ namespace FastTests.Server.Documents.Versioning
             }
         }
 
-
         [Fact]
         public async Task WillDeleteOldRevisions()
         {
