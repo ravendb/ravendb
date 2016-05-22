@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class VersioningHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/revisions", "GET", "/databases/{databaseName:string}/revisions?key={documentKey:string}&start={pageStart:int|optional}&pageSize={pageSize:int|optional(25)")]
+        [RavenAction("/databases/*/revisions", "GET", "/databases/{databaseName:string}/revisions?key={documentKey:string}&start={start:int|optional}&pageSize={pageSize:int|optional(25)")]
         public Task GetRevisionsFor()
         {
             var keys = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
@@ -25,8 +25,8 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                int start = 0;
-                int take = int.MaxValue; // count
+                int start = GetIntValueQueryString("start", false) ?? 0;
+                int take = GetIntValueQueryString("pageSize", false) ?? 25;
                 var revisions = Database.DocumentsStorage.VersioningStorage.GetRevisions(context, key, start, take).ToList();
 
                 long actualEtag = revisions.Count == 0 ? int.MinValue : revisions[revisions.Count - 1].Etag;
