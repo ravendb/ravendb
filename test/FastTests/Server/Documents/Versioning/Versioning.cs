@@ -129,44 +129,35 @@ namespace FastTests.Server.Documents.Versioning
         }
 
 
-        /*       [Fact]
-            public async Task Will_delete_old_revisions()
+        [Fact]
+        public async Task WillDeleteOldRevisions()
+        {
+            var company = new Company {Name = "Company #1"};
+            using (var store = await GetDocumentStore())
             {
-                var company = new Company { Name = "Company #1" };
-                using (var store = await GetDocumentStore())
+                await SetupVersioning(store);
+                using (var session = store.OpenAsyncSession())
                 {
-                    await SetupVersioning(store);
-                    using (var session = store.OpenAsyncSession())
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                    for (var i = 0; i < 10; i++)
                     {
-                    session.Store(company);
-                    session.SaveChanges();
-                    for (int i = 0; i < 10; i++)
-                    {
-                        company.Name = "Company #" + i + 2;
-                        session.SaveChanges();
+                        company.Name = "Company #2: " + i;
+                        await session.SaveChangesAsync();
                     }
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    for (int i = 1; i < 7; i++)
-                    {
-                        Assert.Null(session.Load<Company>(company.Id + "/revisions/" + i));
-                    }
-
-                    for (int i = 7; i < 12; i++)
-                    {
-                        Assert.NotNull(session.Load<Company>(company.Id + "/revisions/" + i));
-                    }
-
-                    for (int i = 12; i < 21; i++)
-                    {
-                        Assert.Null(session.Load<Company>(company.Id + "/revisions/" + i));
-                    }
+                    var revisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
+                    Assert.Equal(5, revisions.Length);
+                    Assert.Equal("Company #2: 5", revisions[0].Name);
+                    Assert.Equal("Company #2: 9", revisions[4].Name);
                 }
             }
+        }
 
-            [Fact]
+        /*         [Fact]
             public async Task Will_not_delete_revisions_if_parent_exists()
             {
                 var company = new Company { Name = "Company Name" };

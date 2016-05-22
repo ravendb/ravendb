@@ -150,7 +150,8 @@ namespace Raven.Server.Documents.Versioning
             if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], key, numberOfRevisionsToDelete);
+            var prefixSlice = GetSliceFromKey(context, key);
+            var deletedRevisionsCount = table.DeleteForwardFrom(_docsSchema.Indexes["KeyAndEtag"], prefixSlice, numberOfRevisionsToDelete);
             Debug.Assert(numberOfRevisionsToDelete == deletedRevisionsCount);
             IncrementCountOfRevisions(context, key, -deletedRevisionsCount);
         }
