@@ -31,6 +31,10 @@ namespace FastTests.Server.Documents.Versioning
                         {
                             Active = false,
                         },
+                        ["Products"] = new VersioningConfigurationCollection
+                        {
+                            Active = false,
+                        },
                     }
                 }, Constants.Versioning.RavenVersioningConfiguration);
 
