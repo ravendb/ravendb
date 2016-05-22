@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
@@ -73,6 +70,18 @@ namespace Raven.Server.Json
         //when it will become longer, it is likely to cause issues
         private static Expression GetValue(PropertyInfo propertyInfo, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
+            var type = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
+            if (type == typeof(string) ||
+                type == typeof(bool) ||
+                type == typeof(long) ||
+                type.GetTypeInfo().IsEnum)
+            {
+                var value = GetParameter(propertyInfo.PropertyType, vars);
+                var genericType = propertyInfo.PropertyType != typeof(string) ? new[] { propertyInfo.PropertyType } : new Type[0];
+                var tryGet = Expression.Call(json, "TryGet", genericType, Expression.Constant(propertyInfo.Name), value);
+                return Expression.Condition(tryGet, value, Expression.Default(propertyInfo.PropertyType));
+            }
+
             if (propertyInfo.PropertyType.Name == "Dictionary`2")
             {
                 var valueType = propertyInfo.PropertyType.GenericTypeArguments[1];
@@ -110,13 +119,12 @@ namespace Raven.Server.Json
                 var converter = (Delegate)converterField.GetValue(null);
                 if (converter == null)
                     throw new InvalidOperationException($"{propertyInfo.PropertyType.Name} field is not initialized yet.");
-                return Expression.Invoke(Expression.Constant(converter), json);
+                var methodToCall = typeof(JsonDeserialization).GetMethod(nameof(ToObject)).MakeGenericMethod(propertyInfo.PropertyType);
+                var constantExpression = Expression.Constant(converter);
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyInfo.Name), constantExpression);
             }
 
-            var value = GetParameter(propertyInfo.PropertyType, vars);
-            var genericType = propertyInfo.PropertyType != typeof (string) ? new[] {propertyInfo.PropertyType} : new Type[0];
-            var tryGet = Expression.Call(json, "TryGet", genericType, Expression.Constant(propertyInfo.Name), value);
-            return Expression.Condition(tryGet, value, Expression.Default(propertyInfo.PropertyType));
+            throw new InvalidOperationException("We wasn't able to convert the value: ");
         }
 
         private static ParameterExpression GetParameter(Type type, Dictionary<Type, ParameterExpression> vars)
@@ -166,6 +174,15 @@ namespace Raven.Server.Json
                 }
             }
             return dic;
+        }
+
+        public static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
+        {
+            BlittableJsonReaderObject obj;
+            if (json.TryGet(name, out obj) == false)
+                return default(T);
+
+            return converter(obj);
         }
 
         public static List<ReplicationDestination> ToListReplicationDestination(BlittableJsonReaderObject json, string name)
