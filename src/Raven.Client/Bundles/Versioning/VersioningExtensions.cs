@@ -28,7 +28,7 @@ namespace Raven.Client.Bundles.Versioning
             var inMemoryDocumentSessionOperations = (InMemoryDocumentSessionOperations)session;
             var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetRevisionsForAsync(id, start, pageSize).ConfigureAwait(false);
             return jsonDocuments
-             .Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
+             .Select(x => (T)inMemoryDocumentSessionOperations.ConvertToEntity(typeof(T),x.Key + "/__revisions", x.DataAsJson, x.Metadata))
              .ToArray();
         }
     }
