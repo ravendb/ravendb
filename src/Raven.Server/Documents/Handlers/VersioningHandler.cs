@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Json;
@@ -18,6 +19,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET", "/databases/{databaseName:string}/revisions?key={documentKey:string}&start={start:int|optional}&pageSize={pageSize:int|optional(25)")]
         public Task GetRevisionsFor()
         {
+            if (Database.DocumentsStorage.VersioningStorage == null)
+                throw new InvalidOperationException("Versioning is disabled");
+
             var keys = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
             var key = keys[0];
 

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Xunit;
 using Raven.Client.Bundles.Versioning;
 
@@ -35,6 +36,33 @@ namespace FastTests.Server.Documents.Versioning
                     Assert.Equal(2, companiesRevisions.Length);
                     Assert.Equal("Company Name", companiesRevisions[0].Name);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task GetRevisionsOfNotExistKey()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                await SetupVersioning(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
+                    Assert.Equal(0, companiesRevisions.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task GetRevisionsOfNotExistKey_WithVersioningDisabled()
+        {
+            using (var store = await GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
+                    Assert.Contains("Versioning is disabled", exception.Message);
                 }
             }
         }
