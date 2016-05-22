@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Json.Parsing;
 
@@ -249,7 +250,11 @@ namespace Sparrow.Json
             {
                 try
                 {
-                    obj = (T) Convert.ChangeType(result, typeof (T));
+                    // todo: review this, is it good enough?
+                    if (typeof(T).GetTypeInfo().IsEnum)
+                        result = Enum.Parse(typeof(T), result.ToString());
+
+                    obj = result == null ? default(T) : (T)Convert.ChangeType(result, typeof(T));
                 }
                 catch (Exception e)
                 {

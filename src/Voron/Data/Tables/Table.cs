@@ -137,6 +137,13 @@ namespace Voron.Data.Tables
             };
         }
 
+        public bool VerifyKeyExists(Slice key)
+        {
+            long id;
+            return TryFindIdFromPrimaryKey(key, out id);
+        }
+
+
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
             var pkTree = GetTree(_schema.Key);
