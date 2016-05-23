@@ -1,8 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Platform;
 using Raven.Client.Platform.Unix;
 using Raven.Server.Documents;
@@ -21,6 +29,9 @@ namespace Raven.Server.ReplicationUtil
         private bool _disposed;
         private WebsocketStream _websocketStream;
 
+        //does not need alot of cache
+        private static readonly HttpJsonRequestFactory _jsonRequestFactory = new HttpJsonRequestFactory(128);
+
         public DocumentReplicationTransport(string url, CancellationToken cancellationToken)
         {
             _url = url;
@@ -34,6 +45,29 @@ namespace Raven.Server.ReplicationUtil
             {
                 _webSocket = await GetAndConnectWebSocketAsync();
                 _websocketStream = new WebsocketStream(_webSocket, _cancellationToken);
+            }
+        }
+
+        public long GetLatestEtag(string targetUrl, Guid srcDbId)
+        {
+            var @params = new CreateHttpJsonRequestParams(null,
+                $"{targetUrl}/lastSentEtag?srcDbId={srcDbId}",HttpMethod.Get, 
+                new OperationCredentials(string.Empty, new NetworkCredential()), null);
+            using (var request = _jsonRequestFactory.CreateHttpJsonRequest(@params))
+            {
+                var response = AsyncHelpers.RunSync(() => request.ExecuteRawResponseAsync());
+                IEnumerable<string> values;
+                if (!response.Headers.TryGetValues(Constants.LastEtagFieldName, out values))
+                    return 0;
+
+                var val = values.FirstOrDefault();
+                long etag;
+                if(string.IsNullOrWhiteSpace(val) || !long.TryParse(val, out etag))
+                    throw new NotImplementedException($@"
+                            Expected an int64 number when fetching last etag, but got {val}. 
+                                This should not happen and it is likely a bug.");
+
+                return etag;
             }
         }
 

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Linq;
 using System.Net.WebSockets;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -15,13 +14,21 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationRequestHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases*/lastSentChangeVector", "GET", "@/databases/{databaseName: string}/lastSentChangeVector")]
-        public async Task GetLastSentChangeVector()
+        [RavenAction("/databases*/lastSentEtag", "GET", "@/databases/{databaseName: string}/lastSentEtag?srcDbId={databaseUniqueId:string}")]
+        public Task GetLastSentEtag()
         {
+            var srcDbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId")[0]);
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                var serverChangeVector = Database.DocumentsStorage.GetChangeVector(context);
+                var vectorEntry = serverChangeVector.FirstOrDefault(x => x.DbId == srcDbId);
+                
+                //no need to write a document for transferring a single value
+                HttpContext.Response.Headers[Constants.LastEtagFieldName] = vectorEntry.Etag.ToString();
             }
+            return Task.CompletedTask;
         }
 
         //an endpoint to establish replication websocket
@@ -39,13 +46,13 @@ namespace Raven.Server.Documents.Handlers
             var hasOtherSideClosedConnection = false;
             bool shouldConnectBack;
             var replicationExecuter = Database.DocumentReplicationLoader.RegisterNewConnectionFrom(
-                dbId,
+                srcDbId,
                 srcUrl,
                 srcDbName,
                 out shouldConnectBack);
             replicationExecuter.Start();
 
-            string ReplicationReceiveDebugTag = $"document-replication/receive <{replicationExecuter.Name}>";
+            string ReplicationReceiveDebugTag = $"document-replication/receive <{replicationExecuter.Name}>";			
 
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
@@ -60,36 +67,53 @@ namespace Raven.Server.Documents.Handlers
                         while (!Database.DatabaseShutdown.IsCancellationRequested)
                         {
                             //this loop handles one replication batch
-                            while (true)
+                            RavenTransaction tx = null;
+                            try
                             {
-
-                                var writer = new BlittableJsonDocumentBuilder(context,
-                                    BlittableJsonDocumentBuilder.UsageMode.None, ReplicationReceiveDebugTag,
-                                    parser, jsonParserState);
-                                writer.ReadObject();
-                                var result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-
-                                if (result.MessageType == WebSocketMessageType.Close)
+                                while (true)
                                 {
-                                    hasOtherSideClosedConnection = true;
-                                    break;
-                                }
+                                    var result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                                    //open write transaction at beginning of the batch
+                                    if (tx == null)
+                                        tx = context.OpenWriteTransaction();
 
-                                if (result.EndOfMessage)
-                                    break;
+                                    var writer = new BlittableJsonDocumentBuilder(context,
+                                        BlittableJsonDocumentBuilder.UsageMode.None, ReplicationReceiveDebugTag,
+                                        parser, jsonParserState);
+                                    writer.ReadObject();
+                                    if (result.MessageType == WebSocketMessageType.Close)
+                                    {
+                                        hasOtherSideClosedConnection = true;
+                                        break;
+                                    }
 
-                                parser.SetBuffer(buffer.Array, result.Count);
-                                while (writer.Read() == false)
-                                {
-                                    result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                                    if (result.EndOfMessage)
+                                        break;
+
                                     parser.SetBuffer(buffer.Array, result.Count);
+                                    while (writer.Read() == false)
+                                    {
+                                        result = await webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                                        parser.SetBuffer(buffer.Array, result.Count);
+                                    }
+                                    writer.FinalizeDocument();
+                                    var receivedDoc = writer.CreateReader();
+                                    docs.Add(receivedDoc);
                                 }
-                                writer.FinalizeDocument();
-                                var receivedDoc = writer.CreateReader();
-                                docs.Add(receivedDoc);
-                            }
+                                replicationExecuter.ReceiveReplicatedDocuments(context, docs);
 
-                            replicationExecuter.ReceiveReplicatedDocuments(context, docs);
+                                //precaution
+                                if(tx == null)
+                                    throw new InvalidOperationException(@"
+                                        Transaction is not initialized while receiving replicated documents; this
+                                         is something that is not supposed to happen and is likely a bug.");
+
+                                tx.Commit();
+                            }
+                            finally
+                            {
+                                tx?.Dispose();
+                            }
 
                             if (hasOtherSideClosedConnection)
                                 break;
@@ -100,14 +124,6 @@ namespace Raven.Server.Documents.Handlers
                     Database.DocumentReplicationLoader.HandleConnectionDisconnection(replicationExecuter);
                 }
             }
-        }
-
-
-        private bool IsCommandDocument(BlittableJsonReaderObject doc)
-        {
-            string val;
-            var hasProperty = doc.TryGet(Constants.TransportResponseProperty, out val);
-            return hasProperty && !String.IsNullOrWhiteSpace(val);
-        }
+        }		
     }
 }

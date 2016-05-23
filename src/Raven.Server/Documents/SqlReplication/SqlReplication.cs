@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         public override string Name => "Sql replication of " + Configuration.Name;
 
+        private bool _shouldWaitForChanges;
         private PredefinedSqlConnection _predefinedSqlConnection;
         public readonly SqlReplicationMetricsCountersManager MetricsCountersManager;
 
@@ -73,28 +74,30 @@ namespace Raven.Server.Documents.SqlReplication
             var spRepTime = new Stopwatch();
             spRepTime.Start();
 
+            _shouldWaitForChanges = false;
             try
             {
                 DocumentsOperationContext context;
-                bool updateEtag;
+                bool hasReplicated;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                 {
                     LoadLastEtag(context);
                     
-                    updateEtag = ReplicateDeletionsToDestination(context) ||
+                    hasReplicated = ReplicateDeletionsToDestination(context) ||
                                  ReplicateChangesToDestination(context, out countOfReplicatedItems);
 
                     tx.Commit();
                 }
 
-                if (updateEtag)
+                if (hasReplicated)
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
                         WriteLastEtag(context);
                         tx.Commit();
                     }
+                    _shouldWaitForChanges = true;
                 }
             }
             finally
@@ -111,6 +114,11 @@ namespace Raven.Server.Documents.SqlReplication
                 var afterReplicationCompleted = _database.SqlReplicationLoader.AfterReplicationCompleted;
                 afterReplicationCompleted?.Invoke(Statistics);
             }
+        }
+
+        protected override bool ShouldWaitForChanges()
+        {
+            return _shouldWaitForChanges;
         }
 
         private bool ReplicateDeletionsToDestination(DocumentsOperationContext context)

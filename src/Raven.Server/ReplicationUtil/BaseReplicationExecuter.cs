@@ -39,6 +39,12 @@ namespace Raven.Server.ReplicationUtil
 
         protected abstract void ExecuteReplicationOnce();
 
+        /// <summary>
+        /// returns true if there are items left to replicate, and false 
+        /// if all items were replicated and the replication needs to go to sleep
+        /// </summary>
+        protected abstract bool ShouldWaitForChanges();
+
         private void ExecuteReplicationLoop()
         {
             while (_cancellationTokenSource.IsCancellationRequested == false)
@@ -70,6 +76,9 @@ namespace Raven.Server.ReplicationUtil
                 {
                     _log.WarnException($"Exception occured for '{Name}'.", e);
                 }
+
+                if (!ShouldWaitForChanges())
+                    continue;
 
                 try
                 {

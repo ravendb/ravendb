@@ -23,9 +23,7 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentReplicationTransport _transport;
         private readonly Guid _srcDbId;
         private readonly ReplicationDestination _destination;
-        private long _lastEtag;
-
-        
+        private long _lastSentEtag;
 
         public DocumentReplicationExecuter(DocumentDatabase database, 
             Guid srcDbId, 
@@ -37,6 +35,9 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext context;
             _database.DocumentsStorage.ContextPool.AllocateOperationContext(out context);
 
+            //not sure about getting latest etag scheme; this probably needs more discussion
+            if (_destination != null) //not null means that there is outgoing replication
+                _lastSentEtag = _transport.GetLatestEtag(_destination.Url, _srcDbId);
         }
 
         //if _destination == null --> the replication is only incoming, otherwise it is a two-way one
@@ -59,6 +60,8 @@ namespace Raven.Server.Documents.Replication
                 for (int j = 0; j < changeVector.Length; j++)
                 {
                     var currentEntry = changeVector[j];
+                    Debug.Assert(currentEntry.DbId != Guid.Empty); //should never happen, but..
+
                     long existingValue;
                     if(!maxReceivedChangeVector.TryGetValue(currentEntry.DbId,out existingValue) ||
                         existingValue < currentEntry.Etag)
@@ -98,9 +101,16 @@ namespace Raven.Server.Documents.Replication
                 _destination.Url.Equals(otherExecuter._destination.Url, StringComparison.OrdinalIgnoreCase);
         }
 
+        private bool _shouldWaitForChanges;
+
+        protected override bool ShouldWaitForChanges()
+        {
+            return _shouldWaitForChanges;
+        }
+
         protected override void ExecuteReplicationOnce()
         {
-            var lastSendEtag = _lastEtag;
+            var lastSendEtag = _lastSentEtag;
 
             //just for shorter code
             var documentStorage = _database.DocumentsStorage;
@@ -118,7 +128,13 @@ namespace Raven.Server.Documents.Replication
                     documentStorage
                         .GetDocumentsAfter(context, lastSendEtag, 0, 1024)
                         .ToArray();
+
+                //TODO : consider changing SendDocumentBatchAsync to sync version
+                // (not sure it will be a bottleneck)
                 AsyncHelpers.RunSync(() => _transport.SendDocumentBatchAsync(replicationBatch, context));
+                _lastSentEtag = replicationBatch.Max(x => x.Etag);
+                var lastExistingEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
+                _shouldWaitForChanges = lastExistingEtag <= _lastSentEtag;
             }
         }
 

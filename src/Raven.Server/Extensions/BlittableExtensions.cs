@@ -9,6 +9,16 @@ namespace Raven.Server
 {
     public static class BlittableExtensions
     {
+        public static long GetEtag(this BlittableJsonReaderObject document)
+        {
+            long etag;
+            BlittableJsonReaderObject metadata;
+            if (!document.TryGet(Constants.Metadata, out metadata) ||
+                !metadata.TryGet(Constants.MetadataEtagField, out etag))
+                    return 0;
+            return etag;
+        }
+
         /// <summary>
         /// Extract enumerable of change vector from document's metadata
         /// </summary>
