@@ -22,8 +22,7 @@ namespace Raven.Server.Documents.Handlers
             if (Database.DocumentsStorage.VersioningStorage == null)
                 throw new InvalidOperationException("Versioning is disabled");
 
-            var keys = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
-            var key = keys[0];
+            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
