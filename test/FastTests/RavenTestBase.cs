@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,7 +32,6 @@ namespace FastTests
         protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
         protected static readonly ConcurrentSet<string> PathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private static long _currentServerUsages;
         private static RavenServer _globalServer;
         private static readonly object ServerLocker = new object();
         private static readonly object AvailableServerPortsLocker = new object();
@@ -76,15 +76,29 @@ namespace FastTests
 
                 if (_globalServer != null)
                 {
-                    Interlocked.Increment(ref _currentServerUsages);
                     _localServer = _globalServer;
                     return _localServer;
                 }
                 lock (ServerLocker)
                 {
                     if (_globalServer == null)
-                        _globalServer = CreateServer(8080);
-                    Interlocked.Increment(ref _currentServerUsages);
+                    {
+                        var globalServer = CreateServer(8080);
+                        AssemblyLoadContext.Default.Unloading += context =>
+                        {
+                            globalServer.Dispose();
+
+                            GC.Collect(2);
+                            GC.WaitForPendingFinalizers();
+
+                            var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
+
+                            RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
+
+                            exceptionAggregator.ThrowIfNeeded();
+                        };
+                        _globalServer = globalServer;
+                    }
                     _localServer = _globalServer;
                 }
                 return _globalServer;
@@ -275,29 +289,8 @@ namespace FastTests
                     return;
                 }
 
-                if (Interlocked.Decrement(ref _currentServerUsages) > 0)
-                {
-                    exceptionAggregator.ThrowIfNeeded();
-                    return;
-                }
-
-                lock (ServerLocker)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _globalServer.Dispose();
-                        _globalServer = null;
-                        _currentServerUsages = 0;
-                    });
-                }
+                 exceptionAggregator.ThrowIfNeeded();
             }
-
-            GC.Collect(2);
-            GC.WaitForPendingFinalizers();
-
-            RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
-
-            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }
