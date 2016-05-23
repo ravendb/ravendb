@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -11,13 +10,10 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Client.Platform;
 using Raven.Client.Platform.Unix;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ReplicationUtil
 {

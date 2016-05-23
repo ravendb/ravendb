@@ -9,11 +9,11 @@ using Raven.Server;
 
 namespace FastTests.Server.Documents.Replication
 {
-    public class UtilityTests : RavenTestBase
+    public class ReplicationUtilityTests : RavenTestBase
     {
         public readonly string DbName = $"TestDB{Guid.NewGuid()}";
 
-        [Fact(Skip = "Failing test, Michael, please fix")]
+        [Fact]
         public async Task Extract_change_vector_from_document_metadata_should_work()
         {
             using (await GetDocumentStore(modifyDatabaseDocument:document => document.Id = DbName))
@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.Replication
                         },
                         new DynamicJsonValue
                         {
-                            ["Key"] = guid1.ToString(),
+                            ["Key"] = guid3.ToString(),
                             ["Value"] = 5L
                         },
                     };
