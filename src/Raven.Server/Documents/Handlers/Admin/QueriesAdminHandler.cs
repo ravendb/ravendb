@@ -12,18 +12,16 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/debug/queries/kill", "GET")]
         public Task KillQuery()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
-            var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
-            var idStr = ids[0];
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
+            var idStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             long id;
             if (long.TryParse(idStr, out id) == false)
                 throw new ArgumentException($"Query string value 'id' must be a number");
 
-            var index = Database.IndexStore.GetIndex(names[0]);
+            var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + names[0]);
+                throw new InvalidOperationException("There is not index with name: " + name);
 
             var query = index.CurrentlyRunningQueries
                 .FirstOrDefault(q => q.QueryId == id);
