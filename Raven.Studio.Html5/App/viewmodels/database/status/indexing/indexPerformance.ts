@@ -16,6 +16,7 @@ import mapStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/m
 import reduceStatsInfo = require("viewmodels/database/status/indexing/perfDialogs/reduceStatsInfo");
 import prefetchInfo = require("viewmodels/database/status/indexing/perfDialogs/prefetchInfo");
 import filteredOutIndexInfo = require("viewmodels/database/status/indexing/perfDialogs/filteredOutIndexInfo");
+import awesomeMultiselect = require("common/awesomeMultiselect");
 
 class dateRange {
     constructor(public start: Date, public end: Date) {
@@ -92,7 +93,9 @@ class gapFinder {
                     this.pushRegion(new dateRange(s, e));
                     s = newRange.start;
                 }
-                e = newRange.end;
+                if (newRange.end.getTime() > e.getTime()) {
+                    e = newRange.end;
+                }
             }
             this.pushRegion(new dateRange(s, e));
         }
@@ -227,7 +230,7 @@ class metrics extends viewModelBase {
             nv.tooltip.cleanup();
             this.redrawGraph();
         });
-        $("#visibleIndexesSelector").multiselect();
+        awesomeMultiselect.build($("#visibleIndexesSelector"));
         this.svg = d3.select("#indexPerformanceGraph");
        
     }
@@ -324,6 +327,11 @@ class metrics extends viewModelBase {
 
                 this.rawMapJsonData = this.mergeMapJsonData(this.rawMapJsonData, mapResult);
                 var mapIndexes = this.findIndexNames(this.rawMapJsonData);
+                var filteredOutResourcesIndexNames = this.rawFilteredOutIndexesJsonData.map(x => x.IndexName);
+
+                // merge filtered out resources with map index names as we display them in map section
+                mapIndexes = d3.set(mapIndexes.concat(filteredOutResourcesIndexNames)).values();
+
                 var oldMapAllIndexes = this.mapAllIndexNames();
                 var newMapIndexes = mapIndexes.filter(i => !oldMapAllIndexes.contains(i));
                 this.mapAllIndexNames.pushAll(newMapIndexes);
@@ -339,7 +347,7 @@ class metrics extends viewModelBase {
                 // this will filterJsonData and redrawGraph
                 this.selectedIndexNames(this.selectedIndexNames().concat(newIndexes));
                 // refresh multiselect widget:
-                $("#visibleIndexesSelector").multiselect('rebuild');
+                awesomeMultiselect.rebuild($("#visibleIndexesSelector"));
             });
     }
 
@@ -1026,7 +1034,7 @@ class metrics extends viewModelBase {
             .attr('class', 'opGroup');
 
         var op = batches.selectAll('.op_g')
-            .data((d: reducingBatchInfoDto) => d.PerfStats);
+            .data((d: reducingBatchInfoDto) => d.PerfStats, d => d.indexName + "/" + d.stats.ReduceType);
 
         op.exit().remove();
 
@@ -1034,10 +1042,8 @@ class metrics extends viewModelBase {
             op
                 .selectAll('.op') 
                 .transition()
-                .attr("transform",
-                (d: reduceLevelPeformanceStatsDto) => {
-                     return "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")";
-                });
+                .attr("transform", 
+                (d: reduceLevelPeformanceStatsDto) => "translate(" + self.xScale(self.isoFormat.parse(d.Started)) + "," + self.yReduceScale(d.parent.indexName) + ")");
 
         opTransition.select('.main_bar')
             .attr('width', (d: reduceLevelPeformanceStatsDto) => self.xScaleExtent(d.DurationMs));

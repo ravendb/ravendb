@@ -9073,3 +9073,15 @@ a.global_help_link:focus {
   margin-bottom: 0;
 }
 /* Override default awesome bootstrap checkbox style - end */
+/**
+    Multiselect customization required for awesome checkboxes, see: http://jsfiddle.net/natearmagost/aznvcLps/
+*/
+.multiselect-container div.checkbox {
+  margin: 0;
+  padding: 5px 15px 5px 35px;
+}
+.multiselect-container label {
+  margin: 0;
+  white-space: nowrap;
+  width: 100%;
+}
