@@ -24,6 +24,7 @@ namespace Raven.Server.ReplicationUtil
     public class DocumentReplicationTransport : IDisposable
     {
         private readonly string _url;
+        private readonly Guid _srcDbId;
         private readonly CancellationToken _cancellationToken;
         private WebSocket _webSocket;
         private bool _disposed;
@@ -32,9 +33,10 @@ namespace Raven.Server.ReplicationUtil
         //does not need alot of cache
         private static readonly HttpJsonRequestFactory _jsonRequestFactory = new HttpJsonRequestFactory(128);
 
-        public DocumentReplicationTransport(string url, CancellationToken cancellationToken)
+        public DocumentReplicationTransport(string url, Guid srcDbId, CancellationToken cancellationToken)
         {
             _url = url;
+            _srcDbId = srcDbId;
             _cancellationToken = cancellationToken;
             _disposed = false;
         }
@@ -48,10 +50,10 @@ namespace Raven.Server.ReplicationUtil
             }
         }
 
-        public long GetLatestEtag(string targetUrl, Guid srcDbId)
+        public long GetLatestEtag()
         {
             var @params = new CreateHttpJsonRequestParams(null,
-                $"{targetUrl}/lastSentEtag?srcDbId={srcDbId}",HttpMethod.Get, 
+                $"{_url}/lastSentEtag?srcDbId={_srcDbId}",HttpMethod.Get, 
                 new OperationCredentials(string.Empty, new NetworkCredential()), null);
             using (var request = _jsonRequestFactory.CreateHttpJsonRequest(@params))
             {

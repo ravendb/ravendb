@@ -31,13 +31,13 @@ namespace Raven.Server.Documents.Replication
         {
             _srcDbId = srcDbId;
             _destination = destination;
-            _transport = new DocumentReplicationTransport(destination.Url,_database.DatabaseShutdown);
+            _transport = new DocumentReplicationTransport(destination.Url, _srcDbId,  _database.DatabaseShutdown);
             DocumentsOperationContext context;
             _database.DocumentsStorage.ContextPool.AllocateOperationContext(out context);
 
             //not sure about getting latest etag scheme; this probably needs more discussion
             if (_destination != null) //not null means that there is outgoing replication
-                _lastSentEtag = _transport.GetLatestEtag(_destination.Url, _srcDbId);
+                _lastSentEtag = _transport.GetLatestEtag();
         }
 
         //if _destination == null --> the replication is only incoming, otherwise it is a two-way one
