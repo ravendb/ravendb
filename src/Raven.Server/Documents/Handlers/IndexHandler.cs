@@ -24,12 +24,12 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "PUT")]
         public async Task Put()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var indexDefinition = await ReadIndexDefinitionAsync(context, names[0]);
+                var indexDefinition = await ReadIndexDefinitionAsync(context, name);
 
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
 
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName(context.GetLazyString("Index"));
-                    writer.WriteString(context.GetLazyString(names[0]));
+                    writer.WriteString(context.GetLazyString(name));
                     writer.WriteComma();
 
                     writer.WritePropertyName(context.GetLazyString("IndexId"));
@@ -135,9 +135,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/source", "GET")]
         public Task Source()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var index = Database.IndexStore.GetIndex(names[0]);
+            var index = Database.IndexStore.GetIndex(name);
             if (index == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -150,9 +150,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/debug", "GET")]
         public Task Debug()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var index = Database.IndexStore.GetIndex(names[0]);
+            var index = Database.IndexStore.GetIndex(name);
             if (index == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -226,11 +226,11 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/stats", "GET")]
         public Task Stats()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var index = Database.IndexStore.GetIndex(names[0]);
+            var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + names[0]);
+                throw new InvalidOperationException("There is not index with name: " + name);
 
             var stats = index.GetStats();
 
@@ -247,9 +247,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "RESET")]
         public Task Reset()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var newIndexId = Database.IndexStore.ResetIndex(names[0]);
+            var newIndexId = Database.IndexStore.ResetIndex(name);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -267,9 +267,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "DELETE")]
         public Task Delete()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            Database.IndexStore.DeleteIndex(names[0]);
+            Database.IndexStore.DeleteIndex(name);
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
@@ -413,16 +413,16 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-lock", "POST")]
         public Task SetLockMode()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var modes = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
 
             IndexLockMode mode;
-            if (Enum.TryParse(modes[0], out mode) == false)
-                throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modes[0]);
+            if (Enum.TryParse(modeStr, out mode) == false)
+                throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
-            var index = Database.IndexStore.GetIndex(names[0]);
+            var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + names[0]);
+                throw new InvalidOperationException("There is not index with name: " + name);
 
             index.SetLock(mode);
 
@@ -432,16 +432,16 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-priority", "POST")]
         public Task SetPriority()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var priorities = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
 
             IndexingPriority priority;
-            if (Enum.TryParse(priorities[0], out priority) == false)
-                throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorities[0]);
+            if (Enum.TryParse(priorityStr, out priority) == false)
+                throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorityStr);
 
-            var index = Database.IndexStore.GetIndex(names[0]);
+            var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + names[0]);
+                throw new InvalidOperationException("There is not index with name: " + name);
 
             index.SetPriority(priority);
 
@@ -546,8 +546,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/terms", "GET")]
         public Task Terms()
         {
-            var names = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var fields = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
             var fromValue = GetStringQueryString("fromValue", required: false);
 
             DocumentsOperationContext context;
@@ -559,7 +559,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var runner = new QueryRunner(Database, context);
 
-                var result = runner.ExecuteGetTermsQuery(names[0], fields[0], fromValue, existingResultEtag, GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
+                var result = runner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
 
                 if (result.NotModified)
                 {
