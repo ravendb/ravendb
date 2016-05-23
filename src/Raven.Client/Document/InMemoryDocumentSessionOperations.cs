@@ -1137,7 +1137,7 @@ more responsive application.
         {
             var metadata = GetMetadataFor(entity);
 
-            metadata[Constants.Headers.RavenCreateVersion] = true;
+            metadata[Constants.Versioning.RavenEnableVersioning] = true;
         }
 
         /// <summary>
@@ -1221,17 +1221,16 @@ more responsive application.
         protected void LogBatch(SaveChangesData data)
         {
             if (log.IsDebugEnabled)
-                log.Debug(() =>
+            {
+                var sb = new StringBuilder()
+                    .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+                    .AppendLine();
+                foreach (var commandData in data.Commands)
                 {
-                    var sb = new StringBuilder()
-                        .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
-                        .AppendLine();
-                    foreach (var commandData in data.Commands)
-                    {
-                        sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
-                    }
-                    return sb.ToString();
-                });
+                    sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+                }
+                log.Debug(sb.ToString());
+            }
         }
 
         public void RegisterMissing(string id)

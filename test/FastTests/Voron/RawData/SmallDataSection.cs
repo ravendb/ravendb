@@ -42,7 +42,7 @@ namespace FastTests.Voron.RawData
         }
 
         [Theory]
-        [InlineDataWithRandomSeed()]
+        [InlineDataWithRandomSeed]
         public void CanAllocateMultipleValues(int seed)
         {
             var random = new Random(seed);

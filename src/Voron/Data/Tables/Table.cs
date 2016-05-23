@@ -137,6 +137,13 @@ namespace Voron.Data.Tables
             };
         }
 
+        public bool VerifyKeyExists(Slice key)
+        {
+            long id;
+            return TryFindIdFromPrimaryKey(key, out id);
+        }
+
+
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
             var pkTree = GetTree(_schema.Key);
@@ -636,34 +643,6 @@ namespace Voron.Data.Tables
             return Insert(builder);
         }
 
-        public bool DeleteAll(TableSchema.FixedSizeSchemaIndexDef index, List<long> deletedList, long maxValue)
-        {
-            var fst = GetFixedSizeTree(index);
-            using (var it = fst.Iterate())
-            {
-                if (it.Seek(long.MinValue) == false)
-                    return true;
-
-                do
-                {
-                    if (it.CurrentKey > maxValue)
-                        break;
-
-                    if (deletedList.Count > 10 * 1024)
-                        break;
-
-                    deletedList.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
-                } while (it.MoveNext());
-            }
-
-            foreach (var id in deletedList)
-            {
-                Delete(id);
-            }
-
-            return true;
-        }
-
         public void DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
         {
             if (numberOfEntriesToDelete < 0)
@@ -690,20 +669,20 @@ namespace Voron.Data.Tables
                 Delete(id);
         }
 
-        public void DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
+        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
         {
             if (numberOfEntriesToDelete < 0)
                 throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
 
             if (numberOfEntriesToDelete == 0)
-                return;            
+                return 0;            
 
             var toDelete = new List<long>();
             var tree = GetTree(index);
             using (var it = tree.Iterate())
             {
                 if (it.Seek(value) == false)
-                    return;
+                    return 0;
 
                 do
                 {
@@ -726,6 +705,7 @@ namespace Voron.Data.Tables
 
             foreach (var id in toDelete)
                 Delete(id);
+            return toDelete.Count;
         }
 
         public bool RequiresParticipation

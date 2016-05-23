@@ -23,11 +23,11 @@ namespace Raven.Server.Documents.Handlers
                 &lastSentEtag={etag:long}")]
         public async Task DocumentReplicationConnection()
         {
-            var dbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId")[0]);
-            var srcUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcUrl")[0];
-            var srcDbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbName")[0];
+            var dbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId"));
+            var srcUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcUrl");
+            var srcDbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbName");
             long lastSentEtag;
-            if (!long.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("lastSentEtag")[0], out lastSentEtag))
+            if (!long.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("lastSentEtag"), out lastSentEtag))
             {
                 throw new ArgumentException("lastSentEtag should be a Int64 number, failed to parse...");
             }

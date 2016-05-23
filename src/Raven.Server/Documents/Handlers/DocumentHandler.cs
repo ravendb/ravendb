@@ -26,13 +26,13 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "HEAD", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public Task Head()
         {
-            var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, ids[0]);
+                var document = Database.DocumentsStorage.Get(context, id);
                 if (document == null)
                     HttpContext.Response.StatusCode = 404;
                 else
@@ -217,12 +217,12 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+                var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
                 var etag = GetLongFromHeaders("If-Match");
 
                 context.OpenWriteTransaction();
-                Database.DocumentsStorage.Delete(context, ids[0], etag);
+                Database.DocumentsStorage.Delete(context, id, etag);
                 context.Transaction.Commit();
 
                 HttpContext.Response.StatusCode = 204; // NoContent
@@ -237,9 +237,9 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+                var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), ids[0]);
+                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id);
 
                 var etag = GetLongFromHeaders("If-Match");
 
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Handlers
                 using (context.OpenWriteTransaction())
                 {
                     Database.Metrics.DocPutsPerSecond.Mark();
-                    putResult = Database.DocumentsStorage.Put(context, ids[0], etag, doc);
+                    putResult = Database.DocumentsStorage.Put(context, id, etag, doc);
                     context.Transaction.Commit();
                     // we want to release the transaction before we write to the network
                 }
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "PATCH", "/databases/{databaseName:string}/docs?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
         public Task Patch()
         {
-            var ids = GetQueryStringValueAndAssertIfSingleAndNotEmpty("ids");
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("ids");
 
             var etag = GetLongFromHeaders("If-Match");
             var isTestOnly = GetBoolValueQueryString("test", required: false) ?? false;
@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Handlers
                 PatchResultData patchResult;
                 using (context.OpenWriteTransaction())
                 {
-                    patchResult = Database.Patch.Apply(context, ids[0], etag, patch, patchIfMissing, isTestOnly);
+                    patchResult = Database.Patch.Apply(context, id, etag, patch, patchIfMissing, isTestOnly);
                     context.Transaction.Commit();
                 }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Json.Parsing;
 
@@ -241,19 +242,24 @@ namespace Sparrow.Json
             {
                 obj = default(T);
             }
-            if (result is T)
+            else if (result is T)
             {
                 obj = (T) result;
             }
             else
             {
+                var type = typeof (T);
                 try
                 {
-                    obj = (T) Convert.ChangeType(result, typeof (T));
+                    // todo: review this, is it good enough?
+                    if (typeof(T).GetTypeInfo().IsEnum)
+                        result = Enum.Parse(typeof(T), result.ToString());
+
+                    obj = (T)Convert.ChangeType(result, Nullable.GetUnderlyingType(type) ?? type);
                 }
                 catch (Exception e)
                 {
-                    throw new FormatException($"Could not convert {result.GetType().FullName} to {typeof (T).FullName}",e);
+                    throw new FormatException($"Could not convert {result.GetType().FullName} to {type.FullName}",e);
                 }
             }
         }
@@ -272,18 +278,26 @@ namespace Sparrow.Json
                 str = null;
                 return false;
             }
+            return ChangeTypeToString(result, out str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ChangeTypeToString(object result, out string str)
+        {
             var lazyCompressedStringValue = result as LazyCompressedStringValue;
             if (lazyCompressedStringValue != null)
             {
                 str = lazyCompressedStringValue;
                 return true;
             }
+
             var lazyStringValue = result as LazyStringValue;
             if (lazyStringValue != null)
             {
                 str = lazyStringValue;
                 return true;
             }
+
             str = null;
             return false;
         }

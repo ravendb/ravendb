@@ -361,8 +361,6 @@ namespace Sparrow.Json
             WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
         }
 
-        
-
         public void Dispose()
         {
             Flush();

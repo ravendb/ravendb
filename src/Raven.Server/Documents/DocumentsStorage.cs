@@ -5,10 +5,9 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
-using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Abstractions.Logging;
-using Raven.Server.Documents.Replication;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.Versioning;
+using Raven.Server.Documents.Replication;using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -19,6 +18,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -40,6 +40,7 @@ namespace Raven.Server.Documents
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
+        public VersioningStorage VersioningStorage;
         private const string NoCollectionSpecified = "Raven/Empty";
         private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
@@ -98,7 +99,15 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            _documentDatabase.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
+
             var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(DocumentsStorage)}");
+
+            exceptionAggregator.Execute(() =>
+            {
+                VersioningStorage?.Dispose();
+                VersioningStorage = null;
+            });
 
             exceptionAggregator.Execute(() =>
             {
@@ -162,6 +171,8 @@ namespace Raven.Server.Documents
 
                     tx.Commit();
                 }
+
+                _documentDatabase.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
             }
             catch (Exception e)
             {
@@ -173,6 +184,18 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }
+
+        public void HandleSystemDocumentChange(DocumentChangeNotification notification)
+        {
+            if (notification.Key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase) == false)
+                return;
+
+            VersioningStorage = null;
+            VersioningStorage = VersioningStorage.LoadConfigurations(_documentDatabase);
+
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Versioning configuration was {(notification.Type == DocumentChangeTypes.Delete ? "disalbed" : "enabled")}");
         }
 
         public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
@@ -341,8 +364,7 @@ namespace Raven.Server.Documents
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
             if (context.Transaction == null)
-                throw new ArgumentException("Context must be set with a valid transaction before calling Put",
-                    nameof(context));
+                throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
             var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
 
@@ -477,7 +499,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey, out int lowerSize,
+        public static void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey, out int lowerSize,
             out byte* key, out int keySize)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
@@ -612,6 +634,7 @@ namespace Raven.Server.Documents
 
             CreateTombstone(context, table, doc, originalCollectionName);
 
+            VersioningStorage?.Delete(context, originalCollectionName, key, isSystemDocument);
             table.Delete(doc.StorageId);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -657,13 +680,6 @@ namespace Raven.Server.Documents
             table.Insert(tbv);
         }
 
-        public bool DeleteCollection(DocumentsOperationContext context, string name, List<long> deletedList, long untilEtag)
-        {
-            name = "@" + name; //todo: avoid this allocation
-            var table = new Table(_docsSchema, name, context.Transaction.InnerTransaction);
-            return table.DeleteAll(_docsSchema.FixedSizeIndexes["CollectionEtags"], deletedList, untilEtag);
-        }
-
         public PutResult Put(DocumentsOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document)
         {
@@ -692,14 +708,14 @@ namespace Raven.Server.Documents
 
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag);
-                   
+
             var tbv = new TableValueBuilder
             {
                 {lowerKey, lowerSize}, //0
                 {(byte*) &newEtagBigEndian , sizeof (long)}, //1
                 {keyPtr, keySize}, //2
                 {document.BasePointer, document.Size}, //3
-            };			
+            };
 
             var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort)lowerSize));
             if (oldValue == null)
@@ -731,6 +747,8 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
+            VersioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document, isSystemDocument);
+
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
                 Etag = newEtag,
@@ -757,6 +775,11 @@ namespace Raven.Server.Documents
             {
                 return finalKey;
             }
+
+            /* We get here if the user inserted a document with a specified id.
+            e.g. your identity is 100
+            but you forced a put with 101
+            so you are trying to insert next document and it would overwrite the one with 101 */
 
             var lastKnownBusy = nextIdentityValue;
             var maybeFree = nextIdentityValue * 2;
@@ -788,7 +811,7 @@ namespace Raven.Server.Documents
 
             originalCollectionName = collectionName;
 
-            // we have to have some way to distinguish between dynamic tree names
+            // TODO: we have to have some way to distinguish between dynamic tree names
             // and our fixed ones, otherwise a collection call Docs will corrupt our state
             return "@" + collectionName;
         }
@@ -859,14 +882,14 @@ namespace Raven.Server.Documents
 
             try
             {
-                var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+            var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
-                return new CollectionStat
-                {
-                    Name = collectionName.Substring(1),
-                    Count = collectionTable.NumberOfEntries
-                };
-            }
+            return new CollectionStat
+            {
+                Name = collectionName.Substring(1),
+                Count = collectionTable.NumberOfEntries
+            };
+        }
             catch (InvalidDataException)
             {
                 return new CollectionStat
