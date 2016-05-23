@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.SqlReplication
         public Action<SqlReplicationStatistics> AfterReplicationCompleted;
 
         public SqlReplicationLoader(DocumentDatabase database, MetricsScheduler metricsScheduler)
-            : base(database)
+            :base(database)
         {
             _metricsScheduler = metricsScheduler;
         }
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.SqlReplication
                 systemDocumentKey.StartsWith(Constants.SqlReplication.SqlReplicationConfigurationPrefix,
                     StringComparison.OrdinalIgnoreCase) ||
                 systemDocumentKey.Equals(Constants.SqlReplication.SqlReplicationConnections, StringComparison.OrdinalIgnoreCase);
-        }
+        }	          
 
         protected override void LoadConfigurations()
         {
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.SqlReplication
                     sqlReplication.Start();
                 }
             }
-        }
+        }        
 
         public DynamicJsonValue SimulateSqlReplicationSqlQueries(SimulateSqlReplication simulateSqlReplication, DocumentsOperationContext context)
         {
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.SqlReplication
                 var document = _database.DocumentsStorage.Get(context, simulateSqlReplication.DocumentId);
                 var sqlReplication = new SqlReplication(_database, simulateSqlReplication.Configuration, _metricsScheduler);
 
-                var result = sqlReplication.ApplyConversionScript(new List<Document> { document }, context);
+                var result = sqlReplication.ApplyConversionScript(new List<Document> {document}, context);
 
                 if (sqlReplication.PrepareSqlReplicationConfig(_connections, false) == false)
                 {

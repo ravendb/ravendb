@@ -20,7 +20,7 @@
       "what": "about\r\nthat",
       "this": true,
       "format": false
-    }
+    },
   ],
   "Quote": "string ' with \" quotes in it",
   "Break":  "\b",

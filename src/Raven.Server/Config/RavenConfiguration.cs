@@ -44,6 +44,8 @@ namespace Raven.Server.Config
 
         public ExpirationBundleConfiguration Expiration { get; }
 
+        public VersioningBundleConfiguration Versioning { get; }
+
         public StudioConfiguration Studio { get; }
 
         public DatabaseConfiguration Databases { get; }
@@ -79,6 +81,7 @@ namespace Raven.Server.Config
             Server = new ServerConfiguration();
             Memory = new MemoryConfiguration();
             Expiration = new ExpirationBundleConfiguration();
+            Versioning = new VersioningBundleConfiguration();
             Studio = new StudioConfiguration();
             Databases = new DatabaseConfiguration();
             Licensing = new LicenseConfiguration();
@@ -102,6 +105,7 @@ namespace Raven.Server.Config
             Indexing.Initialize(Settings);
             Monitoring.Initialize(Settings);
             Expiration.Initialize(Settings);
+            Versioning.Initialize(Settings);
             Studio.Initialize(Settings);
             Databases.Initialize(Settings);
             Licensing.Initialize(Settings);

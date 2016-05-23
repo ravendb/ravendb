@@ -43,7 +43,7 @@ namespace Raven.Server.ReplicationUtil
                 LoadConfigurations();
 
                 if (_log.IsDebugEnabled)
-                    _log.Debug($"Replication configuration was changed: {notification.Key}");
+                    _log.Debug(() => $"Replication configuration was changed: {notification.Key}");
             }
         }
 
