@@ -1,19 +1,17 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Linq;
+using System.IO;
+using System.IO.Compression;
 using System.Net.WebSockets;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Client.BulkInsert;
-using FastTests.Client.Subscriptions;
-using FastTests.Server.Documents.Indexing;
-using FastTests.Voron.RawData;
+using FastTests.Client.Indexing;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Client.Document;
 using Raven.Client.Platform;
-using Sparrow;
+using Raven.Json.Linq;
+using JsonToken = Raven.Imports.Newtonsoft.Json.JsonToken;
 
 namespace Tryouts
 {
@@ -30,39 +28,97 @@ namespace Tryouts
 
         public static void Main(string[] args)
         {
-            /* AsyncManualResetEvent asyncEvent = new AsyncManualResetEvent();
-             for (var i=0; i<10; i++)
-             {
-                 var sp = Stopwatch.StartNew();
-                 asyncEvent.WaitAsync(TimeSpan.FromMilliseconds(3000)).Wait();
-                 Task.Run(() =>
-                 {
-                     Task.Delay(100);
-                     asyncEvent.Set();
-                     asyncEvent.Reset();
-                     asyncEvent.Set();
-                 }).Wait();
+            new IndexesFromClient().MoreLikeThis().Wait();
+        }
 
-                 Console.WriteLine($"iteration {i}; after set: {sp.ElapsedMilliseconds}");
+        public class Order
+        {
+            public string Name;
+        }
 
-             }*/
-
-            for (var i = 0; i < 100; i++)
+        private static void createNewDB(DocumentStore store)
+        {
+            store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
             {
-                var sp = Stopwatch.StartNew();
-                Console.WriteLine(i);
-                try
+                Id = "BenchmarkDB",
+                Settings =
                 {
-                    using (var test = new Subscriptions())
-                        test.BasicSusbscriptionTest().Wait();
+                    {"Raven/DataDir", "~/BenchmarkDB"},
+                    {"Raven/ActiveBundles", ""}
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-                Console.WriteLine($"Total Operation Time: {sp.ElapsedMilliseconds}");
+            });
+        }
 
+        private static async Task importData(DocumentStore store)
+        {
+            //using (var bulk = store.BulkInsert())
+            {
+
+                string filePath = @"C:\Users\ayende\Downloads\Dump of temp2, 2016-05-17 14-07.ravendump";
+                Stream dumpStream = File.OpenRead(filePath);
+                var gZipStream = new GZipStream(dumpStream, CompressionMode.Decompress, leaveOpen: true);
+                using (var streamReader = new StreamReader(gZipStream))
+                using (var reader = new RavenJsonTextReader(streamReader))
+                {
+
+                    if (reader.Read() == false /* { */|| reader.Read() == false /* prop*/)
+                        throw new InvalidOperationException("empty document?");
+
+                    if (reader.TokenType != JsonToken.PropertyName)
+                        throw new InvalidOperationException("Expected property");
+
+                    if ((string)reader.Value != "Docs")
+                        throw new InvalidOperationException("Expected property name 'Docs'");
+
+                    if (reader.Read() == false)
+                        throw new InvalidOperationException("corrupt document");
+
+                    if (reader.TokenType != JsonToken.StartArray)
+                        throw new InvalidOperationException("corrupt document, missing array");
+
+                    if (reader.Read() == false)
+                        throw new InvalidOperationException("corrupt document, array value");
+
+                    while (reader.TokenType != JsonToken.EndArray)
+                    {
+                        var document = RavenJObject.Load(reader);
+                        var metadata = document.Value<RavenJObject>("@metadata");
+                        var key = metadata.Value<string>("@id");
+                        document.Remove("@metadata");
+
+
+                        await store.AsyncDatabaseCommands.PutAsync(key, null, document, metadata);
+                        //await bulk.StoreAsync(document, metadata, key).ConfigureAwait(false);
+                        Console.WriteLine(key);
+                        if (reader.Read() == false)
+                            throw new InvalidOperationException("corrupt document, array value");
+                    }
+                }
             }
+        }
+
+        public class ContactClass
+        {
+            public string Name { get; set; }
+            public string Title { get; set; }
+        }
+        public class AddressClass
+        {
+            public string Line1 { get; set; }
+            public object Line2 { get; set; }
+            public string City { get; set; }
+            public object Region { get; set; }
+            public int PostalCode { get; set; }
+            public string Country { get; set; }
+        }
+        public class Company
+        {
+            public string ExternalId { get; set; }
+            public string Name { get; set; }
+            public ContactClass Contact { get; set; }
+            public AddressClass Address { get; set; }
+            public string Phone { get; set; }
+            public string Fax { get; set; }
         }
 
         private static async Task DoWork()

@@ -86,18 +86,6 @@ namespace Voron
             : this(Encoding.UTF8.GetBytes(key))
         { }
 
-        public Slice(long* ptr)
-            : this((byte*)ptr, sizeof(long))
-        {
-
-        }
-
-        public Slice(ulong* ptr)
-            : this((byte*)ptr, sizeof(ulong))
-        {
-
-        }
-
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
