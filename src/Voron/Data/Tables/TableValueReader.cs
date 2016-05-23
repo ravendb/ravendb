@@ -45,11 +45,6 @@ namespace Voron.Data.Tables
             return _ptr + pos;
         }
 
-        public long* Read(int index, out object size)
-        {
-            throw new NotImplementedException();
-        }
-
         private int GetPositionByIndex(int index)
         {
             switch (_elementSize)

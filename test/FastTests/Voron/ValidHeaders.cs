@@ -105,7 +105,7 @@ namespace FastTests.Voron
         }
 
         [Theory]
-        [InlineDataWithRandomSeed]
+        [InlineDataWithRandomSeed()]
         public void TransactionHeader(int seed)
         {
             var rnd = new Random(seed);

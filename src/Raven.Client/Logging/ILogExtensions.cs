@@ -5,6 +5,12 @@ namespace Raven.Abstractions.Logging
 
     public static class ILogExtensions
     {
+        public static void Debug(this ILog logger, Func<string> messageFunc)
+        {
+            GuardAgainstNullLogger(logger);
+            logger.Log(LogLevel.Debug, messageFunc);
+        }
+
         public static void Debug(this ILog logger, string message, params object[] args)
         {
             GuardAgainstNullLogger(logger);
@@ -45,6 +51,12 @@ namespace Raven.Abstractions.Logging
             logger.Log(LogLevel.Fatal, () => message, exception);
         }
 
+        public static void Info(this ILog logger, Func<string> messageFunc)
+        {
+            GuardAgainstNullLogger(logger);
+            logger.Log(LogLevel.Info, messageFunc);
+        }
+
         public static void Info(this ILog logger, string message, params object[] args)
         {
             GuardAgainstNullLogger(logger);
@@ -60,6 +72,12 @@ namespace Raven.Abstractions.Logging
         {
             GuardAgainstNullLogger(logger);
             logger.Log(LogLevel.Info, () => message, exception);
+        }
+
+        public static void Warn(this ILog logger, Func<string> messageFunc)
+        {
+            GuardAgainstNullLogger(logger);
+            logger.Log(LogLevel.Warn, messageFunc);
         }
 
         public static void Warn(this ILog logger, string message, params object[] args)

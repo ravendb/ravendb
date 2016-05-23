@@ -24,16 +24,6 @@ namespace Voron.Data.Tables
             return ptrSize.Ptr;
         }
 
-        public void Add(ulong* ptr)
-        {
-            Add((byte*)ptr, sizeof(ulong));
-        }
-
-        public void Add(long* ptr)
-        {
-            Add((byte*)ptr, sizeof(long));
-        }
-
         public void Add(byte* ptr, int size)
         {
             _values.Add(new PtrSize

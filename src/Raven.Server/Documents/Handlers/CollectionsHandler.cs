@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/docs", "DELETE", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}")]
         public Task DeleteCollectionDocuments()
         {
-            var deletedList = new List<LazyStringValue>();
+            var deletedList = new List<long>();
             long totalDocsDeletes = 0;
             long maxEtag = -1;
             DocumentsOperationContext context;
@@ -68,26 +68,13 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartArray();
                     while (true)
                     {
+                        bool isAllDeleted;
                         using (context.OpenWriteTransaction())
                         {
                             if (maxEtag == -1)
                                 maxEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
 
-                            foreach (var document in Database.DocumentsStorage.GetDocumentsAfter(context, collection, 0, 0, 16 * 1024))
-                            {
-                                if (document.Etag > maxEtag)
-                                    break;
-                                deletedList.Add(document.Key);
-                            }
-
-                            if (deletedList.Count == 0)
-                                break;
-
-                            foreach (LazyStringValue key in deletedList)
-                            {
-                                Database.DocumentsStorage.Delete(context, key, null);
-                            }
-
+                            isAllDeleted = Database.DocumentsStorage.DeleteCollection(context, collection, deletedList, maxEtag);
                             context.Transaction.Commit();
                         }
                         context.Write(writer, new DynamicJsonValue
@@ -97,8 +84,11 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteComma();
                         writer.WriteNewLine();
                         writer.Flush();
-
+                        
                         totalDocsDeletes += deletedList.Count;
+
+                        if (isAllDeleted)
+                            break;
 
                         deletedList.Clear();
                     }
@@ -111,6 +101,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
             return Task.CompletedTask;
+            
         }
     }
 }
