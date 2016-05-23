@@ -166,7 +166,15 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Includes"));
 
-                writer.WriteDocuments(context, documents, metadataOnly, ids.Count, documents.Count - ids.Count);
+                if (includes.Count > 0)
+                {
+                    writer.WriteDocuments(context, documents, metadataOnly, ids.Count, documents.Count - ids.Count);
+                }
+                else
+                {
+                    writer.WriteStartArray();
+                    writer.WriteEndArray();
+                }
 
                 writer.WriteEndObject();
             }
