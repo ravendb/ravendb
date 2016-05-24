@@ -3046,3 +3046,18 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
 // multiselect customization ends here
 
+
+.flex-container {
+    display: flex;
+    -ms-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+
+    .flex-grow {
+        -ms-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        overflow-y: auto;
+    }
+}
+

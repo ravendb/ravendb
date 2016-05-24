@@ -3,12 +3,13 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
 import document = require("models/database/documents/document");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
+import logEntry = require("models/database/debug/logEntry");
 
 class logs extends viewModelBase {
 
-    allLogs = ko.observableArray<logDto>();
+    allLogs = ko.observableArray<logEntry>();
     filterLevel = ko.observable("All");
-    selectedLog = ko.observable<logDto>();
+    selectedLog = ko.observable<logEntry>();
     debugLogCount: KnockoutComputed<number>;
     infoLogCount: KnockoutComputed<number>;
     warningLogCount: KnockoutComputed<number>;
@@ -19,7 +20,7 @@ class logs extends viewModelBase {
     now = ko.observable<Moment>();
     updateNowTimeoutHandle = 0;
     filteredLoggers = ko.observableArray<string>();
-    sortColumn = ko.observable<string>("TimeStamp");
+    sortColumn = ko.observable<string>("timeStamp");
     sortAsc = ko.observable<boolean>(true);
     filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
     columnWidths: Array<KnockoutObservable<number>>;
@@ -30,17 +31,17 @@ class logs extends viewModelBase {
 
         autoRefreshBindingHandler.install();
 
-        this.debugLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Debug"));
-        this.infoLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Info"));
-        this.warningLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Warn"));
-        this.errorLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Error"));
-        this.fatalLogCount = ko.pureComputed(() => this.allLogs().count(l => l.Level === "Fatal"));
+        this.debugLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Debug"));
+        this.infoLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Info"));
+        this.warningLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Warn"));
+        this.errorLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Error"));
+        this.fatalLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Fatal"));
         this.searchTextThrottled = this.searchText.throttle(400);
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
 
-        this.sortColumn.subscribe(() => this.sortResults());
-        this.sortAsc.subscribe(() => this.sortResults());
+        this.sortColumn.subscribe(() => this.sortInPlace());
+        this.sortAsc.subscribe(() => this.sortInPlace());
     }
 
     activate(args) {
@@ -59,7 +60,7 @@ class logs extends viewModelBase {
 
     attached() {
         super.attached();
-        this.showLogDetails.subscribe(x => {
+        this.showLogDetails.subscribe(() => {
                 $(".logRecords").toggleClass("logRecords-small");
         });
 
@@ -93,67 +94,65 @@ class logs extends viewModelBase {
         return null;
     }
 
-    createHumanReadableTime(item:any, chainDateTime: boolean = true): KnockoutComputed<string> {
-        if (item.TimeStamp) {
-            return ko.pureComputed(() => {
-                var dateMoment = item.dateMoment;
-                var formattedDateTime = "";
-                var agoInMs = dateMoment.diff(this.now());
-                var humanized = moment.duration(agoInMs).humanize(true);
-                if (chainDateTime)
-                    formattedDateTime = dateMoment.format(" (MM/DD/YY, h:mma)");
-                return humanized + formattedDateTime;
-            });
-        }
-
-        return ko.pureComputed(() => null);
-    }
-
     processLogResults(results: logDto[]) {
-        
-        results.forEach(r => {
-            r['dateMoment'] = moment(r.TimeStamp);
-            r['HumanizedTimestamp'] = this.createHumanReadableTime(r, false);
-            r['TimeStampText'] = this.createHumanReadableTime(r, true);
-            r['IsVisible'] = ko.pureComputed(() => this.matchesFilterAndSearch(r) && !this.filteredLoggers.contains(r.LoggerName));
+
+        var mappedResults = results.map(r => {
+            var mapped = new logEntry(r, this.now);
+            mapped['isVisible'] = ko.pureComputed(() => {
+                var matchesSearch = this.matchesFilterAndSearch(mapped);
+                var matchesFilters = this.filteredLoggers().contains(mapped.loggerName());
+                return matchesSearch && !matchesFilters;
+            });
+            return mapped;
         });
 
-        this.allLogs(results.reverse());
-
-        this.sortResults();
+        var sortedResults = this.sortResults(mappedResults.reverse());
+        var allLogsRaw = this.allLogs();
+        if (sortedResults.length === allLogsRaw.length) {
+            for (var i = 0; i < sortedResults.length; i++) {
+                allLogsRaw[i].copyFrom(sortedResults[i]);
+            }
+        } else {
+            this.allLogs(sortedResults);
+        }
     }
 
-    sortResults() {
+    sortInPlace() {
+        var dataToSort = this.sortResults(this.allLogs());
+        this.allLogs(dataToSort);
+    }
+
+    sortResults(dataToSort: logEntry[]) {
         var column = this.sortColumn();
         var asc = this.sortAsc();
         var test = asc ? ((l, r) => l < r) : ((l, r) => l > r);
 
         var sortFunc = (left, right) => {
-            if (left[column] === right[column]) { return 0; }
-            return test(left[column], right[column]) ? 1 : -1;
+            if (left[column]() === right[column]()) { return 0; }
+            return test(left[column](), right[column]()) ? 1 : -1;
         }
 
-        this.allLogs.sort(sortFunc);
+        return dataToSort.sort(sortFunc);
     }
 
-    matchesFilterAndSearch(log: logDto) {
+    matchesFilterAndSearch(log: logEntry) {
         var searchTextThrottled = this.searchTextThrottled().toLowerCase();
         var filterLevel = this.filterLevel();
-        var matchesLogLevel = filterLevel === "All" || log.Level === filterLevel;
+        var matchesLogLevel = filterLevel === "All" || log.level() === filterLevel;
         var matchesSearchText = !searchTextThrottled ||
-            (log.Message && log.Message.toLowerCase().indexOf(searchTextThrottled) >= 0) ||
-            (log.Exception && log.Exception.toLowerCase().indexOf(searchTextThrottled) >= 0);
+            (log.message() && log.message().toLowerCase().indexOf(searchTextThrottled) >= 0) ||
+            (log.exception() && log.exception().toLowerCase().indexOf(searchTextThrottled) >= 0);
 
         return matchesLogLevel && matchesSearchText;
     }
 
-    selectLog(log: logDto) {
+    selectLog(log: logEntry) {
         this.selectedLog(log);
         this.showLogDetails(true);
         $(".logRecords").addClass("logRecords-small");
     }
 
-    unSelectLog(log: logDto) {
+    unSelectLog(log: logEntry) {
         this.selectedLog(null);
         this.showLogDetails(false);
     }
@@ -175,20 +174,17 @@ class logs extends viewModelBase {
                 }
 
                 this.selectedLog(this.allLogs()[newSelectionIndex]);
-                var newSelectedRow = $("#logsContainer table tbody tr:nth-child(" + (newSelectionIndex + 1) + ")");
+                var newSelectedRow = $("#logRecords > div:nth-child(" + (newSelectionIndex + 1) + ")");
                 if (newSelectedRow) {
                     this.ensureRowVisible(newSelectedRow);
                 }
             }
         }
-    }
-
-    showContextMenu() {
-        //alert("this");
+        return true;
     }
 
     ensureRowVisible(row: JQuery) {
-        var table = $("#logTableContainer");
+        var table = $("#logRecords");
         var scrollTop = table.scrollTop();
         var scrollBottom = scrollTop + table.height();
         var scrollHeight = scrollBottom - scrollTop;
@@ -233,9 +229,9 @@ class logs extends viewModelBase {
         this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 60000);
     }
 
-    hideLogType(log: logDto) {
-        if (!this.filteredLoggers.contains(log.LoggerName)) {
-            this.filteredLoggers.push(log.LoggerName);
+    hideLogType(log: logEntry) {
+        if (!this.filteredLoggers.contains(log.loggerName())) {
+            this.filteredLoggers.push(log.loggerName());
         }
     }
 

@@ -9085,3 +9085,15 @@ a.global_help_link:focus {
   white-space: nowrap;
   width: 100%;
 }
+.flex-container {
+  display: flex;
+  -ms-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+.flex-container .flex-grow {
+  -ms-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+  overflow-y: auto;
+}
