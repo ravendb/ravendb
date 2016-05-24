@@ -129,61 +129,68 @@ namespace Raven.Client.Document
 
         public async Task DisposeAsync()
         {
-            if (disposed)
-                return;
-
-            disposed = true;
-
-            OnCompletedNotification();
-
-            subscribers.Clear();
-
-            if (endedBulkInsertsObserver != null)
-                endedBulkInsertsObserver.Dispose();
-
-            if (dataSubscriptionReleasedObserver != null)
-                dataSubscriptionReleasedObserver.Dispose();
-
-            cts.Cancel();
-
-            anySubscriber.Set();
-
-            foreach (var task in new[] { pullingTask, startPullingTask })
+            try
             {
-                if (task == null)
-                    continue;
+                if (disposed)
+                    return;
 
-                switch (task.Status)
+                disposed = true;
+
+                OnCompletedNotification();
+
+                subscribers.Clear();
+
+                if (endedBulkInsertsObserver != null)
+                    endedBulkInsertsObserver.Dispose();
+
+                if (dataSubscriptionReleasedObserver != null)
+                    dataSubscriptionReleasedObserver.Dispose();
+
+                cts.Cancel();
+
+                anySubscriber.Set();
+
+                foreach (var task in new[] { pullingTask, startPullingTask })
                 {
-                    case TaskStatus.RanToCompletion:
-                    case TaskStatus.Canceled:
-                        break;
-                    default:
-                        try
-                        {
-                            await task.ConfigureAwait(false);
-                        }
-                        catch (AggregateException ae)
-                        {
-                            if (ae.InnerException is OperationCanceledException == false &&
-                                ae.InnerException is WebSocketException == false)
+                    if (task == null)
+                        continue;
+
+                    switch (task.Status)
+                    {
+                        case TaskStatus.RanToCompletion:
+                        case TaskStatus.Canceled:
+                            break;
+                        default:
+                            try
                             {
-                                throw;
+                                await task.ConfigureAwait(false);
                             }
-                        }
-                        catch (WebSocketException ex)
-                        {
+                            catch (AggregateException ae)
+                            {
+                                if (ae.InnerException is OperationCanceledException == false &&
+                                    ae.InnerException is WebSocketException == false)
+                                {
+                                    throw;
+                                }
+                            }
+                            catch (WebSocketException ex)
+                            {
                             
-                        }
+                            }
 
-                        break;
+                            break;
+                    }
                 }
+
+                if (IsConnectionClosed)
+                    return ;
+
+                await CloseSubscription().ConfigureAwait(false);
             }
-
-            if (IsConnectionClosed)
-                return ;
-
-            await CloseSubscription().ConfigureAwait(false);
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         public IDisposable Subscribe(IObserver<T> observer)
@@ -317,7 +324,7 @@ namespace Raven.Client.Document
 
                     using (var ms = new MemoryStream())
                     {
-                        ms.SetLength(1024 * 4);
+                        ms.SetLength(1024*4);
                         await webSocket.ConnectAsync(uri, cts.Token).ConfigureAwait(false);
                         // this is terrible, remove this, implement AsyncServerClient.YieldStreamResults for websockets
 
@@ -363,6 +370,10 @@ namespace Raven.Client.Document
                         await processingTask.ConfigureAwait(false);
                         return Task.CompletedTask;
                     }
+                }
+                catch (OperationCanceledException cancelled)
+                {
+                    return Task.CompletedTask;
                 }
                 catch (ErrorResponseException e)
                 {

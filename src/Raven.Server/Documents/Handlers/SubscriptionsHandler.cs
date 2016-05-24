@@ -30,14 +30,16 @@ namespace Raven.Server.Documents.Handlers
 
         private static readonly ILog log = LogManager.GetLogger(typeof(SubscriptionsHandler));
 
-        [RavenAction("/databases/*/subscriptions/create", "POST", "/databases/{databaseName:string}/subscriptions/create")]
+        [RavenAction("/databases/*/subscriptions/create", "POST", "/databases/{databaseName:string}/subscriptions/create?startEtag={startEtag:long|optional}")]
         public async Task Create()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                var startEtag = GetLongQueryString("startEtag") ?? 0;
+
                 var subscriptionCriteriaRaw = await context.ReadForDiskAsync(RequestBodyStream(), null).ConfigureAwait(false);
-                var subscriptionId = Database.SubscriptionStorage.CreateSubscription(subscriptionCriteriaRaw);
+                var subscriptionId = Database.SubscriptionStorage.CreateSubscription(subscriptionCriteriaRaw, startEtag);
                 var ack = new DynamicJsonValue
                 {
                     ["Id"] = subscriptionId

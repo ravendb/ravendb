@@ -31,23 +31,22 @@ namespace Raven.Client.Document
             this.documentStore = documentStore;
         }
 
-        public Task<long> CreateAsync<T>(SubscriptionCriteria<T> criteria, string database = null)
+        public Task<long> CreateAsync<T>(SubscriptionCriteria<T> criteria, long startEtag = 0, string database = null)
         {
             if (criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
             var nonGenericCriteria = new SubscriptionCriteria();
 
-            nonGenericCriteria.BelongsToAnyCollection = new []{ documentStore.Conventions.GetTypeTagName(typeof (T)) };
+            nonGenericCriteria.Collection = documentStore.Conventions.GetTypeTagName(typeof(T));
             nonGenericCriteria.KeyStartsWith = criteria.KeyStartsWith;
-            nonGenericCriteria.PropertiesMatch = criteria.GetPropertiesMatchStrings();
-            nonGenericCriteria.PropertiesNotMatch = criteria.GetPropertiesNotMatchStrings();
-            nonGenericCriteria.StartEtag = criteria.StartEtag;
+            
+            nonGenericCriteria.FilterJavaScript = criteria.FilterJavaScript;
 
-            return CreateAsync(nonGenericCriteria, database);
+            return CreateAsync(nonGenericCriteria, startEtag, database);
         }
 
-        public async Task<long> CreateAsync(SubscriptionCriteria criteria, string database = null)
+        public async Task<long> CreateAsync(SubscriptionCriteria criteria, long startEtag=0, string database = null)
         {
             if (criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
@@ -56,7 +55,7 @@ namespace Raven.Client.Document
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-            using (var request = commands.CreateRequest("/subscriptions/create", HttpMethods.Post))
+            using (var request = commands.CreateRequest("/subscriptions/create?startEtag="+startEtag, HttpMethods.Post))
             {
                 await request.WriteAsync(RavenJObject.FromObject(criteria)).ConfigureAwait(false);
 
@@ -71,13 +70,12 @@ namespace Raven.Client.Document
 
         public async Task<Subscription<T>> OpenAsync<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class
         {
-            if(options == null)
+            if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
 
-            if(options.BatchOptions == null)
-                throw new InvalidOperationException("Cannot open a subscription if batch options are null");
 
-            if(options.BatchOptions.MaxSize.HasValue && options.BatchOptions.MaxSize.Value < 16 * 1024)
+
+            if (options.MaxSize.HasValue && options.MaxSize.Value < 16 * 1024)
                 throw new InvalidOperationException("Max size value of batch options cannot be lower than that 16 KB");
 
             var commands = database == null
@@ -98,7 +96,7 @@ namespace Raven.Client.Document
                 open = false;
             }
 
-            var subscription = new Subscription<T>(id, database ?? MultiDatabase.GetDatabaseName(documentStore.Url), options, commands, documentStore.Changes(database), 
+            var subscription = new Subscription<T>(id, database ?? MultiDatabase.GetDatabaseName(documentStore.Url), options, commands,
                 documentStore.Conventions, open, () => SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
 
             subscriptions.Add(subscription);
