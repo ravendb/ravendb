@@ -37,16 +37,17 @@
             </table>
         </div>
     </div>
-    <div class="panel panel-default" style="height: 30%; overflow-y: auto" data-bind="with: selectedEntry">
+    <div class="panel panel-default flex-container" style="height: 34%; overflow-y: auto" data-bind="with: selectedEntry">
         <div class="panel-heading">Headers</div>
-        <div class="panel-body" data-bind="foreach: RequestHeaders">
-            <div class="row">
-                <label class="col-md-3 text-right control-label" data-bind="text: Name">Message</label>
-                <div class="col-md-9">
-                    <p class="form-control-static" data-bind="text: Values.join(', ')"></p>
+        <div class="panel-body flex-grow">
+            <form class="form-horizontal" data-bind="foreach: RequestHeaders" style="position: ">
+                <div class="row">
+                    <label class="col-md-3 text-right control-label" data-bind="text: Name">Message</label>
+                    <div class="col-md-9">
+                        <p class="form-control-static" data-bind="text: Values.join(', ')"></p>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
-        
     </div>
 </section>

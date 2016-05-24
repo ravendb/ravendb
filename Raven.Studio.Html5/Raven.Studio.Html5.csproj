@@ -89,12 +89,14 @@
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\autoRefreshBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
+    <TypeScriptCompile Include="App\common\awesomeMultiselect.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
     <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
     <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
+    <TypeScriptCompile Include="App\models\database\debug\logEntry.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\runningTask.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
@@ -1082,7 +1084,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requests.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestsCount.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\runningTasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\sqlReplicationPerfStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\sqlReplicationSimulationDialog.ts" />
