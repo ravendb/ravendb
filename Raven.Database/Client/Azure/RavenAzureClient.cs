@@ -160,6 +160,7 @@ namespace Raven.Database.Client.Azure
 
                 try
                 {
+                    var blockNumber = 0;
                     while (true)
                     {
                         if (cts.IsCancellationRequested)
@@ -171,8 +172,8 @@ namespace Raven.Database.Client.Azure
 
                         var destination = new byte[read];
                         Buffer.BlockCopy(buffer, 0, destination, 0, read);
-                        var blockId = Guid.NewGuid();
-                        var blockIdString = Convert.ToBase64String(blockId.ToByteArray());
+                        var blockNumberInBytes = BitConverter.GetBytes(blockNumber++);
+                        var blockIdString = Convert.ToBase64String(blockNumberInBytes);
 
                         blockIds.Add(blockIdString);
                         var byteArrayWithBlockId = new ByteArrayWithBlockId
