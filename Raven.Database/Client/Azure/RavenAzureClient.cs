@@ -138,16 +138,37 @@ namespace Raven.Database.Client.Azure
                 tasks[i] = task;
             }
 
-            await Task.WhenAll(tasks).ConfigureAwait(false);
-            
-            //dispose the cancellation token
-            using (cts)
+            try
             {
-                AssertNotFailed(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+                //put block list
+                PutBlockList(baseUrl, blockIds, metadata);
+            }
+            catch (Exception)
+            {
+                GetExceptionsFromTasks(tasks);
+            }
+            finally
+            {
+                //dispose the cancellation token
+                using (cts) { }
+            }
+        }
+
+        private static void GetExceptionsFromTasks(Task[] tasks)
+        {
+            var exceptions = new List<Exception>();
+
+            foreach (var task in tasks)
+            {
+                if (task.IsCanceled == false && task.IsFaulted == false)
+                    continue;
+
+                exceptions.Add(task.Exception);
             }
 
-            //put block list
-            PutBlockList(baseUrl, blockIds, metadata);
+            if (exceptions.Count > 0)
+                throw new AggregateException(exceptions);
         }
 
         private static Task CreateFillQueueTask(Stream inputStream, List<string> blockIds, 
@@ -202,7 +223,7 @@ namespace Raven.Database.Client.Azure
                     //we don't need the stream anymore
                     inputStream.Dispose();
                 }
-            }, cts.Token);
+            });
             return fillQueueTask;
         }
 
@@ -216,6 +237,9 @@ namespace Raven.Database.Client.Azure
             {
                 while (true)
                 {
+                    if (cts.IsCancellationRequested)
+                        return;
+
                     ByteArrayWithBlockId byteArrayWithBlockId;
                     while (queue.TryTake(out byteArrayWithBlockId, millisecondsTimeout: 200) == false)
                     {
@@ -226,14 +250,11 @@ namespace Raven.Database.Client.Azure
                         }
                     }
 
-                    if (cts.IsCancellationRequested)
-                        return;
-
                     // upload the stream with block id
                     var url = baseUrl + HttpUtility.UrlEncode(byteArrayWithBlockId.BlockId);
                     try
                     {
-                        PutBlock(byteArrayWithBlockId.StreamAsByteArray, client, url, retryRequest: true);
+                        PutBlock(byteArrayWithBlockId.StreamAsByteArray, client, url, cts, retryRequest: true);
                     }
                     catch (Exception)
                     {
@@ -243,7 +264,7 @@ namespace Raven.Database.Client.Azure
                         throw;
                     }
                 }
-            }, cts.Token);
+            });
 
             return task;
         }
@@ -254,23 +275,8 @@ namespace Raven.Database.Client.Azure
             public string BlockId { get; set; }
         }
 
-        private static void AssertNotFailed(Task[] tasks)
-        {
-            var exceptions = new List<Exception>();
-
-            foreach (var task in tasks)
-            {
-                if (task.IsCanceled == false && task.IsFaulted == false)
-                    continue;
-
-                exceptions.Add(task.Exception);
-            }
-
-            if (exceptions.Count > 0)
-                throw new AggregateException(exceptions);
-        }
-
-        private void PutBlock(byte[] streamAsByteArray, HttpClient client, string url, bool retryRequest)
+        private void PutBlock(byte[] streamAsByteArray, HttpClient client, 
+            string url, CancellationTokenSource cts, bool retryRequest)
         {
             var now = SystemTime.UtcNow;
             //stream is disposed by the HttpClient
@@ -287,17 +293,29 @@ namespace Raven.Database.Client.Azure
 
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
-            if (response.IsSuccessStatusCode)
-                return;
-
-            if (retryRequest && response.StatusCode != HttpStatusCode.RequestEntityTooLarge)
+            HttpResponseMessage response;
+            try
             {
-                PutBlock(streamAsByteArray, client, url, retryRequest: false);
+                response = AsyncHelpers.RunSync(() => client.PutAsync(url, content, cts.Token));
+                if (response.IsSuccessStatusCode)
+                    return;
+            }
+            catch (Exception)
+            {
+                if (cts.IsCancellationRequested)
+                    return;
+
+                if (retryRequest == false)
+                    throw;
+
+                PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
                 return;
             }
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            if (retryRequest == false || response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
+                throw ErrorResponseException.FromResponseMessage(response);
+
+            PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
         }
 
         private void PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
