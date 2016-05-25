@@ -30,13 +30,13 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
                 await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                 {
                     { "property1", "value1" }, 
                     { "property2", "value2" }
                 });
-                var blob = client.GetBlob(blobKey);
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -50,7 +50,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact(Skip = "Requires Windows Azure Development Storage")]
+        [Fact]
         public async Task PutBlobIntoFolder()
         {
             var containerName = "testContainer";
@@ -58,13 +58,14 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
                 await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                 {
                     { "property1", "value1" }, 
                     { "property2", "value2" }
                 });
-                var blob = client.GetBlob(blobKey);
+
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))

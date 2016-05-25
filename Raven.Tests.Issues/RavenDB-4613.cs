@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,7 +28,7 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
                 var sb = new StringBuilder();
                 for (var i = 0; i < 64 * 1024 * 1024; i++)
                 {
@@ -41,7 +42,7 @@ namespace Raven.Tests.Issues
                         {"property2", "value2"}
                     });
 
-                var blob = client.GetBlob(blobKey);
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -63,7 +64,7 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
                 var sb = new StringBuilder();
                 for (var i = 0; i < 70 * 1024 * 1024; i++)
                 {
@@ -77,7 +78,7 @@ namespace Raven.Tests.Issues
                         {"property2", "value2"}
                     });
 
-                var blob = client.GetBlob(blobKey);
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -99,7 +100,7 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
                 var sb = new StringBuilder();
                 for (var i = 0; i < 100 * 1024 * 1024; i++)
                 {
@@ -114,7 +115,7 @@ namespace Raven.Tests.Issues
                         {"property3", "value3"}
                     });
 
-                var blob = client.GetBlob(blobKey);
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -138,7 +139,7 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
 
                 var sb = new StringBuilder();
                 for (var i = 0; i < 64 * 1024 * 1024; i++)
@@ -153,7 +154,7 @@ namespace Raven.Tests.Issues
                         {"property2", "value2"}
                     });
 
-                var blob = client.GetBlob(blobKey);
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -175,7 +176,7 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
 
                 var sb = new StringBuilder();
                 for (var i = 0; i < 70 * 1024 * 1024; i++)
@@ -190,7 +191,7 @@ namespace Raven.Tests.Issues
                         {"property2", "value2"}
                     });
 
-                var blob = client.GetBlob(blobKey);
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -212,7 +213,7 @@ namespace Raven.Tests.Issues
 
             using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer();
+                await client.PutContainer();
 
                 var sb = new StringBuilder();
                 for (var i = 0; i < 100 * 1024 * 1024; i++)
@@ -228,7 +229,7 @@ namespace Raven.Tests.Issues
                         {"property3", "value3"}
                     });
 
-                var blob = client.GetBlob(blobKey);
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
