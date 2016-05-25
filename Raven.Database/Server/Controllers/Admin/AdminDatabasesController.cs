@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -89,8 +90,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
                 dataDir = dataDir.ToFullPath(SystemConfiguration.DataDirectory);
 
-                if (Directory.Exists(dataDir))
+                // if etag is not null, it means we want to update existing database
+                if (Directory.Exists(dataDir) && etag == null)
+                {
                     return GetMessageWithString(string.Format("Failed to create '{0}' database, because data directory '{1}' exists and it is forbidden to create non-empty cluster-wide databases.", id, dataDir), HttpStatusCode.BadRequest);
+                }
 
                 await ClusterManager.Client.SendDatabaseUpdateAsync(id, dbDoc).ConfigureAwait(false);
                 return GetEmptyMessage();
