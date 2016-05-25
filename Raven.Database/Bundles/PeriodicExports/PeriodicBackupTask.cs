@@ -242,7 +242,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
                                 try
                                 {
-                                    await UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+                                    await UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup).ConfigureAwait(false);
                                 }
                                 finally
                                 {
@@ -332,7 +332,7 @@ namespace Raven.Database.Bundles.PeriodicExports
             }
             else if (!string.IsNullOrWhiteSpace(localExportConfigs.AzureStorageContainer))
             {
-                await UploadToAzure(backupPath, localExportConfigs, isFullBackup);
+                await UploadToAzure(backupPath, localExportConfigs, isFullBackup).ConfigureAwait(false); ;
             }
         }
 
@@ -382,7 +382,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
             using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, localExportConfigs.AzureStorageContainer))
             {
-                client.PutContainer();
+                await client.PutContainer().ConfigureAwait(false);
                 using (var fileStream = File.OpenRead(backupPath))
                 {
                     var key = Path.GetFileName(backupPath);
@@ -391,7 +391,7 @@ namespace Raven.Database.Bundles.PeriodicExports
                         new Dictionary<string, string>
                         {
                             {"Description", GetArchiveDescription(isFullBackup)}
-                        });
+                        }).ConfigureAwait(false);
 
                     logger.Info(string.Format(
                         "Successfully uploaded backup {0} to Azure container {1}, with key {2}",
