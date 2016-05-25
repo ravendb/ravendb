@@ -111,8 +111,7 @@ namespace Raven.Database.Config
                             return;
                         case 2: // LowMemorySimulationEvent
                             Log.Warn("Low memory simulation, will try to reduce memory usage...");
-
-                            RunLowMemoryHandlers("Simulated low memory");
+                            RunLowMemoryHandlers("System detected low memory");
                             break;
                         case 3://SoftMemoryReleaseEvent
                             Log.Warn("Releasing memory before Garbage Collection operation");
