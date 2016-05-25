@@ -17,7 +17,7 @@ namespace Raven.Server.ReplicationUtil
         public CancellationToken CancellationToken => _cancellationTokenSource.Token;
         public readonly ManualResetEventSlim WaitForChanges = new ManualResetEventSlim();
 
-        public abstract string Name { get; }
+        public abstract string ReplicationUniqueName { get; }
 
         protected BaseReplicationExecuter(DocumentDatabase database)
         {
@@ -28,9 +28,12 @@ namespace Raven.Server.ReplicationUtil
 
         public void Start()
         {
+            if (_replicationThread != null)
+                return;
+
             _replicationThread = new Thread(ExecuteReplicationLoop)
             {
-                Name = $"Replication thread, {Name}",
+                Name = $"Replication thread, {ReplicationUniqueName}",
                 IsBackground = true
             };
 
@@ -50,7 +53,7 @@ namespace Raven.Server.ReplicationUtil
             while (_cancellationTokenSource.IsCancellationRequested == false)
             {
                 if (_log.IsDebugEnabled)
-                    _log.Debug($"Starting replication for '{Name}'.");
+                    _log.Debug($"Starting replication for '{ReplicationUniqueName}'.");
 
                 WaitForChanges.Reset();
 
@@ -61,11 +64,11 @@ namespace Raven.Server.ReplicationUtil
                     ExecuteReplicationOnce();
 
                     if (_log.IsDebugEnabled)
-                        _log.Debug($"Finished replication for '{Name}'.");
+                        _log.Debug($"Finished replication for '{ReplicationUniqueName}'.");
                 }
                 catch (OutOfMemoryException oome)
                 {
-                    _log.WarnException($"Out of memory occured for '{Name}'.", oome);
+                    _log.WarnException($"Out of memory occured for '{ReplicationUniqueName}'.", oome);
                     // TODO [ppekrol] GC?
                 }
                 catch (OperationCanceledException)
@@ -74,7 +77,7 @@ namespace Raven.Server.ReplicationUtil
                 }
                 catch (Exception e)
                 {
-                    _log.WarnException($"Exception occured for '{Name}'.", e);
+                    _log.WarnException($"Exception occured for '{ReplicationUniqueName}'.", e);
                 }
 
                 if (!ShouldWaitForChanges())

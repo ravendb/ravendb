@@ -4,6 +4,8 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
+using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -14,45 +16,47 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationRequestHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases*/lastSentEtag", "GET", "@/databases/{databaseName: string}/lastSentEtag?srcDbId={databaseUniqueId:string}")]
+        [RavenAction("/databases/*/lastSentEtag", "GET", "@/databases/{databaseName: string}/lastSentEtag?srcDbId={databaseUniqueId:string}")]
         public Task GetLastSentEtag()
         {
-            var srcDbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId")[0]);
+            var srcDbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId"));
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
                 var serverChangeVector = Database.DocumentsStorage.GetChangeVector(context);
                 var vectorEntry = serverChangeVector.FirstOrDefault(x => x.DbId == srcDbId);
-                
+
                 //no need to write a document for transferring a single value
-                HttpContext.Response.Headers[Constants.LastEtagFieldName] = vectorEntry.Etag.ToString();
+                HttpContext.Response.Headers[Constants.LastEtagFieldName] = vectorEntry.Etag.ToString();				
             }
             return Task.CompletedTask;
         }
 
         //an endpoint to establish replication websocket
         [RavenAction("/databases/*/documentReplication", "GET",
-            @"/databases/{databaseName:string}/documentReplication?
+            @"@/databases/{databaseName:string}/documentReplication?
                 srcDbId={databaseUniqueId:string}
-                &srcUrl={url:string}
                 &srcDbName={databaseName:string}")]
         public async Task DocumentReplicationConnection()
         {
-            var dbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId")[0]);
-            var srcUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcUrl")[0];
-            var srcDbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbName")[0];
+            var srcDbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId"));
+            var srcDbName = EscapingHelper.UnescapeLongDataString(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbName"));
 
             var hasOtherSideClosedConnection = false;
             bool shouldConnectBack;
-            var replicationExecuter = Database.DocumentReplicationLoader.RegisterNewConnectionFrom(
+            var srcUrl = HttpContext.Request.GetHostnameUrl();
+            var executer = Database.DocumentReplicationLoader.RegisterConnection(
                 srcDbId,
                 srcUrl,
                 srcDbName,
                 out shouldConnectBack);
-            replicationExecuter.Start();
 
-            string ReplicationReceiveDebugTag = $"document-replication/receive <{replicationExecuter.Name}>";			
+            if(executer.HasOutgoingReplication)
+                executer.Start();
+
+            string ReplicationReceiveDebugTag = $"document-replication/receive <{executer.ReplicationUniqueName}>";			
 
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
@@ -100,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
                                     var receivedDoc = writer.CreateReader();
                                     docs.Add(receivedDoc);
                                 }
-                                replicationExecuter.ReceiveReplicatedDocuments(context, docs);
+                                executer.ReceiveReplicatedDocuments(context, docs);
 
                                 //precaution
                                 if(tx == null)
@@ -121,7 +125,7 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     //if execution path gets here, it means the node was disconnected
-                    Database.DocumentReplicationLoader.HandleConnectionDisconnection(replicationExecuter);
+                    Database.DocumentReplicationLoader.HandleConnectionDisconnection(executer);
                 }
             }
         }		

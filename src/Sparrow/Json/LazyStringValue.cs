@@ -49,7 +49,6 @@ namespace Sparrow.Json
             return CompareTo(other) == 0;
         }
 
-
         public bool Equals(LazyStringValue other)
         {
             return CompareTo(other) == 0;
@@ -58,7 +57,6 @@ namespace Sparrow.Json
         public int Compare(byte* other, int otherSize)
         {
             var result = Memory.Compare(Buffer, other, Math.Min(Size, otherSize));
-
             return result == 0 ? Size - otherSize : result;
         }
 

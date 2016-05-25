@@ -177,6 +177,9 @@ namespace Raven.Server.Documents
 
         public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
         {
+            if(context.Transaction == null) //precaution
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
             var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
             using (var iter = tree.Iterate())

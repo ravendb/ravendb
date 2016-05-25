@@ -80,7 +80,7 @@ namespace Raven.Abstractions.Data
             public const string RequestTime = "Raven-Request-Time";
         }
 
-        public const string LastEtagFieldName = "Raven/LastEtag";
+        public const string LastEtagFieldName = "Raven-LastEtag";
 
         public const string ParticipatingIDsPropertyName = "Participating-IDs-Property-Name";
 

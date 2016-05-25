@@ -21,6 +21,7 @@ namespace Raven.Server.ReplicationUtil
     {
         private readonly string _url;
         private readonly Guid _srcDbId;
+        private readonly string _srcDbName;
         private readonly CancellationToken _cancellationToken;
         private WebSocket _webSocket;
         private bool _disposed;
@@ -28,18 +29,25 @@ namespace Raven.Server.ReplicationUtil
 
         //does not need alot of cache
         private static readonly HttpJsonRequestFactory _jsonRequestFactory = new HttpJsonRequestFactory(128);
+        private readonly string _targetDbName;	    
 
-        public DocumentReplicationTransport(string url, Guid srcDbId, CancellationToken cancellationToken)
+        public DocumentReplicationTransport(string url, 
+            Guid srcDbId, 
+            string srcDbName,
+            string targetDbName,
+            CancellationToken cancellationToken)
         {
             _url = url;
             _srcDbId = srcDbId;
+            _srcDbName = srcDbName;
+            _targetDbName = targetDbName;
             _cancellationToken = cancellationToken;
             _disposed = false;
         }
 
-        private async Task EnsureConnectionAsync()
+        public async Task EnsureConnectionAsync()
         {
-            if (_webSocket.State != WebSocketState.Open)
+            if (_webSocket == null || _webSocket.State != WebSocketState.Open)
             {
                 _webSocket = await GetAndConnectWebSocketAsync();
                 _websocketStream = new WebsocketStream(_webSocket, _cancellationToken);
@@ -48,12 +56,15 @@ namespace Raven.Server.ReplicationUtil
 
         public long GetLatestEtag()
         {
+            //auth here? not sure it is needed
             var @params = new CreateHttpJsonRequestParams(null,
-                $"{_url}/lastSentEtag?srcDbId={_srcDbId}",HttpMethod.Get, 
+                $"{_url}/databases/{_targetDbName}/lastSentEtag?srcDbId={_srcDbId}",HttpMethod.Get, 
                 new OperationCredentials(string.Empty, new NetworkCredential()), null);
             using (var request = _jsonRequestFactory.CreateHttpJsonRequest(@params))
             {
                 var response = AsyncHelpers.RunSync(() => request.ExecuteRawResponseAsync());
+                response.EnsureSuccessStatusCode();
+                
                 IEnumerable<string> values;
                 if (!response.Headers.TryGetValues(Constants.LastEtagFieldName, out values))
                     return 0;
@@ -71,28 +82,35 @@ namespace Raven.Server.ReplicationUtil
 
         private async Task<WebSocket> GetAndConnectWebSocketAsync()
         {
-            var uri = new Uri(_url.Replace("http://", "ws://").Replace(".fiddler", "") + "/");
-            if (Sparrow.Platform.Platform.RunningOnPosix)
+            var uri = new Uri(
+                $@"{_url?.Replace("http://", "ws://")
+                    ?.Replace(".fiddler", "")}/databases/{_targetDbName?.Replace("/", string.Empty)}/documentReplication?srcDbId={_srcDbId}&srcDbName={EscapingHelper
+                        .EscapeLongDataString(_srcDbName)}");
+            try
             {
-                var webSocketUnix = new RavenUnixClientWebSocket();
-                await webSocketUnix.ConnectAsync(uri, _cancellationToken);
+                if (Sparrow.Platform.Platform.RunningOnPosix)
+                {
+                    var webSocketUnix = new RavenUnixClientWebSocket();
+                    await webSocketUnix.ConnectAsync(uri, _cancellationToken);
 
-                return webSocketUnix;
+                    return webSocketUnix;
+                }
+
+                var webSocket = new ClientWebSocket();			    
+                await webSocket.ConnectAsync(uri, _cancellationToken);
+                return webSocket;
             }
-
-            var webSocket = new ClientWebSocket();
-            await webSocket.ConnectAsync(uri, _cancellationToken);
-            return webSocket;
-        }	   
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to connect websocket for remote replication node.", e);
+            }
+        }
 
         public async Task SendDocumentBatchAsync(Document[] docs, DocumentsOperationContext context)
         {
             await EnsureConnectionAsync();
             for (int i = 0; i < docs.Length; i++)
-            {
-                var doc = docs[i];
-                context.Write(_websocketStream,doc.Data);				
-            }
+                context.Write(_websocketStream, docs[i].Data);
 
             await _websocketStream.WriteEndOfMessageAsync();
             await _websocketStream.FlushAsync(_cancellationToken);

@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.SqlReplication
         public readonly SqlReplicationConfiguration Configuration;
         public readonly SqlReplicationStatistics Statistics;
 
-        public override string Name => "Sql replication of " + Configuration.Name;
+        public override string ReplicationUniqueName => "Sql replication of " + Configuration.Name;
 
         private bool _shouldWaitForChanges;
         private PredefinedSqlConnection _predefinedSqlConnection;
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.SqlReplication
       
         private void LoadLastEtag(DocumentsOperationContext context)
         {
-            var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + Name);
+            var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + ReplicationUniqueName);
             if (sqlReplicationStatus == null)
             {
                 Statistics.LastReplicatedEtag = 0;
@@ -52,10 +52,10 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void WriteLastEtag(DocumentsOperationContext context)
         {
-            var key = Constants.SqlReplication.RavenSqlReplicationStatusPrefix + Name;
+            var key = Constants.SqlReplication.RavenSqlReplicationStatusPrefix + ReplicationUniqueName;
             var document = context.ReadObject(new DynamicJsonValue
             {
-                ["Name"] = Name,
+                ["Name"] = ReplicationUniqueName,
                 ["LastReplicatedEtag"] = Statistics.LastReplicatedEtag,
                 ["LastTombstonesEtag"] = Statistics.LastTombstonesEtag,
             }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);

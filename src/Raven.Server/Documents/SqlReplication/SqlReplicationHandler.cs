@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
             var name = names[0];
-            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name) as SqlReplication;
+            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name) as SqlReplication;
 
             if (replication == null)
             {
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.SqlReplication
 
                         var json = new DynamicJsonValue
                         {
-                            ["Name"] = replication.Name,
+                            ["Name"] = replication.ReplicationUniqueName,
                             ["Statistics"] = replication.Statistics.ToBlittable(),
                             ["Metrics"] = replication.MetricsCountersManager.ToSqlReplicationMetricsData(),
                         };
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (names.Count == 0)
                 throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
             var name = names[0];
-            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.Name == name);
+            var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name);
 
             if (replication == null)
             {

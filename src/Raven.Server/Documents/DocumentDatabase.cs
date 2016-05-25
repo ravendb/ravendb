@@ -49,6 +49,8 @@ namespace Raven.Server.Documents
 
         public string Name { get; }
 
+        public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
+
         public string ResourceName => $"db/{Name}";
 
         public RavenConfiguration Configuration { get; }
@@ -67,7 +69,7 @@ namespace Raven.Server.Documents
 
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
-        public DocumentReplicationLoader DocumentReplicationLoader { get; }
+        public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
 
 
         public void Initialize()
