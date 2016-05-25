@@ -4,8 +4,8 @@ import d3 = require("d3/d3");
 
 interface autoRefreshConfigDto {
     duration: number;
-    autoStart: boolean;
     onRefresh: () => JQueryPromise<any>;
+    active?: KnockoutObservable<boolean> | boolean;
 }
 
 interface autoRefreshContext extends autoRefreshConfigDto {
@@ -44,7 +44,8 @@ class autoRefreshBindingHandler {
 
         $(element).click(() => autoRefreshBindingHandler.toggleAutorefresh(context));
 
-        if (config.autoStart) {
+        var active = ko.unwrap(config.active);
+        if (active) {
             autoRefreshBindingHandler.animatePath(context);
         } else {
             context.refreshing(true);
@@ -120,15 +121,16 @@ class autoRefreshBindingHandler {
             .startAngle(0)
             .endAngle(d => d * 2 * Math.PI);
 
+        var autorefreshEnabled = ko.isObservable(config.active) ?  <KnockoutObservable<boolean>> config.active : ko.observable<boolean>(true);
+
         return {
             svg: svg,
             path: path,
             arc: arc,
-            autorefreshEnabled: ko.observable<boolean>(true),
+            autorefreshEnabled: autorefreshEnabled,
             refreshing: ko.observable<boolean>(false),
             duration: config.duration,
             onRefresh: config.onRefresh,
-            autoStart: config.autoStart,
             disposed: false
     };
     }

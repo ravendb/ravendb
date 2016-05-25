@@ -36,7 +36,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <button data-bind="click: addAnotherServerToCluster.bind($root, false), disable: settingsAccess.isReadOnly()" class="btn btn-default"><i class="fa fa-plus"></i> Add another server to cluster</button>
-                    <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.refresh.bind($root), autoStart:false }"></button>
+                    <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.refresh.bind($root), active:false }"></button>
                     <div class="btn-group">
                         <button id="operationType" type="button" class="btn btn-danger dropdown-toggle" data-bind="visible: !settingsAccess.isReadOnly()" data-toggle="dropdown">
                             <span>Emergency cluster operations</span>
