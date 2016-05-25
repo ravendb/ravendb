@@ -104,7 +104,7 @@ namespace Raven.Database.Client.Azure
             var client = GetClient(TimeSpan.FromHours(1));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
+            var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -190,6 +190,14 @@ namespace Raven.Database.Client.Azure
                         var read = inputStream.Read(buffer, 0, buffer.Length);
                         if (read <= 0)
                             break;
+
+                        while (read < buffer.Length)
+                        {
+                            var lastRead = inputStream.Read(buffer, read, buffer.Length - read);
+                            if (lastRead <= 0)
+                                break;
+                            read += lastRead;
+                        }
 
                         var destination = new byte[read];
                         Buffer.BlockCopy(buffer, 0, destination, 0, read);
@@ -318,7 +326,7 @@ namespace Raven.Database.Client.Azure
             PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
         }
 
-        private void PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
+        private async Task PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
         {
             var url = baseUrl + "?comp=blocklist";
             var now = SystemTime.UtcNow;
@@ -341,7 +349,7 @@ namespace Raven.Database.Client.Azure
             var client = GetClient(TimeSpan.FromHours(1));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
+            var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
                 return;
 
