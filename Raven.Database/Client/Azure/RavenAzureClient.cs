@@ -193,6 +193,14 @@ namespace Raven.Database.Client.Azure
                         if (read <= 0)
                             break;
 
+                        while (read < buffer.Length)
+                        {
+                            var lastRead = inputStream.Read(buffer, read, buffer.Length - read);
+                            if (lastRead <= 0)
+                                break;
+                            read += lastRead;
+                        }
+
                         var destination = new byte[read];
                         Buffer.BlockCopy(buffer, 0, destination, 0, read);
                         var blockNumberInBytes = BitConverter.GetBytes(blockNumber++);
