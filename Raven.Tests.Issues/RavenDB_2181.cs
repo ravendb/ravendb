@@ -49,7 +49,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Requires Windows Azure Development Storage")]
         public async Task PutBlobIntoFolder()
         {
             var containerName = "testContainer";
