@@ -653,7 +653,7 @@ interface bulkDocumentDto {
 
 interface databaseDocumentSaveDto {
     Key: string;
-    ETag: string
+    ETag: string;
 }
 
 interface backupRequestDto {
