@@ -5,6 +5,7 @@ import moment = require("moment");
 import document = require("models/database/documents/document");
 import runningTask = require("models/database/debug/runningTask");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
+import messagePublisher = require("common/messagePublisher");
 
 type taskType = {
     name: string;
@@ -126,6 +127,9 @@ class runningTasks extends viewModelBase {
 
     taskKill(task: runningTask) {
         new killRunningTaskCommand(this.activeDatabase(), task.id).execute()
+            .done(() => {
+                messagePublisher.reportSuccess("Send kill task request");
+            })
             .always(() => setTimeout(() => {
                 this.selectedTask(null);
                 this.fetchTasks();
@@ -140,16 +144,16 @@ class runningTasks extends viewModelBase {
 
             var oldSelection = this.selectedTask();
             if (oldSelection) {
-                var oldSelectionIndex = this.allTasks.indexOf(oldSelection);
+                var oldSelectionIndex = this.filteredAndSortedTasks().indexOf(oldSelection);
                 var newSelectionIndex = oldSelectionIndex;
                 if (isKeyUp && oldSelectionIndex > 0) {
                     newSelectionIndex--;
-                } else if (isKeyDown && oldSelectionIndex < this.allTasks().length - 1) {
+                } else if (isKeyDown && oldSelectionIndex < this.filteredAndSortedTasks().length - 1) {
                     newSelectionIndex++;
                 }
 
-                this.selectedTask(this.allTasks()[newSelectionIndex]);
-                var newSelectedRow = $("#runningTasksContainer table tbody tr:nth-child(" + (newSelectionIndex + 1) + ")");
+                this.selectedTask(this.filteredAndSortedTasks()[newSelectionIndex]);
+                var newSelectedRow = $("#runningTasksItemsContainer > div:nth-child(" + (newSelectionIndex + 1) + ")");
                 if (newSelectedRow) {
                     this.ensureRowVisible(newSelectedRow);
                 }

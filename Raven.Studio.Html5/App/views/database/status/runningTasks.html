@@ -22,7 +22,7 @@
 </style>
 <section id="runningTasksContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div style="height: 65%; position: relative;">
-        <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.fetchTasks.bind($root), autoStart:true }"></button>
+        <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.fetchTasks.bind($root), active:true }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterTypeAll">
                 <input type="radio" name="options" id="option0"> <span data-bind="text: 'All tasks (' + allTasks().length + ')'"></span>
@@ -36,8 +36,8 @@
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown'" />
         </form>
-        <div id="runningTasksTableContainer" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
-            <span style="white-space: nowrap">
+        <div id="runningTasksTableContainer" class="no-outline" tabindex="-1" data-bind="event: { keydown: tableKeyDown }" style="overflow-y: auto; overflow-x: auto; position: absolute; top: 40px; bottom: 10px; width: 100%;">
+            <div style="white-space: nowrap">
                 <div class="column column-header"  style="width: 40px;">
                     <span>Kill</span>
                 </div>
@@ -59,8 +59,8 @@
                 </div>
                 <div class="column column-header" data-bind="style: { width: $root.columnWidths[2]() + 'px' }">
                     <span class="column-handle" column="2"></span>
-                    <span data-bind="click: $root.sortBy.bind($root, 'executionStatus')">Status</span>
-                    <span data-bind="visible: $root.sortColumn() === 'executionStatus'">
+                    <span data-bind="click: $root.sortBy.bind($root, 'fullStatus')">Status</span>
+                    <span data-bind="visible: $root.sortColumn() === 'fullStatus'">
                         <span class="fa fa-sort-asc" data-bind="visible: $root.sortAsc"></span>
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
@@ -81,9 +81,8 @@
                         <span class="fa fa-sort-desc" data-bind="visible: !$root.sortAsc()"></span>
                     </span>
                 </div>
-                
-            </span>
-            <div style="white-space: nowrap" data-bind="foreach: filteredAndSortedTasks, delegatedHandler: 'click'">
+            </div>
+            <div id="runningTasksItemsContainer" style="white-space: nowrap" data-bind="foreach: filteredAndSortedTasks, delegatedHandler: 'click'">
                 <div style="display: block; white-space: nowrap" class="logRecord log-table-row" data-click="selectTask" data-bind="css: { warning: canceled, danger: faulted, 'selected': $data === $parent.selectedTask() }">
                     <div class="column" style="width: 40px"><button data-bind="visible: killable, click: $root.taskKill.bind($root, $data)" class="btn btn-link negative-margin"><i class="fa fa-bolt"></i></button>
                     </div>

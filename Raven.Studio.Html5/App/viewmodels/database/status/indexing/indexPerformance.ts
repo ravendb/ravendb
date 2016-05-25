@@ -223,16 +223,21 @@ class metrics extends viewModelBase {
         this.updateHelpLink('QCVU81');
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#metricsContainer").scroll(() => this.graphScrolled());
-        this.refresh();
+        
         this.refreshSubscription = this.refreshGraphObservable.throttle(5000).subscribe((e) => this.refresh());
+      
+        awesomeMultiselect.build($("#visibleIndexesSelector"));
+        this.svg = d3.select("#indexPerformanceGraph");
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
         this.selectedIndexNames.subscribe((v) => {
             this.filterJsonData();
             nv.tooltip.cleanup();
             this.redrawGraph();
         });
-        awesomeMultiselect.build($("#visibleIndexesSelector"));
-        this.svg = d3.select("#indexPerformanceGraph");
-       
+        this.refresh();
     }
 
     createNotifications(): Array<changeSubscription> {

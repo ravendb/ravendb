@@ -19,13 +19,15 @@ class alerts extends viewModelBase {
     now = ko.observable<Moment>();
     updateNowTimeoutHandle = 0;
 
+    autoRefreshEnabled = ko.observable<boolean>(true);
+
     constructor() {
         super();
 
         autoRefreshBindingHandler.install();
 
-        this.unreadAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed() === false));
-        this.readAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed() === true));
+        this.unreadAlertCount = ko.computed(() => this.allAlerts().count(a => !a.observed()));
+        this.readAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed()));
         this.updateCurrentNowTime();
         this.activeDatabase.subscribe(() => this.fetchAlerts());
     }
@@ -72,8 +74,8 @@ class alerts extends viewModelBase {
             return true;
         }
 
-        var unreadFilterWithUnreadAlert = this.filterLevel() === "Unread" && a.observed() === false;
-        var readFilterWithReadAlert = this.filterLevel() === "Read" && a.observed() === true;
+        var unreadFilterWithUnreadAlert = this.filterLevel() === "Unread" && !a.observed();
+        var readFilterWithReadAlert = this.filterLevel() === "Read" && a.observed();
         return unreadFilterWithUnreadAlert || readFilterWithReadAlert;
     }
 
@@ -160,6 +162,7 @@ class alerts extends viewModelBase {
     }
 
     toggleSelectedReadState() {
+        this.disableAutoRefresh(); 
         var alert = this.selectedAlert();
         if (alert) {
             if (!alert.observed()) {
@@ -169,7 +172,12 @@ class alerts extends viewModelBase {
         }
     }
 
+    private disableAutoRefresh() {
+        this.autoRefreshEnabled(false);
+    }
+
     deleteSelectedAlert() {
+        this.disableAutoRefresh();
         var alert = this.selectedAlert();
         if (alert) {
             this.allAlerts.remove(alert);
@@ -177,10 +185,12 @@ class alerts extends viewModelBase {
     }
 
     deleteReadAlerts() {
+        this.disableAutoRefresh();
         this.allAlerts.remove(a => a.observed());
     }
 
     deleteAllAlerts() {
+        this.disableAutoRefresh();
         this.allAlerts.removeAll();
     }
 

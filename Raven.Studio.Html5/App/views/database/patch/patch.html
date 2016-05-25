@@ -31,7 +31,7 @@
             </button>
             <ul class="dropdown-menu" role="menu" data-bind="foreach: recentPatches">
                 <li>
-                    <a href="#" data-bind="click: $root.useRecentPatch.bind($root, $data)">
+                    <a href="#" data-bind="click: $root.useRecentPatch.bind($root, $data), attr: { title: Script }">
                         <span data-bind="text: PatchOnOption"></span>
                         <span data-bind="visible: SelectedItem">
                             <span class="text-muted">|</span>

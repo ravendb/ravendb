@@ -1,6 +1,6 @@
 <section id="logsContainer" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <div class="form-horizontal">
-        <button class="btn btn-default" data-bind="autoRefresh: { duration: 2000, onRefresh: $root.fetchLogs.bind($root), autoStart:true }"></button>
+        <button class="btn btn-default" data-bind="autoRefresh: { duration: 2000, onRefresh: $root.fetchLogs.bind($root), active:true }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterAll">
                 <input type="radio" name="options" id="option1"> <span data-bind="text: 'All logs (' + allLogs().length + ')'"></span>
