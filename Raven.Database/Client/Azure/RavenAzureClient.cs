@@ -48,7 +48,7 @@ namespace Raven.Database.Client.Azure
             return string.Format(template, accountName, containerName.ToLower());
         }
 
-        public void PutContainer()
+        public async Task PutContainer()
         {
             var url = azureServerUrl + "?restype=container";
 
@@ -65,7 +65,7 @@ namespace Raven.Database.Client.Azure
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
+            var response = await client.PutAsync(url, content).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -104,7 +104,7 @@ namespace Raven.Database.Client.Azure
             var client = GetClient(TimeSpan.FromHours(1));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = await client.PutAsync(url, content);
+            var response = await client.PutAsync(url, content).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -140,9 +140,11 @@ namespace Raven.Database.Client.Azure
 
             try
             {
+                //wait for all tasks to complete
                 await Task.WhenAll(tasks).ConfigureAwait(false);
+
                 //put block list
-                PutBlockList(baseUrl, blockIds, metadata);
+                await PutBlockList(baseUrl, blockIds, metadata).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -241,7 +243,7 @@ namespace Raven.Database.Client.Azure
             //open http client for each task
             //we have different authorization header for each request
             var client = GetClient(TimeSpan.FromHours(1));
-            var task = Task.Run(() =>
+            var task = Task.Run(async () =>
             {
                 while (true)
                 {
@@ -262,7 +264,8 @@ namespace Raven.Database.Client.Azure
                     var url = baseUrl + HttpUtility.UrlEncode(byteArrayWithBlockId.BlockId);
                     try
                     {
-                        PutBlock(byteArrayWithBlockId.StreamAsByteArray, client, url, cts, retryRequest: true);
+                        await PutBlock(byteArrayWithBlockId.StreamAsByteArray, 
+                            client, url, cts, retryRequest: true).ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
@@ -283,7 +286,7 @@ namespace Raven.Database.Client.Azure
             public string BlockId { get; set; }
         }
 
-        private void PutBlock(byte[] streamAsByteArray, HttpClient client, 
+        private async Task PutBlock(byte[] streamAsByteArray, HttpClient client, 
             string url, CancellationTokenSource cts, bool retryRequest)
         {
             var now = SystemTime.UtcNow;
@@ -301,10 +304,10 @@ namespace Raven.Database.Client.Azure
 
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            HttpResponseMessage response;
+            HttpResponseMessage response = null;
             try
             {
-                response = AsyncHelpers.RunSync(() => client.PutAsync(url, content, cts.Token));
+                response = await client.PutAsync(url, content, cts.Token).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                     return;
             }
@@ -315,15 +318,16 @@ namespace Raven.Database.Client.Azure
 
                 if (retryRequest == false)
                     throw;
-
-                PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
-                return;
             }
 
-            if (retryRequest == false || response.StatusCode == HttpStatusCode.RequestEntityTooLarge)
+            if (retryRequest == false || 
+                (response != null && response.StatusCode == HttpStatusCode.RequestEntityTooLarge))
                 throw ErrorResponseException.FromResponseMessage(response);
 
-            PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
+            //wait for one second before trying again to send the request
+            //maybe there was a network issue?
+            await Task.Delay(1000).ConfigureAwait(false);
+            await PutBlock(streamAsByteArray, client, url, cts, retryRequest: false).ConfigureAwait(false);
         }
 
         private async Task PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
@@ -349,7 +353,7 @@ namespace Raven.Database.Client.Azure
             var client = GetClient(TimeSpan.FromHours(1));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-            var response = await client.PutAsync(url, content);
+            var response = await client.PutAsync(url, content).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -375,7 +379,7 @@ namespace Raven.Database.Client.Azure
             return doc;
         }
 
-        public Blob GetBlob(string key)
+        public async Task<Blob> GetBlob(string key)
         {
             var url = azureServerUrl + "/" + key;
 
@@ -393,14 +397,14 @@ namespace Raven.Database.Client.Azure
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("GET", url, requestMessage.Headers);
 
-            var response = AsyncHelpers.RunSync(() => client.SendAsync(requestMessage));
+            var response = await client.SendAsync(requestMessage).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.NotFound) 
                 return null;
 
             if (response.IsSuccessStatusCode == false)
                 throw ErrorResponseException.FromResponseMessage(response);
 
-            var data = AsyncHelpers.RunSync(() => response.Content.ReadAsStreamAsync());
+            var data = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
             return new Blob(data, headers);
