@@ -1,5 +1,7 @@
-﻿using System.Linq;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using System;
+using System.Linq;
+using System.Net.WebSockets;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
@@ -10,9 +12,10 @@ namespace Raven.Server.Documents.Replication
     {
         private const string SystemDocumentPrefix = "Raven/";
         private readonly DocumentDatabase _database;
-        private long _lastSentEtag;
+        protected long _lastSentEtag;
         private bool _shouldWaitForChanges;
         private readonly DocumentReplicationTransport _transport;
+        private readonly ILog _log = LogManager.GetLogger(typeof (OutgoingDocumentReplication));
 
         public OutgoingDocumentReplication(
             DocumentDatabase database, 
@@ -49,14 +52,31 @@ namespace Raven.Server.Documents.Replication
                         .ToArray();
 
                 if (replicationBatch.Length == 0)
+                {
+                    _shouldWaitForChanges = true;
                     return;
+                }
 
                 //TODO : consider changing SendDocumentBatchAsync to sync version
-                AsyncHelpers.RunSync(() => 
-                    _transport.SendDocumentBatchAsync(replicationBatch, context));
+                try
+                {
+                    AsyncHelpers.RunSync(() =>
+                        _transport.SendDocumentBatchAsync(replicationBatch, context));
+                }
+                catch (WebSocketException e)
+                {
+                    _log.Warn("Sending document replication batch is interrupted. This is not necessarily an issue. Reason: " + e);
+                    return;
+                }
+                catch (Exception e)
+                {
+                    _log.Error("Sending document replication batch has failed. Reason: " + e);
+                    return;
+                }
+
                 _lastSentEtag = replicationBatch.Max(x => x.Etag);
                 var lastExistingEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-                _shouldWaitForChanges = lastExistingEtag <= _lastSentEtag;
+                _shouldWaitForChanges = lastExistingEtag >= _lastSentEtag;
             }
         }
     }

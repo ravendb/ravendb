@@ -14,6 +14,7 @@ using Raven.Client.Platform.Unix;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.ReplicationUtil
 {
@@ -109,9 +110,15 @@ namespace Raven.Server.ReplicationUtil
         public async Task SendDocumentBatchAsync(Document[] docs, DocumentsOperationContext context)
         {
             await EnsureConnectionAsync();
-            for (int i = 0; i < docs.Length; i++)
-                context.Write(_websocketStream, docs[i].Data);
-
+            using (var writer = new BlittableJsonTextWriter(context,_websocketStream))
+            {
+                for (int i = 0; i < docs.Length; i++)
+                {
+                    docs[i].EnsureMetadata();												
+                    context.Write(writer, docs[i].Data);
+                    writer.Flush();
+                }
+            }
             await _websocketStream.WriteEndOfMessageAsync();
             await _websocketStream.FlushAsync(_cancellationToken);
         }		

@@ -107,12 +107,16 @@ namespace Raven.Server.Documents.Handlers
                                 executer.ReceiveReplicatedDocuments(context, docs);
 
                                 //precaution
-                                if(tx == null)
+                                if (tx == null)
                                     throw new InvalidOperationException(@"
                                         Transaction is not initialized while receiving replicated documents; this
                                          is something that is not supposed to happen and is likely a bug.");
 
                                 tx.Commit();
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException("Failed to receive replication document batch.", e);
                             }
                             finally
                             {

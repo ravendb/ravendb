@@ -105,7 +105,8 @@ namespace Raven.Server.Json
             var dic = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
 
             BlittableJsonReaderObject obj;
-            if (json.TryGet(name, out obj) == false)
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
             foreach (var propertyName in obj.GetPropertyNames())

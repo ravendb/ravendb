@@ -69,7 +69,7 @@ namespace Raven.Server.Json
                 false, cancellationToken).ConfigureAwait(false);
         }
 
-        private static readonly ArraySegment<byte> emptyBuffer = new ArraySegment<byte>();
+        private static readonly ArraySegment<byte> emptyBuffer = new ArraySegment<byte>(new byte[0]);
         public async Task WriteEndOfMessageAsync()
         {
             ThrowOnDisposed();

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Replication;
@@ -9,6 +8,16 @@ namespace Raven.Server
 {
     public static class BlittableExtensions
     {
+        public static string GetIdFromMetadata(this BlittableJsonReaderObject document)
+        {
+            string id;
+            BlittableJsonReaderObject metadata;
+            if (!document.TryGet(Constants.Metadata, out metadata) ||
+                !metadata.TryGet(Constants.MetadataDocId, out id))
+                return null;
+            return id;
+        }
+
         public static long GetEtag(this BlittableJsonReaderObject document)
         {
             long etag;

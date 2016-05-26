@@ -119,6 +119,8 @@ namespace Raven.Abstractions.Data
 
         public const string MetadataDocId = "@id";
 
+        public const string MetadataEtagId = "@etag";
+
         public const string TemporaryTransformerPrefix = "Temp/";
 
         public const string RavenAlerts = "Raven/Alerts";

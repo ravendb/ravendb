@@ -62,11 +62,10 @@ namespace Raven.Server.Documents.Replication
 
         private void ReceiveReplicated(DocumentsOperationContext context, BlittableJsonReaderObject doc)
         {
-            var idAsObject = doc[Constants.DocumentIdFieldName];
-            if (idAsObject == null)
+            var id = doc.GetIdFromMetadata();
+            if (id == null)
                 throw new InvalidDataException($"Missing {Constants.DocumentIdFieldName} field from a document; this is not something that should happen...");
 
-            var id = idAsObject.ToString();
             _database.DocumentsStorage.Put(context, id, null, doc);
         }
     }

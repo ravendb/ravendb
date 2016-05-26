@@ -86,9 +86,9 @@ namespace Raven.Server.Documents.Handlers
                                 docPtr += size;
                                 string docKey;
                                 BlittableJsonReaderObject metadata;
-                                const string idKey = "@id";
+                                
                                 if (reader.TryGet(Constants.Metadata, out metadata) == false ||
-                                    metadata.TryGet(idKey, out docKey) == false)
+                                    metadata.TryGet(Constants.MetadataDocId, out docKey) == false)
                                 {
                                     const string message = "bad doc key";
                                     throw new InvalidDataException(message);

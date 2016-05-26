@@ -43,8 +43,8 @@ namespace Raven.Server.Documents
                 };
             }
 
-            mutatedMetadata["@etag"] = Etag;
-            mutatedMetadata["@id"] = Key;
+            mutatedMetadata[Constants.MetadataEtagId] = Etag;
+            mutatedMetadata[Constants.MetadataDocId] = Key;
 
             _hash = null;
         }

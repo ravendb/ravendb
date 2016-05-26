@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Replication
             public int Age { get; set; }
         }
 
-        [Fact(Skip = "Not everything is done, WIP")]
+        [Fact]
         public async Task Single_way_replication_should_work()
         {
             var dbName1 = DbName + "1";
