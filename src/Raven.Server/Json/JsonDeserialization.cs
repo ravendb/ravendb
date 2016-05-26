@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
 
 namespace Raven.Server.Json
@@ -30,7 +28,10 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, SqlReplicationStatus> SqlReplicationStatus = GenerateJsonDeserializationRoutine<SqlReplicationStatus>();
 
-        public static Func<BlittableJsonReaderObject,T> GenerateJsonDeserializationRoutine<T>()
+        public static readonly Func<BlittableJsonReaderObject, VersioningConfigurationCollection> VersioningConfigurationCollection = GenerateJsonDeserializationRoutine<VersioningConfigurationCollection>();
+        public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
+
+        public static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try
             {
@@ -54,7 +55,7 @@ namespace Raven.Server.Json
             {
                 return o =>
                 {
-                    throw new InvalidOperationException($"Could not build json parser for {typeof (T).FullName}", e);
+                    throw new InvalidOperationException($"Could not build json parser for {typeof(T).FullName}", e);
                 };
             }
         }
@@ -68,7 +69,7 @@ namespace Raven.Server.Json
             {
                 return Expression.Call(typeof (JsonDeserialization).GetMethod(nameof(ToDictionary)), json, Expression.Constant(propertyInfo.Name));
             }
-           
+
             if (propertyInfo.PropertyType == typeof(List<SqlReplicationTable>))
             {
                 return Expression.Call(typeof(JsonDeserialization).GetMethod(nameof(ToListSqlReplicationTable)), json, Expression.Constant(propertyInfo.Name));
@@ -100,7 +101,7 @@ namespace Raven.Server.Json
 
         public static Dictionary<string, string> ToDictionary(BlittableJsonReaderObject json, string name)
         {
-            var dic = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false)
