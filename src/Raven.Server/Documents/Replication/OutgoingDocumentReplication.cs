@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Replication
 
                 _lastSentEtag = replicationBatch.Max(x => x.Etag);
                 var lastExistingEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-                _shouldWaitForChanges = lastExistingEtag >= _lastSentEtag;
+                _shouldWaitForChanges = lastExistingEtag <= _lastSentEtag;
             }
         }
     }
