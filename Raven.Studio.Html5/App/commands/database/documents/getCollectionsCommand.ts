@@ -63,8 +63,7 @@ class getCollectionsCommand extends commandBase {
                 }
             })
             .fail((response) => {
-                this.reportError("Can't fetch collection names");
-                task.reject(response);
+                this.createSystemIndexAndTryAgain(task, response);
             });
 
         return task;
