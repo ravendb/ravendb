@@ -42,7 +42,12 @@ namespace Raven.Server.Documents.Handlers
         public async Task DocumentReplicationConnection()
         {
             var srcDbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId"));
-            var srcDbName = EscapingHelper.UnescapeLongDataString(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbName"));
+            var srcDbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbName");
+            long lastSentEtag;
+            if (!long.TryParse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("lastSentEtag"), out lastSentEtag))
+            {
+                throw new ArgumentException("lastSentEtag should be a Int64 number, failed to parse...");
+            }
 
             var hasOtherSideClosedConnection = false;
             bool shouldConnectBack;
