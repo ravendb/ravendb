@@ -238,6 +238,8 @@ namespace Raven.Client.Document
 
             Subscriptions?.Dispose();
 
+            AsyncSubscriptions?.Dispose();
+
             WasDisposed = true;
             AfterDispose?.Invoke(this, EventArgs.Empty);
 
