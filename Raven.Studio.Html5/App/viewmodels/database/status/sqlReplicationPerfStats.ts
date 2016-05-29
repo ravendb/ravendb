@@ -4,18 +4,17 @@ import changesContext = require("common/changesContext");
 import getSqlReplicationPerfStatsCommand = require("commands/database/debug/getSqlReplicationPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
-import shell = require("viewmodels/shell");
-import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
+import database = require('models/resources/database');
 import changeSubscription = require('common/changeSubscription');
 
 class sqlReplicationPerfStats extends viewModelBase {
-
+    statsAvailable: KnockoutComputed<boolean>;
     hasReplicationEnabled = ko.observable(false);
 
     jsonData: any[] = [];
     rawJsonData: any[] = [];
     hiddenNames = d3.set([]);
-    replicationNames: string[] = [];
+    replicationNames = ko.observableArray<string>([]);
     private refreshGraphObservable = ko.observable<number>();
     private refreshSubscription: KnockoutSubscription;
 
@@ -42,21 +41,17 @@ class sqlReplicationPerfStats extends viewModelBase {
     activate(args) {
         super.activate(args);
 
-        this.activeDatabase.subscribe(() => {
-            this.checkIfHasReplicationEnabled();
+        this.activeDatabase.subscribe((db: database) => {
+            this.checkIfHasReplicationEnabled(db);
         });
-        this.checkIfHasReplicationEnabled();
+        this.checkIfHasReplicationEnabled(this.activeDatabase());
+
+        this.statsAvailable = ko.computed(() => this.hasReplicationEnabled() && this.replicationNames().length > 0);
     }
 
-    checkIfHasReplicationEnabled() {
-        new getDatabaseSettingsCommand(this.activeDatabase())
-            .execute()
-            .done(document => {
-                var documentSettings = document.Settings["Raven/ActiveBundles"];
-                this.hasReplicationEnabled(documentSettings.toLowerCase().indexOf("sqlreplication") !== -1);
-            });
+    checkIfHasReplicationEnabled(db: database) {
+        this.hasReplicationEnabled(db.isBundleActive("sqlreplication"));
     }
-
 
     attached() {
         super.attached();
@@ -91,7 +86,7 @@ class sqlReplicationPerfStats extends viewModelBase {
     refresh() {
         return this.fetchJsonData().done((data) => {
             this.rawJsonData = this.mergeJsonData(this.rawJsonData, data);
-            this.replicationNames = this.findReplicationNames(this.rawJsonData);
+            this.replicationNames(this.findReplicationNames(this.rawJsonData));
             this.filterJsonData();
             this.redrawGraph(); 
         });
@@ -330,7 +325,7 @@ class sqlReplicationPerfStats extends viewModelBase {
 
         
         this.legend = this.svg.select('.controlls').selectAll(".legend")
-            .data(this.replicationNames, d => d);
+            .data(this.replicationNames(), d => d);
 
         this.legend.selectAll("rect").transition()
             .attr("x", this.width - 18);
@@ -364,7 +359,7 @@ class sqlReplicationPerfStats extends viewModelBase {
 
         this.svg.select('.legend_bg')
             .attr('y', -6)
-            .attr('height', this.replicationNames.length * 20 + 10)
+            .attr('height', this.replicationNames().length * 20 + 10)
             .attr('width', this.legendWidth)
             .attr('x', this.width - this.legendWidth + 10);
     }
