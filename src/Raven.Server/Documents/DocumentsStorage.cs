@@ -6,14 +6,13 @@ using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Server.Documents.Versioning;
-using Raven.Server.Documents.Replication;using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -40,7 +39,6 @@ namespace Raven.Server.Documents
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
-        public VersioningStorage VersioningStorage;
         private const string NoCollectionSpecified = "Raven/Empty";
         private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
@@ -99,15 +97,7 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _documentDatabase.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
-
             var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(DocumentsStorage)}");
-
-            exceptionAggregator.Execute(() =>
-            {
-                VersioningStorage?.Dispose();
-                VersioningStorage = null;
-            });
 
             exceptionAggregator.Execute(() =>
             {
@@ -171,8 +161,6 @@ namespace Raven.Server.Documents
 
                     tx.Commit();
                 }
-
-                _documentDatabase.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
             }
             catch (Exception e)
             {
@@ -184,18 +172,6 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
-        }
-
-        public void HandleSystemDocumentChange(DocumentChangeNotification notification)
-        {
-            if (notification.Key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase) == false)
-                return;
-
-            VersioningStorage = null;
-            VersioningStorage = VersioningStorage.LoadConfigurations(_documentDatabase);
-
-            if (_log.IsDebugEnabled)
-                _log.Debug($"Versioning configuration was {(notification.Type == DocumentChangeTypes.Delete ? "disalbed" : "enabled")}");
         }
 
         public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
@@ -637,7 +613,7 @@ namespace Raven.Server.Documents
 
             CreateTombstone(context, table, doc, originalCollectionName);
 
-            VersioningStorage?.Delete(context, originalCollectionName, key, isSystemDocument);
+            _documentDatabase.BundleLoader.DeleteDocument(context, originalCollectionName, key, isSystemDocument);
             table.Delete(doc.StorageId);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -750,7 +726,7 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
-            VersioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document, isSystemDocument);
+            _documentDatabase.BundleLoader.PutDocument(context, originalCollectionName, key, newEtagBigEndian, document, isSystemDocument);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {

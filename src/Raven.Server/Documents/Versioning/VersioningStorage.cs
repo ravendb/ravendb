@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -14,11 +13,8 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Versioning
 {
-    public unsafe class VersioningStorage : IDisposable
+    public unsafe class VersioningStorage
     {
-        private readonly ILog Log = LogManager.GetLogger(typeof(VersioningStorage));
-
-        private readonly DocumentDatabase _database;
         private readonly TableSchema _docsSchema = new TableSchema();
 
         private readonly VersioningConfiguration _versioningConfiguration;
@@ -30,11 +26,12 @@ namespace Raven.Server.Documents.Versioning
 
         public VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
         {
-            _database = database;
             _versioningConfiguration = versioningConfiguration;
 
             // The documents schema is as follows
             // 5 fields (lowered key, recored separator, etag, lazy string key, document)
+            // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
+            //      e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it.
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             _docsSchema.DefineIndex("KeyAndEtag", new TableSchema.SchemaIndexDef
             {
@@ -42,7 +39,6 @@ namespace Raven.Server.Documents.Versioning
                 Count = 3,
             });
 
-            // TODO: Move code to bundle initialize event
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
                 tx.CreateTree(VersioningRevisions);
@@ -68,10 +64,6 @@ namespace Raven.Server.Documents.Versioning
                 var versioningConfiguration = JsonDeserialization.VersioningConfiguration(configuration.Data);
                 return new VersioningStorage(database, versioningConfiguration);
             }
-        }
-
-        public void Dispose()
-        {
         }
 
         private VersioningConfigurationCollection GetVersioningConfiguration(string collectionName)
@@ -245,7 +237,7 @@ namespace Raven.Server.Documents.Versioning
                 {
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
                 }
-                destChars[key.Length] = (char)30;
+                destChars[key.Length] = (char)30; // the record separator
 
                 var keyBytes = buffer + sizeof(char) + key.Length * sizeof(char);
 
