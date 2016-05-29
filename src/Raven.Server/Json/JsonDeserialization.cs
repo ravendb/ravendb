@@ -175,7 +175,7 @@ namespace Raven.Server.Json
         public static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
         {
             BlittableJsonReaderObject obj;
-            if (json.TryGet(name, out obj) == false)
+            if (json.TryGet(name, out obj) == false || obj == null)
                 return default(T);
 
             return converter(obj);
