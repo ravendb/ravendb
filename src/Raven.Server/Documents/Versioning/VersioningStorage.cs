@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -15,6 +16,8 @@ namespace Raven.Server.Documents.Versioning
 {
     public unsafe class VersioningStorage
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(DocumentDatabase));
+
         private readonly TableSchema _docsSchema = new TableSchema();
 
         private readonly VersioningConfiguration _versioningConfiguration;
@@ -61,8 +64,17 @@ namespace Raven.Server.Documents.Versioning
                 if (configuration == null)
                     return null;
 
-                var versioningConfiguration = JsonDeserialization.VersioningConfiguration(configuration.Data);
-                return new VersioningStorage(database, versioningConfiguration);
+                try
+                {
+                    var versioningConfiguration = JsonDeserialization.VersioningConfiguration(configuration.Data);
+                    return new VersioningStorage(database, versioningConfiguration);
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Cannot enable versioning for documents as the versioning configuration document isn't valid: " + configuration.Data, e);
+                    return null;
+                }
             }
         }
 
