@@ -563,7 +563,7 @@ namespace Raven.Tests.Issues
                     var changes3 = session.Advanced.WhatChanged();
 
                     Assert.Equal("UserData.Name", changes3["friends/1"][0].FieldName);
-                    Assert.Equal("UserData.Exam1Marks", changes3["friends/1"][1].FieldName);
+                    Assert.Equal("UserData.Exam1Marks[2]", changes3["friends/1"][1].FieldName);
                 }
             }
         }
@@ -602,7 +602,7 @@ namespace Raven.Tests.Issues
 
                     Assert.Equal("Descr", changes3["bigfriends/1"][0].FieldName);
                     Assert.Equal("UserData.Name", changes3["bigfriends/1"][1].FieldName);
-                    Assert.Equal("UserData.Exam1Marks", changes3["bigfriends/1"][2].FieldName);
+                    Assert.Equal("UserData.Exam1Marks[2]", changes3["bigfriends/1"][2].FieldName);
                 }
             }
         }

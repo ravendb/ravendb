@@ -92,7 +92,7 @@ namespace Raven.Json.Linq
                     }
                 }
 
-                var ravenJObject = (RavenJObject) token;
+                var ravenJObject = (RavenJObject)token;
 
                 RavenJToken value = ravenJObject[key];
                 if (value != null)
@@ -112,7 +112,7 @@ namespace Raven.Json.Linq
                 {
                     o[item["Key"].Value<string>()] = item["Value"];
                 }
-                return (U) (object) o;
+                return (U)(object)o;
             }
 
             bool cast = typeof(RavenJToken).IsAssignableFrom(typeof(U));
@@ -153,7 +153,7 @@ namespace Raven.Json.Linq
 
                 targetType = Nullable.GetUnderlyingType(targetType);
             }
-            if(targetType == typeof(Guid))
+            if (targetType == typeof(Guid))
             {
                 if (value.Value == null)
                     return default(U);
@@ -173,14 +173,14 @@ namespace Raven.Json.Linq
                     DateTime dateTime;
                     if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                         DateTimeStyles.RoundtripKind, out dateTime))
-                        return (U) (object) dateTime;
+                        return (U)(object)dateTime;
 
                     dateTime = RavenJsonTextReader.ParseDateMicrosoft(s);
-                    return (U) (object) dateTime;
+                    return (U)(object)dateTime;
                 }
                 if (value.Value is DateTimeOffset)
                 {
-                    return (U)(object)((DateTimeOffset) value.Value).UtcDateTime;
+                    return (U)(object)((DateTimeOffset)value.Value).UtcDateTime;
                 }
             }
             if (targetType == typeof(DateTimeOffset))
@@ -191,13 +191,13 @@ namespace Raven.Json.Linq
                     DateTimeOffset dateTimeOffset;
                     if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
                         DateTimeStyles.RoundtripKind, out dateTimeOffset))
-                        return (U) (object) dateTimeOffset;
+                        return (U)(object)dateTimeOffset;
 
                     return default(U);
                 }
                 if (value.Value is DateTime)
                 {
-                    return (U) (object) (new DateTimeOffset((DateTime) value.Value));
+                    return (U)(object)(new DateTimeOffset((DateTime)value.Value));
                 }
             }
             if (targetType == typeof(byte[]) && value.Value is string)
@@ -210,54 +210,85 @@ namespace Raven.Json.Linq
 
             try
             {
-                return (U) System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+                return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
             }
             catch (Exception e)
             {
                 if (value.Value != null)
-                    throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. ", value.Value.GetType()),e);
-                
-                throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value),e);
+                    throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. ", value.Value.GetType()), e);
+
+                throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value), e);
             }
         }
 
         public static bool CompareRavenJArrayData(this ICollection<DocumentsChanges> docChanges, RavenJArray selfArray, RavenJArray otherArray, string fieldArrName)
         {
-            IEnumerable<RavenJToken> differences = selfArray.Length < otherArray.Length ? 
-                otherArray.Except(selfArray, RavenJTokenEqualityComparer.Default) :
-                selfArray.Except(otherArray, RavenJTokenEqualityComparer.Default);
-            if(!differences.Any())
+            IEnumerable<RavenJToken> differences = selfArray.Length < otherArray.Length ? otherArray : selfArray;
+
+            if (!differences.Any())
                 return true;
 
+            int index = 0;
             foreach (var dif in differences)
             {
                 var changes = new DocumentsChanges
                 {
-                    FieldName = fieldArrName
+                    FieldName = string.Format("{0}[{1}]", fieldArrName, index)
                 };
-
 
                 if (selfArray.Length < otherArray.Length)
                 {
-                    changes.Change = DocumentsChanges.ChangeType.ArrayValueRemoved;
-                    changes.FieldOldValue = dif.ToString();
-                    changes.FieldOldType = dif.Type.ToString();
+                    if (index < selfArray.Length)
+                    {
+                        if (!selfArray[index].DeepEquals(otherArray[index], (List<DocumentsChanges>)docChanges))
+                        {
+                            List<DocumentsChanges> docChangesList = docChanges.ToList();
+                            docChangesList[docChangesList.Count - 1].FieldName = selfArray[index].Type == JTokenType.Object ?
+                                String.Format("{0}.{1}", changes.FieldName, docChangesList[docChangesList.Count - 1].FieldName) :
+                                 String.Format("{0}", changes.FieldName);
+                        }
+                    }
+                    else
+                    {
+                        changes.Change = DocumentsChanges.ChangeType.ArrayValueRemoved;
+                        changes.FieldOldValue = dif.ToString();
+                        changes.FieldOldType = dif.Type.ToString();
+                        docChanges.Add(changes);
+                    }
+
                 }
 
                 if (selfArray.Length > otherArray.Length)
                 {
-                    changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
-                    changes.FieldNewValue = dif.ToString();
-                    changes.FieldNewType = dif.Type.ToString();
+                    if (index < otherArray.Length)
+                    {
+                        if (!selfArray[index].DeepEquals(otherArray[index], (List<DocumentsChanges>)docChanges))
+                        {
+                            List<DocumentsChanges> docChangesList = docChanges.ToList();
+
+                            docChangesList[docChangesList.Count - 1].FieldName = otherArray[index].Type == JTokenType.Object ?
+                                String.Format("{0}.{1}", changes.FieldName, docChangesList[docChangesList.Count - 1].FieldName) :
+                                 String.Format("{0}", changes.FieldName);
+                        }
+                    }
+                    else
+                    {
+                        changes.Change = DocumentsChanges.ChangeType.ArrayValueAdded;
+                        changes.FieldNewValue = dif.ToString();
+                        changes.FieldNewType = dif.Type.ToString();
+                        docChanges.Add(changes);
+                    }
+
+
                 }
-                docChanges.Add(changes);
+                index++;
             }
             return false;
         }
 
         public static bool CompareDifferentLengthRavenJObjectData(this ICollection<DocumentsChanges> docChanges, RavenJObject otherObj, RavenJObject selfObj, string fieldName)
         {
-           
+
             var diffData = new Dictionary<string, string>();
             RavenJToken token;
             if (otherObj.Count == 0)
@@ -281,7 +312,7 @@ namespace Raven.Json.Linq
                     docChanges.Add(changes);
                 }
 
-               return false;
+                return false;
             }
             FillDifferentJsonData(selfObj.Properties, otherObj.Properties, diffData);
 
@@ -291,7 +322,7 @@ namespace Raven.Json.Linq
                 {
                     FieldOldType = otherObj.Type.ToString(),
                     FieldNewType = selfObj.Type.ToString(),
-                     FieldName = key
+                    FieldName = key
                 };
 
                 if (selfObj.Count < otherObj.Count)
@@ -311,12 +342,12 @@ namespace Raven.Json.Linq
         }
 
 
-        private static  void FillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Dictionary<string, string> diffData)
+        private static void FillDifferentJsonData(DictionaryWithParentSnapshot selfObj, DictionaryWithParentSnapshot otherObj, Dictionary<string, string> diffData)
         {
-            Debug.Assert(diffData != null,"Precaution --> parameter should not be null");
+            Debug.Assert(diffData != null, "Precaution --> parameter should not be null");
 
             string[] diffNames;
-            DictionaryWithParentSnapshot bigObj ;
+            DictionaryWithParentSnapshot bigObj;
 
             if (selfObj.Keys.Count < otherObj.Keys.Count)
             {
@@ -343,9 +374,9 @@ namespace Raven.Json.Linq
             {
                 Change = change
             });
-            
+
         }
-        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token,string fieldName)
+        public static void AddChanges(this ICollection<DocumentsChanges> docChanges, KeyValuePair<string, RavenJToken> kvp, RavenJToken token, string fieldName)
         {
             var changes = new DocumentsChanges
             {
@@ -371,7 +402,7 @@ namespace Raven.Json.Linq
                 FieldName = fieldName
             };
             docChanges.Add(changes);
-           
+
         }
     }
 }
