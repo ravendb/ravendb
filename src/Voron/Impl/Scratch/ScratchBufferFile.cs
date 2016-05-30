@@ -130,7 +130,7 @@ namespace Voron.Impl.Scratch
                 listOfAvailableImmediately.RemoveLast();
 
                 result = new PageFromScratchBuffer ( _scratchNumber, freeAndAvailablePageNumber, size, numberOfPages );
-                
+
                 _allocatedPagesUsedSize += numberOfPages;
                 _allocatedPages.Add(freeAndAvailablePageNumber, result);
                 return true;

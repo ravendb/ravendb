@@ -33,8 +33,8 @@ namespace Voron
 
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
-        private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
-
+        public readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
+        internal readonly ReaderWriterLockSlim FlushInProgressLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
         private long _transactionsCounter;
@@ -303,13 +303,16 @@ namespace Voron
         internal LowLevelTransaction NewLowLevelTransaction(TransactionFlags flags, TimeSpan? timeout = null)
         {
             bool txLockTaken = false;
+            bool flushInProgressReadLockTaken = false;
             try
             {
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
+                    if (FlushInProgressLock.IsWriteLockHeld == false)
+                        flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
                     Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
-                    if (txLockTaken == false)
+                    if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {
                         _flushWriter.Set();
                         throw new TimeoutException("Waited for " + wait +
@@ -352,6 +355,10 @@ namespace Voron
                 if (txLockTaken)
                 {
                     Monitor.Exit(_txWriter);
+                }
+                if (flushInProgressReadLockTaken)
+                {
+                    FlushInProgressLock.ExitReadLock();
                 }
                 throw;
             }
@@ -405,6 +412,8 @@ namespace Voron
                 return;
 
             Monitor.Exit(_txWriter);
+            if (FlushInProgressLock.IsReadLockHeld)
+                FlushInProgressLock.ExitReadLock();
         }
 
         public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
@@ -523,7 +532,7 @@ namespace Voron
             ForceLogFlushToDataFile(tx, allowToFlushOverwrittenPages);
         }
 
-        internal void ForceLogFlushToDataFile(LowLevelTransaction tx, bool allowToFlushOverwrittenPages)
+        public void ForceLogFlushToDataFile(LowLevelTransaction tx, bool allowToFlushOverwrittenPages)
         {
             _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, _cancellationTokenSource.Token, tx, allowToFlushOverwrittenPages);
         }

@@ -241,14 +241,17 @@ namespace Voron.Platform.Win32
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
+            long sizeToWrite = 0;
             foreach (var allocationInfo in PagerState.AllocationInfos)
             {
+                sizeToWrite += allocationInfo.Size;
                 if (Win32MemoryMapNativeMethods.FlushViewOfFile(allocationInfo.BaseAddress, new IntPtr(allocationInfo.Size)) == false)
                     throw new Win32Exception();
             }
 
             if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
                 throw new Win32Exception();
+            // TODO : Measure IO times (RavenDB-4659) - Flushed & sync {sizeToWrite/1024:#,#} kb in {sp.ElapsedMilliseconds:#,#} ms
         }
 
 

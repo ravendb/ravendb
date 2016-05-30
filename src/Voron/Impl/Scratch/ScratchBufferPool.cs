@@ -170,7 +170,7 @@ namespace Voron.Impl.Scratch
                 // we can continue running. It is possible that a long running read transaction
                 // would in fact generate enough work for us to timeout, but hopefully we can avoid that.
 
-                while (
+                while (tx.IsLazyTransaction == false && // lazy transaction is holding a read tx that will stop this, nothing to do here
                     tx.Environment.Options.ManualFlushing == false &&
                     sp.ElapsedMilliseconds < tx.Environment.Options.ScratchBufferOverflowTimeout)
                 {

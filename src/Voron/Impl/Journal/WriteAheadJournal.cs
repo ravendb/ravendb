@@ -558,26 +558,41 @@ namespace Voron.Impl.Journal
                         _journalsToDelete.Add(unused.Number, unused);
                     }
 
-                    using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
+                    var timeout = TimeSpan.FromSeconds(3);
+                    bool tryEnterReadLock = false;
+                    if (alreadyInWriteTx == false)
+                        tryEnterReadLock = _waj._env.FlushInProgressLock.TryEnterWriteLock(timeout);
+                    try
                     {
-                        _lastSyncedJournal = lastProcessedJournal;
-                        _lastSyncedTransactionId = lastFlushedTransactionId;
-
-                        _lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
-                        
-                        if (unusedJournals.Count > 0)
+                        using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(TransactionFlags.ReadWrite).JournalApplicatorTransaction())
                         {
-                            var lastUnusedJournalNumber = unusedJournals.Last().Number;
-                            _waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber);
+                            _lastSyncedJournal = lastProcessedJournal;
+                            _lastSyncedTransactionId = lastFlushedTransactionId;
+
+                            _lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
+
+                            if (unusedJournals.Count > 0)
+                            {
+                                var lastUnusedJournalNumber = unusedJournals.Last().Number;
+                                _waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber);
+                            }
+
+                            if (_waj._files.Count == 0)
+                                _waj.CurrentFile = null;
+
+                            FreeScratchPages(unusedJournals, txw ?? transaction);
+
+                            if (txw != null)
+                            {
+                                txw.FlushedToJournal = true;// force the env to increment the tx id
+                                txw.Commit();
+                            }
                         }
-
-                        if (_waj._files.Count == 0)
-                            _waj.CurrentFile = null;
-
-                        FreeScratchPages(unusedJournals, txw ?? transaction);
-
-                        if (txw != null)
-                            txw.Commit();
+                    }
+                    finally
+                    {
+                        if(tryEnterReadLock)
+                            _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
                     
                     if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
@@ -783,9 +798,17 @@ namespace Voron.Impl.Journal
                 get { return Monitor.IsEntered(_flushingLock); }
             }
 
-            public IDisposable TryTakeFlushingLock(ref bool lockTaken)
+            public IDisposable TryTakeFlushingLock(ref bool lockTaken, TimeSpan? timeout = null)
             {
-                Monitor.TryEnter(_flushingLock, ref lockTaken);
+                if (timeout == null)
+                {
+                    Monitor.TryEnter(_flushingLock, ref lockTaken);
+                }
+                else
+                {
+                    Monitor.TryEnter(_flushingLock, timeout.Value, ref lockTaken);
+                }
+
                 bool localLockTaken = lockTaken;
 
                 ignoreLockAlreadyTaken = true;

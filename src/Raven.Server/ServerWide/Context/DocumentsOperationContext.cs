@@ -1,5 +1,7 @@
-﻿using Raven.Server.Documents;
+﻿using System;
+using Raven.Server.Documents;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -21,6 +23,11 @@ namespace Raven.Server.ServerWide.Context
         protected override DocumentsTransaction CreateWriteTransaction()
         {
             return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(), _documentDatabase.Notifications);
+        }
+
+        public StorageEnvironment Environment()
+        {
+            return _documentDatabase.DocumentsStorage.Environment;
         }
     }
 }
