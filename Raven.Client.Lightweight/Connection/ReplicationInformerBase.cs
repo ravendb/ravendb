@@ -194,14 +194,14 @@ namespace Raven.Client.Connection
             {
                 case FailoverBehavior.AllowReadsFromSecondaries:
                 case FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached:
-                    if (method == HttpMethods.Get)
+                    if (method == HttpMethods.Get || method == HttpMethods.Head)
                         return;
                     break;
                 case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
                     return;
                 case FailoverBehavior.FailImmediately:
                     var allowReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-                    if (allowReadFromAllServers && method == HttpMethods.Get)
+                    if (allowReadFromAllServers && (method == HttpMethods.Get || method == HttpMethods.Head))
                         return;
                     break;
             }
