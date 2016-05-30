@@ -43,7 +43,7 @@
                 </div>
             </div>
             <span><br/></span>
-            <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: '#uploadQueueContainer', bottomMargin: 5}">
+            <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: '#uploadQueueContainer', bottomMargin: 5}" style="overflow-y: auto" >
                 <div id="filesTree" data-bind="tree: { selectedNode: selectedFolder, addedNode: addedFolder, currentLevelNodes: currentLevelSubdirectories }"></div>
             </div>
         </div>

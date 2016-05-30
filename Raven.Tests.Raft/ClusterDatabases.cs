@@ -13,6 +13,7 @@ using Rachis.Transport;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Database.Raft.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -85,6 +86,31 @@ namespace Raven.Tests.Raft
                 var key = Constants.Database.Prefix + "Northwind";
 
                 clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), key));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Nodes")]
+        public void CanWaitUntilDatabaseIsCreatedOnCallingNode(int numberOfNodes)
+        {
+            var clusterStores = CreateRaftCluster(numberOfNodes);
+
+            var firstNonLeaderIndex = servers.FindIndex(server => !server.Options.ClusterManager.Value.IsLeader());
+
+            using (var nonLeaderStore = clusterStores[firstNonLeaderIndex])
+            {
+                nonLeaderStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                {
+                    Id = "Northwind",
+                    Settings =
+                                                                       {
+                                                                           {"Raven/DataDir", "~/Databases/Northwind"}
+                                                                       }
+                });
+
+                // if create database waits properly until database is being created on calling node
+                // then we can send request to newly created database (and won't get Could not find a resource named: Northwind exception)
+                Assert.Null(nonLeaderStore.DatabaseCommands.ForDatabase("Northwind").Get("people/1"));
             }
         }
 
