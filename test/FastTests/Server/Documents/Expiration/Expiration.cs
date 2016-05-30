@@ -46,10 +46,9 @@ namespace FastTests.Server.Documents.Expiration
                     Assert.NotNull(expirationDate);
                     var dateTime = expirationDate.Value<DateTime>();
                     Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
-                    Assert.Equal(expiry, expirationDate);
+                    Assert.Equal(expiry.ToString("O"), expirationDate.ToString());
                 }
 
-                // Can_add_entity_with_expiry
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 using (var session = store.OpenAsyncSession())
                 {

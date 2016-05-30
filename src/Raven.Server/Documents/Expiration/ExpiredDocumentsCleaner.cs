@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -14,7 +15,6 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
-using Voron.Data.BTrees;
 
 namespace Raven.Server.Documents.Expiration
 {
@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Expiration
         private static readonly ILog Log = LogManager.GetLogger(typeof(ExpiredDocumentsCleaner));
 
         private const string DocumentsByExpiration = "DocumentsByExpiration";
-        private readonly Tree _documentsByExpirationTree;
 
         private readonly Timer _timer;
         private readonly object _locker = new object();
@@ -36,12 +35,6 @@ namespace Raven.Server.Documents.Expiration
         {
             _database = database;
             _configuration = configuration;
-
-            using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
-            {
-                _documentsByExpirationTree = tx.CreateTree(DocumentsByExpiration);
-                tx.Commit();
-            }
 
             var deleteFrequencyInSeconds = _configuration.DeleteFrequencySeconds ?? 300;
             Log.Info($"Initialized expired document cleaner, will check for expired documents every {deleteFrequencyInSeconds} seconds");
@@ -95,55 +88,58 @@ namespace Raven.Server.Documents.Expiration
                 var currentTime = sliceWriter.CreateSlice();
 
                 var toDelete = new HashSet<string>();
-                using (var it = _documentsByExpirationTree.Iterate())
-                {
-                    if (it.Seek(Slice.BeforeAllKeys) == false)
-                        return;
-
-                    while (it.CurrentKey.Compare(currentTime) < 1)
-                    {
-                        using (var multiIt = _documentsByExpirationTree.MultiRead(it.CurrentKey))
-                        {
-                            if (multiIt.Seek(Slice.BeforeAllKeys))
-                            {
-                                do
-                                {
-                                    // TODO: Maybe we should improve the ToString to use the same buffer instead of allocating new one
-                                    toDelete.Add(multiIt.CurrentKey.ToString());
-                                } while (multiIt.MoveNext());
-                            }
-                        }
-
-                        // TODO: validate that we are in write transaction here?
-                        if (it.DeleteCurrentAndMoveNext() == false)
-                            break;
-                    }
-                }
-
-                if (toDelete.Count == 0)
-                    return;
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug($"Deleting {toDelete.Count} expired documents: [{string.Join(", ", toDelete)}]");
 
                 DocumentsOperationContext context;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
                 {
-
-                    foreach (var key in toDelete)
+                    var tree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
+                    using (var it = tree.Iterate())
                     {
-                        if (_database.DatabaseShutdown.IsCancellationRequested)
-                        {
-                            if (Log.IsDebugEnabled)
-                                Log.Debug($"Stop deleting {toDelete.Count} expired documents at {key} because of database was shutdown");
+                        if (it.Seek(Slice.BeforeAllKeys) == false)
                             return;
+
+                        while (it.CurrentKey.Compare(currentTime) < 1)
+                        {
+                            using (var multiIt = tree.MultiRead(it.CurrentKey))
+                            {
+                                if (multiIt.Seek(Slice.BeforeAllKeys))
+                                {
+                                    do
+                                    {
+                                        // TODO: Maybe we should improve the ToString to use the same buffer instead of allocating new one
+                                        toDelete.Add(multiIt.CurrentKey.ToString());
+                                    } while (multiIt.MoveNext());
+                                }
+                            }
+
+                            if (it.DeleteCurrentAndMoveNext() == false)
+                                break;
                         }
-
-                        var deleted = _database.DocumentsStorage.Delete(context, key, null);
-
-                        if (Log.IsDebugEnabled && deleted == false)
-                            Log.Debug($"Tried to delete expired document '{key}' but document was not found.");
                     }
+
+                    if (toDelete.Count > 0)
+                    {
+                        if (Log.IsDebugEnabled)
+                            Log.Debug($"Deleting {toDelete.Count} expired documents: [{string.Join(", ", toDelete)}]");
+
+                        foreach (var key in toDelete)
+                        {
+                            if (_database.DatabaseShutdown.IsCancellationRequested)
+                            {
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug($"Stop deleting {toDelete.Count} expired documents at {key} because of database was shutdown");
+                                return;
+                            }
+
+                            var deleted = _database.DocumentsStorage.Delete(context, key, null);
+
+                            if (Log.IsDebugEnabled && deleted == false)
+                                Log.Debug($"Tried to delete expired document '{key}' but document was not found.");
+                        }
+                    }
+
+                    tx.Commit();
                 }
             }
             catch (Exception e)
@@ -174,8 +170,8 @@ namespace Raven.Server.Documents.Expiration
                 return;
 
             DateTime date;
-            if (DateTime.TryParse(expirationDate, out date) == false)
-                return;
+            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
+                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {SystemTime.UtcNow.ToString("O")}");
 
             if (SystemTime.UtcNow >= date)
                 throw new InvalidOperationException($"Cannot put an expired document. Expired on: {date.ToString("O")}");
@@ -183,9 +179,10 @@ namespace Raven.Server.Documents.Expiration
             var buffer = context.GetManagedBuffer();
             var sliceWriter = new SliceWriter(buffer);
             sliceWriter.WriteBigEndian(date.Ticks);
-            var slice = sliceWriter.CreateSlice();
+            var slice = sliceWriter.CreateSlice(sizeof(long));
 
-            _documentsByExpirationTree.MultiAdd(slice, key);
+            var tree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);
+            tree.MultiAdd(slice, key);
         }
     }
 }
