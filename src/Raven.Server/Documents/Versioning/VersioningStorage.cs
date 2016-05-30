@@ -71,8 +71,10 @@ namespace Raven.Server.Documents.Versioning
                 }
                 catch (Exception e)
                 {
-                    if (Log.IsDebugEnabled)
-                        Log.Debug($"Cannot enable versioning for documents as the versioning configuration document {Constants.Versioning.RavenVersioningConfiguration} is not valid: " + configuration.Data, e);
+                    //TODO: This should generate an alert, so admin will know that something is very bad
+                    //TODO: Or this should throw and we should have a config flag to ignore the error
+                    if (Log.IsWarnEnabled)
+                        Log.WarnException($"Cannot enable versioning for documents as the versioning configuration document {Constants.Versioning.RavenVersioningConfiguration} is not valid: {configuration.Data}", e);
                     return null;
                 }
             }
@@ -105,20 +107,18 @@ namespace Raven.Server.Documents.Versioning
                 {
                     DynamicJsonValue mutatedMetadata;
                     Debug.Assert(metadata.Modifications == null);
-                    // TODO: Is the the correct usage, e.g. why we need to initialize the DynamicJsonValue with a metadata?
+                   
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Versioning.RavenDisableVersioning);
                     if (disableVersioning)
                         return;
                 }
 
-                /* TODO: Should honor both RavenDisableVersioning and RavenEnableVersioning by the order is exist in metadata? */
-
                 if (metadata.TryGet(Constants.Versioning.RavenEnableVersioning, out enableVersioning))
                 {
-                    DynamicJsonValue mutatedMetadata;
-                    Debug.Assert(metadata.Modifications == null);
-                    metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
+                    DynamicJsonValue mutatedMetadata = metadata.Modifications;
+                    if (mutatedMetadata == null)
+                        metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Versioning.RavenEnableVersioning);
                 }
             }
@@ -178,12 +178,10 @@ namespace Raven.Server.Documents.Versioning
             numbers.Delete(prefixedLoweredKey);
         }
 
-        public void Delete(DocumentsOperationContext context, string collectionName, string key, bool isSystemDocument)
+        public void Delete(DocumentsOperationContext context, string collectionName, string key)
         {
             Debug.Assert(collectionName[0] != '@');
-            if (isSystemDocument)
-                return;
-
+            
             var configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
                 return;

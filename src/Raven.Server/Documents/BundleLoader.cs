@@ -14,7 +14,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _database;
         public VersioningStorage VersioningStorage;
-        private ExpiredDocumentsCleaner _expiredDocumentsCleaner;
+        public ExpiredDocumentsCleaner ExpiredDocumentsCleaner;
 
         public BundleLoader(DocumentDatabase database)
         {
@@ -27,19 +27,18 @@ namespace Raven.Server.Documents
             var key = notification.Key;
             if (key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase))
             {
-                VersioningStorage = null;
                 VersioningStorage = VersioningStorage.LoadConfigurations(_database);
 
                 if (_log.IsDebugEnabled)
-                    _log.Debug($"Versioning configuration was {(notification.Type == DocumentChangeTypes.Delete ? "disalbed" : "enabled")}");
+                    _log.Debug($"Versioning configuration was {(VersioningStorage  != null ? "disabled" : "enabled")}");
             }
             else if(key.Equals(Constants.Expiration.RavenExpirationConfiguration, StringComparison.OrdinalIgnoreCase))
             {
-                _expiredDocumentsCleaner = null;
-                _expiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
+                ExpiredDocumentsCleaner?.Dispose();
+                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
 
                 if (_log.IsDebugEnabled)
-                    _log.Debug($"Expiration configuration was {(_expiredDocumentsCleaner != null ? "enabled" : "disalbed")}");
+                    _log.Debug($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
             }
         }
 
@@ -47,22 +46,7 @@ namespace Raven.Server.Documents
         {
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
 
-            _expiredDocumentsCleaner?.Dispose();
-        }
-
-        public void DeleteDocument(DocumentsOperationContext context, string originalCollectionName, string key, bool isSystemDocument)
-        {
-            VersioningStorage?.Delete(context, originalCollectionName, key, isSystemDocument);
-        }
-
-        public void PutDocument(DocumentsOperationContext context, string originalCollectionName, string key, long newEtagBigEndian, 
-            BlittableJsonReaderObject document, bool isSystemDocument)
-        {
-            if (isSystemDocument)
-                return;
-
-            VersioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document);
-            _expiredDocumentsCleaner?.Put(context, originalCollectionName, key, newEtagBigEndian, document);
+            ExpiredDocumentsCleaner?.Dispose();
         }
     }
 }

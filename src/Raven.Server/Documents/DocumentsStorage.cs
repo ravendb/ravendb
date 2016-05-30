@@ -613,7 +613,10 @@ namespace Raven.Server.Documents
 
             CreateTombstone(context, table, doc, originalCollectionName);
 
-            _documentDatabase.BundleLoader.DeleteDocument(context, originalCollectionName, key, isSystemDocument);
+            if (isSystemDocument == false)
+            {
+                _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, originalCollectionName, key);
+            }
             table.Delete(doc.StorageId);
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -726,7 +729,11 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
 
-            _documentDatabase.BundleLoader.PutDocument(context, originalCollectionName, key, newEtagBigEndian, document, isSystemDocument);
+            if (isSystemDocument == false)
+            {
+                _documentDatabase.BundleLoader.VersioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document);
+                _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, new Slice(lowerKey, (ushort)lowerSize), document);
+            }
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
             {
