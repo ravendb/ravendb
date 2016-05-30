@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
@@ -11,7 +12,7 @@ using Sparrow.Json;
 namespace Raven.Server.Json
 {
     public static class JsonDeserialization
-    {
+    {	
         public static readonly Func<BlittableJsonReaderObject, ReplicationClientConfiguration> ReplicationClientConfiguration = GenerateJsonDeserializationRoutine<ReplicationClientConfiguration>();
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
         public static readonly Func<BlittableJsonReaderObject, ReplicationDestination> ReplicationDestination = GenerateJsonDeserializationRoutine<ReplicationDestination>();
@@ -31,6 +32,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, VersioningConfigurationCollection> VersioningConfigurationCollection = GenerateJsonDeserializationRoutine<VersioningConfigurationCollection>();
         public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
+        
         public static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
             try

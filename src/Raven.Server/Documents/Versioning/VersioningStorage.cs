@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Versioning
 
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
-        public VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
+        private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
         {
             _versioningConfiguration = versioningConfiguration;
 
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Versioning
                 catch (Exception e)
                 {
                     if (Log.IsDebugEnabled)
-                        Log.Debug("Cannot enable versioning for documents as the versioning configuration document isn't valid: " + configuration.Data, e);
+                        Log.Debug($"Cannot enable versioning for documents as the versioning configuration document {Constants.Versioning.RavenVersioningConfiguration} is not valid: " + configuration.Data, e);
                     return null;
                 }
             }
@@ -94,12 +94,8 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public void PutVersion(DocumentsOperationContext context, string collectionName, string key, long newEtagBigEndian,
-            BlittableJsonReaderObject document, bool isSystemDocument)
+        public void PutVersion(DocumentsOperationContext context, string collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
         {
-            if (isSystemDocument)
-                return;
-
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
             if (document.TryGet(Constants.Metadata, out metadata))

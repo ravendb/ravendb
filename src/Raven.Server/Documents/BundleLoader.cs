@@ -1,6 +1,7 @@
 using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -13,6 +14,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _database;
         private VersioningStorage _versioningStorage;
+        private ExpiredDocumentsCleaner _expiredDocumentsCleaner;
 
         public BundleLoader(DocumentDatabase database)
         {
@@ -22,7 +24,8 @@ namespace Raven.Server.Documents
 
         public void HandleSystemDocumentChange(DocumentChangeNotification notification)
         {
-            if (notification.Key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase) != false)
+            var key = notification.Key;
+            if (key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase))
             {
                 _versioningStorage = null;
                 _versioningStorage = VersioningStorage.LoadConfigurations(_database);
@@ -30,11 +33,21 @@ namespace Raven.Server.Documents
                 if (_log.IsDebugEnabled)
                     _log.Debug($"Versioning configuration was {(notification.Type == DocumentChangeTypes.Delete ? "disalbed" : "enabled")}");
             }
+            else if(key.Equals(Constants.Expiration.RavenExpirationConfiguration, StringComparison.OrdinalIgnoreCase))
+            {
+                _expiredDocumentsCleaner = null;
+                _expiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
+
+                if (_log.IsDebugEnabled)
+                    _log.Debug($"Expiration configuration was {(_expiredDocumentsCleaner != null ? "enabled" : "disalbed")}");
+            }
         }
 
         public void Dispose()
         {
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
+
+            _expiredDocumentsCleaner?.Dispose();
         }
 
         public void DeleteDocument(DocumentsOperationContext context, string originalCollectionName, string key, bool isSystemDocument)
@@ -42,9 +55,14 @@ namespace Raven.Server.Documents
             _versioningStorage?.Delete(context, originalCollectionName, key, isSystemDocument);
         }
 
-        public void PutDocument(DocumentsOperationContext context, string originalCollectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document, bool isSystemDocument)
+        public void PutDocument(DocumentsOperationContext context, string originalCollectionName, string key, long newEtagBigEndian, 
+            BlittableJsonReaderObject document, bool isSystemDocument)
         {
-            _versioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document, isSystemDocument);
+            if (isSystemDocument)
+                return;
+
+            _versioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document);
+            _expiredDocumentsCleaner?.Put(context, originalCollectionName, key, newEtagBigEndian, document);
         }
     }
 }

@@ -344,5 +344,12 @@ namespace Raven.Abstractions.Data
             } 
         }
 
-        public const string RequestFailedExceptionMarker = "ExceptionRequestFailed"; 
-}}
+        public const string RequestFailedExceptionMarker = "ExceptionRequestFailed";
+
+        public class Expiration
+        {
+            public const string RavenExpirationConfiguration = "Raven/Expiration/Configuration";
+
+            public const string RavenExpirationDate = "Raven-Expiration-Date";
+        }
+    }}
