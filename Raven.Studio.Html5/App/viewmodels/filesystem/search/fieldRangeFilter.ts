@@ -4,7 +4,7 @@ import moment = require("moment");
 import dialog = require("plugins/dialog");
 
 class fieldRangeFilter extends searchDialogViewModel {
-    filterOptions = ko.observableArray(["Numeric Double", "Numeric Int", "Alphabetical", "Datetime"]);
+    filterOptions = ko.observableArray(["Numeric Double", "Numeric Int","Numeric Long", "Alphabetical", "Datetime"]);
     selectedOption = ko.observable("Starts with");
     public applyFilterTask = $.Deferred();
     label = "";

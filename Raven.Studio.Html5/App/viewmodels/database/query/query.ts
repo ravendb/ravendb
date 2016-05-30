@@ -810,6 +810,11 @@ class query extends viewModelBase {
                 if (to !== "*") toPrefix = "Dx";
                 this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix + to + "]");
             }
+            else if (option === "Numeric Long") {
+                if (from !== "*") fromPrefix = "Lx";
+                if (to !== "*") toPrefix = "Lx";
+                this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix + to + "]");
+            }
             else if (option === "Numeric Int") {
                 if (from !== "*") fromPrefix = "Ix";
                 if (to !== "*") toPrefix = "Ix";
