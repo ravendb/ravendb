@@ -263,7 +263,7 @@ namespace FastTests
             return path;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             GC.SuppressFinalize(this);
 

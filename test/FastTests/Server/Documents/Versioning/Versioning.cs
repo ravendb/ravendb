@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Xunit;
 using Raven.Client.Bundles.Versioning;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Server.Documents.Versioning
 {
@@ -237,11 +238,5 @@ namespace FastTests.Server.Documents.Versioning
             public string Description { get; set; }
             public int Quantity { get; set; }
         }
-    }
-
-    public class Company
-    {
-        public string Name { get; set; }
-        public string Id { get; set; }
     }
 }
