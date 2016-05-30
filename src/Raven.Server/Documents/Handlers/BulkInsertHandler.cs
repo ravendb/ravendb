@@ -112,8 +112,9 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log.ErrorException("Server reported error during bulk insert", ex);
                 _fullBuffers.CompleteAdding();
                 throw;
             }
