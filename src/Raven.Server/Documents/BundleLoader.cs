@@ -13,7 +13,7 @@ namespace Raven.Server.Documents
         private readonly ILog _log = LogManager.GetLogger(typeof(BundleLoader));
 
         private readonly DocumentDatabase _database;
-        private VersioningStorage _versioningStorage;
+        public VersioningStorage VersioningStorage;
         private ExpiredDocumentsCleaner _expiredDocumentsCleaner;
 
         public BundleLoader(DocumentDatabase database)
@@ -27,8 +27,8 @@ namespace Raven.Server.Documents
             var key = notification.Key;
             if (key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase))
             {
-                _versioningStorage = null;
-                _versioningStorage = VersioningStorage.LoadConfigurations(_database);
+                VersioningStorage = null;
+                VersioningStorage = VersioningStorage.LoadConfigurations(_database);
 
                 if (_log.IsDebugEnabled)
                     _log.Debug($"Versioning configuration was {(notification.Type == DocumentChangeTypes.Delete ? "disalbed" : "enabled")}");
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
 
         public void DeleteDocument(DocumentsOperationContext context, string originalCollectionName, string key, bool isSystemDocument)
         {
-            _versioningStorage?.Delete(context, originalCollectionName, key, isSystemDocument);
+            VersioningStorage?.Delete(context, originalCollectionName, key, isSystemDocument);
         }
 
         public void PutDocument(DocumentsOperationContext context, string originalCollectionName, string key, long newEtagBigEndian, 
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents
             if (isSystemDocument)
                 return;
 
-            _versioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document);
+            VersioningStorage?.PutVersion(context, originalCollectionName, key, newEtagBigEndian, document);
             _expiredDocumentsCleaner?.Put(context, originalCollectionName, key, newEtagBigEndian, document);
         }
     }

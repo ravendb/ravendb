@@ -19,7 +19,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET", "/databases/{databaseName:string}/revisions?key={documentKey:string}&start={start:int|optional}&pageSize={pageSize:int|optional(25)")]
         public Task GetRevisionsFor()
         {
-            if (Database.DocumentsStorage.VersioningStorage == null)
+            var versioningStorage = Database.BundleLoader.VersioningStorage;
+            if (versioningStorage == null)
                 throw new InvalidOperationException("Versioning is disabled");
 
             var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 int start = GetIntValueQueryString("start", false) ?? 0;
                 int take = GetIntValueQueryString("pageSize", false) ?? 25;
-                var revisions = Database.DocumentsStorage.VersioningStorage.GetRevisions(context, key, start, take).ToList();
+                var revisions = versioningStorage.GetRevisions(context, key, start, take).ToList();
 
                 long actualEtag = revisions.Count == 0 ? int.MinValue : revisions[revisions.Count - 1].Etag;
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
