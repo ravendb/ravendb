@@ -223,9 +223,8 @@ namespace Raven.Json.Linq
 
         public static bool CompareRavenJArrayData(this ICollection<DocumentsChanges> docChanges, RavenJArray selfArray, RavenJArray otherArray, string fieldArrName)
         {
-            IEnumerable<RavenJToken> differences = selfArray.Length < otherArray.Length ?
-                otherArray.Except(selfArray, RavenJTokenEqualityComparer.Default) :
-                selfArray.Except(otherArray, RavenJTokenEqualityComparer.Default);
+            IEnumerable<RavenJToken> differences = selfArray.Length < otherArray.Length ? otherArray : selfArray;
+
             if (!differences.Any())
                 return true;
 
@@ -241,10 +240,13 @@ namespace Raven.Json.Linq
                 {
                     if (index < selfArray.Length)
                     {
-                        selfArray[index].DeepEquals(otherArray[index], (List<DocumentsChanges>)docChanges);
-                        List<DocumentsChanges> docChangesList = docChanges.ToList();
-                        docChangesList[docChangesList.Count - 1].FieldName = String.Format("{0}.{1}", changes.FieldName, docChangesList[docChangesList.Count - 1].FieldName);
-
+                        if (!selfArray[index].DeepEquals(otherArray[index], (List<DocumentsChanges>)docChanges))
+                        {
+                            List<DocumentsChanges> docChangesList = docChanges.ToList();
+                            docChangesList[docChangesList.Count - 1].FieldName = selfArray[index].Type == JTokenType.Object ?
+                                String.Format("{0}.{1}", changes.FieldName, docChangesList[docChangesList.Count - 1].FieldName) :
+                                 String.Format("{0}", changes.FieldName);
+                        }
                     }
                     else
                     {
@@ -260,9 +262,14 @@ namespace Raven.Json.Linq
                 {
                     if (index < otherArray.Length)
                     {
-                        selfArray[index].DeepEquals(otherArray[index], (List<DocumentsChanges>)docChanges);
-                        List<DocumentsChanges> docChangesList = docChanges.ToList();
-                        docChangesList[docChangesList.Count - 1].FieldName = String.Format("{0}.{1}", changes.FieldName, docChangesList[docChangesList.Count - 1].FieldName);
+                        if (!selfArray[index].DeepEquals(otherArray[index], (List<DocumentsChanges>)docChanges))
+                        {
+                            List<DocumentsChanges> docChangesList = docChanges.ToList();
+
+                            docChangesList[docChangesList.Count - 1].FieldName = otherArray[index].Type == JTokenType.Object ?
+                                String.Format("{0}.{1}", changes.FieldName, docChangesList[docChangesList.Count - 1].FieldName) :
+                                 String.Format("{0}", changes.FieldName);
+                        }
                     }
                     else
                     {

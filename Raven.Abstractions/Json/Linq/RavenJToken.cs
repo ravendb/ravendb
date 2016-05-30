@@ -497,7 +497,8 @@ namespace Raven.Json.Linq
                             {
                                 if (docChanges == null)
                                     return false;
-                                fieldName = FieldName(curOtherReader.CurType, fieldName, curThisReader.ToString(), curOtherReader);
+
+                                fieldName = FieldName(curOtherReader.CurType, fieldName, curThisReader.ToString(), curOtherReader,false);
                                 docChanges.AddChanges(curThisReader, curOtherReader.Token, fieldName);
                                 isEqual = false;
                             }
@@ -529,7 +530,7 @@ namespace Raven.Json.Linq
             return isEqual;
         }
 
-        private static string FieldName(JTokenType prevType, string origFieldName, string key, RavenJTokenState curOtherReader)
+        private static string FieldName(JTokenType prevType, string origFieldName, string key, RavenJTokenState curOtherReader,bool addKeyToFieldName = true)
         {
             string fieldName;
 
@@ -539,7 +540,8 @@ namespace Raven.Json.Linq
             }
             else if (prevType == JTokenType.Array)
             {
-                fieldName = string.Format("{0}[{1}].{2}", origFieldName, curOtherReader.Index, key);
+                fieldName =addKeyToFieldName? string.Format("{0}[{1}].{2}", origFieldName, curOtherReader.Index, key):
+                                              string.Format("{0}[{1}]", origFieldName, curOtherReader.Index);
             }
             else
             {
