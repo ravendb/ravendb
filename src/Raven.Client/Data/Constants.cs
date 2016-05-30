@@ -150,9 +150,6 @@ namespace Raven.Abstractions.Data
 
         public static readonly RavenJObject InResourceKeyVerificationDocumentContents;
 
-        public const string TransportRequestProperty = "Raven/TransportRequest";
-        public const string TransportResponseProperty = "Raven/TransportResponse";
-
         public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
 
         public const int MinimumAcceptableEncryptionKeyLength = 64 / 8;

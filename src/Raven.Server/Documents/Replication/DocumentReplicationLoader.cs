@@ -59,8 +59,7 @@ namespace Raven.Server.Documents.Replication
                     var destination = _replicationDocument.Destinations[i];
                     try
                     {
-                        bool _;
-                        var executer = RegisterConnection(Guid.Empty, destination.Url, destination.Database, out _);
+                        var executer = RegisterConnection(Guid.Empty, destination.Url, destination.Database);
                         if (executer.HasOutgoingReplication)
                             executer.Start();
                     }
@@ -77,15 +76,12 @@ namespace Raven.Server.Documents.Replication
         public DocumentReplicationExecuter RegisterConnection(
             Guid srcDbId, 
             string url, 
-            string dbName, 
-            out bool shouldConnectBack)
+            string dbName)
         {
             //since this should be done once per destination node, 
             //the mutext is not likely to be a bottleneck
             lock (Replications)
             {
-                shouldConnectBack = false;
-
                 var existingExecuter =
                     Replications.Select(x => x as DocumentReplicationExecuter)
                         .FirstOrDefault(x => x.DbId == srcDbId ||
@@ -102,9 +98,6 @@ namespace Raven.Server.Documents.Replication
                     destination = _replicationDocument.Destinations
                         .FirstOrDefault(x => x.Url.Equals(url, StringComparison.OrdinalIgnoreCase) &&
                                              x.Database.Equals(dbName, StringComparison.OrdinalIgnoreCase));
-
-                    if (destination != null)
-                        shouldConnectBack = true;
                 }
 
                 var documentReplicationExecuter = new DocumentReplicationExecuter(_database, url, destination);
@@ -117,8 +110,8 @@ namespace Raven.Server.Documents.Replication
         {
             lock (Replications)
             {
-                replicationExecuter.Dispose();
                 Replications.TryRemove(replicationExecuter);
+                replicationExecuter.Dispose();
             }
         }
     }

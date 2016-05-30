@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Server.ReplicationUtil;
@@ -8,36 +10,37 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class OutgoingDocumentReplication
+    public class OutgoingDocumentReplication : IDisposable
     {
         private const string SystemDocumentPrefix = "Raven/";
         private readonly DocumentDatabase _database;
         protected long _lastSentEtag;
-        private bool _shouldWaitForChanges;
+        private bool _hasMoreDocumentsToSend;
         private readonly DocumentReplicationTransport _transport;
         private readonly ILog _log = LogManager.GetLogger(typeof (OutgoingDocumentReplication));
 
+        //private readonly SemaphoreSlim _replicationSemaphore = new SemaphoreSlim(0,1);
+
         public OutgoingDocumentReplication(
-            DocumentDatabase database, 
-            long lastSentEtag, 
+            DocumentDatabase database,             
             DocumentReplicationTransport transport)
         {
-            _database = database;
-            _lastSentEtag = lastSentEtag;
+            _database = database;           
             _transport = transport;
+            _lastSentEtag = -1;
         }
 
-        public bool ShouldWaitForChanges => _shouldWaitForChanges;
+        public bool HasMoreDocumentsToSend => _hasMoreDocumentsToSend;
 
         public void ExecuteReplicationOnce()
         {
+            AsyncHelpers.RunSync(() => _transport.EnsureConnectionAsync());
+            if (_lastSentEtag == -1)
+                _lastSentEtag = _transport.GetLastEtag();
             var lastSendEtag = _lastSentEtag;
 
             //just for shorter code
             var documentStorage = _database.DocumentsStorage;
-            //TODO: handle here properly last etag
-            //either add here negotiation for the etag, 
-            //or add etag tracking
             DocumentsOperationContext context;
             using (documentStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -53,19 +56,18 @@ namespace Raven.Server.Documents.Replication
 
                 if (replicationBatch.Length == 0)
                 {
-                    _shouldWaitForChanges = true;
+                    _hasMoreDocumentsToSend = true;
                     return;
                 }
 
-                //TODO : consider changing SendDocumentBatchAsync to sync version
                 try
                 {
-                    AsyncHelpers.RunSync(() =>
-                        _transport.SendDocumentBatchAsync(replicationBatch, context));
+                    AsyncHelpers.RunSync(() => _transport.SendDocumentBatchAsync(replicationBatch));
                 }
                 catch (WebSocketException e)
                 {
-                    _log.Warn("Sending document replication batch is interrupted. This is not necessarily an issue. Reason: " + e);
+                    _log.Warn("Sending document replication batch is interrupted. This is not necessarily an issue. Reason: " +
+                              e);
                     return;
                 }
                 catch (Exception e)
@@ -76,8 +78,13 @@ namespace Raven.Server.Documents.Replication
 
                 _lastSentEtag = replicationBatch.Max(x => x.Etag);
                 var lastExistingEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-                _shouldWaitForChanges = lastExistingEtag <= _lastSentEtag;
+                _hasMoreDocumentsToSend = lastExistingEtag <= _lastSentEtag;
             }
+        }
+
+        public void Dispose()
+        {
+            //_replicationSemaphore.Dispose();
         }
     }
 }

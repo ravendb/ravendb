@@ -250,8 +250,11 @@ namespace Sparrow.Json
             {
                 try
                 {
-                    if (typeof(T).GetTypeInfo().IsEnum)
-                        result = Enum.Parse(typeof(T), result.ToString());
+                    if (typeof (T).GetTypeInfo().IsEnum)
+                    {
+                        obj = (T)Enum.Parse(typeof (T), result.ToString());
+                        return;
+                    }
 
                     obj = result == null ? default(T) : (T)Convert.ChangeType(result, typeof(T));
                 }

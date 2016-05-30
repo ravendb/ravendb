@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
-        protected override bool ShouldWaitForChanges()
+        protected override bool HasMoreDocumentsToSend()
         {
             return _shouldWaitForChanges;
         }

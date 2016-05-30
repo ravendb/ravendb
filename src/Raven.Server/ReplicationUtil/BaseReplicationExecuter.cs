@@ -46,7 +46,7 @@ namespace Raven.Server.ReplicationUtil
         /// returns true if there are items left to replicate, and false 
         /// if all items were replicated and the replication needs to go to sleep
         /// </summary>
-        protected abstract bool ShouldWaitForChanges();
+        protected abstract bool HasMoreDocumentsToSend();
 
         private void ExecuteReplicationLoop()
         {
@@ -80,7 +80,7 @@ namespace Raven.Server.ReplicationUtil
                     _log.WarnException($"Exception occured for '{ReplicationUniqueName}'.", e);
                 }
 
-                if (!ShouldWaitForChanges())
+                if (!HasMoreDocumentsToSend())
                     continue;
 
                 try

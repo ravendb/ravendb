@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,12 +10,12 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Client.Platform.Unix;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ReplicationUtil
 {
@@ -27,22 +28,22 @@ namespace Raven.Server.ReplicationUtil
         private WebSocket _webSocket;
         private bool _disposed;
         private WebsocketStream _websocketStream;
-
-        //does not need alot of cache
-        private static readonly HttpJsonRequestFactory _jsonRequestFactory = new HttpJsonRequestFactory(128);
+        private readonly DocumentsOperationContext _context;
         private readonly string _targetDbName;	    
 
         public DocumentReplicationTransport(string url, 
             Guid srcDbId, 
             string srcDbName,
             string targetDbName,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, 
+            DocumentsOperationContext context)
         {
             _url = url;
             _srcDbId = srcDbId;
             _srcDbName = srcDbName;
             _targetDbName = targetDbName;
             _cancellationToken = cancellationToken;
+            _context = context;
             _disposed = false;
         }
 
@@ -55,30 +56,25 @@ namespace Raven.Server.ReplicationUtil
             }
         }
 
-        public long GetLatestEtag()
+        public long GetLastEtag()
         {
-            //auth here? not sure it is needed
-            var @params = new CreateHttpJsonRequestParams(null,
-                $"{_url}/databases/{_targetDbName}/lastSentEtag?srcDbId={_srcDbId}",HttpMethod.Get, 
-                new OperationCredentials(string.Empty, new NetworkCredential()), null);
-            using (var request = _jsonRequestFactory.CreateHttpJsonRequest(@params))
+            using (var writer = new BlittableJsonTextWriter(_context, _websocketStream))
             {
-                var response = AsyncHelpers.RunSync(() => request.ExecuteRawResponseAsync());
-                response.EnsureSuccessStatusCode();
-                
-                IEnumerable<string> values;
-                if (!response.Headers.TryGetValues(Constants.LastEtagFieldName, out values))
-                    return 0;
+                _context.Write(writer, new DynamicJsonValue
+                {
+                    ["Raven/GetLastEtag"] = true
+                });
 
-                var val = values.FirstOrDefault();
-                long etag;
-                if(string.IsNullOrWhiteSpace(val) || !long.TryParse(val, out etag))
-                    throw new NotImplementedException($@"
-                            Expected an int64 number when fetching last etag, but got {val}. 
-                                This should not happen and it is likely a bug.");
-
-                return etag;
+                writer.Flush();
             }
+
+            var lastEtagMessage = _context.ReadForMemory(_websocketStream, null);
+
+            long etag;
+            if (!lastEtagMessage.TryGet("Raven/LastSentEtag", out etag))
+                throw new InvalidDataException(
+                    "Received invalid last etag message. Failed to get Raven/LastSentEtag property from received result");
+            return etag;
         }
 
         private async Task<WebSocket> GetAndConnectWebSocketAsync()
@@ -107,20 +103,19 @@ namespace Raven.Server.ReplicationUtil
             }
         }
 
-        public async Task SendDocumentBatchAsync(Document[] docs, DocumentsOperationContext context)
+        public async Task SendDocumentBatchAsync(Document[] docs)
         {
             await EnsureConnectionAsync();
-            using (var writer = new BlittableJsonTextWriter(context,_websocketStream))
+            using (var writer = new BlittableJsonTextWriter(_context, _websocketStream))
             {
                 for (int i = 0; i < docs.Length; i++)
                 {
-                    docs[i].EnsureMetadata();												
-                    context.Write(writer, docs[i].Data);
+                    docs[i].EnsureMetadata();
+                    _context.Write(writer, docs[i].Data);
                     writer.Flush();
                 }
             }
             await _websocketStream.WriteEndOfMessageAsync();
-            await _websocketStream.FlushAsync(_cancellationToken);
         }		
 
         public async Task SendHeartbeatAsync(DocumentsOperationContext context)
@@ -132,6 +127,7 @@ namespace Raven.Server.ReplicationUtil
         public void Dispose()
         {
             _disposed = true;
+            _context.Dispose();
             _webSocket.Dispose();
         }				   
     }

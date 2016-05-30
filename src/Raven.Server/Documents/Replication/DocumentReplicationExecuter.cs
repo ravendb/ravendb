@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -22,9 +23,16 @@ namespace Raven.Server.Documents.Replication
             _destination = destination;
             if (_destination != null)
             {
-                _transport = new DocumentReplicationTransport(_destination.Url,_database.DbId, _database.Name, _destination.Database,_database.DatabaseShutdown);
-                var lastSentEtag = _transport.GetLatestEtag();
-                _outgoing = new OutgoingDocumentReplication(database, lastSentEtag, _transport);
+                DocumentsOperationContext context;
+                database.DocumentsStorage.ContextPool.AllocateOperationContext(out context);
+                _transport = new DocumentReplicationTransport(
+                    _destination.Url,
+                    _database.DbId,
+                    _database.Name, 
+                    _destination.Database,
+                    _database.DatabaseShutdown,
+                    context);
+                _outgoing = new OutgoingDocumentReplication(database, _transport);
             }
         }
 
@@ -39,12 +47,13 @@ namespace Raven.Server.Documents.Replication
 
         protected override void ExecuteReplicationOnce() => _outgoing?.ExecuteReplicationOnce();
 
-        protected override bool ShouldWaitForChanges() => _outgoing?.ShouldWaitForChanges ?? true;
+        protected override bool HasMoreDocumentsToSend() => _outgoing?.HasMoreDocumentsToSend ?? true;
 
         public bool HasOutgoingReplication => _outgoing != null;
 
         public override void Dispose()
         {
+            _outgoing?.Dispose();
             _transport?.Dispose();		    
             base.Dispose();
         }

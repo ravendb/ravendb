@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Server.Extensions;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -16,22 +17,23 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationRequestHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/lastSentEtag", "GET", "@/databases/{databaseName: string}/lastSentEtag?srcDbId={databaseUniqueId:string}")]
-        public Task GetLastSentEtag()
+        private long GetLastEtag(Guid srcDbId, DocumentsOperationContext context)
         {
-            var srcDbId = Guid.Parse(GetQueryStringValueAndAssertIfSingleAndNotEmpty("srcDbId"));
+            RavenTransaction tx = null;
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
+            try
             {
+                if (context.Transaction == null || context.Transaction.Disposed)
+                    tx = context.OpenReadTransaction();
                 var serverChangeVector = Database.DocumentsStorage.GetChangeVector(context);
                 var vectorEntry = serverChangeVector.FirstOrDefault(x => x.DbId == srcDbId);
-
-                //no need to write a document for transferring a single value
-                HttpContext.Response.Headers[Constants.LastEtagFieldName] = vectorEntry.Etag.ToString();				
+                return vectorEntry.Etag;
             }
-            return Task.CompletedTask;
+            finally
+            {
+                if(tx != null || context.Transaction.Disposed == false)
+                    tx?.Dispose();
+            }
         }
 
         //an endpoint to establish replication websocket
@@ -50,13 +52,11 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var hasOtherSideClosedConnection = false;
-            bool shouldConnectBack;
             var srcUrl = HttpContext.Request.GetHostnameUrl();
             var executer = Database.DocumentReplicationLoader.RegisterConnection(
                 srcDbId,
                 srcUrl,
-                srcDbName,
-                out shouldConnectBack);
+                srcDbName);
 
             if(executer.HasOutgoingReplication)
                 executer.Start();
@@ -107,6 +107,13 @@ namespace Raven.Server.Documents.Handlers
                                     }
                                     writer.FinalizeDocument();
                                     var receivedDoc = writer.CreateReader();
+
+                                    //special document that signifies "Get Last Etag" request
+                                    if (receivedDoc.Count == 1 && receivedDoc.GetPropertyNames()[0] == "Raven/GetLastEtag")
+                                    {
+                                        WriteLastEtagResponse(webSocket, context, srcDbId);
+                                        continue;
+                                    }
                                     docs.Add(receivedDoc);
                                 }
                                 executer.ReceiveReplicatedDocuments(context, docs);
@@ -121,7 +128,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                             catch (Exception e)
                             {
-                                throw new InvalidOperationException("Failed to receive replication document batch.", e);
+                                throw new InvalidOperationException($@"Failed to receive replication document batch. (Origin -> Database Id = {srcDbId}, Database Name = {srcDbName}, Origin URL = {srcUrl})", e);
                             }
                             finally
                             {
@@ -137,6 +144,19 @@ namespace Raven.Server.Documents.Handlers
                     Database.DocumentReplicationLoader.HandleConnectionDisconnection(executer);
                 }
             }
-        }		
+        }
+
+        private void WriteLastEtagResponse(WebSocket webSocket, DocumentsOperationContext context, Guid srcDbId)
+        {
+            using (var websocketStream = new WebsocketStream(webSocket, Database.DatabaseShutdown))
+            using (var responseWriter = new BlittableJsonTextWriter(context, websocketStream))
+            {
+                context.Write(responseWriter, new DynamicJsonValue
+                {
+                    ["Raven/LastSentEtag"] = GetLastEtag(srcDbId, context)
+                });
+                responseWriter.Flush();
+            }
+        }
     }
 }
