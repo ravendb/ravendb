@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -19,19 +21,13 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents
 {
+
+    // todo: implement functionality for limiting amount of opened subscriptions
+    // todo: implement functionality for removing "old" subscriptions using dedicated index
     public class SubscriptionStorage : IDisposable
     {
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
-
-        private readonly TransactionContextPool _contextPool;
-
-        private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> _forciblyReleasedSubscriptions =
-            new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
-
-        private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> _openSubscriptions = new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
-
-
-        private readonly JsonOperationContext _subscriptionsContext;
+        private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly TableSchema _subscriptionsSchema = new TableSchema();
         private readonly DocumentDatabase _db;
         private readonly StorageEnvironment _environment;
@@ -39,26 +35,16 @@ namespace Raven.Server.Documents
 
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
-        private static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> _subscriptionCriteriaDeserializer =
-            JsonDeserialization.SubscriptionCriteria;
-
-        private static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions>
-            _subscriptionConnectionOptionsDeserializer = JsonDeserialization.SubscriptionCriteriaOptions;
-
-
-
         public SubscriptionStorage(DocumentDatabase db)
         {
             _db = db;
             var options = _db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"));
-
+            
             _environment = new StorageEnvironment(options);
             _unmanagedBuffersPool = new UnmanagedBuffersPool($"Subscriptions");
-            _contextPool = new TransactionContextPool(_unmanagedBuffersPool, _environment);
 
-            _contextPool.AllocateOperationContext(out _subscriptionsContext);
             var databaseName = db.Name;
             _log = LogManager.GetLogger($"{typeof(SubscriptionStorage).FullName}.{databaseName}");
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -70,7 +56,6 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _subscriptionsContext.Dispose();
             _unmanagedBuffersPool.Dispose();
             _environment.Dispose();
         }
@@ -97,8 +82,8 @@ namespace Raven.Server.Documents
                 long timeOfSendingLastBatch = 0;
                 long timeOfLastClientActivity = 0;
                 
-
-                _subscriptionCriteriaDeserializer(criteria);
+                // Validate that this can be properly parsed into a criteria object
+                JsonDeserialization.SubscriptionCriteria(criteria);
 
                 var bigEndianId = Bits.SwapBytes((ulong)id);
 
@@ -115,17 +100,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe void UpdateSubscriptionTimes(long id, bool updateLastBatch, bool updateClientActivity, Transaction outerTransaction = null)
+        public unsafe void UpdateSubscriptionTimes(long id, 
+            bool updateLastBatch,
+            bool updateClientActivity)
         {
-            Transaction innerTransaction = outerTransaction;
-            if (outerTransaction == null)
-                innerTransaction = _environment.WriteTransaction();
-
-            try
+            using (var innerTransaction = _environment.WriteTransaction())
             {
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, innerTransaction);
                 var subscriptionId = Bits.SwapBytes(id);
-                var oldValue = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
+                var oldValue = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof (long)));
 
                 if (oldValue == null)
                     throw new ArgumentException($"Cannot update subscription with id {id}, because it was not found");
@@ -149,137 +132,14 @@ namespace Raven.Server.Documents
                     {&lastBatch}
                 };
                 table.Update(oldValue.Id, tvb);
-
-            }
-            finally
-            {
-                if (outerTransaction == null)
-                {
-                    innerTransaction.Commit();
-                    innerTransaction.Dispose();
-                }
-            }
-
-
-        }
-
-        private void ForceReleaseAndOpenForNewClient(long id, SubscriptionConnectionOptions options, Transaction tx)
-        {
-            ReleaseSubscription(id);
-            _openSubscriptions.TryAdd(id, options);
-            UpdateSubscriptionTimes(id, updateClientActivity: true, updateLastBatch: false, outerTransaction: tx);
-        }
-
-        private unsafe Tuple<BlittableJsonReaderObject, UnmanagedBuffersPool.AllocatedMemoryData>
-            AllocateReaderObjectCopy(BlittableJsonReaderObject subscriptionConnectionOptions)
-        {
-            var allocatedMemory = _subscriptionsContext.GetMemory(subscriptionConnectionOptions.Size);
-            subscriptionConnectionOptions.CopyTo((byte*)allocatedMemory.Address);
-            var readerObjectCopy = new BlittableJsonReaderObject((byte*)allocatedMemory.Address,
-                subscriptionConnectionOptions.Size, _subscriptionsContext);
-            return Tuple.Create(readerObjectCopy, allocatedMemory);
-        }
-
-        public unsafe void OpenSubscription(long id, BlittableJsonReaderObject connectionOptionsBlittable)
-        {
-            SizeLimitedConcurrentSet<string> releasedConnections;
-
-            SubscriptionOpeningStrategy subscriptionConnectionStrategy;
-
-            connectionOptionsBlittable.TryGet("Strategy", out subscriptionConnectionStrategy);
-
-            var connectionOptions = _subscriptionConnectionOptionsDeserializer(connectionOptionsBlittable);
-
-            var connectionId = connectionOptions.ConnectionId;
-
-            if (_forciblyReleasedSubscriptions.TryGetValue(id, out releasedConnections) &&
-                releasedConnections.Contains(connectionId))
-                throw new SubscriptionClosedException("Subscription " + id + " was forcibly released. Cannot reopen it.");
-
-
-            // if subscription is not opened, store subscription connection options and update subscription activity
-            if (_openSubscriptions.TryAdd(id, connectionOptions))
-            {
-                UpdateSubscriptionTimes(id, updateLastBatch: false, updateClientActivity: true);
-                return;
-            }
-
-            // check if there is already opened subscription connection with the same id
-            SubscriptionConnectionOptions existingOptions;
-
-            if (_openSubscriptions.TryGetValue(id, out existingOptions) == false)
-                throw new SubscriptionDoesNotExistException(
-                    "Didn't get existing open subscription while it's expected. Subscription id: " + id);
-
-            var existingOptionsConnectionId = existingOptions.ConnectionId;
-
-            if (existingOptionsConnectionId.Equals(connectionId, StringComparison.OrdinalIgnoreCase))
-            {
-                // reopen subscription on already existing connection - might happen after network connection problems the client tries to reopen
-                UpdateSubscriptionTimes(id, updateLastBatch: false, updateClientActivity: true);
-                return;
-            }
-
-            using (var tx = _environment.WriteTransaction())
-            {
-                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-                var subscriptionId = id;
-                var config = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
-                var now = SystemTime.UtcNow.Ticks;
-                int readSize;
-                var timeSinceBatchSentTicks = now -
-                                              *(long*)
-                                                      config.Read(Schema.SubscriptionTable.TimeOfSendingLastBatch,
-                                                          out readSize);
-
-                var acknowledgementTimeoutTicks = existingOptions.AcknowledgmentTimeout;
-                int tempSize;
-                var timeOfLastClientActivityTicks =
-                    *(long*)config.Read(Schema.SubscriptionTable.TimeOfLastActivityIndex, out tempSize);
-
-                var clientAliveNotificationTicks = existingOptions.ClientAliveNotificationInterval;
-
-                if (timeSinceBatchSentTicks > acknowledgementTimeoutTicks &&
-                    now - timeOfLastClientActivityTicks > clientAliveNotificationTicks * 3)
-                {
-                    // last connected client exceeded ACK timeout and didn't send at least two 'client-alive' notifications - let the requesting client to open it
-                    ForceReleaseAndOpenForNewClient(id, connectionOptions, tx);
-                    tx.Commit();
-                    return;
-                }
-
-                switch (connectionOptions.Strategy)
-                {
-                    case SubscriptionOpeningStrategy.TakeOver:
-                        var existingOptionsConnectionStrategy = existingOptions.Strategy;
-
-                        if (existingOptionsConnectionStrategy != SubscriptionOpeningStrategy.ForceAndKeep)
-                        {
-                            ForceReleaseAndOpenForNewClient(id, connectionOptions, tx);
-                            tx.Commit();
-                            return;
-                        }
-                        break;
-                    case SubscriptionOpeningStrategy.ForceAndKeep:
-                        ForceReleaseAndOpenForNewClient(id, connectionOptions, tx);
-                        tx.Commit();
-                        return;
-                }
-                throw new SubscriptionInUseException(
-                    "Subscription is already in use. There can be only a single open subscription connection per subscription.");
+                innerTransaction.Commit();
             }
         }
 
-        public void ReleaseSubscription(long id, bool forced = false)
+        public SubscriptionConnectionState OpenSubscription(SubscriptionConnectionOptions options)
         {
-            SubscriptionConnectionOptions options;
-            _openSubscriptions.TryRemove(id, out options);
-
-            if (forced && options != null)
-            {
-                _forciblyReleasedSubscriptions.GetOrAdd(id,
-                    new SizeLimitedConcurrentSet<string>(50, StringComparer.OrdinalIgnoreCase)).Add(options.ConnectionId);
-            }
+            return _subscriptionConnectionStates.GetOrAdd(options.SubscriptionId,
+                _ => new SubscriptionConnectionState(options));
         }
 
 
@@ -288,25 +148,14 @@ namespace Raven.Server.Documents
             using (var tx = _environment.WriteTransaction())
             {
                 var config = GetSubscriptionConfig(id, tx);
-                var options = GetSubscriptionOptions(id);
-
-                var acknoledgementTimeout = options.AcknowledgmentTimeout;
-
-                var tempSize = 0;
-                var timeSinceBatchSent = SystemTime.UtcNow.Ticks -
-                                         *
-                                             (long*)
-                                                 config.Read(Schema.SubscriptionTable.TimeOfSendingLastBatch,
-                                                     out tempSize); //config.TimeOfSendingLastBatch;
-                if (timeSinceBatchSent > acknoledgementTimeout)
-                    throw new TimeoutException(
-                        "The subscription cannot be acknowledged because the timeout has been reached.");
 
                 var subscriptionId = Bits.SwapBytes((ulong)id); ;
 
                 int oldCriteriaSize;
                 int longSizeForOutput;
                 var now = SystemTime.UtcNow.Ticks;
+
+                //todo: remove one of the time fields
                 var tvb = new TableValueBuilder
                 {
                     {(byte*)&subscriptionId, sizeof (long)},
@@ -322,71 +171,37 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void AssertOpenSubscriptionConnection(long id, string connection)
+        public void AssertSubscriptionExists(long id)
         {
-            SubscriptionConnectionOptions options;
-            if (_openSubscriptions.TryGetValue(id, out options) == false)
-                throw new SubscriptionClosedException("There is no subscription with id: " + id + " being opened");
-
-            if (options.ConnectionId.Equals(connection, StringComparison.OrdinalIgnoreCase) == false)
-            {
-                // prevent from concurrent work of multiple clients against the same subscription
-                throw new SubscriptionInUseException("Subscription is being opened for a different connection.");
-            }
-        }
-
-        public SubscriptionConnectionOptions GetSubscriptionOptions(long id)
-        {
-            SubscriptionConnectionOptions options;
-            if (_openSubscriptions.TryGetValue(id, out options) == false)
+            if (_subscriptionConnectionStates.ContainsKey(id) == false)
                 throw new SubscriptionClosedException("There is no open subscription with id: " + id);
-
-            return options;
         }
 
-        public unsafe SubscriptionCriteria GetCriteria(long id, DocumentsOperationContext context)
+        public unsafe void GetCriteriaAndEtag(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out long startEtag)
         {
             using (var tx = _environment.ReadTransaction())
             {
-                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-                var subscriptionId = Bits.SwapBytes((ulong)id);
-
-                var config = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
-
-                if (config == null)
-                    throw new SubscriptionDoesNotExistException(
-                        "There is no subscription configuration for specified identifier (id: " + id + ")");
+                var config = GetSubscriptionConfig(id, tx);
 
                 int criteriaSize;
                 var criteriaPtr = config.Read(Schema.SubscriptionTable.CriteriaIndex, out criteriaSize);
                 var criteriaBlittable = new BlittableJsonReaderObject(criteriaPtr, criteriaSize, context);
-                return _subscriptionCriteriaDeserializer(criteriaBlittable);
+                criteria = JsonDeserialization.SubscriptionCriteria(criteriaBlittable);
+                startEtag = *(long*)config.Read(Schema.SubscriptionTable.AckEtagIndex, out criteriaSize);
             }
         }
 
-        public unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx = null)
+        private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx = null)
         {
-            var localTx = tx ?? _environment.ReadTransaction();
-            try
-            {
-                var table = new Table(_subscriptionsSchema, Schema.SubsTree, localTx);
-                var subscriptionId = Bits.SwapBytes((ulong)id);
+            var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
+            var subscriptionId = Bits.SwapBytes((ulong)id);
 
-                var config = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
+            var config = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
 
-                if (config == null)
-                    throw new SubscriptionDoesNotExistException(
-                        "There is no subscription configuration for specified identifier (id: " + id + ")");
-                return config;
-            }
-            finally
-            {
-                if (tx == null)
-                {
-                    localTx.Commit();
-                    localTx.Dispose();
-                }
-            }
+            if (config == null)
+                throw new SubscriptionDoesNotExistException(
+                    "There is no subscription configuration for specified identifier (id: " + id + ")");
+            return config;
         }
 
         public unsafe void AssertSubscriptionConfigExists(long id)
@@ -402,21 +217,25 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe void DeleteSubscription(long id)
+
+        public void DeleteSubscription(long id)
         {
-            using (var tx = _environment.WriteTransaction())
+            SubscriptionConnectionState subscriptionConnectionState;
+            if (_subscriptionConnectionStates.TryRemove(id, out subscriptionConnectionState))
             {
-                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-                var subscriptionId = id;
-                var subscription = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
-                table.Delete(subscription.Id);
+                subscriptionConnectionState.EndConnection();
+            }
 
-                SizeLimitedConcurrentSet<string> temp;
-                _forciblyReleasedSubscriptions.TryRemove(id, out temp);
-                SubscriptionConnectionOptions subscriptionConnectionOptions;
-                _openSubscriptions.TryRemove(id, out subscriptionConnectionOptions);
-
-                tx.Commit();
+            unsafe
+            {
+                using (var tx = _environment.WriteTransaction())
+                {
+                    var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
+                    var subscriptionId = id;
+                    var subscription = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
+                    table.Delete(subscription.Id);
+                    tx.Commit();
+                }
             }
         }
 
@@ -460,9 +279,16 @@ namespace Raven.Server.Documents
                     {
                         int longSize;
                         var subscriptionId = *(long*)subscriptionForKey.Read(0, out longSize);
-                        SubscriptionConnectionOptions options;
-                        _openSubscriptions.TryGetValue(subscriptionId, out options);
-                        subscriptions.Add(options);
+                        SubscriptionConnectionState connectionState;
+
+                        if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out connectionState))
+                        {
+                            var options = connectionState.Connection;
+                            if (options != null)
+                            {
+                                subscriptions.Add(connectionState.Connection);
+                            }
+                        }
                     }
                 }
 

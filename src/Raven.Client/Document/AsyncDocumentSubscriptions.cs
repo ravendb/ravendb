@@ -73,55 +73,19 @@ namespace Raven.Client.Document
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
 
-
-
-            if (options.MaxSize.HasValue && options.MaxSize.Value < 16 * 1024)
+            if (options.MaxBatchSize.HasValue && options.MaxBatchSize.Value < 16 * 1024)
                 throw new InvalidOperationException("Max size value of batch options cannot be lower than that 16 KB");
 
             var commands = database == null
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-            var open = true;
-
-            try
-            {
-                await SendOpenSubscriptionRequest(commands, id, options).ConfigureAwait(false);
-            }
-            catch (SubscriptionException subscriptionException)
-            {
-                if (options.Strategy != SubscriptionOpeningStrategy.WaitForFree || (subscriptionException is SubscriptionInUseException) == false)
-                    throw;
-
-                open = false;
-            }
-
             var subscription = new Subscription<T>(id, database ?? MultiDatabase.GetDatabaseName(documentStore.Url), options, commands,
-                documentStore.Conventions, open, () => SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
+                documentStore.Conventions); // to ensure that subscription is open try to call it with the same connection id
 
             subscriptions.Add(subscription);
 
             return subscription;
-        }
-
-        private static async Task SendOpenSubscriptionRequest(IAsyncDatabaseCommands commands, long id, SubscriptionConnectionOptions options)
-        {
-            using (var request = commands.CreateRequest(string.Format("/subscriptions/open?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Post))
-            {
-                try
-                {
-                    await request.WriteAsync(RavenJObject.FromObject(options)).ConfigureAwait(false);
-                    await request.ExecuteRequestAsync().ConfigureAwait(false);
-                }
-                catch (ErrorResponseException e)
-                {
-                    SubscriptionException subscriptionException;
-                    if (TryGetSubscriptionException(e, out subscriptionException))
-                        throw subscriptionException;
-
-                    throw;
-                }
-            }
         }
 
         public async Task<List<SubscriptionConfig>> GetSubscriptionsAsync(int start, int take, string database = null)

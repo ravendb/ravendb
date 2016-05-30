@@ -12,26 +12,35 @@ namespace Raven.Abstractions.Data
 {
     public class SubscriptionConnectionOptions
     {
-        private static int connectionCounter;
+        private static int _connectionCounter;
+        private string _connectionId;
+        public long SubscriptionId { get; set; }
 
         public SubscriptionConnectionOptions()
         {
-            ConnectionId = Interlocked.Increment(ref connectionCounter) + "/" + Base62Util.Base62Random();
-            _clientAliveNotificationInterval = TimeSpan.FromMinutes(2);
-            ClientAliveNotificationInterval = _clientAliveNotificationInterval.Ticks;
             _timeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(15);
             TimeToWaitBeforeConnectionRetry = _timeToWaitBeforeConnectionRetry.Ticks;
-            _pullingRequestTimeout = TimeSpan.FromMinutes(5);
-            PullingRequestTimeout = _pullingRequestTimeout.Ticks;
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
-            MaxDocCount = 4096;
-            AcknowledgmentTimeout = TimeSpan.FromMinutes(1).Ticks;
-
+            MaxDocsPerBatch = 4096;
         }
 
-        public string ConnectionId { get; private set; }
+        public string ConnectionId
+        {
+            get
+            {
+                if (_connectionId == null)
+                {
+                    _connectionId = Interlocked.Increment(ref _connectionCounter) + "/" + Base62Util.Base62Random();
+                }
+                return _connectionId;
+            }
+            set { _connectionId = value; }
+        }
 
         private TimeSpan _timeToWaitBeforeConnectionRetry;
+
+        [JsonIgnore] public CancellationTokenSource CancellationTokenSource;
+        [JsonIgnore] public IDisposable DisposeOnDisconnect;
 
         [JsonIgnore]
         public TimeSpan TimeToWaitBeforeConnectionRetryTimespan
@@ -48,42 +57,13 @@ namespace Raven.Abstractions.Data
 
         public long ClientAliveNotificationInterval { get; set; }
 
-        private TimeSpan _clientAliveNotificationInterval;
-        [JsonIgnore]
-        public TimeSpan ClientAliveNotificationIntervalTimespan
-        {
-            get
-            {
-                if (_clientAliveNotificationInterval.Ticks != ClientAliveNotificationInterval)
-                    _clientAliveNotificationInterval = new TimeSpan(ClientAliveNotificationInterval);
-                return _clientAliveNotificationInterval;
-            }
-        }
-
-        public long PullingRequestTimeout { get; set; }
-
-        private TimeSpan _pullingRequestTimeout;
-
-        [JsonIgnore]
-        public TimeSpan PullingRequestTimeoutTimespan
-        {
-            get
-            {
-                if (_pullingRequestTimeout.Ticks != PullingRequestTimeout)
-                    _pullingRequestTimeout = new TimeSpan(PullingRequestTimeout);
-                return _pullingRequestTimeout;
-            }
-        }
-
         public bool IgnoreSubscribersErrors { get; set; }
 
         public SubscriptionOpeningStrategy Strategy { get; set; }
 
-        public int? MaxSize { get; set; }
+        public int? MaxBatchSize { get; set; }
 
-        public int MaxDocCount { get; set; }
-
-        public long AcknowledgmentTimeout { get; set; }
+        public int MaxDocsPerBatch { get; set; }
     }
 
     public class SubscriptionBatchOptions
