@@ -223,7 +223,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="incrementalBackupInterval" class="col-sm-4 control-label">Incremental Backup Interval:</label>
+                            <label for="incrementalBackupInterval" class="col-sm-4 control-label">Incremental Export Interval:</label>
                             <div class="col-sm-1">
                                 <input id="incrementalBackupInterval" required type="number" class="form-control" min="0" data-bind="enable: $root.usingGlobal() == false, numericValue: incrementalBackupInterval, valueUpdate: 'afterkeydown'" />
                             </div>
@@ -238,7 +238,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="fullBackupInterval" class="col-sm-4 control-label">Full Backup Interval:</label>
+                            <label for="fullBackupInterval" class="col-sm-4 control-label">Full Export Interval:</label>
                             <div class="col-sm-1">
                                 <input id="fullBackupInterval" required type="number" class="form-control" min="0" data-bind="enable: $root.usingGlobal() == false, numericValue: fullBackupInterval, valueUpdate: 'afterkeydown'" />
                             </div>
