@@ -281,6 +281,7 @@ namespace Raven.Client.Document
                             break;
                         if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(30))
                         {
+                            // TODO: Waited to much for close msg from server in bulk insert.. can happen in huge bulk insert ratios.
                             throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
                         }
                     }
