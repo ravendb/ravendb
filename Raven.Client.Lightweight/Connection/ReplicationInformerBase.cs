@@ -222,14 +222,14 @@ namespace Raven.Client.Connection
             switch (Conventions.FailoverBehaviorWithoutFlags)
             {
                 case FailoverBehavior.AllowReadsFromSecondaries:
-                    if (method == "GET")
+                    if (method == "GET" || method == "HEAD")
                         return;
                     break;
                 case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
                     return;
                 case FailoverBehavior.FailImmediately:
                     var allowReadFromAllServers = Conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-                    if (allowReadFromAllServers && method == "GET")
+                    if (allowReadFromAllServers && (method == "GET" || method == "HEAD"))
                         return;
                     break;
             }
