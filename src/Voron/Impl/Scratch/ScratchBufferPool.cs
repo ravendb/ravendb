@@ -359,5 +359,10 @@ namespace Voron.Impl.Scratch
             var item = _scratchBuffers[value.ScratchFileNumber];
             item.File.BreakLargeAllocationToSeparatePages(value);
         }
+
+        public long GetAvailablePagesCount()
+        {
+            return _current.File.NumberOfAllocatedPages - _current.File.AllocatedPagesUsedSize;
+        }
     }
 }

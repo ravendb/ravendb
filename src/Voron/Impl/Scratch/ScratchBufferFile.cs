@@ -50,6 +50,10 @@ namespace Voron.Impl.Scratch
 
         public long Size => _scratchPager.NumberOfAllocatedPages * _scratchPager.PageSize;
 
+        public long NumberOfAllocatedPages => _scratchPager.NumberOfAllocatedPages;
+
+        public long AllocatedPagesUsedSize => _allocatedPagesUsedSize;
+
         public long SizeAfterAllocation(long sizeToAllocate)
         {
             return (_lastUsedPage + sizeToAllocate) * _scratchPager.PageSize;
@@ -214,13 +218,16 @@ namespace Voron.Impl.Scratch
         {
             long result = _allocatedPagesUsedSize;
 
-            var keys = _freePagesByTransaction.Keys;
-            var values = _freePagesByTransaction.Values;
-            for (int i = 0; i < keys.Count; i++ )
+            if (oldestActiveTransaction != 0)
             {
-                if (keys[i] < oldestActiveTransaction)
-                    break;
-                result += values[i];
+                var keys = _freePagesByTransaction.Keys;
+                var values = _freePagesByTransaction.Values;
+                for (int i = 0; i < keys.Count; i++)
+                {
+                    if (keys[i] < oldestActiveTransaction)
+                        break;
+                    result += values[i];
+                }
             }
 
             return result * _scratchPager.PageSize;

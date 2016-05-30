@@ -856,7 +856,7 @@ namespace Voron.Impl.Journal
                 CurrentFile = NextFile(pages.Length);
             }
 
-            CurrentFile.Write(tx, pages, _lazyTransactionBuffer);
+            CurrentFile.Write(tx, pages, _lazyTransactionBuffer, pageCount);
 
             if (CurrentFile.AvailablePages == 0)
             {
