@@ -37,7 +37,7 @@ Requirements:
 - TypeScript 1.5
 - WiX Toolset 3.7 or higher
 
-The easiest way to build is to execute `build.cmd` or `quick.ps1`. Just ensure that you can execute PowerShell scripts, if you can't then you might want to execute `Set-ExecutionPolicy Unrestricted` in PowerShell as an Administrator
+The easiest way to build is to execute `build.cmd` or `quick.ps1`. Just ensure that you can execute PowerShell scripts, if you can't then you might want to execute `Set-ExecutionPolicy Unrestricted` in PowerShell as an Administrator.
 
 Want to contribute?
 -------------------
