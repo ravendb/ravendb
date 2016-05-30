@@ -433,9 +433,9 @@ namespace Voron.Impl.Journal
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
                 bool lockTaken = false;
-
                 try
                 {
+                    _waj._env.IsFlushingScratchBuffer = true;
                     Monitor.TryEnter(_flushingLock, Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30), ref lockTaken);
 
                     if (lockTaken == false)
@@ -591,6 +591,7 @@ namespace Voron.Impl.Journal
                 {
                     if(lockTaken)
                         Monitor.Exit(_flushingLock);
+                    _waj._env.IsFlushingScratchBuffer = false;
                 }
             }
 
