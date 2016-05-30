@@ -178,6 +178,7 @@ namespace Raven.Client.Connection
                 if (document == null)
                 {
                     LastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+                    ReplicationDestinations.Clear(); // clear destinations that could be retrieved from local storage
                     return;
                 }
 
