@@ -1096,46 +1096,48 @@ namespace Raven.Client.FileSystem
                 this.client = client;
             }
 
-            public Task<SynchronizationDestination[]> GetDestinationsAsync()
+            public async Task<SynchronizationDestination[]> GetDestinationsAsync()
             {
-                return client.ExecuteWithReplication(HttpMethods.Get, async operation =>
+                var requestUriString = BaseUrl + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
+
+                using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Get, Credentials, convention)).AddOperationHeaders(OperationsHeaders))
                 {
-                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
-                    using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Get, operation.Credentials, convention)).AddOperationHeaders(OperationsHeaders))
+                    try
                     {
-                        try
-                        {
-                            var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                            var rawDestinations = (RavenJArray)response["Destinations"];
-                            return rawDestinations.JsonDeserialization<SynchronizationDestination>();
-                        }
-                        catch (Exception e)
-                        {
-                            throw e.SimplifyException();
-                        }
+                        var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                        var rawDestinations = (RavenJArray)response["Destinations"];
+                        return rawDestinations.JsonDeserialization<SynchronizationDestination>();
                     }
-                });
+                    catch (Exception e)
+                    {
+                        var responseException = e as ErrorResponseException;
+                        if (responseException == null)
+                            throw e.SimplifyException();
+
+                        if (responseException.StatusCode == HttpStatusCode.NotFound)
+                            return null;
+
+                        throw responseException;
+                    }
+                }
             }
 
             public Task SetDestinationsAsync(params SynchronizationDestination[] destinations)
             {
-                return client.ExecuteWithReplication(HttpMethods.Put, async operation =>
+                var requestUriString = BaseUrl + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
+                using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, Credentials, convention)).AddOperationHeaders(OperationsHeaders))
                 {
-                    var requestUriString = operation.Url + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations);
-                    using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethod.Put, operation.Credentials, convention)).AddOperationHeaders(OperationsHeaders))
-                    {
-                        var data = new { Destinations = destinations };
+                    var data = new { Destinations = destinations };
 
-                        try
-                        {
-                            await request.WriteWithObjectAsync(data).ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            throw e.SimplifyException();
-                        }
+                    try
+                    {
+                        return request.WriteWithObjectAsync(data);
                     }
-                });
+                    catch (Exception e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                }
             }
 
             public async Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25)
