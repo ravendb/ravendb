@@ -6,16 +6,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
-using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Sparrow.Collections;
@@ -222,7 +221,14 @@ namespace Raven.Client.Document
                 tasks.Add(subscription.DisposeAsync());
             }
 
-            Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
+            try
+            {
+                Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
+            }
+            catch (AggregateException ae)
+            {
+                throw new InvalidOperationException("Failed to dispose active data subscriptions", ae.ExtractSingleInnerException());
+            }
         }
     }
 }
