@@ -160,7 +160,7 @@ namespace Voron.Impl.Journal
                 // non lazy tx will add itself to the buffer and then flush scratch to journal
                 if (tx.IsLazyTransaction == false)
                 {
-                    lazyTransactionScratch.WriteBufferToFile(this);
+                    lazyTransactionScratch.WriteBufferToFile(this, tx);
                 }
                 else 
                 {

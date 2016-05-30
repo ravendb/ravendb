@@ -323,7 +323,7 @@ namespace Voron.Impl.Journal
             // we cannot dispose the journal until we are done with all of the pending writes
             if (_lazyTransactionBuffer != null)
             {
-                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer.WriteBufferToFile(CurrentFile, null);
                 _lazyTransactionBuffer.Dispose();
             }
             _compressionPager.Dispose();
@@ -852,7 +852,7 @@ namespace Voron.Impl.Journal
 
             if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
             {
-                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                 CurrentFile = NextFile(pages.Length);
             }
 
@@ -860,7 +860,7 @@ namespace Voron.Impl.Journal
 
             if (CurrentFile.AvailablePages == 0)
             {
-                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile);
+                _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                 CurrentFile = null;
             }
         }

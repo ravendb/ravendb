@@ -49,13 +49,16 @@ namespace Voron.Impl.Journal
             _readTransaction = tx.Environment.NewLowLevelTransaction(TransactionFlags.Read);
         }
 
-        public void WriteBufferToFile(JournalFile journalFile)
+        public void WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)
         {
             if (_firstPositionInJournalFile != null)
             {
                 journalFile.WriteBuffer(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),
                     _lastUsedPage * _options.DataPager.PageSize);
             }
+
+            if (tx != null)
+                tx.IsLazyTransaction = false;// so it will notify the flush thread it has work to do
 
             _readTransaction?.Dispose();
             _firstPositionInJournalFile = null;
