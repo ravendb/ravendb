@@ -59,6 +59,8 @@ namespace Raven.Server.Documents
 
         public DocumentsStorage DocumentsStorage { get; private set; }
 
+        public BundleLoader BundleLoader { get; private set; }
+
         public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
 
         public DocumentsNotifications Notifications { get; }
@@ -91,6 +93,7 @@ namespace Raven.Server.Documents
             DocumentReplicationLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
+            BundleLoader = new BundleLoader(this);
 
             try
             {
@@ -125,6 +128,12 @@ namespace Raven.Server.Documents
             {
                 IndexStore?.Dispose();
                 IndexStore = null;
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                BundleLoader?.Dispose();
+                BundleLoader = null;
             });
 
             exceptionAggregator.Execute(() =>
