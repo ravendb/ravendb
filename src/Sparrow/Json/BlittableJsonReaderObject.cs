@@ -242,7 +242,7 @@ namespace Sparrow.Json
             {
                 obj = default(T);
             }
-            if (result is T)
+            else if (result is T)
             {
                 obj = (T) result;
             }
@@ -276,18 +276,26 @@ namespace Sparrow.Json
                 str = null;
                 return false;
             }
+            return ChangeTypeToString(result, out str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ChangeTypeToString(object result, out string str)
+        {
             var lazyCompressedStringValue = result as LazyCompressedStringValue;
             if (lazyCompressedStringValue != null)
             {
                 str = lazyCompressedStringValue;
                 return true;
             }
+
             var lazyStringValue = result as LazyStringValue;
             if (lazyStringValue != null)
             {
                 str = lazyStringValue;
                 return true;
             }
+
             str = null;
             return false;
         }

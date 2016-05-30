@@ -17,21 +17,21 @@ namespace Raven.Abstractions.Data
             {
             }
 
-            public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
+        public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 
-            public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
+        public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 
-            public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
+        public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
-            public const string RavenShardId = "Raven-Shard-Id";
+        public const string RavenShardId = "Raven-Shard-Id";
+        
+        public const string LastModified = "Last-Modified";
 
-            public const string LastModified = "Last-Modified";
+        public const string CreationDate = "Creation-Date";
 
-            public const string CreationDate = "Creation-Date";
+        public const string RavenCreationDate = "Raven-Creation-Date";
 
-            public const string RavenCreationDate = "Raven-Creation-Date";
-
-            public const string RavenLastModified = "Raven-Last-Modified";
+        public const string RavenLastModified = "Raven-Last-Modified";
 
             public const string TemporaryScoreValue = "Temp-Index-Score";
 
@@ -197,13 +197,10 @@ namespace Raven.Abstractions.Data
         public const double EarthMeanRadiusKm = 6371.0087714;
 
         public const double MilesToKm = 1.60934;
-        
-        //Versioning
-
 
         public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 
-       
+
 
         /// <summary>
         /// if no encoding information in headers of incoming request, this encoding is assumed
@@ -275,9 +272,11 @@ namespace Raven.Abstractions.Data
 
         public class Versioning
         {
-            public const string RavenVersioningPrefix = "Raven/Versioning/";
+            public const string RavenVersioningConfiguration = "Raven/Versioning/Configuration";
 
-            public const string RavenVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+            public const string RavenEnableVersioning = "Raven-Enable-Versioning";
+
+            public const string RavenDisableVersioning = "Raven-Disable-Versioning";
         }
 
         public class DocumentReplication
@@ -346,4 +345,11 @@ namespace Raven.Abstractions.Data
         }
 
         public const string RequestFailedExceptionMarker = "ExceptionRequestFailed";
+
+        public class Expiration
+        {
+            public const string RavenExpirationConfiguration = "Raven/Expiration/Configuration";
+
+            public const string RavenExpirationDate = "Raven-Expiration-Date";
+        }
     }}

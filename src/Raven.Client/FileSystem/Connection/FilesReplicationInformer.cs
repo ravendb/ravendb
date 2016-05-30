@@ -99,15 +99,16 @@ namespace Raven.Client.FileSystem.Connection
 
                 try
                 {
-                    var config = serverClient.Configuration.GetKeyAsync<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
+                    var destinations = serverClient.Synchronization.GetDestinationsAsync().Result;
 
                     FailureCounters.FailureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
-                    if (config != null)
+                    if (destinations != null)
                     {
-                        var destinationsArray = config.Value<RavenJArray>("Destinations");
-                        if (destinationsArray != null)
-                            document = new JsonDocument { DataAsJson = new RavenJObject() { { "Destinations", destinationsArray } } };
+                        document = new JsonDocument
+                        {
+                            DataAsJson = new RavenJObject {{"Destinations", RavenJToken.FromObject(destinations)}}
+                        };
                     }
                 }
                 catch (Exception e)
@@ -119,6 +120,7 @@ namespace Raven.Client.FileSystem.Connection
                 if (document == null)
                 {
                     lastReplicationUpdate = SystemTime.UtcNow;
+                    ReplicationDestinations.Clear(); // clear destinations that could be retrieved from local storage
                     return;
                 }
 
@@ -158,6 +160,9 @@ namespace Raven.Client.FileSystem.Connection
             var destinations = document.DataAsJson.Value<RavenJArray>("Destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
             ReplicationDestinations = destinations.Select(x =>
             {
+                if (string.IsNullOrEmpty(x.Url) || x.Enabled == false)
+                    return null;
+
                 ICredentials credentials = null;
                 if (string.IsNullOrEmpty(x.Username) == false)
                 {

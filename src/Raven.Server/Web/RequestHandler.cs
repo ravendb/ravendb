@@ -240,7 +240,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse query string '{name}' as date");
         }
 
-        protected StringValues GetQueryStringValueAndAssertIfSingleAndNotEmpty(string name)
+        protected string GetQueryStringValueAndAssertIfSingleAndNotEmpty(string name)
         {
             var values = HttpContext.Request.Query[name];
             if (values.Count != 1)
@@ -248,7 +248,7 @@ namespace Raven.Server.Web
             if (string.IsNullOrWhiteSpace(values[0]))
                 throw new ArgumentException($"Query string value '{name}' must have a non empty value");
 
-            return values;
+            return values[0];
         }
 
         protected DisposableAction TrackRequestTime()

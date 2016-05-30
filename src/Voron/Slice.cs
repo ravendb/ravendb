@@ -63,17 +63,23 @@ namespace Voron
         }
 
         public Slice(Slice other, ushort size) 
-            : this( other.Options, size, size )
+            : this(other.Options, size, size )
         {
             Array = other.Array;
             Pointer = other.Pointer;
         }
 
         public Slice(byte[] key, ushort size) 
-            : this( SliceOptions.Key, size, size )
+            : this(SliceOptions.Key, size, size )
         {
             Debug.Assert(key != null);
             Array = key;
+        }
+
+        public Slice(ulong* ptr):
+            this((byte*)ptr, sizeof(ulong))
+        {
+            
         }
 
         public Slice(TreeNodeHeader* node)
@@ -82,7 +88,7 @@ namespace Voron
             SetInline(this, node);
         }
 
-        public Slice(string key)
+        public Slice(string key) //todo: fix allocation
             : this(Encoding.UTF8.GetBytes(key))
         { }
 
@@ -128,7 +134,7 @@ namespace Voron
                     throw new ArgumentOutOfRangeException(nameof(index));
 
                 return *(Pointer + (sizeof (byte)*index));
-            }			
+            }
         }
 
         public override string ToString()
@@ -240,6 +246,7 @@ namespace Voron
 
         public static implicit operator Slice(string s)
         {
+            // TODO: Fix allocation
             return new Slice(Encoding.UTF8.GetBytes(s));
         }
 
