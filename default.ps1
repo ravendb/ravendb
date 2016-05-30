@@ -104,6 +104,7 @@ task CompileHtml5 {
     exec { & $tools_dir\Pvc\pvc.exe optimized-build }
     
     Copy-Item $base_dir\Raven.Studio.Html5\optimized-build $build_dir\Html5 -Recurse
+    Copy-Item $base_dir\Raven.Studio.Html5\favicon.ico $build_dir\Html5
     Copy-Item $base_dir\Raven.Studio.Html5\fonts $build_dir\Html5 -Recurse -Force
     Copy-Item $base_dir\Raven.Studio.Html5\Content $build_dir\Html5 -Recurse -Force
     
