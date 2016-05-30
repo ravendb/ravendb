@@ -268,6 +268,9 @@ namespace Raven.Client.Document
             if (Subscriptions != null)
                 Subscriptions.Dispose();
 
+            if (AsyncSubscriptions != null)
+                AsyncSubscriptions.Dispose();
+
             // if this is still going, we continue with disposal, it is for grace only, anyway
 
             if (jsonRequestFactory != null)
