@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -102,7 +103,7 @@ namespace Voron.Trees
                 // sequential inserts, at that point, we are going to keep the current page as is and create a new 
                 // page, this will allow us to do minimal amount of work to get the best density
 
-                Page _;
+                Page branchOfSeparator;
 
                 byte* pos;
                 if (_page.IsBranch)
@@ -118,19 +119,24 @@ namespace Voron.Trees
 
                         var separatorKey = _page.GetNodeKey(node);
 
-                        AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, true, out _);
+                        AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
 
                         _page.RemoveNode(_page.NumberOfEntries - 1);
                     }
                     else
                     {
                         _tree.FreePage(rightPage); // return the unnecessary right page
-                        return AddSeparatorToParentPage(_pageNumber, _newKey, false, out _);
+                        pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
+
+                        if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
+                            _cursor.Push(branchOfSeparator);
+
+                        return pos;
                     }
                 }
                 else
                 {
-                    AddSeparatorToParentPage(rightPage.PageNumber, _newKey, true, out _);
+                    AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
                     pos = AddNodeToPage(rightPage, 0);
                 }
                 _cursor.Push(rightPage);
@@ -208,7 +214,7 @@ namespace Voron.Trees
             }
 
             Page parentOfRight;
-            AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, toRight, out parentOfRight);
+            AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
 
             MemorySlice instance = _page.CreateNewEmptyKey();
 
@@ -338,7 +344,7 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private byte* AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey, bool toRight, out Page parent)
+        private byte* AddSeparatorToParentPage(long pageRefNumber, MemorySlice seperatorKey, out Page parentOfPageRef)
         {
             var pos = _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
 
@@ -346,31 +352,47 @@ namespace Voron.Trees
 
             if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
             {
-                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
+                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageRefNumber, NodeFlags.PageRef,
                     0, _cursor, _treeState);
 
                 var posToInsert = pageSplitter.Execute();
                 
-                if (toRight == false && _cursor.CurrentPage.PageNumber != _parentPage.PageNumber)
-                {
-                    // _newKey being added to _page wasn't meant to be inserted to a newly created right page
-                    // however the above page split has modified the cursor that its first page is a parent page for the right page containing separator key
-                    // we need to ensure that the current _parentPage is first at the cursor 
+                parentOfPageRef = _cursor.CurrentPage;
 
-                    parent = _cursor.Pop();
+                var adjustParentPageOnCursor = true;
+
+                for (int i = 0; i < _cursor.CurrentPage.NumberOfEntries; i++)
+                {
+                    if (_cursor.CurrentPage.GetNode(i)->PageNumber == _page.PageNumber)
+                    {
+                        adjustParentPageOnCursor = false;
+                        break;
+                    }
+                }
+
+                if (adjustParentPageOnCursor)
+                {
+                    // the above page split has modified the cursor that its first page points to the parent of the leaf where 'separatorKey' was inserted
+                    // and it doesn't have the reference to _page, we need to ensure that the actual parent is first at the cursor
+
+                    _cursor.Pop();
                     _cursor.Push(_parentPage);
                 }
-                else
-                {
-                    parent = _parentPage;
-                }
 
+#if VALIDATE
+                Debug.Assert(Enumerable.Range(0, _cursor.CurrentPage.NumberOfEntries).Any(i => _cursor.CurrentPage.GetNode(i)->PageNumber == _page.PageNumber), 
+                            "The parent page is not referencing a page which is being split");
+
+                var parentToValidate = parentOfPageRef;
+                Debug.Assert(Enumerable.Range(0, parentToValidate.NumberOfEntries).Any(i => parentToValidate.GetNode(i)->PageNumber == pageRefNumber),
+                            "The parent page of a page reference isn't referencing it");
+#endif
                 return posToInsert;
             }
 
-            parent = _parentPage;
+            parentOfPageRef = _parentPage;
 
-            return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageNumber);
+            return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageRefNumber);
         }
 
         private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool toRight)
