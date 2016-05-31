@@ -129,6 +129,8 @@ namespace Raven.Database.Impl
                         {
                             while (batchCount < batchSize && enumerator.MoveNext())
                             {
+                                token.ThrowIfCancellationRequested();
+
                                 batchCount++;
                                 operations++;
 
