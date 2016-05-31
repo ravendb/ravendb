@@ -75,6 +75,7 @@ namespace Voron.Tests.Bugs
         [InlineData(1)]
         [InlineData(3)]
         [InlineData(103)]
+        [InlineData(4001)]
         public void ShouldHaveEnoughSpaceWhenSplittingPageInHalf(int seed)
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
