@@ -1,9 +1,10 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Linq;
+
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Linq;
 
-namespace Raven.Server.Documents.Indexes.Static
+namespace Raven.Server.Documents.Indexes.Static.Roslyn
 {
     public static class RoslynHelper
     {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,8 +13,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-using Raven.Abstractions.Exceptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Indexes.Static.Roslyn;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -120,19 +122,14 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var expression = SyntaxFactory.ParseExpression(map);
                 var queryExpression = expression as QueryExpressionSyntax;
-                if (queryExpression == null)
-                    throw new InvalidOperationException();
+                if (queryExpression != null)
+                    return HandleSyntaxInMap(new QuerySyntaxMapRewriter(), queryExpression);
 
-                var mapRewriter = new MapRewriter();
-                queryExpression = (QueryExpressionSyntax)mapRewriter.Visit(queryExpression);
+                var invocationExpression = expression as InvocationExpressionSyntax;
+                if (invocationExpression != null)
+                    return HandleSyntaxInMap(new MethodSyntaxMapRewriter(), invocationExpression);
 
-                var collectionName = mapRewriter.CollectionName;
-                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
-                var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), queryExpression);
-
-                return RoslynHelper.This("AddMap") // this.AddMap("Users", docs => from doc in docs ... )
-                    .Invoke(collection, indexingFunction)
-                    .AsExpressionStatement();
+                throw new InvalidOperationException("Not supported expression type.");
             }
             catch (Exception ex)
             {
@@ -144,32 +141,22 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        private static StatementSyntax HandleSyntaxInMap(MapRewriter mapRewriter, ExpressionSyntax expression)
+        {
+            var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
+            if (string.IsNullOrWhiteSpace(mapRewriter.CollectionName))
+                throw new InvalidOperationException("Could not extract collection name from expression");
+
+            var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(mapRewriter.CollectionName));
+            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
+
+            return RoslynHelper.This("AddMap") // this.AddMap("Users", docs => from doc in docs ... )
+                .Invoke(collection, indexingFunction).AsExpressionStatement();
+        }
+
         private static string GetCSharpSafeName(IndexDefinition definition)
         {
             return $"Index_{Regex.Replace(definition.Name, @"[^\w\d]", "_")}";
-        }
-    }
-
-    internal class MapRewriter : CSharpSyntaxRewriter
-    {
-        public string CollectionName;
-
-        public override SyntaxNode VisitFromClause(FromClauseSyntax node)
-        {
-            if (CollectionName != null)
-                return node;
-
-            var docsExpression = node.Expression as MemberAccessExpressionSyntax;
-            if (docsExpression == null)
-                return node;
-
-            var docsIdentifier = docsExpression.Expression as IdentifierNameSyntax;
-            if (string.Equals(docsIdentifier?.Identifier.Text, "docs", StringComparison.OrdinalIgnoreCase) == false)
-                return node;
-
-            CollectionName = docsExpression.Name.Identifier.Text;
-
-            return node.WithExpression(docsExpression.Expression);
         }
     }
 }

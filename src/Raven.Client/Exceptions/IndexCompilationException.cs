@@ -1,10 +1,9 @@
 using System;
-using System.Runtime.Serialization;
+
 using Raven.Abstractions.Extensions;
 
-namespace Raven.Abstractions.Exceptions
+namespace Raven.Client.Exceptions
 {
-
     public class IndexCompilationException : Exception
     {
      

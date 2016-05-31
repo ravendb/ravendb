@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 
 namespace Raven.Client.Indexes
