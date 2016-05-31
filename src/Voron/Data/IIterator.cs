@@ -11,6 +11,7 @@ namespace Voron.Data
         Slice MaxKey { get; set; }
         bool MoveNext();
         bool MovePrev();
+        bool DeleteCurrentAndMoveNext();
         bool Skip(int count);
         ValueReader CreateReaderForCurrent();
 

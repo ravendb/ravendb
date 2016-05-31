@@ -290,7 +290,7 @@ namespace Voron.Data.BTrees
             return nestedPage.NumberOfEntries;
         }
 
-        public IIterator MultiRead(Slice key)
+        public IIterator MultiRead(Slice key, bool allowWrites = false)
         {
             TreeNodeHeader* node;
             var page = FindPageFor(key, out node);
@@ -312,9 +312,16 @@ namespace Voron.Data.BTrees
                 return tree.Iterate();
             }
 
-            var nestedPage = new TreePage(TreeNodeHeader.DirectAccess(_llt, node), "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, node));
+            var ptr = TreeNodeHeader.DirectAccess(_llt, node);
+            var dataSize = (ushort)TreeNodeHeader.GetDataSize(_llt, node);
+            if (allowWrites)
+            {
+                ptr = DirectAdd(key, dataSize);//make sure that the memory we pass is writable
+                key = key.Clone(); // ensure that we won't have a key that is going to be modified
+            }
+            var nestedPage = new TreePage(ptr, "multi tree", dataSize);
                 
-            return new TreePageIterator(nestedPage);
+            return new TreePageIterator(key ,this, nestedPage, allowWrites);
         }
 
         private Tree OpenMultiValueTree(Slice key, TreeNodeHeader* item)
