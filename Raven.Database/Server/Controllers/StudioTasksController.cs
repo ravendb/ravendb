@@ -154,6 +154,8 @@ for(var customFunction in customFunctions) {{
             var status = new ImportOperationStatus();
             var cts = new CancellationTokenSource();
             var user = CurrentOperationContext.User.Value;
+            if (user == null)
+                user = RequestContext.Principal;
             var requestDisposables = CurrentOperationContext.RequestDisposables.Value;
             var headers = CurrentOperationContext.Headers.Value;
             var task = Task.Run(async () =>

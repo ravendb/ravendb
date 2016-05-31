@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Controllers
             }
 
             var sp = Stopwatch.StartNew();
-
+            controllerContext.RequestContext.Principal = CurrentOperationContext.User.Value;
             var result = await base.ExecuteAsync(controllerContext, cancellationToken);
             sp.Stop();
             AddRavenHeader(result, sp);
