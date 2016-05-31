@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        public unsafe void TimerCallback(object state)
+        public void TimerCallback(object state)
         {
             if (_database.DatabaseShutdown.IsCancellationRequested)
                 return;
@@ -86,13 +86,13 @@ namespace Raven.Server.Documents.Expiration
 
                 var currentTicks = SystemTime.UtcNow.Ticks;
                 int count = 0;
-                bool foundStuffToDelete = true;
+                bool exitWriteTransactionAndContinueAgain = true;
                 DocumentsOperationContext context;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
-                    while (foundStuffToDelete)
+                    while (exitWriteTransactionAndContinueAgain)
                     {
-                        foundStuffToDelete = false;
+                        exitWriteTransactionAndContinueAgain = false;
 
                         var sp = Stopwatch.StartNew();
                         using (var tx = context.OpenWriteTransaction())
@@ -103,33 +103,44 @@ namespace Raven.Server.Documents.Expiration
                                 if (it.Seek(Slice.BeforeAllKeys) == false)
                                     return;
 
-                                while (it.CurrentKey.CreateReader().ReadBigEndianInt64() < currentTicks
-                                    && sp.ElapsedMilliseconds < 150)
+                                while (it.CurrentKey.CreateReader().ReadBigEndianInt64() < currentTicks)
                                 {
                                     using (var multiIt = tree.MultiRead(it.CurrentKey, allowWrites: true))
                                     {
                                         if (multiIt.Seek(Slice.BeforeAllKeys))
                                         {
-                                            foundStuffToDelete = true;
                                             do
                                             {
+                                                if (
+#if DEBUG
+                                                Debugger.IsAttached == false &&
+#endif
+                                                    sp.ElapsedMilliseconds < 150)
+                                                {
+                                                    exitWriteTransactionAndContinueAgain = true;
+                                                    break;
+                                                }
+
                                                 var key = multiIt.CurrentKey.ToString();
                                                 var deleted = _database.DocumentsStorage.Delete(context, key, null);
                                                 count++;
                                                 if (Log.IsDebugEnabled && deleted == false)
                                                     Log.Debug($"Tried to delete expired document '{key}' but document was not found.");
 
-                                            } while (multiIt.DeleteCurrentAndMoveNext() && sp.ElapsedMilliseconds < 150);
+                                            } while (multiIt.DeleteCurrentAndMoveNext());
                                         }
                                     }
+
+                                    if (exitWriteTransactionAndContinueAgain || it.MoveNext() == false)
+                                        break;
                                 }
                             }
 
                             tx.Commit();
                         }
                         if (Log.IsDebugEnabled)
-                            Log.Debug($"Successfully deleted {count:#,#;;0} documents in {sp.ElapsedMilliseconds:#,#;;0} ms.");
-                        if (foundStuffToDelete)
+                            Log.Debug($"Successfully deleted {count:#,#;;0} documents in {sp.ElapsedMilliseconds:#,#;;0} ms. Found more staff to delete? {exitWriteTransactionAndContinueAgain}");
+                        if (exitWriteTransactionAndContinueAgain)
                             Thread.Sleep(16);// give up the thread for a short while, to let other transactions run
                     }
                 }

@@ -53,7 +53,50 @@ namespace FastTests.Server.Documents.Expiration
                 using (var session = store.OpenAsyncSession())
                 {
                     var company2 = await session.LoadAsync<Company>(company.Id);
+                    Assert.Null(company2);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
+        {
+            var company = new { Name = "Company Name" };
+            var companyJson = RavenJObject.FromObject(company);
+
+            using (var store = await GetDocumentStore())
+            {
+                await SetupExpiration(store);
+
+                var expiry = SystemTime.UtcNow.AddMinutes(5);
+                var metadata = new RavenJObject
+                {
+                    [Constants.Expiration.RavenExpirationDate] = new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite))
+                };
+                var metadata2 = new RavenJObject
+                {
+                    [Constants.Expiration.RavenExpirationDate] = new RavenJValue(expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite))
+                };
+                for (int i = 0; i < 10000; i++)
+                {
+                    await store.AsyncDatabaseCommands.PutAsync("companies/" + i, null, companyJson, metadata);
+                    await store.AsyncDatabaseCommands.PutAsync("companies-type2/" + i, null, companyJson, metadata2);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company2 = await session.LoadAsync<Company>("companies/9999");
                     Assert.NotNull(company2);
+                }
+
+                SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10000; i++)
+                    {
+                        var company2 = await session.LoadAsync<Company>("companies/" + i);
+                        Assert.Null(company2);
+                    }
                 }
             }
         }
