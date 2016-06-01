@@ -8,32 +8,34 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-
+using System.Threading.Tasks;
 using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Tests.Common;
-
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
     public class RavenDB_2181 : NoDisposalNeeded
     {
+        private const string AzureAccountName = "devstoreaccount1";
+        private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+
         [Fact(Skip = "Requires Windows Azure Development Storage")]
-        public void PutBlob()
+        public async Task PutBlob()
         {
             var containerName = "testContainer";
             var blobKey = "testKey";
 
-            using (var client = new RavenAzureClient("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="))
+            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer(containerName);
-                client.PutBlob(containerName, blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
-                                                                                                        {
-                                                                                                            { "property1", "value1" }, 
-                                                                                                            { "property2", "value2" }
-                                                                                                        });
-                var blob = client.GetBlob(containerName, blobKey);
+                await client.PutContainer();
+                await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+                {
+                    { "property1", "value1" }, 
+                    { "property2", "value2" }
+                });
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -48,20 +50,21 @@ namespace Raven.Tests.Issues
         }
 
         [Fact(Skip = "Requires Windows Azure Development Storage")]
-        public void PutBlobIntoFolder()
+        public async Task PutBlobIntoFolder()
         {
             var containerName = "testContainer";
             var blobKey = "folder1/folder2/testKey";
 
-            using (var client = new RavenAzureClient("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="))
+            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
             {
-                client.PutContainer(containerName);
-                client.PutBlob(containerName, blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
-                                                                                                        {
-                                                                                                            { "property1", "value1" }, 
-                                                                                                            { "property2", "value2" }
-                                                                                                        });
-                var blob = client.GetBlob(containerName, blobKey);
+                await client.PutContainer();
+                await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+                {
+                    { "property1", "value1" }, 
+                    { "property2", "value2" }
+                });
+
+                var blob = await client.GetBlob(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))

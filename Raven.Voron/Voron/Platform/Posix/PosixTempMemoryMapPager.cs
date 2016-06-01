@@ -97,8 +97,7 @@ namespace Voron.Platform.Posix
 
             if (tx != null)
             {
-                newPagerState.AddRef();
-                tx.AddPagerState(newPagerState);
+                tx.EnsurePagerStateReference(newPagerState);
             }
 
             var tmp = PagerState;
@@ -133,13 +132,6 @@ namespace Voron.Platform.Posix
 
             newPager.AddRef(); // one for the pager
             return newPager;
-        }
-
-        
-        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
-        {
-            ThrowObjectDisposedIfNeeded();
-            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
         }
 
         public override  void Sync()

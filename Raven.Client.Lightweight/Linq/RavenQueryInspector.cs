@@ -188,7 +188,8 @@ namespace Raven.Client.Linq
         public override string ToString()
         {
             RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-            var documentQuery = ravenQueryProvider.GetDocumentQueryFor(expression);
+            var documentQuery = databaseCommands != null ? ravenQueryProvider.GetDocumentQueryFor(expression).ToString()
+                : ravenQueryProvider.GetAsyncDocumentQueryFor(expression).ToString();
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)
                 fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";

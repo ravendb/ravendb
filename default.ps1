@@ -608,7 +608,7 @@ task InitNuget {
 
     $global:nugetVersion = "$version.$env:buildlabel"
     if ($global:uploadCategory -and $global:uploadCategory -ne "RavenDB"){
-        $global:nugetVersion += "-" + $global:uploadCategory
+        $global:nugetVersion += "-" + $global:uploadCategory.Replace("RavenDB-", "")
     }
 
 }

@@ -571,14 +571,37 @@ namespace Raven.Json.Linq
 
         private static int CompareFloat(object objA, object objB)
         {
-            double d1 = Convert.ToDouble(objA, CultureInfo.InvariantCulture);
-            double d2 = Convert.ToDouble(objB, CultureInfo.InvariantCulture);
+            double d1;
+            if (TryConvertToDouble(objA, out d1) == false)
+            {
+                return -1;
+            }
+            double d2;
+            if (TryConvertToDouble(objB, out d2) == false)
+            {
+                return 1;
+            }
 
             // take into account possible floating point errors
             if (MathUtils.ApproxEquals(d1, d2))
                 return 0;
 
             return d1.CompareTo(d2);
+        }
+
+        private static bool TryConvertToDouble(object obj, out double d)
+        {
+            try
+            {
+                d = Convert.ToDouble(obj, CultureInfo.InvariantCulture);
+            }
+            catch (Exception e)
+            {
+                d = 0d;
+                return false;
+            }
+
+            return true;
         }
 
         internal override bool DeepEquals(RavenJToken node)
