@@ -712,7 +712,7 @@ namespace Voron.Trees
                     {
                         // this is a multi value
                         p.SetNodeKey(node, ref key);
-                        var tree = OpenMultiValueTree(_tx, key, node);
+                        var tree = OpenMultiValueTree(_tx, (Slice)key, node);
                         results.AddRange(tree.AllPages());
                     }
                     else
