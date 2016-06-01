@@ -20,14 +20,6 @@ namespace Raven.Database.Bundles.Replication.Plugins
                                         Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
                                         out RavenJObject documentToSave)
         {
-            // we can't resolve to local when local is conflicted
-            if (existingDoc.Metadata.Value<bool>(Constants.RavenReplicationConflict))
-            {
-                documentToSave = null;
-                metadataToSave = null;
-                return false;
-            }
-
             metadataToSave = existingDoc.Metadata;
             documentToSave = existingDoc.DataAsJson;
 
