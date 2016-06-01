@@ -18,6 +18,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Voron;
 using Voron.Exceptions;
@@ -27,8 +28,14 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BulkInsertHandler : DatabaseRequestHandler
     {
+        private const int NumberOfBuffersUsed = 8;
         private readonly BlockingCollection<BulkBufferInfo> _fullBuffers = new BlockingCollection<BulkBufferInfo>();
         private readonly BlockingCollection<BulkBufferInfo> _freeBuffers = new BlockingCollection<BulkBufferInfo>();
+
+        public static readonly ArraySegment<byte> WaitingMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Waiting'}"));
+        public static readonly ArraySegment<byte> ProcessingMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processing'}"));
+        public static readonly ArraySegment<byte> ThrottleMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Throttle'}"));
+        public static readonly ArraySegment<byte> SpeedupMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Speedup'}"));
 
         public enum ResponseMessageType
         {
@@ -42,9 +49,8 @@ namespace Raven.Server.Documents.Handlers
             public UnmanagedBuffersPool.AllocatedMemoryData Buffer;
         }
 
-        private static readonly ArraySegment<byte> HeartbeatMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("Heartbeat"));
-
         private WebSocket _webSocket;
+        private bool _throttling;
 
         public unsafe void InsertDocuments()
         {
@@ -170,7 +176,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 Log.Debug("Starting bulk insert operation");
 
-                for (int i = 0; i < 8; i++)
+                for (int i = 0; i < NumberOfBuffersUsed; i++)
                 {
                     _freeBuffers.Add(new BulkBufferInfo
                     {
@@ -182,7 +188,7 @@ namespace Raven.Server.Documents.Handlers
                 var task = Task.Factory.StartNew(InsertDocuments);
                 try
                 {
-                    const string BulkInsertDocumentDebugTag = "bulk/insert/document";
+                    int tryTakeMilliSec = 0; // 0 - first throttling message will be sent immediately to prevent filling buffer even in this period of time
                     using (var stream = context.GetStream())
                     {
                         var current = _freeBuffers.Take();
@@ -190,7 +196,14 @@ namespace Raven.Server.Documents.Handlers
                         var sp = Stopwatch.StartNew();
                         while (true)
                         {
-                            var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                            var receiveAsync = _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                            while (await Task.WhenAny(receiveAsync, Task.Delay(1000)) != receiveAsync)
+                            {
+                                await _webSocket.SendAsync(WaitingMessage, WebSocketMessageType.Text, false,
+                                  Database.DatabaseShutdown);
+                            }
+                            var result = await receiveAsync;
+
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
                                 continue;
@@ -202,12 +215,38 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     _fullBuffers.Add(current);
                                 }
-                                catch (Exception)
+                                catch (Exception exception)
                                 {
+                                    Console.WriteLine("ADIADI::" + exception);
                                     break;
                                     // error in the actual insert, we'll get it when we await on the insert task
                                 }
-                                current = _freeBuffers.Take();
+
+                                while (_freeBuffers.TryTake(out current, tryTakeMilliSec) == false)
+                                {
+                                    tryTakeMilliSec = 1000;
+                                    Console.WriteLine("Sending Throttle ON");
+                                    _throttling = true;
+                                    await _webSocket.SendAsync(ThrottleMessage, WebSocketMessageType.Text, false,
+                                        Database.DatabaseShutdown);
+                                }
+
+                                if (_throttling && _freeBuffers.Count > NumberOfBuffersUsed / 2)
+                                {
+                                    tryTakeMilliSec = 0;
+                                    Console.WriteLine("Sending Throttle OFF");
+
+                                    _throttling = false;
+                                    await _webSocket.SendAsync(SpeedupMessage, WebSocketMessageType.Text, false,
+                                        Database.DatabaseShutdown);
+                                }
+                                else if (_throttling)
+                                {
+                                    Console.WriteLine("Sending Throttle FORCE PROCESSING");
+                                    await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, false,
+                                        Database.DatabaseShutdown);
+                                }
+
                                 if (current.Buffer.SizeInBytes < stream.SizeInBytes)
                                 {
                                     context.ReturnMemory(current.Buffer);
@@ -233,11 +272,11 @@ namespace Raven.Server.Documents.Handlers
                         
                         while (true)
                         {
-                            var res = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(5)));
+                            var res = await Task.WhenAny(task, Task.Delay(TimeSpan.FromMilliseconds(200)));
                             if (res == task)
                                 break;
-                            // send heartbeat to client so we'll keep the connection open
-                            await _webSocket.SendAsync(HeartbeatMessage, WebSocketMessageType.Text, false,
+                            Console.WriteLine("Sending PROCCeSing");
+                            await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, false,
                                     Database.DatabaseShutdown);
                         }
                         var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
@@ -252,7 +291,9 @@ namespace Raven.Server.Documents.Handlers
                     try
                     {
                         await _webSocket.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
-                            e.ToString(), Database.DatabaseShutdown);
+                            // yuck
+                           "{'Type': 'Error', 'Exception': '"  + e.ToString().Replace("'","\\'") + "'}", 
+                           Database.DatabaseShutdown);
                     }
                     catch (Exception)
                     {
