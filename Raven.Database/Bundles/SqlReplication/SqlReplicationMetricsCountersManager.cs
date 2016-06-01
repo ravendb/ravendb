@@ -2,20 +2,21 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using metrics;
 using metrics.Core;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Util;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
     [CLSCompliant(false)]
-    public class SqlReplicationMetricsCountersManager
+    public class SqlReplicationMetricsCountersManager : IDisposable
     {
         readonly Metrics dbMetrics;
         private readonly SqlReplicationConfig sqlReplicationConfig;
+        private const string MeterContext = "metrics";
+        private readonly string meterName;
 
         public MeterMetric SqlReplicationBatchSizeMeter { get; private set; }
         public HistogramMetric SqlReplicationBatchSizeHistogram { get; private set; }
@@ -27,7 +28,11 @@ namespace Raven.Database.Bundles.SqlReplication
         {
             this.dbMetrics = dbMetrics;
             this.sqlReplicationConfig = sqlReplicationConfig;
-            SqlReplicationBatchSizeMeter = dbMetrics.Meter("metrics", "SqlReplication Batch docs/min for " + sqlReplicationConfig.Name, "SQLReplication docs/min Counter", TimeUnit.Minutes);
+
+            meterName = "SqlReplication Batch docs/min for " + sqlReplicationConfig.Name;
+            SqlReplicationBatchSizeMeter = dbMetrics.Meter(MeterContext, meterName, "SQLReplication docs/min Counter", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(SqlReplicationBatchSizeMeter);
+
             SqlReplicationBatchSizeHistogram = dbMetrics.Histogram("metrics", "SqlReplication Batch histogram for " + sqlReplicationConfig.Name);
             SqlReplicationDurationHistogram = dbMetrics.Histogram("metrics", "SQLReplication duration Histogram for " + sqlReplicationConfig.Name);
             TablesMetrics = new ConcurrentDictionary<string, SqlReplicationTableMetrics>();
@@ -36,7 +41,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         public SqlReplicationTableMetrics GetTableMetrics(string tableName)
         {
-            return TablesMetrics.GetOrAdd(tableName, s => new SqlReplicationTableMetrics(s, sqlReplicationConfig,dbMetrics));
+            return TablesMetrics.GetOrAdd(tableName, s => new SqlReplicationTableMetrics(s, sqlReplicationConfig, dbMetrics));
         }
 
         public SqlReplicationMetricsData ToSqlReplicationMetricsData()
@@ -50,17 +55,19 @@ namespace Raven.Database.Bundles.SqlReplication
                     {"Duration Histogram", SqlReplicationDurationHistogram.CreateHistogramData()}
                 },
                 TablesMetrics = TablesMetrics.ToDictionary(x=>x.Key, x=>x.Value.ToSqlReplicationTableMetricsDataDictionary())
-                
             };
         }
 
-        public class SqlReplicationTableMetrics
+        public class SqlReplicationTableMetrics : IDisposable
         {
             private readonly Metrics dbMetrics;
             public string TableName { get; set; }
             public SqlReplicationConfig Config { get; set; }
             public MeterMetric m_sqlReplicationDeleteActionsMeter;
             public MeterMetric m_sqlReplicationInsertActionsMeter;
+            private const string MeterContext = "metrics";
+            private readonly string deleteMeterName;
+            private readonly string insertMeterName;
             public HistogramMetric m_sqlReplicationDeleteActionsHistogram;
             public HistogramMetric m_sqlReplicationInsertActionsHistogram;
             public HistogramMetric m_sqlReplicationDeleteActionsDurationHistogram;
@@ -71,13 +78,22 @@ namespace Raven.Database.Bundles.SqlReplication
                 this.dbMetrics = dbMetrics;
                 Config = cfg;
                 TableName = tableName;
+
+                deleteMeterName = "SqlReplication Deletes/min for table :" + TableName + " in replication: " + Config.Name;
+                insertMeterName = "SqlReplication Inserts/min for table :" + TableName + " in replication: " + Config.Name;
             }
 
             public MeterMetric SqlReplicationDeleteActionsMeter
             {
                 get
                 {
-                    return m_sqlReplicationDeleteActionsMeter ?? (m_sqlReplicationDeleteActionsMeter = dbMetrics.Meter("metrics", "SqlReplication Deletes/min for table :" + TableName + " in replication: " + Config.Name, "SQLReplication Delete Commands/min Counter", TimeUnit.Minutes));
+                    if (m_sqlReplicationDeleteActionsMeter == null)
+                    {
+                        m_sqlReplicationDeleteActionsMeter = dbMetrics.Meter(MeterContext, deleteMeterName, "SQLReplication Delete Commands/min Counter", TimeUnit.Minutes);
+                        MetricsTicker.Instance.AddMeterMetric(m_sqlReplicationDeleteActionsMeter);
+                    }
+
+                    return m_sqlReplicationDeleteActionsMeter;
                 }
             }
             public HistogramMetric SqlReplicationDeleteActionsHistogram
@@ -91,7 +107,13 @@ namespace Raven.Database.Bundles.SqlReplication
             {
                 get
                 {
-                    return m_sqlReplicationInsertActionsMeter ?? (m_sqlReplicationInsertActionsMeter = dbMetrics.Meter("metrics", "SqlReplication Inserts/min for table :" + TableName + " in replication: " + Config.Name, "SQLReplication Insert Commands/min Counter", TimeUnit.Minutes));
+                    if (m_sqlReplicationInsertActionsMeter == null)
+                    {
+                        m_sqlReplicationInsertActionsMeter = dbMetrics.Meter(MeterContext, insertMeterName, "SQLReplication Insert Commands/min Counter", TimeUnit.Minutes);
+                        MetricsTicker.Instance.AddMeterMetric(m_sqlReplicationInsertActionsMeter);
+                    }
+
+                    return m_sqlReplicationInsertActionsMeter;
                 }
             }
 
@@ -128,6 +150,33 @@ namespace Raven.Database.Bundles.SqlReplication
                     {"Insert Actions Histogram",SqlReplicationInsertActionsHistogram.CreateHistogramData()},
                     {"Delete Actions Duration Histogram",SqlReplicationDeleteActionsDurationHistogram.CreateHistogramData()}
                 };
+            }
+
+            public void Dispose()
+            {
+                if (m_sqlReplicationDeleteActionsMeter != null)
+                {
+                    dbMetrics.RemoveMeter(MeterContext, deleteMeterName);
+                    MetricsTicker.Instance.RemoveMeterMetric(m_sqlReplicationDeleteActionsMeter);
+                }
+
+
+                if (m_sqlReplicationInsertActionsMeter != null)
+                {
+                    dbMetrics.RemoveMeter(MeterContext, insertMeterName);
+                    MetricsTicker.Instance.RemoveMeterMetric(m_sqlReplicationInsertActionsMeter);
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            MetricsTicker.Instance.RemoveMeterMetric(SqlReplicationBatchSizeMeter);
+            dbMetrics.RemoveMeter(MeterContext, meterName);
+
+            foreach (var tableMetric in TablesMetrics)
+            {
+                tableMetric.Value.Dispose();
             }
         }
     }
