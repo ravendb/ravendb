@@ -50,6 +50,7 @@ namespace FastTests.Server.Documents.Expiration
                 }
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await Task.Delay(TimeSpan.FromSeconds(3));
                 using (var session = store.OpenAsyncSession())
                 {
                     var company2 = await session.LoadAsync<Company>(company.Id);
@@ -90,6 +91,7 @@ namespace FastTests.Server.Documents.Expiration
                 }
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await Task.Delay(TimeSpan.FromSeconds(5));
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 0; i < 10000; i++)
