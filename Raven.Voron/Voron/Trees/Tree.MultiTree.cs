@@ -303,7 +303,7 @@ namespace Voron.Trees
             return new PageIterator(nestedPage);
         }
 
-        private Tree OpenMultiValueTree(Transaction tx, MemorySlice key, NodeHeader* item)
+        private Tree OpenMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
         {
             Tree tree;
             if (tx.TryGetMultiValueTree(this, key, out tree))
