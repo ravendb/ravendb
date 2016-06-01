@@ -55,7 +55,7 @@ namespace FastTests.Server.Documents.Indexing
             analyzer = operation.GetAnalyzer(fields, forQuerying: false);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
-            Assert.IsType<StandardAnalyzer>(analyzer.GetAnalyzer("Field1"));
+            Assert.IsType<RavenStandardAnalyzer>(analyzer.GetAnalyzer("Field1"));
 
             fields.Clear();
             fields.Add("Field1", new IndexField { Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed });
@@ -69,7 +69,7 @@ namespace FastTests.Server.Documents.Indexing
             analyzer = operation.GetAnalyzer(fields, forQuerying: true);
 
             Assert.IsType<LowerCaseKeywordAnalyzer>(analyzer.GetAnalyzer(string.Empty));
-            Assert.IsType<StandardAnalyzer>(analyzer.GetAnalyzer("Field1"));
+            Assert.IsType<RavenStandardAnalyzer>(analyzer.GetAnalyzer("Field1"));
 
             fields.Clear();
             fields.Add("Field1", new IndexField { Analyzer = typeof(NotForQueryingAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed });
