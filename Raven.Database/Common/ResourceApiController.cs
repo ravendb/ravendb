@@ -370,6 +370,7 @@ namespace Raven.Database.Common
 
             var sp = Stopwatch.StartNew();
             controllerContext.Request.Properties["timer"] = sp;
+            controllerContext.RequestContext.Principal = CurrentOperationContext.User.Value;
             var result = await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
             sp.Stop();
             AddRavenHeader(result, sp);
