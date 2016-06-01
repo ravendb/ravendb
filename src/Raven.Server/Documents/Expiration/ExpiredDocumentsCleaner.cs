@@ -122,6 +122,21 @@ namespace Raven.Server.Documents.Expiration
                                                 }
 
                                                 var key = multiIt.CurrentKey.ToString();
+                                                var document = _database.DocumentsStorage.Get(context, key);
+
+                                                // Validate that the expiration value in metadata is still the same.
+                                                // We have to check this as the user can update this valud.
+                                                string expirationDate;
+                                                BlittableJsonReaderObject metadata;
+                                                if (document.Data.TryGet(Constants.Metadata, out metadata) == false ||
+                                                    metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate) == false)
+                                                    continue;
+                                                DateTime date;
+                                                if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
+                                                    continue;
+                                                if (SystemTime.UtcNow < date)
+                                                    continue;
+
                                                 var deleted = _database.DocumentsStorage.Delete(context, key, null);
                                                 count++;
                                                 if (Log.IsDebugEnabled && deleted == false)
