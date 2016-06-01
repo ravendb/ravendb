@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
@@ -93,7 +92,6 @@ namespace Raven.Server.Documents.Expiration
                     while (exitWriteTransactionAndContinueAgain)
                     {
                         exitWriteTransactionAndContinueAgain = false;
-
                         var sp = Stopwatch.StartNew();
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -111,11 +109,7 @@ namespace Raven.Server.Documents.Expiration
                                         {
                                             do
                                             {
-                                                if (
-#if DEBUG
-                                                Debugger.IsAttached == false &&
-#endif
-                                                    sp.ElapsedMilliseconds < 150)
+                                                if (sp.ElapsedMilliseconds > 150)
                                                 {
                                                     exitWriteTransactionAndContinueAgain = true;
                                                     break;
@@ -123,6 +117,8 @@ namespace Raven.Server.Documents.Expiration
 
                                                 var key = multiIt.CurrentKey.ToString();
                                                 var document = _database.DocumentsStorage.Get(context, key);
+                                                if (document == null)
+                                                    continue;
 
                                                 // Validate that the expiration value in metadata is still the same.
                                                 // We have to check this as the user can update this valud.
