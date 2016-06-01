@@ -108,6 +108,7 @@ namespace Raven.Database.Util
                 MetricsTicker.Instance.RemoveMeterMetric(batchSizeMeter.Value);
             }
 
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(DocsPerSecond);
             MetricsTicker.Instance.RemovePerSecondCounterMetric(FilesPerSecond);
             MetricsTicker.Instance.RemovePerSecondCounterMetric(RequestsPerSecondCounter);
             MetricsTicker.Instance.RemovePerSecondCounterMetric(ReducedPerSecond);
