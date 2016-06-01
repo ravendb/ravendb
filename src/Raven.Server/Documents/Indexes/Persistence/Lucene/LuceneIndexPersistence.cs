@@ -154,9 +154,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Index));
 
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
             _disposed = true;
 
             _indexWriter?.Analyzer?.Dispose();

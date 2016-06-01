@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             else
                 defaultAnalyzer = createDefaultAnalyzer();
 
-            StandardAnalyzer standardAnalyzer = null;
+            RavenStandardAnalyzer standardAnalyzer = null;
             KeywordAnalyzer keywordAnalyzer = null;
             var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
             foreach (var field in fields)
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         }
 
                         if (standardAnalyzer == null)
-                            standardAnalyzer = new StandardAnalyzer(global::Lucene.Net.Util.Version.LUCENE_29);
+                            standardAnalyzer = new RavenStandardAnalyzer(global::Lucene.Net.Util.Version.LUCENE_29);
 
                         perFieldAnalyzerWrapper.AddAnalyzer(field.Key, standardAnalyzer);
                         break;

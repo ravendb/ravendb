@@ -15,7 +15,7 @@ namespace SlowTests.Core.Indexing
 {
     public class MultiMap : RavenTestBase
     {
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task CanCreateAndSearchMultiMapIndex()
         {
             using (var store = await GetDocumentStore())
