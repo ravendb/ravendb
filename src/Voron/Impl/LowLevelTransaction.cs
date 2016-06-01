@@ -24,8 +24,7 @@ namespace Voron.Impl
         private readonly long _id;
         private Tree _root;
 
-        public bool FlushedToJournal { get;  set; }
-
+        public bool FlushedToJournal { get; private set; }
         public Tree RootObjects => _root;
 
         private readonly WriteAheadJournal _journal;

@@ -584,7 +584,12 @@ namespace Voron.Impl.Journal
 
                             if (txw != null)
                             {
-                                txw.FlushedToJournal = true;// force the env to increment the tx id
+                                // we force a dummy change to a page, so when we commit, this will be written to the journal
+                                // as well as force us to generate a new transaction id, which will mean that the next time
+                                // that we run, we have freed lazy transactions, we have freed all the pages that were freed
+                                // in this transaction
+                                txw.ModifyPage(0); 
+
                                 txw.Commit();
                             }
                         }
