@@ -430,7 +430,8 @@ namespace Voron.Trees
 
             node = p.Search(key); // will set the LastSearchPosition
 
-            AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
+            if (p.NumberOfEntries > 0)
+                AddToRecentlyFoundPages(c, p, leftmostPage, rightmostPage);
 
             cursor = new Lazy<Cursor>(() => c);
             return p;
