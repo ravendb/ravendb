@@ -82,6 +82,8 @@ namespace Raven.Database.Linq
                     translatorDeclaration =
                         QueryParsingUtils.GetVariableDeclarationForLinqQuery(transformerDefinition.TransformResults,
                                                                              requiresSelectNewAnonymousType: false);
+
+                    translatorDeclaration.AcceptVisitor(new TransformFromClauses(), null);
                 }
                 else
                 {

@@ -143,7 +143,6 @@ namespace Raven.Database.Linq
                 variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
                 variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
                 variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
-                variable.AcceptVisitor(new TransformFromClauses(), null);
                 variable.AcceptVisitor(new TransformObsoleteMethods(), null);
                 return variable;
             }
