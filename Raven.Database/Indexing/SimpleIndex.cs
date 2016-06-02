@@ -21,6 +21,7 @@ using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Spatial4n.Core.Exceptions;
@@ -427,35 +428,66 @@ namespace Raven.Database.Indexing
 
         public override void Remove(string[] keys, WorkContext context)
         {
-            Write((writer, analyzer, stats) =>
+            DeletionBatchInfo deletionBatchInfo = null;
+            try
             {
-                stats.Operation = IndexingWorkStats.Status.Ignore;
-                if (logIndexing.IsDebugEnabled)
-                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+                deletionBatchInfo = context.ReportDeletionBatchStarted(PublicName, keys.Length);
 
-                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
-                    .Where(x => x != null)
-                    .ToList();
-
-                keys.Apply(
-                    key =>
-                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.DocumentIdFieldName, key.ToLowerInvariant())));
-
-                writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
-                batchers.ApplyAndIgnoreAllErrors(
-                    e =>
-                    {
-                        logIndexing.WarnException("Failed to dispose on index update trigger in " + PublicName, e);
-                        context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
-                    },
-                    batcher => batcher.Dispose());
-
-                return new IndexedItemsInfo(GetLastEtagFromStats())
+                Write((writer, analyzer, stats) =>
                 {
-                    ChangedDocs = keys.Length,
-                    DeletedKeys = keys
-                };
-            });
+                    var indexUpdateTriggersDuration = new Stopwatch();
+
+                    stats.Operation = IndexingWorkStats.Status.Ignore;
+                    if (logIndexing.IsDebugEnabled)
+                        logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+
+                    List<AbstractIndexUpdateTriggerBatcher> batchers;
+                    using (StopwatchScope.For(indexUpdateTriggersDuration))
+                    {
+                        batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
+                       .Where(x => x != null)
+                       .ToList();
+
+                        keys.Apply(key =>
+                               InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.DocumentIdFieldName, key.ToLowerInvariant())));
+                    }
+                   
+                    var deleteDocumentsDuration = new Stopwatch();
+
+                    using (StopwatchScope.For(deleteDocumentsDuration))
+                    {
+                        writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
+                    }
+
+                    deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.Delete_Documents, deleteDocumentsDuration.ElapsedMilliseconds));
+
+                    using (StopwatchScope.For(indexUpdateTriggersDuration))
+                    {
+                        batchers.ApplyAndIgnoreAllErrors(
+                          e =>
+                          {
+                              logIndexing.WarnException("Failed to dispose on index update trigger in " + PublicName, e);
+                              context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
+                          },
+                          batcher => batcher.Dispose());
+                    }
+
+                    deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.Delete_IndexUpdateTriggers, indexUpdateTriggersDuration.ElapsedMilliseconds));
+
+                    return new IndexedItemsInfo(GetLastEtagFromStats())
+                    {
+                        ChangedDocs = keys.Length,
+                        DeletedKeys = keys
+                    };
+                }, deletionBatchInfo.PerformanceStats);
+            }
+            finally
+            {
+                if (deletionBatchInfo != null)
+                {
+                    context.ReportDeletionBatchCompleted(deletionBatchInfo);
+                }
+            }
         }
 
         /// <summary>

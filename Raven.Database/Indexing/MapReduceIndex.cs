@@ -512,22 +512,63 @@ namespace Raven.Database.Indexing
 
         public override void Remove(string[] keys, WorkContext context)
         {
-            context.TransactionalStorage.Batch(actions =>
+            DeletionBatchInfo deletionBatchInfo = null;
+            try
             {
-                var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
-                foreach (var key in keys)
-                {
-                    actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
-                    context.CancellationToken.ThrowIfCancellationRequested();
-                }
+                deletionBatchInfo = context.ReportDeletionBatchStarted(PublicName, keys.Length);
 
-                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);
-                foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
+                context.TransactionalStorage.Batch(actions =>
                 {
-                    actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
-                    context.CancellationToken.ThrowIfCancellationRequested();
+                    var storageCommitDuration = new Stopwatch();
+
+                    actions.BeforeStorageCommit += storageCommitDuration.Start;
+
+                    actions.AfterStorageCommit += () =>
+                    {
+                        storageCommitDuration.Stop();
+
+                        deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.StorageCommit, storageCommitDuration.ElapsedMilliseconds));
+                    };
+
+                    var reduceKeyAndBuckets = new Dictionary<ReduceKeyAndBucket, int>();
+
+                    var deleteMappedResultsDuration = new Stopwatch();
+
+                    using (StopwatchScope.For(deleteMappedResultsDuration))
+                    {
+                        foreach (var key in keys)
+                        {
+                            actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
+                            context.CancellationToken.ThrowIfCancellationRequested();
+                        }
+                    }
+
+                    deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.Delete_DeleteMappedResultsForDocumentId, deleteMappedResultsDuration.ElapsedMilliseconds));
+
+                    actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);
+
+                    var scheduleReductionsDuration = new Stopwatch();
+
+                    using (StopwatchScope.For(scheduleReductionsDuration))
+                    {
+                        foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
+                        {
+                            actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
+                            context.CancellationToken.ThrowIfCancellationRequested();
+                        }
+                    }
+
+                    deletionBatchInfo.PerformanceStats.Add(PerformanceStats.From(IndexingOperation.Reduce_ScheduleReductions, scheduleReductionsDuration.ElapsedMilliseconds));
+                });
+            }
+            finally
+            {
+                if (deletionBatchInfo != null)
+                {
+                    context.ReportDeletionBatchCompleted(deletionBatchInfo);
                 }
-            });
+            }
+            
         }
 
         public class ReduceDocuments

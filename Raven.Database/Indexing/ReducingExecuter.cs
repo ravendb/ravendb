@@ -421,7 +421,7 @@ namespace Raven.Database.Indexing
                             Take = int.MaxValue // just get all, we do the rate limit when we load the number of keys to reduce, anyway
                         };
 
-                        var getItemsToReduceDuration = Stopwatch.StartNew();
+                        var getItemsToReduceDuration = new Stopwatch();
 
                         int scheduledItemsSum = 0;
                         int scheduledItemsCount = 0;
