@@ -23,7 +23,7 @@ namespace Raven.Database.Storage.Voron.Schema
 {
     internal class SchemaCreator
     {
-        private readonly TableStorage storage;
+        internal readonly TableStorage storage;
 
         private readonly Action<string> output;
 
@@ -169,17 +169,17 @@ namespace Raven.Database.Storage.Voron.Schema
             }
         }
 
-        private static void CreateIndexingMetadataSchema(Transaction tx, TableStorage storage)
+        internal static void CreateIndexingMetadataSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.IndexingMetadata.TableName);
         }
 
-        private static void CreateReduceStatsSchema(Transaction tx, TableStorage storage)
+        internal static void CreateReduceStatsSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.ReduceStats.TableName);
         }
 
-        private static void CreateReduceResultsSchema(Transaction tx, TableStorage storage)
+        internal static void CreateReduceResultsSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.ReduceResults.TableName);
             storage.Environment.CreateTree(tx, storage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel));
@@ -189,13 +189,13 @@ namespace Raven.Database.Storage.Voron.Schema
             storage.Environment.CreateTree(tx, storage.ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.Data));
         }
 
-        private static void CreateReduceKeyCountsSchema(Transaction tx, TableStorage storage)
+        internal static void CreateReduceKeyCountsSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.ReduceKeyCounts.TableName);
             storage.Environment.CreateTree(tx, storage.ReduceKeyCounts.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
         }
 
-        private static void CreateReduceKeyTypesSchema(Transaction tx, TableStorage storage)
+        internal static void CreateReduceKeyTypesSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.ReduceKeyTypes.TableName);
             storage.Environment.CreateTree(tx, storage.ReduceKeyTypes.GetIndexKey(Tables.ReduceKeyCounts.Indices.ByView));
@@ -209,7 +209,7 @@ namespace Raven.Database.Storage.Voron.Schema
             storage.Environment.CreateTree(tx, storage.Attachments.GetIndexKey(Tables.Attachments.Indices.Metadata));
         }
 
-        private static void CreateMappedResultsSchema(Transaction tx, TableStorage storage)
+        internal static void CreateMappedResultsSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.MappedResults.TableName);
             storage.Environment.CreateTree(tx, storage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.ByView));
@@ -219,18 +219,18 @@ namespace Raven.Database.Storage.Voron.Schema
             storage.Environment.CreateTree(tx, storage.MappedResults.GetIndexKey(Tables.MappedResults.Indices.Data));
         }
 
-        private static void CreateScheduledReductionsSchema(Transaction tx, TableStorage storage)
+        internal static void CreateScheduledReductionsSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.ScheduledReductions.TableName);
             storage.Environment.CreateTree(tx, storage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByView));
             storage.Environment.CreateTree(tx, storage.ScheduledReductions.GetIndexKey(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey));
         }
 
-        private static void CreateStalenessSchema(Transaction tx, TableStorage storage)
+        internal static void CreateStalenessSchema(Transaction tx, TableStorage storage)
         {
         }
 
-        private static void CreateTasksSchema(Transaction tx, TableStorage storage)
+        internal static void CreateTasksSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.Tasks.TableName);
             storage.Environment.CreateTree(tx, storage.Tasks.GetIndexKey(Tables.Tasks.Indices.ByIndexAndType));
@@ -252,7 +252,7 @@ namespace Raven.Database.Storage.Voron.Schema
             storage.Environment.CreateTree(tx, storage.Queues.GetIndexKey(Tables.Queues.Indices.Data));
         }
 
-        private static void CreateDocumentReferencesSchema(Transaction tx, TableStorage storage)
+        internal static void CreateDocumentReferencesSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.DocumentReferences.TableName);
             storage.Environment.CreateTree(tx, storage.DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByRef));
@@ -261,12 +261,12 @@ namespace Raven.Database.Storage.Voron.Schema
             storage.Environment.CreateTree(tx, storage.DocumentReferences.GetIndexKey(Tables.DocumentReferences.Indices.ByKey));
         }
 
-        private static void CreateLastIndexedEtagsSchema(Transaction tx, TableStorage storage)
+        internal static void CreateLastIndexedEtagsSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.LastIndexedEtags.TableName);
         }
 
-        private static void CreateIndexingStatsSchema(Transaction tx, TableStorage storage)
+        internal static void CreateIndexingStatsSchema(Transaction tx, TableStorage storage)
         {
             storage.Environment.CreateTree(tx, Tables.IndexingStats.TableName);
         }
