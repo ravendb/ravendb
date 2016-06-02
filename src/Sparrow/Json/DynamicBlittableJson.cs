@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Dynamic;
 
 namespace Sparrow.Json
@@ -6,7 +9,7 @@ namespace Sparrow.Json
     {
         protected BlittableJsonReaderObject BlittableJsonReaderObject;
 
-        public class DynamicBlittableArray : DynamicObject
+        public class DynamicBlittableArray : DynamicObject, IEnumerable<DynamicObject>
         {
             protected BlittableJsonReaderArray BlittableJsonReaderArray;
 
@@ -14,7 +17,6 @@ namespace Sparrow.Json
             {
                 BlittableJsonReaderArray = blittableJsonReaderArray;
             }
-
 
             public int Length => BlittableJsonReaderArray.Length;
 
@@ -38,23 +40,56 @@ namespace Sparrow.Json
 
             public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
             {
-                var i = (int) (indexes[0]);
+                var i = (int)(indexes[0]);
                 result = null;
                 object resultObject = BlittableJsonReaderArray[i];
 
                 if (resultObject is BlittableJsonReaderObject)
                 {
-                    result = new DynamicBlittableJson((BlittableJsonReaderObject) resultObject);
+                    result = new DynamicBlittableJson((BlittableJsonReaderObject)resultObject);
                 }
                 else if (resultObject is BlittableJsonReaderArray)
                 {
-                    result = new DynamicBlittableArray((BlittableJsonReaderArray) resultObject);
+                    result = new DynamicBlittableArray((BlittableJsonReaderArray)resultObject);
                 }
                 else
                 {
                     result = resultObject;
                 }
                 return true;
+            }
+
+            public IEnumerable<DynamicObject> Items
+            {
+                get
+                {
+                    foreach (var item in BlittableJsonReaderArray.Items)
+                    {
+                        if (item is BlittableJsonReaderObject)
+                        {
+                            yield return new DynamicBlittableJson((BlittableJsonReaderObject)item);
+                            continue;
+                        }
+
+                        if (item is BlittableJsonReaderArray)
+                        {
+                            yield return new DynamicBlittableArray((BlittableJsonReaderArray)item);
+                            continue;
+                        }
+
+                        throw new NotSupportedException();
+                    }
+                }
+            }
+
+            public IEnumerator<DynamicObject> GetEnumerator()
+            {
+                return Items.GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
             }
         }
 
@@ -81,11 +116,11 @@ namespace Sparrow.Json
 
             if (result is BlittableJsonReaderObject)
             {
-                result = new DynamicBlittableJson((BlittableJsonReaderObject) result);
+                result = new DynamicBlittableJson((BlittableJsonReaderObject)result);
             }
             else if (result is BlittableJsonReaderArray)
             {
-                result = new DynamicBlittableArray((BlittableJsonReaderArray) result);
+                result = new DynamicBlittableArray((BlittableJsonReaderArray)result);
             }
 
             return true;
@@ -93,7 +128,7 @@ namespace Sparrow.Json
 
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
         {
-            return TryGet((string) indexes[0], out result);
+            return TryGet((string)indexes[0], out result);
         }
     }
 }

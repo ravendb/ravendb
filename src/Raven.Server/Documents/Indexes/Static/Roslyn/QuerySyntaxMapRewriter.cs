@@ -7,6 +7,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 {
     internal class QuerySyntaxMapRewriter : MapRewriter
     {
+        public override string CollectionName { get; protected set; }
+
         public override SyntaxNode VisitFromClause(FromClauseSyntax node)
         {
             if (CollectionName != null)

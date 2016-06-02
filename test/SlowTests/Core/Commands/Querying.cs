@@ -24,7 +24,7 @@ namespace SlowTests.Core.Commands
 {
     public class Querying : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanDoSimpleQueryOnDatabase()
         {
             const string indexName = "CompaniesByName";
@@ -52,7 +52,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanProcessLongQueryString()
         {
             using (var store = await GetDocumentStore())
@@ -102,7 +102,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Boosting, Streaming")]
         public async Task CanStreamQueryResult()
         {
             using (var store = await GetDocumentStore())
@@ -128,7 +128,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Facets")]
         public async Task CanGetFacets()
         {
             using (var store = await GetDocumentStore())
@@ -309,7 +309,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public async Task CanGetSuggestions()
         {
             using (var store = await GetDocumentStore())

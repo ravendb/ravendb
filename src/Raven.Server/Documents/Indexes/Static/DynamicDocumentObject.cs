@@ -22,13 +22,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (name == Constants.DocumentIdFieldName)
             {
-                result = (string)_document.Key;
+                result = _document.Key;
                 return true;
             }
 
             if (name == "Id")
             {
-                result = (string)_document.Key;
+                result = _document.Key;
                 return true;
             }
 
