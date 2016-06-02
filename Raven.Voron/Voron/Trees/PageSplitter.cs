@@ -216,6 +216,8 @@ namespace Voron.Trees
             Page parentOfRight;
             AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
 
+            var parentOfPage = _cursor.CurrentPage;
+
             MemorySlice instance = _page.CreateNewEmptyKey();
 
             if (prefixes != null)
@@ -263,6 +265,13 @@ namespace Voron.Trees
             {
                 try
                 {
+                    if (toRight && _cursor.CurrentPage.PageNumber != parentOfRight.PageNumber)
+                    {
+                        // modify the cursor if we are going to insert to the right page
+                        _cursor.Pop();
+                        _cursor.Push(parentOfRight);
+                    }
+
                     // actually insert the new key
                     pos = toRight ? InsertNewKey(rightPage) : InsertNewKey(_page);
                 }
@@ -286,7 +295,7 @@ namespace Voron.Trees
                 Debug.Assert(rightPage.NumberOfEntries > 0);
 
                 if (_page.NumberOfEntries == 1)
-                    RemoveBranchWithOneEntry(_page, _cursor.ParentPage);
+                    RemoveBranchWithOneEntry(_page, parentOfPage);
 
                 if (rightPage.NumberOfEntries == 1)
                     RemoveBranchWithOneEntry(rightPage, parentOfRight);
@@ -344,55 +353,15 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private byte* AddSeparatorToParentPage(long pageRefNumber, MemorySlice seperatorKey, out Page parentOfPageRef)
+        private byte* AddSeparatorToParentPage(long pageRefNumber, MemorySlice separatorKey, out Page parentOfPageRef)
         {
-            var pos = _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
+            var parent = new ParentPageAction(_parentPage, _page, _tree, _cursor, _tx);
 
-            var separatorKeyToInsert = _parentPage.PrepareKeyToInsert(seperatorKey, pos);
+            var pos = parent.AddSeparator(separatorKey, pageRefNumber);
 
-            if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
-            {
-                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageRefNumber, NodeFlags.PageRef,
-                    0, _cursor, _treeState);
+            parentOfPageRef = parent.ParentOfAddedPageRef;
 
-                var posToInsert = pageSplitter.Execute();
-                
-                parentOfPageRef = _cursor.CurrentPage;
-
-                var adjustParentPageOnCursor = true;
-
-                for (int i = 0; i < _cursor.CurrentPage.NumberOfEntries; i++)
-                {
-                    if (_cursor.CurrentPage.GetNode(i)->PageNumber == _page.PageNumber)
-                    {
-                        adjustParentPageOnCursor = false;
-                        break;
-                    }
-                }
-
-                if (adjustParentPageOnCursor)
-                {
-                    // the above page split has modified the cursor that its first page points to the parent of the leaf where 'separatorKey' was inserted
-                    // and it doesn't have the reference to _page, we need to ensure that the actual parent is first at the cursor
-
-                    _cursor.Pop();
-                    _cursor.Push(_parentPage);
-                }
-
-#if VALIDATE
-                Debug.Assert(Enumerable.Range(0, _cursor.CurrentPage.NumberOfEntries).Any(i => _cursor.CurrentPage.GetNode(i)->PageNumber == _page.PageNumber), 
-                            "The parent page is not referencing a page which is being split");
-
-                var parentToValidate = parentOfPageRef;
-                Debug.Assert(Enumerable.Range(0, parentToValidate.NumberOfEntries).Any(i => parentToValidate.GetNode(i)->PageNumber == pageRefNumber),
-                            "The parent page of a page reference isn't referencing it");
-#endif
-                return posToInsert;
-            }
-
-            parentOfPageRef = _parentPage;
-
-            return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageRefNumber);
+            return pos;
         }
 
         private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool toRight)

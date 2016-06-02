@@ -76,6 +76,11 @@ namespace Voron.Tests.Bugs
         [InlineData(3)]
         [InlineData(103)]
         [InlineData(4001)]
+        [InlineData(4024)]
+        [InlineData(4031)]
+        [InlineData(4041)]
+        [InlineData(4234)]
+        [InlineDataWithRandomSeed()]
         public void ShouldHaveEnoughSpaceWhenSplittingPageInHalf(int seed)
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
