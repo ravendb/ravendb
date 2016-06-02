@@ -38,7 +38,7 @@ namespace Raven.Client.Document
             new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
         private readonly Task _writeToServerTask;
         private DateTime _lastHeartbeat;
-        private long _batchNum;
+        private long _sentAccomulator;
 
         private AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
         private bool  _isThrottling;
@@ -240,7 +240,7 @@ namespace Raven.Client.Document
                                             throw new InvalidOperationException("Invalid BatchNum response from server " +
                                                                                 (response.ToString() ?? "null"));
 
-                                        if (_batchNum - batchNum > _maxDiffSizeBeforeThrottling)
+                                        if (_sentAccomulator - batchNum > _maxDiffSizeBeforeThrottling)
                                         {
                                             if (_isThrottling == false)
                                             {
@@ -343,7 +343,7 @@ namespace Raven.Client.Document
             await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
                 .ConfigureAwait(false);
 
-            _batchNum += _networkBuffer.Length;
+            _sentAccomulator += _networkBuffer.Length;
 
             ReportProgress($"Batch sent to {_url} (bytes count = {segment.Count})");
 

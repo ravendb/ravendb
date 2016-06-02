@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private WebSocket _webSocket;
-        private long _batchNum;
+        private long _processedAccomulator;
 
         public unsafe void InsertDocuments()
         {
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                             var result = await receiveAsync;
 
-                            _batchNum += result.Count;
+                            _processedAccomulator += result.Count;
 
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
@@ -250,7 +250,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 while (_freeBuffers.TryTake(out current, 1000) == false)
                                 {
-                                    ArraySegment<byte> KeepAliveMessage2 = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + _batchNum + "}")); // make field?
+                                    ArraySegment<byte> KeepAliveMessage2 = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + _processedAccomulator + "}")); // make field?
                                     await _webSocket.SendAsync(KeepAliveMessage2, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
                                         .ConfigureAwait(false);
                                     //await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Handlers
                                     current.Buffer = context.GetMemory(Bits.NextPowerOf2(stream.SizeInBytes));
                                 }
 
-                                ArraySegment<byte> KeepAliveMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + _batchNum + "}")); // make field?
+                                ArraySegment<byte> KeepAliveMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + _processedAccomulator + "}")); // make field?
                                 await _webSocket.SendAsync(KeepAliveMessage, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
                                     .ConfigureAwait(false);
 
