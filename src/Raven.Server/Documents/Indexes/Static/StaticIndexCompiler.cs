@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace());
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: definition.Name + ".index.dll",
+                assemblyName: cSharpSafeName + ".index.dll",
                 syntaxTrees: new[] { SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString()) }, // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
                 references: References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
