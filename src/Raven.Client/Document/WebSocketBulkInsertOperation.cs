@@ -38,9 +38,10 @@ namespace Raven.Client.Document
             new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
         private readonly Task _writeToServerTask;
         private DateTime _lastHeartbeat;
+        private long _batchNum;
 
-//        private ManualResetEventSlim _throttlingEvent = new ManualResetEventSlim(false);
         private AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
+        private bool  _isThrottling;
 
 
         ~WebSocketBulkInsertOperation()
@@ -169,8 +170,13 @@ namespace Raven.Client.Document
                 parser.SetBuffer(buffer.Array, result.Count);
                 while (writer.Read() == false)
                 {
-                    if(result.CloseStatus != null)
-                        throw new InvalidOperationException("Partly received message but connection was closed: " + Encoding.UTF8.GetString(buffer.Array, 0, buffer.Count));
+                    if (result.CloseStatus != null)
+                    {
+                        Console.WriteLine("*************ERRR");
+                        return null;
+                        //   throw new InvalidOperationException("Partly received message but connection was closed: " +
+                        //                                     Encoding.UTF8.GetString(buffer.Array, 0, buffer.Count));
+                    }
                     result = await webSocket.ReceiveAsync(buffer, cancellationToken);
                     parser.SetBuffer(buffer.Array, result.Count);
                 }
@@ -192,8 +198,9 @@ namespace Raven.Client.Document
                     using (var response =
                         await ReadFromWebSocket(context, _connection, "Bulk/Insert/GetServerResponse", _cts.Token))
                     {
-
-                        Console.WriteLine(response);
+                        if (response == null)
+                            continue;
+                        // Console.WriteLine(response);
                         string responseType;
                         if (response == null)
                             throw new InvalidOperationException("Invalid response from server " +
@@ -222,7 +229,38 @@ namespace Raven.Client.Document
                                     throw new BulkInsertAbortedExeption(msg);
 
                                 case "Processing":
-                                    // do nothing.. functions as hearbeat
+                                    // do nothing.  this is hearbeat while server is really busy
+                                break;
+
+                                case "BatchNum":
+                                    {
+                                        long batchNum;
+                                        if (response.TryGet("Num", out batchNum) == false)
+                                            throw new InvalidOperationException("Invalid BatchNum response from server " +
+                                                                                (response.ToString() ?? "null"));
+
+                                        // Console.WriteLine("BATCH DIFF = " + (_batchNum - batchNum));
+                                        var diff = _batchNum - batchNum;
+
+                                        if (diff > 1L*1024*1024)
+                                        {
+                                            if (_isThrottling == false)
+                                            {
+                                                Console.WriteLine("* THROTTLE ON");
+                                                _isThrottling = true;
+                                                _throttlingEvent.Reset();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (_isThrottling == true)
+                                            {
+                                                Console.WriteLine("* THROTTLE OFF");
+                                                _isThrottling = false;
+                                                _throttlingEvent.Set();
+                                            }
+                                        }
+                                    }
                                     break;
 
                                 case "Completed":
@@ -312,6 +350,11 @@ namespace Raven.Client.Document
 
             await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
                 .ConfigureAwait(false);
+
+            _batchNum += _networkBuffer.Length;
+            // Console.WriteLine("Sent batch" + ++_batchNum);
+            // await SendBatchNumMessage(_batchNum).ConfigureAwait(false);
+
             ReportProgress($"Batch sent to {_url} (bytes count = {segment.Count})");
 
             _networkBuffer.SetLength(0);
@@ -379,15 +422,14 @@ namespace Raven.Client.Document
         }
 
 
-        public static readonly ArraySegment<byte> KeepAliveMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'KeepAlive'}"));
-
-        private async Task SendKeepAliveMessage()
+        private async Task SendBatchNumMessage(long num)
         {
             if (_connection.State != WebSocketState.Open)
                 return;
             try
             {
-                Console.WriteLine("Sending  ** KEEP-ALIVE **");
+                ArraySegment<byte> KeepAliveMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + num + "}")); // make field?
+                Console.WriteLine(KeepAliveMessage);
                 await _connection.SendAsync(KeepAliveMessage, WebSocketMessageType.Text, true, _cts.Token)
                     .ConfigureAwait(false);
             }

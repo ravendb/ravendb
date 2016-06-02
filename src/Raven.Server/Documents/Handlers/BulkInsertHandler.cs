@@ -52,6 +52,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private WebSocket _webSocket;
+        private long _batchNum;
 
         public unsafe void InsertDocuments()
         {
@@ -149,7 +150,6 @@ namespace Raven.Server.Documents.Handlers
                         if (Log.IsDebugEnabled)
                             Log.Debug(
                                 $"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
-
                     }
 
                     using (var tx = context.OpenWriteTransaction())
@@ -224,10 +224,12 @@ namespace Raven.Server.Documents.Handlers
                             var receiveAsync = _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
                             while (await Task.WhenAny(receiveAsync, Task.Delay(1000)) != receiveAsync)
                             {
-                                await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, false,
+                                await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
                                   Database.DatabaseShutdown);
                             }
                             var result = await receiveAsync;
+
+                            _batchNum += result.Count;
 
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
@@ -249,8 +251,11 @@ namespace Raven.Server.Documents.Handlers
 
                                 while (_freeBuffers.TryTake(out current, 1000) == false)
                                 {
-                                    await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, false,
-                                        Database.DatabaseShutdown);
+                                    ArraySegment<byte> KeepAliveMessage2 = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + _batchNum + "}")); // make field?
+                                    await _webSocket.SendAsync(KeepAliveMessage2, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
+                                        .ConfigureAwait(false);
+                                    //await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
+                                    //    Database.DatabaseShutdown);
                                 }
 
                                 if (current.Buffer.SizeInBytes < stream.SizeInBytes)
@@ -258,6 +263,11 @@ namespace Raven.Server.Documents.Handlers
                                     context.ReturnMemory(current.Buffer);
                                     current.Buffer = context.GetMemory(Bits.NextPowerOf2(stream.SizeInBytes));
                                 }
+
+                                ArraySegment<byte> KeepAliveMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + _batchNum + "}")); // make field?
+                                await _webSocket.SendAsync(KeepAliveMessage, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
+                                    .ConfigureAwait(false);
+
                                 current.Used = 0;
                             }
                             stream.CopyTo(current.Buffer.Address + current.Used);
@@ -283,7 +293,7 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                             
                             Console.WriteLine("Sending PROCCSing (while waiting InsertDocuments task to finish)");
-                            await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, false,
+                            await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
                                     Database.DatabaseShutdown);
                         }
                         var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
