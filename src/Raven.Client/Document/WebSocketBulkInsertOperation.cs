@@ -233,14 +233,14 @@ namespace Raven.Client.Document
                                     // do nothing.  this is hearbeat while server is really busy
                                 break;
 
-                                case "BatchNum":
+                                case "Processed":
                                     {
-                                        long batchNum;
-                                        if (response.TryGet("Num", out batchNum) == false)
-                                            throw new InvalidOperationException("Invalid BatchNum response from server " +
+                                        long processedSize;
+                                        if (response.TryGet("Size", out processedSize) == false)
+                                            throw new InvalidOperationException("Invalid Processed response from server " +
                                                                                 (response.ToString() ?? "null"));
 
-                                        if (_sentAccomulator - batchNum > _maxDiffSizeBeforeThrottling)
+                                        if (_sentAccomulator - processedSize > _maxDiffSizeBeforeThrottling)
                                         {
                                             if (_isThrottling == false)
                                             {
@@ -411,22 +411,6 @@ namespace Raven.Client.Document
             }
         }
 
-
-        private async Task SendBatchNumMessage(long num)
-        {
-            if (_connection.State != WebSocketState.Open)
-                return;
-            try
-            {
-                ArraySegment<byte> KeepAliveMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + num + "}")); // make field?
-                await _connection.SendAsync(KeepAliveMessage, WebSocketMessageType.Text, true, _cts.Token)
-                    .ConfigureAwait(false);
-            }
-            catch (Exception)
-            {
-                // ignoring this error
-            }
-        }
 
         private async Task SendCloseMessage(WebSocketCloseStatus msgType, string closeMessage)
         {
