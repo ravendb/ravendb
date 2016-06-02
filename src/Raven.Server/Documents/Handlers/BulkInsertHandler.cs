@@ -244,7 +244,6 @@ namespace Raven.Server.Documents.Handlers
                                 }
                                 catch (Exception exception)
                                 {
-                                    Console.WriteLine("ADIADI::" + exception);
                                     break;
                                     // error in the actual insert, we'll get it when we await on the insert task
                                 }
@@ -292,7 +291,6 @@ namespace Raven.Server.Documents.Handlers
                             if (res == task)
                                 break;
                             
-                            Console.WriteLine("Sending PROCCSing (while waiting InsertDocuments task to finish)");
                             await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
                                     Database.DatabaseShutdown);
                         }
@@ -304,7 +302,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Ex:" + e);
+                    // TODO :: check why -  "System.InvalidOperationException: Unexpected reserved bits set" // Console.WriteLine("Ex:" + e);
                     _fullBuffers.CompleteAdding();
                     try
                     {

@@ -42,7 +42,7 @@ namespace Raven.Client.Document
 
         private AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
         private bool  _isThrottling;
-
+        private readonly long _maxDiffSizeBeforeThrottling = 3L*1024*1024;
 
         ~WebSocketBulkInsertOperation()
         {
@@ -172,7 +172,8 @@ namespace Raven.Client.Document
                 {
                     if (result.CloseStatus != null)
                     {
-                        Console.WriteLine("*************ERRR");
+
+                        // TODO: Should we ignore? Console.WriteLine("*************ERRR");
                         return null;
                         //   throw new InvalidOperationException("Partly received message but connection was closed: " +
                         //                                     Encoding.UTF8.GetString(buffer.Array, 0, buffer.Count));
@@ -198,13 +199,15 @@ namespace Raven.Client.Document
                     using (var response =
                         await ReadFromWebSocket(context, _connection, "Bulk/Insert/GetServerResponse", _cts.Token))
                     {
+                        // TODO :: do we need to ignore here? 
                         if (response == null)
                             continue;
-                        // Console.WriteLine(response);
+                        //if (response == null)
+                        //    throw new InvalidOperationException("Invalid response from server " +
+                        //                                        (response?.ToString() ?? "null"));
+
                         string responseType;
-                        if (response == null)
-                            throw new InvalidOperationException("Invalid response from server " +
-                                                                (response?.ToString() ?? "null"));
+                       
 
                         if (response.TryGet("Type", out responseType))
                         {
@@ -213,8 +216,6 @@ namespace Raven.Client.Document
                             {
                                 case "Error":
                                     {
-                                        Console.WriteLine("ERROR");
-
                                         string exceptionString;
                                         if (response.TryGet("Exception", out exceptionString) == false)
                                             throw new InvalidOperationException("Invalid response from server " +
@@ -239,14 +240,10 @@ namespace Raven.Client.Document
                                             throw new InvalidOperationException("Invalid BatchNum response from server " +
                                                                                 (response.ToString() ?? "null"));
 
-                                        // Console.WriteLine("BATCH DIFF = " + (_batchNum - batchNum));
-                                        var diff = _batchNum - batchNum;
-
-                                        if (diff > 1L*1024*1024)
+                                        if (_batchNum - batchNum > _maxDiffSizeBeforeThrottling)
                                         {
                                             if (_isThrottling == false)
                                             {
-                                                Console.WriteLine("* THROTTLE ON");
                                                 _isThrottling = true;
                                                 _throttlingEvent.Reset();
                                             }
@@ -255,7 +252,6 @@ namespace Raven.Client.Document
                                         {
                                             if (_isThrottling == true)
                                             {
-                                                Console.WriteLine("* THROTTLE OFF");
                                                 _isThrottling = false;
                                                 _throttlingEvent.Set();
                                             }
@@ -265,7 +261,6 @@ namespace Raven.Client.Document
 
                                 case "Completed":
                                     {
-                                        Console.WriteLine("COMPLETED");
                                         var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
                                         var result = await _connection.ReceiveAsync(buffer, _cts.Token);
                                         if (result.MessageType != WebSocketMessageType.Close)
@@ -284,9 +279,6 @@ namespace Raven.Client.Document
                                     break;
                                 default:
                                     {
-                                        Console.WriteLine("DEFAULT=");
-                                        Console.WriteLine(responseType);
-
                                         msg = "Received unexpected message from a server : " + responseType;
                                         ReportProgress(msg);
                                         await
@@ -352,8 +344,6 @@ namespace Raven.Client.Document
                 .ConfigureAwait(false);
 
             _batchNum += _networkBuffer.Length;
-            // Console.WriteLine("Sent batch" + ++_batchNum);
-            // await SendBatchNumMessage(_batchNum).ConfigureAwait(false);
 
             ReportProgress($"Batch sent to {_url} (bytes count = {segment.Count})");
 
@@ -429,13 +419,11 @@ namespace Raven.Client.Document
             try
             {
                 ArraySegment<byte> KeepAliveMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'BatchNum', 'Num': " + num + "}")); // make field?
-                Console.WriteLine(KeepAliveMessage);
                 await _connection.SendAsync(KeepAliveMessage, WebSocketMessageType.Text, true, _cts.Token)
                     .ConfigureAwait(false);
             }
             catch (Exception)
             {
-                Console.WriteLine("EXCEPTION ?? ***********************");
                 // ignoring this error
             }
         }
@@ -446,7 +434,6 @@ namespace Raven.Client.Document
                 return;
             try
             {
-                Console.WriteLine("Sending  CLOSE *************");
                 await _connection.CloseOutputAsync(msgType,
                     closeMessage,
                     _cts.Token)
