@@ -35,6 +35,7 @@
     <TypeScriptCompile Include="App\commands\database\cluster\removeClusteringCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\cluster\initializeNewClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\debug\getDeletionBatchStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getDocumentsPreviewCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
@@ -148,6 +149,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugTasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\filteredOutIndexInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\prefetchInfo.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\deletionBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceStatsInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapStatsInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceBatchInfo.ts" />
@@ -206,6 +208,7 @@
     <Content Include="App\views\database\indexes\indexLockAllConfirm.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\filteredOutIndexInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\prefetchInfo.html" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\deletionBatchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceStatsInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\mapStatsInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceBatchInfo.html" />
