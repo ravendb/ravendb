@@ -110,9 +110,6 @@ namespace Raven.Server.Documents.Indexes
 
                 Index index;
 
-                if (definition.Type == IndexType.Unknown)
-                    definition.Type = definition.DetectIndexType();
-
                 switch (definition.Type)
                 {
                     case IndexType.Map:

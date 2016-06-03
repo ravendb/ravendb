@@ -2,11 +2,11 @@
 {
     public enum IndexType
     {
-        Unknown,
         AutoMap,
         AutoMapReduce,
         Map,
-        MapReduce
+        MapReduce,
+        Faulty
     }
 
     public static class IndexTypeExtensions

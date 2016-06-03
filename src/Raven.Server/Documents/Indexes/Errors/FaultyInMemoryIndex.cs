@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -16,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Errors
     public class FaultyInMemoryIndex : Index
     {
         public FaultyInMemoryIndex(int indexId, string name)
-            : base(indexId, IndexType.Unknown, new FaultyIndexDefinition(name ?? $"Faulty/Indexes/{indexId}", new[] { "@FaultyIndexes" }, 
+            : base(indexId, IndexType.Faulty, new FaultyIndexDefinition(name ?? $"Faulty/Indexes/{indexId}", new[] { "@FaultyIndexes" }, 
                    IndexLockMode.Unlock, new IndexField[0]))
         {
             Priority = IndexingPriority.Error;
