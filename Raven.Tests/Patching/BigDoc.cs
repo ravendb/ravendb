@@ -16,7 +16,7 @@ namespace Raven.Tests.Patching
         {
             using (var store = NewDocumentStore())
             {
-                using (var stream = typeof(BigDoc).Assembly.GetManifestResourceStream("Raven.Tests.Patching.failingdump11.ravendump"))
+                using (var stream = typeof(BigDoc).Assembly.GetManifestResourceStream("Raven.Tests.Patching.failingdump11.ravendbdump"))
                 {
                     new DatabaseDataDumper(store.SystemDatabase).ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = stream }).Wait(TimeSpan.FromSeconds(15));
                 }
