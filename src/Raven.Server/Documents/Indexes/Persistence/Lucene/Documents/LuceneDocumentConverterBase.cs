@@ -8,6 +8,7 @@ using Lucene.Net.Documents;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Data;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -104,6 +105,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield break;
             }
 
+            
+            if (valueType == ValueType.BoostedValue)
+            {
+                var boostedValue = (BoostedValue)value;
+                foreach (var fieldFromCollection in GetRegularFields(field, boostedValue.Value, nestedArray: false))
+                {
+                    fieldFromCollection.Boost = boostedValue.Boost;
+                    fieldFromCollection.OmitNorms = false;
+                    yield return fieldFromCollection;
+                }
+
+                yield break;
+            }
+
             if (valueType == ValueType.Enumerable)
             {
                 var itemsToIndex = value as IEnumerable;
@@ -150,6 +165,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is LazyStringValue) return ValueType.String;
 
             if (value is LazyCompressedStringValue) return ValueType.CompressedString;
+
+            if (value is BoostedValue) return ValueType.BoostedValue;
 
             if (value is IEnumerable) return ValueType.Enumerable;
 
@@ -295,7 +312,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             Convertible,
 
-            Numeric
+            Numeric,
+
+            BoostedValue
         }
     }
 }

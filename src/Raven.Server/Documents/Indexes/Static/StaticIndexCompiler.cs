@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-
+using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
@@ -35,6 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof (Enumerable).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof (StaticIndexCompiler).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof (DynamicAttribute).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof (BoostedValue).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
         };

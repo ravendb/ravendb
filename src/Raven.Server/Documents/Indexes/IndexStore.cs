@@ -420,6 +420,10 @@ namespace Raven.Server.Documents.Indexes
                         var autoMapIndex = (AutoMapIndex)index;
                         var autoMapIndexDefinition = autoMapIndex.Definition;
                         return CreateIndex(autoMapIndexDefinition);
+                    case IndexType.Map:
+                        var staticMapIndex = (StaticMapIndex)index;
+                        var staticMapIndexDefinition = staticMapIndex.Definition.IndexDefinition;
+                        return CreateIndex(staticMapIndexDefinition);
                     default:
                         throw new NotSupportedException(index.Type.ToString());
                 }
