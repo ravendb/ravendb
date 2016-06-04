@@ -2,16 +2,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using metrics;
 using metrics.Core;
-using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Util;
 
 namespace Raven.Database.Counters
 {
     [CLSCompliant(false)]
-    public class CountersMetricsManager
+    public class CountersMetricsManager : IDisposable
     {
         readonly Metrics counterMetrics = new Metrics();
         public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
@@ -37,15 +35,28 @@ namespace Raven.Database.Counters
         public CountersMetricsManager()
         {
             Increments = counterMetrics.Meter("counterMetrics", "inc/min", "increments", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(Increments);
+
             Decrements = counterMetrics.Meter("counterMetrics", "dec/min", "decrements", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(Decrements);
+
             Resets = counterMetrics.Meter("counterMetrics", "reset/min", "resets", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(Resets);
+
             Deletes = counterMetrics.Meter("counterMetrics", "delete/min", "deletes", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(Deletes);
+
             ClientRequests = counterMetrics.Meter("counterMetrics", "client/min", "client requests", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(ClientRequests);
 
             IncomingReplications = counterMetrics.Meter("counterMetrics", "RepIn/min", "replications", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(IncomingReplications);
+
             OutgoingReplications = counterMetrics.Meter("counterMetrics", "RepOut/min", "replications", TimeUnit.Minutes);
+            MetricsTicker.Instance.AddMeterMetric(OutgoingReplications);
 
             RequestsPerSecondCounter = counterMetrics.TimedCounter("counterMetrics", "req/sec counter", "Requests Per Second");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(RequestsPerSecondCounter);
 
             IncSizeMetrics = counterMetrics.Histogram("counterMetrics", "inc delta sizes");
             DecSizeMetrics = counterMetrics.Histogram("counterMetrics", "dec delta sizes");
@@ -78,12 +89,31 @@ namespace Raven.Database.Counters
         public void Dispose()
         {
             counterMetrics.Dispose();
+
+            MetricsTicker.Instance.RemoveMeterMetric(Increments);
+            MetricsTicker.Instance.RemoveMeterMetric(Decrements);
+            MetricsTicker.Instance.RemoveMeterMetric(Resets);
+            MetricsTicker.Instance.RemoveMeterMetric(Deletes);
+            MetricsTicker.Instance.RemoveMeterMetric(ClientRequests);
+            MetricsTicker.Instance.RemoveMeterMetric(IncomingReplications);
+            MetricsTicker.Instance.RemoveMeterMetric(OutgoingReplications);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(RequestsPerSecondCounter);
+
+            foreach (var batchSizeMeter in ReplicationBatchSizeMeter)
+            {
+                MetricsTicker.Instance.RemoveMeterMetric(batchSizeMeter.Value);
+            }
         }
 
         public MeterMetric GetReplicationBatchSizeMetric(string serverUrl)
         {
             return ReplicationBatchSizeMeter.GetOrAdd(serverUrl,
-                s => counterMetrics.Meter("counterMetrics", "counters replication/min for: "+ s, "Replication docs/min Counter", TimeUnit.Minutes));
+                s =>
+                {
+                    var meter = counterMetrics.Meter("counterMetrics", "counters replication/min for: " + s, "Replication docs/min Counter", TimeUnit.Minutes);
+                    MetricsTicker.Instance.AddMeterMetric(meter);
+                    return meter;
+                });
         }
 
         public HistogramMetric GetReplicationBatchSizeHistogram(string serverUrl)
