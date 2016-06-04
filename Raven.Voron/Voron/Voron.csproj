@@ -105,6 +105,7 @@
     <Compile Include="Structure.cs" />
     <Compile Include="StructureReader.cs" />
     <Compile Include="StructureSchema.cs" />
+    <Compile Include="Trees\ParentPageAction.cs" />
     <Compile Include="Trees\PageIterator.cs" />
     <Compile Include="Trees\PrefixInfoSection.cs" />
     <Compile Include="Trees\PrefixNodeHeader.cs" />
