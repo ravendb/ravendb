@@ -48,5 +48,7 @@ namespace Raven.Database.Smuggler
                 ReportProgress = api.ShowProgress
             }).ConfigureAwait(false);
         }
+
+        protected override string FileExtension => "ravencsdump";
     }
 }

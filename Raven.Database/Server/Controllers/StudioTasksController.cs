@@ -215,7 +215,7 @@ for(var customFunction in customFunctions) {{
                     }
                     else if (e is JsonReaderException)
                     {
-                        status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
+                        status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendbdump file, exported by smuggler (aka database export). If you are importing a .ravendbdump file then the file may be corrupted";
                     }
                     else if (e is OperationVetoedException && e.Message.Contains(VersioningPutTrigger.CreationOfHistoricalRevisionIsNotAllowed))
                     {
@@ -289,7 +289,7 @@ for(var customFunction in customFunctions) {{
                 smugglerOptions.NoneDefaultFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = fileName + ".ravendump"
+                FileName = fileName + ".ravendbdump"
             };
 
             return new CompletedTask<HttpResponseMessage>(result);

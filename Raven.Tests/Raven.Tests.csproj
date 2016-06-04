@@ -1046,7 +1046,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
-    <EmbeddedResource Include="Patching\failingdump11.ravendump" />
+    <EmbeddedResource Include="Patching\failingdump11.ravendbdump" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

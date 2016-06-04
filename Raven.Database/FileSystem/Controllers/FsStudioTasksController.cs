@@ -177,7 +177,7 @@ namespace Raven.Database.FileSystem.Controllers
                 smugglerOptions.NoneDefualtFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = fileName + ".ravendump"
+                FileName = fileName + ".ravenfsdump"
             };
 
             return new CompletedTask<HttpResponseMessage>(result);
