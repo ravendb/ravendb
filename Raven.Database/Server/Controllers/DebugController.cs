@@ -390,6 +390,16 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
+        [RavenRoute("debug/deletion-batch-stats")]
+        [RavenRoute("databases/{databaseName}/debug/deletion-batch-stats")]
+        public HttpResponseMessage DeletionBatchStats(int lastId = 0)
+        {
+            var deletionBatches = Database.WorkContext.LastActualDeletionBatchInfo.ToArray();
+            var deletionBatchesTrimmed = deletionBatches.SkipWhile(x => x.Id < lastId).ToArray();
+            return GetMessageWithObject(deletionBatchesTrimmed);
+        }
+
+        [HttpGet]
         [RavenRoute("debug/plugins")]
         [RavenRoute("databases/{databaseName}/debug/plugins")]
         public HttpResponseMessage Plugins()
