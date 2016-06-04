@@ -109,11 +109,13 @@ namespace Voron.Data.BTrees
             }
 
             int pageSize = nestedPage.CalcSizeUsed() + Constants.TreePageHeaderSize;
-            var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(valueToInsert, 0);
+            var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(valueToInsert, 0) +
+                                  nestedPage.GetRequiredSpace(key, 0);
             if (newRequiredSize <= maxNodeSize)
             {
                 // we can just expand the current value... no need to create a nested tree yet
-                var actualPageSize = (ushort) Math.Min(Bits.NextPowerOf2(newRequiredSize), maxNodeSize);
+                var actualPageSize = (ushort) Math.Min(Bits.NextPowerOf2(newRequiredSize),
+                    maxNodeSize - nestedPage.GetRequiredSpace(key, 0));
 
                 var currentDataSize = TreeNodeHeader.GetDataSize(_llt, item);
                 ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, actualPageSize, currentDataSize);
