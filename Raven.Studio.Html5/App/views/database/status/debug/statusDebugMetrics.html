@@ -206,7 +206,11 @@
             </div>
             <div class="panel-collapse collapse in" id="metricsReplication"  >
                 <div class="panel-body">
-                    <ul class="nav nav-tabs" data-bind="foreach: $root.replicationDestinations">
+                    <div class="text-center" data-bind="visible: !$root.replicationDestinations().length">
+                        <h3 class="text-info">No replication destinations found. </h3>
+                    </div>
+
+                    <ul class="nav nav-tabs" data-bind="visible: $root.replicationDestinations().length, foreach: $root.replicationDestinations">
                         <li data-bind="css: { active: $index() == 0 }"><a data-bind="attr: { href: '#replication-tab-' + $index() }, text: $data" data-toggle="tab"></a></li>
                     </ul>
                     <div class="tab-content" data-bind="foreach: $root.replicationDestinations">

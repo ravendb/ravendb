@@ -9097,3 +9097,6 @@ a.global_help_link:focus {
   flex: 1;
   overflow-y: auto;
 }
+.form-condensed .form-group {
+  margin-bottom: 5px;
+}

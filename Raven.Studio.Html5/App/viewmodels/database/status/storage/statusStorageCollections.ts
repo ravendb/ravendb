@@ -31,9 +31,7 @@ class statusStorageCollections extends viewModelBase {
                 .done((results: debugDocumentStats) => {
                     this.data(results);
                 })
-
                 .always(() => this.canSearch(true));
-
         }
 
         return null;

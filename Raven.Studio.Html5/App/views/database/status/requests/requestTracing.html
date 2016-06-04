@@ -17,7 +17,7 @@
             </label>
         </div>
         <div id="requestTracingTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 50px; width: 100%; ">
-            <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableKeyDown }" tabindex="1">
+            <table class="single-line-row-table table table-condensed" data-bind="event: { keydown: tableNavigation.tableKeyDown.bind(tableNavigation) }" tabindex="1">
                 <thead>
                     <tr>
                         <th class="col-md-2">Method</th>

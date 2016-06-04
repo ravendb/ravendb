@@ -36,11 +36,11 @@ text.trace {
 
     <div class="panel panel-default panel-wo-margin">
         <div class="panel-heading">
-            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
+            <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.adminView() && $root.currentHelpLink()" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <div class="btn-group" data-bind="visible: adminView()">
 
                 <button class="btn btn-default" title="Creates package with stacktrace (available ONLY for system database)" data-bind="click: createPackageWithStacks">
-                    <span data-bind="visible: showLoadingIndicator" class="fa fa-spinner fa-spin fa-fw"></span>
+                    <i data-bind="visible: showLoadingIndicator" class="fa fa-spinner fa-spin fa-fw"></i>
                     Create info package with stacktraces <span class="text-danger">(This is resource consuming)</span>
                 </button>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -50,7 +50,7 @@ text.trace {
                 <ul class="dropdown-menu" role="menu">
                     <li>
                         <a data-bind="click: createPackageWithoutStacks" class="btn btn-link">
-                            Create info package <i class="fa fa-file-zip-o"></i>
+                            <i class="fa fa-file-zip-o"></i> Create info package 
                         </a>
                     </li>
                 </ul>
@@ -58,13 +58,14 @@ text.trace {
 
             <div class="btn-group" data-bind="visible: adminView()==false">
                 <button data-bind="click: createPackageWithoutStacks" class="btn btn-default">
-                    Create info package <i class="fa fa-file-zip-o"></i>
+                    <i data-bind="visible: showLoadingIndicator" class="fa fa-spinner fa-spin fa-fw"></i>
+                    <i data-bind="visible: !showLoadingIndicator()" class="fa fa-file-zip-o"></i> Create info package 
                 </button>
             </div>
 
             <div class="btn-group" data-bind="visible: hasStackDump">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                    Download parallel stacks <i class="fa fa-download"></i> <span class="caret"></span>
+                    <i class="fa fa-download"></i> Download parallel stacks  <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
                     <li data-bind="click: saveAsPng, visible: hasSaveAsPngSupport"><a href="#"><i class="fa fa-file-image-o"></i> PNG</a></li>
@@ -73,12 +74,12 @@ text.trace {
                 </ul>
             </div>
 
-            <button data-bind="click: saveAsZip, visible: hasInfoPackage" type="button" class="btn btn-default">
-                Download info package <i class="fa fa-download"></i>
+            <button data-bind="click: saveAsZip, visible: hasInfoPackage" type="button" class="btn btn-primary">
+                <i class="fa fa-download"></i> Download info package 
             </button>
 
-            <button type="button" class="btn btn-default" data-bind="click: chooseImportFile">
-                Import <i class="fa fa-upload"></i>
+            <button type="button" class="btn btn-default" data-bind="click: chooseImportFile, visible: adminView()">
+                <i class="fa fa-upload"></i> Import 
             </button>
         </div>
         <div class="panel-body">

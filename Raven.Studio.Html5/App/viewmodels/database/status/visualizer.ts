@@ -22,6 +22,8 @@ import queryIndexDebugReduceCommand = require("commands/database/debug/queryInde
 import queryIndexDebugAfterReduceCommand = require("commands/database/debug/queryIndexDebugAfterReduceCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 
+import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
+
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 
@@ -132,6 +134,13 @@ class visualizer extends viewModelBase {
         this.drawHeader();
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+        this.hasIndexSelected.subscribe(() => {
+            dynamicHeightBindingHandler.forceUpdate();
+        });
+    }
+
     resetChart() {
         this.tooltipClose();
         this.reduceKey("");
@@ -213,7 +222,7 @@ class visualizer extends viewModelBase {
     }
 
     addDocKey(key: string) {
-        if (key && this.docKeys.contains(key))
+        if (!key || this.docKeys.contains(key))
             return;
 
         this.showLoadingIndicator(true);
@@ -243,7 +252,7 @@ class visualizer extends viewModelBase {
 
     addReduceKey(key: string, needToChangeLoadingIndicator = true): JQueryPromise<any[]> {
         var deferred = $.Deferred();
-        if (key && this.reduceKeys().contains(key))
+        if (!key || this.reduceKeys().contains(key))
             return deferred.resolve();
 
         if (needToChangeLoadingIndicator)

@@ -42,7 +42,7 @@ class autoRefreshBindingHandler {
 
         var context = autoRefreshBindingHandler.initRefresh(element, config);
 
-        $(element).click(() => autoRefreshBindingHandler.toggleAutorefresh(context));
+        $(element).click(() => context.autorefreshEnabled(!context.autorefreshEnabled()));
 
         var active = ko.unwrap(config.active);
         if (active) {
@@ -121,9 +121,8 @@ class autoRefreshBindingHandler {
             .startAngle(0)
             .endAngle(d => d * 2 * Math.PI);
 
-        var autorefreshEnabled = ko.isObservable(config.active) ?  <KnockoutObservable<boolean>> config.active : ko.observable<boolean>(true);
-
-        return {
+        var autorefreshEnabled = ko.isObservable(config.active) ? <KnockoutObservable<boolean>>config.active : ko.observable<boolean>(true);
+        var context = {
             svg: svg,
             path: path,
             arc: arc,
@@ -132,7 +131,10 @@ class autoRefreshBindingHandler {
             duration: config.duration,
             onRefresh: config.onRefresh,
             disposed: false
-    };
+        };
+        autorefreshEnabled.subscribe(() => this.toggleAutorefresh(context));
+
+        return context;
     }
 
     private static animatePath(context: autoRefreshContext) {
@@ -154,7 +156,7 @@ class autoRefreshBindingHandler {
     }
 
     private static toggleAutorefresh(context: autoRefreshContext) {
-        if (context.autorefreshEnabled()) {
+        if (!context.autorefreshEnabled()) {
             // stop current animation if any
             if (!context.refreshing()) {
                 context.path
@@ -169,7 +171,6 @@ class autoRefreshBindingHandler {
             context.onRefresh()
                 .always(() => autoRefreshBindingHandler.animatePath(context));
         }
-        context.autorefreshEnabled(!context.autorefreshEnabled());
     }
 
     update(element: HTMLInputElement, valueAccessor: () => any, allBindingsAccessor, viewModel: viewModelBase, bindingContext) {
