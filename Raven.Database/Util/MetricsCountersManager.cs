@@ -6,16 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Tasks;
-
 using metrics;
 using metrics.Core;
-
 using System.Linq;
-using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Extensions;
 
 namespace Raven.Database.Util
 {
@@ -38,7 +33,6 @@ namespace Raven.Database.Util
 
         public MeterMetric ConcurrentRequests { get; private set; }
 
-        public MeterMetric RequestsMeter { get; private set; }
         public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
 
         public ConcurrentDictionary<string, MeterMetric> ReplicationBatchSizeMeter { get; private set; }
@@ -50,28 +44,36 @@ namespace Raven.Database.Util
         public ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>> ReplicationPerformanceStats { get; private set; }
 
         public long ConcurrentRequestsCount;
-        
+
         public MetricsCountersManager()
         {
             StaleIndexMaps = dbMetrics.Histogram("metrics", "stale index maps");
-
             StaleIndexReduces = dbMetrics.Histogram("metrics", "stale index reduces");
 
             ConcurrentRequests = dbMetrics.Meter("metrics", "req/sec", "Concurrent Requests Meter", TimeUnit.Seconds);
+            MetricsTicker.Instance.AddMeterMetric(ConcurrentRequests);
 
             RequestDuationMetric = dbMetrics.Histogram("metrics", "req duration");
 
             DocsPerSecond = dbMetrics.TimedCounter("metrics", "docs/sec", "Docs Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(DocsPerSecond);
+
             FilesPerSecond = dbMetrics.TimedCounter("metrics", "files/sec", "Files Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(FilesPerSecond);
+
             RequestsPerSecondCounter = dbMetrics.TimedCounter("metrics", "req/sec counter", "Requests Per Second");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(RequestsPerSecondCounter);
+
             ReducedPerSecond = dbMetrics.TimedCounter("metrics", "reduces/sec", "Reduced Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(ReducedPerSecond);
+
             IndexedPerSecond = dbMetrics.TimedCounter("metrics", "indexed/sec", "Index Per Second Counter");
+            MetricsTicker.Instance.AddPerSecondCounterMetric(IndexedPerSecond);
+
             ReplicationBatchSizeMeter = new ConcurrentDictionary<string, MeterMetric>();
             ReplicationBatchSizeHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationDurationHistogram = new ConcurrentDictionary<string, HistogramMetric>();
             ReplicationPerformanceStats = new ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>>();
-            
-
         }
 
         public void AddGauge<T>(Type type, string name, Func<T> function)
@@ -99,12 +101,29 @@ namespace Raven.Database.Util
         public void Dispose()
         {
             dbMetrics.Dispose();
+
+            MetricsTicker.Instance.RemoveMeterMetric(ConcurrentRequests);
+            foreach (var batchSizeMeter in ReplicationBatchSizeMeter)
+            {
+                MetricsTicker.Instance.RemoveMeterMetric(batchSizeMeter.Value);
+            }
+
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(DocsPerSecond);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(FilesPerSecond);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(RequestsPerSecondCounter);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(ReducedPerSecond);
+            MetricsTicker.Instance.RemovePerSecondCounterMetric(IndexedPerSecond);
         }
 
         public MeterMetric GetReplicationBatchSizeMetric(ReplicationStrategy destination)
         {
             return ReplicationBatchSizeMeter.GetOrAdd(destination.ConnectionStringOptions.Url,
-                s => dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes));
+                s =>
+                {
+                    var newMetric = dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes);
+                    MetricsTicker.Instance.AddMeterMetric(newMetric);
+                    return newMetric;
+                });
         }
 
         public HistogramMetric GetReplicationBatchSizeHistogram(ReplicationStrategy destination)

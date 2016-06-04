@@ -17,6 +17,7 @@ using Raven.Database.Embedded;
 using Raven.Database.FileSystem;
 using Raven.Database.Server;
 using Raven.Database.Server.WebApi;
+using Raven.Database.Util;
 
 namespace Raven.Server
 {
@@ -24,6 +25,7 @@ namespace Raven.Server
     {
         private readonly DocumentStore documentStore;
         private readonly FilesStore filesStore;
+        private readonly MetricsTicker metricsTicker;
 
         private InMemoryRavenConfiguration configuration;
         private IServerThingsForTests serverThingsForTests;
@@ -53,6 +55,8 @@ namespace Raven.Server
                     FailoverBehavior = FailoverBehavior.FailImmediately
                 }
             };
+
+            metricsTicker = MetricsTicker.Instance;
         }
 
         public InMemoryRavenConfiguration Configuration
@@ -151,6 +155,9 @@ namespace Raven.Server
                 return;
 
             Disposed = true;
+
+            if (metricsTicker != null)
+                metricsTicker.Dispose();
 
             if (documentStore != null)
                 documentStore.Dispose();
