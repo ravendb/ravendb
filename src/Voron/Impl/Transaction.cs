@@ -102,13 +102,12 @@ namespace Voron.Impl
             }
         }
 
-
         internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
         {
             if (_multiValueTrees == null)
                 _multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
             mvTree.IsMultiValueTree = true;
-            _multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
+            _multiValueTrees.Add(Tuple.Create(tree, key.Clone()), mvTree);
         }
 
         internal bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
