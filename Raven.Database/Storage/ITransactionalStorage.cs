@@ -57,7 +57,7 @@ namespace Raven.Database.Storage
         List<TransactionContextData> GetPreparedTransactions();
 
         object GetInFlightTransactionsInternalStateForDebugOnly();
-
+        void DropAllIndexingInformation();
         ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel();
         /// <summary>
         /// Scheduled reduction tracking is a memory living entity it will get corrupted on a reset.
