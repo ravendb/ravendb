@@ -503,7 +503,13 @@ namespace Raven.Tests.Common
                         {
                             if (session.Advanced.GetEtagFor(e) != changedSince)
                                 break;
+
+                            Thread.Sleep(100);
+                            continue;
                         }
+                    }
+                    else
+                    {
                         Thread.Sleep(100);
                         continue;
                     }
