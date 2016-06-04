@@ -8,17 +8,33 @@ using System;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Json.Linq;
+using Raven.Server.Documents.Expiration;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Expiration
 {
-    public class Expiration : ExpirationTest
+    public class Expiration : RavenTestBase
     {
         public Expiration()
         {
             SystemTime.UtcDateTime = () => DateTime.UtcNow;
+        }
+
+        protected async Task SetupExpiration(DocumentStore store)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new ExpirationConfiguration
+                {
+                    Active = true,
+                    DeleteFrequencySeconds = 100,
+                }, Constants.Expiration.RavenExpirationConfiguration);
+
+                await session.SaveChangesAsync();
+            }
         }
 
         [Fact]
@@ -50,7 +66,9 @@ namespace FastTests.Server.Documents.Expiration
                 }
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                await Task.Delay(TimeSpan.FromSeconds(3));
+
+                (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner.CleanupExpiredDocs();
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var company2 = await session.LoadAsync<Company>(company.Id);
@@ -64,6 +82,7 @@ namespace FastTests.Server.Documents.Expiration
         {
             var company = new { Name = "Company Name" };
             var companyJson = RavenJObject.FromObject(company);
+            const int count = 100;
 
             using (var store = await GetDocumentStore())
             {
@@ -72,13 +91,15 @@ namespace FastTests.Server.Documents.Expiration
                 var expiry = SystemTime.UtcNow.AddMinutes(5);
                 var metadata = new RavenJObject
                 {
-                    [Constants.Expiration.RavenExpirationDate] = new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite))
+                    [Constants.Expiration.RavenExpirationDate] =
+                        new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite))
                 };
                 var metadata2 = new RavenJObject
                 {
-                    [Constants.Expiration.RavenExpirationDate] = new RavenJValue(expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite))
+                    [Constants.Expiration.RavenExpirationDate] =
+                        new RavenJValue(expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite))
                 };
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < count; i++)
                 {
                     await store.AsyncDatabaseCommands.PutAsync("companies/" + i, null, companyJson, metadata);
                     await store.AsyncDatabaseCommands.PutAsync("companies-type2/" + i, null, companyJson, metadata2);
@@ -86,15 +107,19 @@ namespace FastTests.Server.Documents.Expiration
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var company2 = await session.LoadAsync<Company>("companies/9999");
+                    var company2 = await session.LoadAsync<Company>("companies/" + (count - 1));
                     Assert.NotNull(company2);
                 }
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                using (var session = store.OpenAsyncSession())
+
+                var expiredDocumentsCleaner =
+                    (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner;
+                expiredDocumentsCleaner.CleanupExpiredDocs();
+
+                for (int i = 0; i < count; i++)
                 {
-                    for (int i = 0; i < 10000; i++)
+                    using (var session = store.OpenAsyncSession())
                     {
                         var company2 = await session.LoadAsync<Company>("companies/" + i);
                         Assert.Null(company2);
