@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.Abstractions.Logging;
+using Raven.Client.Data;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -15,7 +19,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionWebSocketConnection:IDisposable
     {
-        
         private readonly WebSocket _webSocket;
         private readonly IDisposable _contextPoolDisposable;
         private readonly DocumentsOperationContext _context;
@@ -29,6 +32,7 @@ namespace Raven.Server.Documents.Handlers
         private CancellationTokenSource _internalCancellationTokenSource;
         private ArraySegment<byte> _clientAckBuffer;
         private SubscriptionConnectionState _state;
+        protected static readonly ILog Log = LogManager.GetLogger(typeof(SubscriptionWebSocketConnection).FullName);
 
         public SubscriptionWebSocketConnection(DocumentsContextPool contextPool, WebSocket webSocket, DocumentDatabase database)
         {
@@ -131,6 +135,9 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     int skipNumber = 0;
+                    var patchCriteria = new Patch.PatchRequest {Script = criteria.FilterJavaScript};
+                    var spd = new SubscriptionPatchDocument(this._database);
+
                     while (true)
                     {
                         _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -148,7 +155,19 @@ namespace Raven.Server.Documents.Handlers
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 hasDocuments = true;
                                 startEtag = doc.Etag;
-                                if (MatchCriteria(criteria, doc) == false)
+
+                                var matchesCriteria = false;
+
+                                try
+                                {
+                                    matchesCriteria = spd.MatchCriteria(_context, doc, patchCriteria);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.ErrorException($"Criteria script threw exception for subscription {this._options.SubscriptionId} for document id {doc.Key}",ex);
+                                }
+
+                                if (matchesCriteria == false)
                                 {
                                     if (skipNumber++ % _options.MaxDocsPerBatch == 0)
                                     {
@@ -336,10 +355,10 @@ namespace Raven.Server.Documents.Handlers
             await FlushStreamToClient().ConfigureAwait(false);
         }
 
-        private bool MatchCriteria(SubscriptionCriteria criteria, Document doc)
+        private bool MatchCriteria(DocumentsOperationContext context, Patch.PatchRequest patchCriteria, Document doc, SubscriptionPatchDocument spd)
         {
             // todo: implement
-            return true;
+            return  spd.MatchCriteria(context, doc, patchCriteria);
         }
 
         public void Dispose()

@@ -17,7 +17,7 @@ using Raven.Tests.Notifications;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class Subscriptions : RavenTestBase
+    public class Subscriptions : SubscriptionTestBase
     {
         [Fact]
         public async Task CreateSubscription()
@@ -42,21 +42,6 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(subscriptionCriteria.KeyStartsWith, subscriptionsConfig[0].Criteria.KeyStartsWith);
                 Assert.Equal(0, subscriptionsConfig[0].AckEtag);
                 Assert.Equal(subsId, subscriptionsConfig[0].SubscriptionId);
-            }
-        }
-
-        public class Thing
-        {
-            public string Name { get; set; }
-        }
-
-        private async Task AsyncSpin(Func<bool> action, int amount)
-        {
-            var sp = Stopwatch.StartNew();
-
-            while (sp.ElapsedMilliseconds < amount && action() == false)
-            {
-                await Task.Delay(50).ConfigureAwait(false);
             }
         }
 
@@ -213,21 +198,6 @@ namespace FastTests.Client.Subscriptions
                 await AsyncSpin(() => waitingSubscriptionList.Count == 5, 60000).ConfigureAwait(false);
                 Assert.Equal(5, acceptedSusbscriptionList.Count);
                 Assert.Equal(5, waitingSubscriptionList.Count);
-            }
-        }
-
-        private static void CreateDocuments(DocumentStore store, int amount)
-        {
-            using (var session = store.OpenSession())
-            {
-                for (var i = 0; i < amount; i++)
-                {
-                    session.Store(new Thing
-                    {
-                        Name = $"ThingNo{i}"
-                    });
-                }
-                session.SaveChanges();
             }
         }
 
