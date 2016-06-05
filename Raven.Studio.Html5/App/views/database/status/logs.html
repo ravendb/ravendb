@@ -3,28 +3,28 @@
         <button class="btn btn-default" data-bind="autoRefresh: { duration: 2000, onRefresh: $root.fetchLogs.bind($root), active:true }"></button>
         <div class="btn-group" data-toggle="buttons">
             <label class="btn btn-default active" data-bind="click: setFilterAll">
-                <input type="radio" name="options" id="option1"> <span data-bind="text: 'All logs (' + allLogs().length + ')'"></span>
+                <input type="radio" name="options" id="option1"> All logs <span class="badge" data-bind="text: allLogs().length"></span>
             </label>
             <label class="btn btn-default" data-bind="click: setFilterDebug">
-                <input type="radio" name="options" id="option2"> <span data-bind="text: 'Debug (' + debugLogCount() + ')'"></span>
+                <input type="radio" name="options" id="option2"> Debug <span class="badge" data-bind="text: debugLogCount()"></span>
             </label>
             <label class="btn btn-default" data-bind="click: setFilterInfo">
-                <input type="radio" name="options" id="option3"> <span data-bind="text: 'Info (' + infoLogCount() + ')'"></span>
+                <input type="radio" name="options" id="option3"> Info <span class="badge" data-bind="text: infoLogCount()"></span>
             </label>
             <label class="btn btn-default" data-bind="click: setFilterWarning">
-                <input type="radio" name="options" id="option4"> <span data-bind="text: 'Warnings (' + warningLogCount() + ')'"></span>
+                <input type="radio" name="options" id="option4">Warnings <span class="badge" data-bind="text: warningLogCount()"></span>
             </label>
             <label class="btn btn-default" data-bind="click: setFilterError">
-                <input type="radio" name="options" id="option5"> <span data-bind="text: 'Errors (' + errorLogCount() + ')'"></span>
+                <input type="radio" name="options" id="option5">Errors <span class="badge" data-bind="text: errorLogCount()"></span>
             </label>
             <label class="btn btn-default" data-bind="click: setFilterFatal">
-                <input type="radio" name="options" id="option6"> <span data-bind="text: 'Fatal (' + fatalLogCount() + ')'"></span>
+                <input type="radio" name="options" id="option6">Fatal <span class="badge" data-bind="text: fatalLogCount()"></span>
             </label>
         </div>
         <form class="form-inline" style="display: inline-block; vertical-align: middle;">
             <input type="text" class="form-control col-md-8" placeholder="Filter" data-bind="value: searchText, valueUpdate: 'afterkeydown', submit: function(){ }" />
         </form>
-        <div class="form-group" id="logTableContainer"  data-bind="event: { keydown: tableKeyDown }">
+        <div class="form-group" id="logTableContainer"  data-bind="event: { keydown: tableNavigation.tableKeyDown.bind(tableNavigation) }">
             <div style="padding-top: 10px;" data-bind="foreach: filteredLoggers">
                 <button class="btn btn-default" data-bind="click: $root.unHidelogType.bind($root)">
                     <span data-bind="text: $data"></span>

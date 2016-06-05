@@ -159,12 +159,10 @@
         <div class="btn-group" data-bind="visible: hasIndexSelected">
             <div id="loadingIndicator" data-bind="visible: showLoadingIndicator" class="glyphicon" style="width: 30px; height: 30px;"><span class="fa fa-spinner fa-spin fa-2x"></span></div>
         </div>
-
-
     </div>
 
     <svg data-bind="visible: hasIndexSelected" id="visHeader" style="height: 25px" height="25"></svg>
-    <div id="visualizerContainer" style="height: 600px; width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" class="with-3d-shadow with-transitions">
+    <div id="visualizerContainer" style="height: 600px; width: 100%; overflow-y: auto" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', container: '#visualizerSection' }" class="with-3d-shadow with-transitions">
         <div>
             <svg id="visualizer" transform="translate(0.5,0.5)" preserveAspectRatio="xMinYMin slice"></svg>
         </div>

@@ -9,6 +9,8 @@ class dynamicHeightBindingHandler {
     windowHeightObservable: KnockoutObservable<number>;
     throttleTimeMs = 100;
 
+    static updateForced = ko.observable<number>();
+
     constructor() {
         var $window = $(window);
         this.windowHeightObservable = ko.observable<number>($window.height());
@@ -28,8 +30,28 @@ class dynamicHeightBindingHandler {
         }
     }
 
+    static forceUpdate() {
+        dynamicHeightBindingHandler.updateForced(new Date().getTime());
+    }
+
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
+    init(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number; container?: string }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
+
+        var bindingValue = valueAccessor();
+        if (bindingValue.target) {
+            var targetSelector = bindingValue.target || "footer";
+            var bottomMargin = ko.unwrap(bindingValue.bottomMargin) || 0;
+            var container = bindingValue.container;
+
+            var forcedUpdateSubscription = dynamicHeightBindingHandler.updateForced.subscribe(() => {
+                dynamicHeightBindingHandler.stickToTarget(element, targetSelector, bottomMargin, container);
+            });
+
+            ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
+                forcedUpdateSubscription.dispose();
+            });
+        }
+        
     }
 
     // Called by Knockout each time the dependent observable value changes.

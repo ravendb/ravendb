@@ -6,6 +6,7 @@ import document = require("models/database/documents/document");
 import runningTask = require("models/database/debug/runningTask");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import messagePublisher = require("common/messagePublisher");
+import tableNavigationTrait = require("common/tableNavigationTrait");
 
 type taskType = {
     name: string;
@@ -30,6 +31,8 @@ class runningTasks extends viewModelBase {
     filteredAndSortedTasks: KnockoutComputed<Array<runningTask>>;
     columnWidths: Array<KnockoutObservable<number>>;
 
+    tableNavigation : tableNavigationTrait<runningTask>;
+
     constructor() {
         super();
 
@@ -52,6 +55,8 @@ class runningTasks extends viewModelBase {
 
             return tasks.sort(sortFunc);
         });
+
+        this.tableNavigation = new tableNavigationTrait<runningTask>("#runningTasksTableContainer", this.selectedTask, this.filteredAndSortedTasks, i => "#runningTasksItemsContainer > div:nth-child(" + (i + 1) + ")");
     }
 
     recalculateTaskTypes() {
@@ -134,48 +139,6 @@ class runningTasks extends viewModelBase {
                 this.selectedTask(null);
                 this.fetchTasks();
             }, 1000));
-    }
-
-    tableKeyDown(sender: any, e: KeyboardEvent) {
-        var isKeyUp = e.keyCode === 38;
-        var isKeyDown = e.keyCode === 40;
-        if (isKeyUp || isKeyDown) {
-            e.preventDefault();
-
-            var oldSelection = this.selectedTask();
-            if (oldSelection) {
-                var oldSelectionIndex = this.filteredAndSortedTasks().indexOf(oldSelection);
-                var newSelectionIndex = oldSelectionIndex;
-                if (isKeyUp && oldSelectionIndex > 0) {
-                    newSelectionIndex--;
-                } else if (isKeyDown && oldSelectionIndex < this.filteredAndSortedTasks().length - 1) {
-                    newSelectionIndex++;
-                }
-
-                this.selectedTask(this.filteredAndSortedTasks()[newSelectionIndex]);
-                var newSelectedRow = $("#runningTasksItemsContainer > div:nth-child(" + (newSelectionIndex + 1) + ")");
-                if (newSelectedRow) {
-                    this.ensureRowVisible(newSelectedRow);
-                }
-            }
-        }
-    }
-
-    ensureRowVisible(row: JQuery) {
-        var table = $("#runningTasksTableContainer");
-        var scrollTop = table.scrollTop();
-        var scrollBottom = scrollTop + table.height();
-        var scrollHeight = scrollBottom - scrollTop;
-
-        var rowPosition = row.position();
-        var rowTop = rowPosition.top;
-        var rowBottom = rowTop + row.height();
-
-        if (rowTop < 0) {
-            table.scrollTop(scrollTop + rowTop);
-        } else if (rowBottom > scrollHeight) {
-            table.scrollTop(scrollTop + (rowBottom - scrollHeight));
-        }
     }
 
     setFilterTypeAll() {

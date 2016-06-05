@@ -93,6 +93,7 @@
     <TypeScriptCompile Include="App\common\awesomeMultiselect.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
+    <TypeScriptCompile Include="App\common\tableNavigationTrait.ts" />
     <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
     <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
@@ -265,7 +266,6 @@
     <Content Include="App\views\database\settings\sqlReplicationConnectionStringsManagement.html" />
     <Content Include="App\views\database\settings\sqlReplications.html" />
     <Content Include="App\views\database\settings\versioning.html" />
-    <Content Include="App\views\database\status\alerts.html" />
     <Content Include="App\views\database\status\alerts.html" />
     <Content Include="App\views\database\status\debug\statusDebug.html" />
     <Content Include="App\views\database\status\debug\statusDebugChanges.html" />
