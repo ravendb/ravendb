@@ -117,14 +117,8 @@ namespace FastTests.Server.Documents.Expiration
                     (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner;
                 expiredDocumentsCleaner.CleanupExpiredDocs();
 
-                for (int i = 0; i < count; i++)
-                {
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var company2 = await session.LoadAsync<Company>("companies/" + i);
-                        Assert.Null(company2);
-                    }
-                }
+                var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+                Assert.Equal(1, stats.CountOfDocuments);
             }
         }
 
