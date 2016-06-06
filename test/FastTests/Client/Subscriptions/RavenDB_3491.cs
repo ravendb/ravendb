@@ -37,7 +37,7 @@ namespace FastTests.Client.Subscriptions
                     var user2Etag = session.Advanced.GetEtagFor(us2);
                     var id = store.Subscriptions.Create(new SubscriptionCriteria
                     {
-                        Collection = "users"
+                        Collection = "Users"
                     }, user2Etag??0);
 
                     var users = new List<RavenJObject>();
