@@ -135,8 +135,14 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     int skipNumber = 0;
-                    var patchCriteria = new Patch.PatchRequest {Script = criteria.FilterJavaScript};
-                    var spd = new SubscriptionPatchDocument(this._database);
+                    SubscriptionPatchDocument spd = null;
+
+                    if (string.IsNullOrWhiteSpace(criteria.FilterJavaScript) == false)
+                    {
+                        spd = new SubscriptionPatchDocument(this._database, criteria.FilterJavaScript );
+                    }
+                    
+                    
 
                     while (true)
                     {
@@ -160,7 +166,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 try
                                 {
-                                    matchesCriteria = spd.MatchCriteria(_context, doc, patchCriteria);
+                                    matchesCriteria = spd?.MatchCriteria(_context, doc) ?? true;
                                 }
                                 catch (Exception ex)
                                 {
@@ -355,10 +361,10 @@ namespace Raven.Server.Documents.Handlers
             await FlushStreamToClient().ConfigureAwait(false);
         }
 
-        private bool MatchCriteria(DocumentsOperationContext context, Patch.PatchRequest patchCriteria, Document doc, SubscriptionPatchDocument spd)
+        private bool MatchCriteria(DocumentsOperationContext context, Document doc, SubscriptionPatchDocument spd)
         {
             // todo: implement
-            return  spd.MatchCriteria(context, doc, patchCriteria);
+            return  spd.MatchCriteria(context, doc);
         }
 
         public void Dispose()

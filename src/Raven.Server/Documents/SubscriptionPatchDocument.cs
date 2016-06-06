@@ -13,16 +13,24 @@ namespace Raven.Server.Documents
 {
     public class SubscriptionPatchDocument:PatchDocument
     {
-        public SubscriptionPatchDocument(DocumentDatabase database) : base(database)
+        private PatchRequest _patchRequest;
+
+        public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) : base(database)
         {
+            this._patchRequest = new PatchRequest
+            {
+                Script =  filterJavaScript
+            };
+            
         }
+
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
             
         }
-        public bool MatchCriteria(DocumentsOperationContext context, Document document, PatchRequest patch)
+        public bool MatchCriteria(DocumentsOperationContext context, Document document)
         {
-            var actualPatchResult = ApplySingleScript(context, document, false, patch).ActualPatchResult;
+            var actualPatchResult = ApplySingleScript(context, document, false, _patchRequest).ActualPatchResult;
             return actualPatchResult.AsBoolean();
         }
     }
