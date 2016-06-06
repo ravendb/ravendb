@@ -126,7 +126,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                             continue;
 
                         var reason = string.Format("Reduced thread #{0} priority was changed to below normal priority {1} because of high CPU Usage", thread.Thread.ManagedThreadId, ThreadPriority.BelowNormal);
-                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
+                        database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         thread.Thread.Priority = ThreadPriority.BelowNormal;
                         return;
                     }
@@ -137,7 +137,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         var prevThreads = _currentWorkingThreadsAmount;
                         _currentWorkingThreadsAmount--;
                         var reason = string.Format("Current working threads amount was decreased from {0} to {1} because of high CPU Usage", prevThreads, _currentWorkingThreadsAmount);
-                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
+                        database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                     }
                 }
                 catch (Exception e)
@@ -162,7 +162,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         var prevThreads = _currentWorkingThreadsAmount;
                         _currentWorkingThreadsAmount++;
                         var reason = string.Format("Current working threads amount was increased from {0} to {1} because of low CPU Usage", prevThreads, _currentWorkingThreadsAmount);
-                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
+                        database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         return;
                     }
 
@@ -174,7 +174,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                             continue;
 
                         var reason = string.Format("Thread #{0} priority was changed to normal priority {1} because of low CPU Usage", thread.Thread.ManagedThreadId, ThreadPriority.Normal);
-                        database.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
+                        database?.AutoTuningTrace.Enqueue(new AutoTunerDecisionDescription(Name, database.Name, reason));
                         thread.Thread.Priority = ThreadPriority.Normal;
                         return;
                     }
