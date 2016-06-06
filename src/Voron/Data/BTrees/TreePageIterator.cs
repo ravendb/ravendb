@@ -5,14 +5,20 @@ namespace Voron.Data.BTrees
 {
     public unsafe class TreePageIterator : IIterator
     {
+        private readonly Slice _treeKey;
+        private readonly Tree _parent;
         private readonly TreePage _page;
+        private readonly bool _allowWritable;
         private Slice _currentKey = new Slice(SliceOptions.Key);
         private Slice _currentInternalKey;
         private bool _disposed;
 
-        public TreePageIterator(TreePage page)
+        public TreePageIterator(Slice treeKey, Tree parent, TreePage page, bool allowWritable)
         {
+            _treeKey = treeKey;
+            _parent = parent;
             _page = page;
+            _allowWritable = allowWritable;
             _currentInternalKey = page.CreateNewEmptyKey();
         }
 
@@ -120,5 +126,18 @@ namespace Voron.Data.BTrees
         }
 
         public event Action<IIterator> OnDisposal;
+
+        public bool DeleteCurrentAndMoveNext()
+        {
+            if(_allowWritable == false)
+                throw new InvalidOperationException("Cannot modify a tree page iterator that wasn't marked as writable");
+            _page.RemoveNode(_page.LastSearchPosition);
+            if (_page.NumberOfEntries == 0)
+            {
+                _parent.Delete(_treeKey);
+                return false;
+            }
+            return TrySetPosition();
+        }
     }
 }

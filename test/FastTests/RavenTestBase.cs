@@ -159,6 +159,10 @@ namespace FastTests
             return server;
         }
 
+        protected Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(DocumentStore store)
+        {
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+        }
 
         protected virtual async Task<DocumentStore> GetDocumentStore([CallerMemberName] string caller = null, string dbSuffixIdentifier = null,
            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)

@@ -41,8 +41,10 @@ namespace Voron.Data.BTrees
                     return null;
                 }
 
-                var parentPage = _tree.ModifyPage(_cursor.ParentPage);
-                _cursor.Update(_cursor.Pages.First.Next, parentPage);
+                _cursor.Pop();
+
+                var parentPage = _tree.ModifyPage(_cursor.CurrentPage);
+                _cursor.Update(_cursor.Pages.First, parentPage);
 
                 if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
                 {
@@ -59,7 +61,6 @@ namespace Voron.Data.BTrees
                     }
 
                     _tree.FreePage(page);
-                    _cursor.Pop();
 
                     return parentPage;
                 }
@@ -67,7 +68,6 @@ namespace Voron.Data.BTrees
                 if (page.IsBranch && page.NumberOfEntries == 1)
                 {
                     RemoveBranchWithOneEntry(page, parentPage);
-                    _cursor.Pop();
 
                     return parentPage;
                 }
@@ -89,8 +89,6 @@ namespace Voron.Data.BTrees
                 if (sibling.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                     sibling.NumberOfEntries > minKeys)
                 {
-                    _cursor.Pop();
-
                     // neighbor is over the min size and has enough key, can move just one key to  the current page
                     if (page.IsBranch)
                         MoveBranchNode(parentPage, sibling, page);
@@ -110,9 +108,7 @@ namespace Voron.Data.BTrees
                     if (TryMergePages(parentPage, page, sibling) == false)
                         return null;
                 }
-
-                _cursor.Pop();
-
+                
                 return parentPage;
             }
         }
@@ -248,20 +244,14 @@ namespace Voron.Data.BTrees
                 newSeparatorKey = GetActualKey(from, 0);
             }
 
-            AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
+            AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
         }
 
-        private void AddSeparatorToParentPage(TreePage parentPage, long pageNumber, Slice separatorKey, int separatorKeyPosition)
+        private void AddSeparatorToParentPage(TreePage childPage, TreePage parentPage, long pageNumber, Slice seperatorKey, int separatorKeyPosition)
         {
-            if (parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separatorKey) + Constants.NodeOffsetSize) == false)
-            {
-                var pageSplitter = new TreePageSplitter(_tx, _tree, separatorKey, -1, pageNumber, TreeNodeFlags.PageRef, 0, _cursor);
-                pageSplitter.Execute();
-            }
-            else
-            {
-                parentPage.AddPageRefNode(separatorKeyPosition, separatorKey, pageNumber);
-            }
+            var parent = new ParentPageAction(parentPage, childPage, _tree, _cursor, _tx);
+
+            parent.AddSeparator(seperatorKey, pageNumber, separatorKeyPosition);
         }
 
         private void MoveBranchNode(TreePage parentPage, TreePage from, TreePage to)
@@ -328,7 +318,7 @@ namespace Voron.Data.BTrees
                 newSeparatorKey = GetActualKey(from, 0);
             }
 
-            AddSeparatorToParentPage(parentPage, pageNumber, newSeparatorKey, pos);
+            AddSeparatorToParentPage(to, parentPage, pageNumber, newSeparatorKey, pos);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
