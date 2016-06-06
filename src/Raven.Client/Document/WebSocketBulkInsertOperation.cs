@@ -173,12 +173,7 @@ namespace Raven.Client.Document
                         // we got incomplete json response.
                         // This might happen if we close the connection but still server sends something
                         if (result.CloseStatus != null)
-                        {
-                            Console.WriteLine("ERRRR :::: " + result.CloseStatus.Value + " , " + result.MessageType +
-                                              " , " + result.CloseStatusDescription + "<<" +
-                                              Encoding.UTF8.GetString(buffer.Array, 0, result.Count) + ">>");
                             return null;
-                        }
                     }
 
                     result = await webSocket.ReceiveAsync(buffer, cancellationToken);
@@ -234,8 +229,6 @@ namespace Raven.Client.Document
                                 break;
 
                                 case "Waiting":
-                                    Console.WriteLine("WAITING RECVED");
-
                                     _isThrottling = false;
                                     _throttlingEvent.Set();
                                     break;
@@ -247,17 +240,12 @@ namespace Raven.Client.Document
                                             throw new InvalidOperationException("Invalid Processed response from server " +
                                                                                 (response.ToString() ?? "null"));
 
-                                        //Console.WriteLine("Info: " + _sentAccomulator + " - " + processedSize + " = " +
-                                        //                  (_sentAccomulator - processedSize >
-                                        //                   _maxDiffSizeBeforeThrottling));
-
                                         if (_sentAccomulator - processedSize > _maxDiffSizeBeforeThrottling)
                                         {
                                             if (_isThrottling == false)
                                             {
                                                 _isThrottling = true;
                                                 _throttlingEvent.Reset();
-                                                Console.WriteLine("Throttle ON");
                                             }
                                         }
                                         else
@@ -266,7 +254,6 @@ namespace Raven.Client.Document
                                             {
                                                 _isThrottling = false;
                                                 _throttlingEvent.Set();
-                                                Console.WriteLine("Throttle OFF");
                                             }
                                         }
                                     }

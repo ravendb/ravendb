@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -40,6 +41,8 @@ namespace Raven.Server.Documents.Handlers
         private int _numbrtOfMsgs;
 
         private static object lockObj = new object();
+        private static int x;
+
 
         private void SendMessageToClient(ArraySegment<byte> msg)
         {
@@ -53,18 +56,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (_messagesQueue.TryTake(out msgToSend))
                 {
-                    _webSocket.SendAsync(msg, WebSocketMessageType.Text, true, Database.DatabaseShutdown).Wait();
+                    AsyncHelpers.RunSync(() => _webSocket.SendAsync(msg, WebSocketMessageType.Text, true, Database.DatabaseShutdown));
                     num = Interlocked.Decrement(ref _numbrtOfMsgs);
                     if (num == 0)
                         break;
                 }
             }
-
-            //lock (lockObj)
-            //{
-            //    _webSocket.SendAsync(msg, WebSocketMessageType.Text, true, Database.DatabaseShutdown).Wait();
-            //}
-
         }
 
         public enum ResponseMessageType
@@ -194,8 +191,6 @@ namespace Raven.Server.Documents.Handlers
                                 $"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
 
                         processedAccomulator += current.Used;
-
-                        // Console.WriteLine(processedAccomulator);
 
                         var proccessedString = "{'Type': 'Processed', 'Size': " + processedAccomulator + "}";
                         Encoding.UTF8.GetBytes(proccessedString, 0, proccessedString.Length, ProcessedMessageArray, 0);
@@ -345,7 +340,6 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Ex:" + e);
                     // TODO :: check why -  "System.InvalidOperationException: Unexpected reserved bits set"
                     _fullBuffers.CompleteAdding();
                     try
