@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -173,6 +174,9 @@ namespace Raven.Client.Document
                         // This might happen if we close the connection but still server sends something
                         if (result.CloseStatus != null)
                         {
+                            Console.WriteLine("ERRRR :::: " + result.CloseStatus.Value + " , " + result.MessageType +
+                                              " , " + result.CloseStatusDescription + "<<" +
+                                              Encoding.UTF8.GetString(buffer.Array, 0, result.Count) + ">>");
                             return null;
                         }
                     }
@@ -243,9 +247,9 @@ namespace Raven.Client.Document
                                             throw new InvalidOperationException("Invalid Processed response from server " +
                                                                                 (response.ToString() ?? "null"));
 
-                                        Console.WriteLine("Info: " + _sentAccomulator + " - " + processedSize + " = " +
-                                                          (_sentAccomulator - processedSize >
-                                                           _maxDiffSizeBeforeThrottling));
+                                        //Console.WriteLine("Info: " + _sentAccomulator + " - " + processedSize + " = " +
+                                        //                  (_sentAccomulator - processedSize >
+                                        //                   _maxDiffSizeBeforeThrottling));
 
                                         if (_sentAccomulator - processedSize > _maxDiffSizeBeforeThrottling)
                                         {
