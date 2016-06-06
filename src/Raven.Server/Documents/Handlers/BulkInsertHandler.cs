@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Handlers
 
         public unsafe void InsertDocuments()
         {
-            long processedAccomulator = 0;
+            long processedAccumulator = 0;
             try
             {
                 DocumentsOperationContext context;
@@ -190,9 +190,9 @@ namespace Raven.Server.Documents.Handlers
                             Log.Debug(
                                 $"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
 
-                        processedAccomulator += current.Used;
+                        processedAccumulator += current.Used;
 
-                        var proccessedString = "{'Type': 'Processed', 'Size': " + processedAccomulator + "}";
+                        var proccessedString = "{'Type': 'Processed', 'Size': " + processedAccumulator + "}";
                         Encoding.UTF8.GetBytes(proccessedString, 0, proccessedString.Length, ProcessedMessageArray, 0);
                         SendMessageToClient(ProcessedMessage);
                     }
