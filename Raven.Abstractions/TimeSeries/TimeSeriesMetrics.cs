@@ -21,8 +21,6 @@ namespace Raven.Abstractions.TimeSeries
 
         public Dictionary<string, MeterData> ReplicationBatchSizeMeter { get; set; }
 
-        public Dictionary<string, MeterData> ReplicationDurationMeter { get; set; }
-
         public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
 
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }

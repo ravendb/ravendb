@@ -20,7 +20,6 @@ namespace Raven.Abstractions.Data
         public HistogramData StaleIndexReduces { get; set; }
         public Dictionary<string, Dictionary<string, string>> Gauges { get; set; }
         public Dictionary<string, MeterData> ReplicationBatchSizeMeter { get; set; }
-        public Dictionary<string, MeterData> ReplicationDurationMeter { get; set; }
         public Dictionary<string, HistogramData> ReplicationBatchSizeHistogram { get; set; }
         public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
     }
