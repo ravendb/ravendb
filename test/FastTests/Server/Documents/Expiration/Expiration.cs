@@ -77,12 +77,12 @@ namespace FastTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
+        [Theory]
+        [InlineData(100)]
+        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
         {
             var company = new { Name = "Company Name" };
             var companyJson = RavenJObject.FromObject(company);
-            const int count = 100;
 
             using (var store = await GetDocumentStore())
             {
