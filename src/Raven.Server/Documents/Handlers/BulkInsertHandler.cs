@@ -6,20 +6,16 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Client.Platform;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -34,9 +30,11 @@ namespace Raven.Server.Documents.Handlers
         private readonly BlockingCollection<BulkBufferInfo> _fullBuffers = new BlockingCollection<BulkBufferInfo>();
         private readonly BlockingCollection<BulkBufferInfo> _freeBuffers = new BlockingCollection<BulkBufferInfo>();
 
-        public static readonly ArraySegment<byte> WaitingMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Waiting'}"));
         public static readonly ArraySegment<byte> ProcessingMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processing'}"));
-
+        public static readonly ArraySegment<byte> WaitingMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Waiting'}"));
+        public static readonly ArraySegment<byte> CompletedMessage = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Completed'}"));
+        public static byte[] ProcessedMessageArray = new byte[1024];
+        public static readonly ArraySegment<byte> ProcessedMessage = new ArraySegment<byte>(ProcessedMessageArray);
 
         public enum ResponseMessageType
         {
@@ -48,14 +46,13 @@ namespace Raven.Server.Documents.Handlers
         {
             public int Used;
             public UnmanagedBuffersPool.AllocatedMemoryData Buffer;
-            public int Number;
         }
 
         private WebSocket _webSocket;
-        private long _processedAccomulator;
 
         public unsafe void InsertDocuments()
         {
+            long processedAccomulator = 0;
             try
             {
                 DocumentsOperationContext context;
@@ -69,7 +66,23 @@ namespace Raven.Server.Documents.Handlers
                         BulkBufferInfo current;
                         try
                         {
-                            current = _fullBuffers.Take(Database.DatabaseShutdown);
+                            int timeToWait = 500;
+                            int retry = 60;
+                            while (_fullBuffers.TryTake(out current, timeToWait, Database.DatabaseShutdown) == false)
+                            {
+                                if (--retry == 0)
+                                {
+                                    throw new InvalidOperationException("Server waited " + (timeToWait * retry) / 1000 + " Seconds, but the client didn't send any documents or completion message");
+                                }
+                                try
+                                {
+                                    _webSocket.SendAsync(WaitingMessage, WebSocketMessageType.Text, true, Database.DatabaseShutdown).Wait();
+                                }
+                                catch (Exception)
+                                {
+                                    // ignore
+                                }
+                            }
                         }
                         catch (InvalidOperationException) // adding completed
                         {
@@ -86,7 +99,6 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 using (var tx = context.OpenWriteTransaction())
                                 {
-                                    
                                     tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
                                     
                                     byte* docPtr = (byte*)current.Buffer.Address;
@@ -99,18 +111,24 @@ namespace Raven.Server.Documents.Handlers
                                         if (size + docPtr > end) //TODO: Better error
                                             throw new InvalidDataException(
                                                 "The blittable size specified is more than the available data, aborting...");
+                                        
                                         //TODO: Paranoid mode, has to validate the data is safe
                                         var reader = new BlittableJsonReaderObject(docPtr, size, context);
                                         docPtr += size;
+
                                         string docKey;
                                         BlittableJsonReaderObject metadata;
-
-                                        if (reader.TryGet(Constants.Metadata, out metadata) == false ||
-                                            metadata.TryGet(Constants.MetadataDocId, out docKey) == false)
+                                        if (reader.TryGet(Constants.Metadata, out metadata) == false)
                                         {
-                                            const string message = "bad doc key";
+                                            const string message = "'@metadata' is missing in received document for bulk insert";
                                             throw new InvalidDataException(message);
                                         }
+                                        if (metadata.TryGet(Constants.MetadataDocId, out docKey) == false)
+                                        {
+                                            const string message = "'@id' is missing in received document for bulk insert";
+                                            throw new InvalidDataException(message);
+                                        }
+
                                         Database.DocumentsStorage.Put(context, docKey, null, reader);
                                     }
                                     _freeBuffers.Add(current);
@@ -150,6 +168,14 @@ namespace Raven.Server.Documents.Handlers
                         if (Log.IsDebugEnabled)
                             Log.Debug(
                                 $"Completed bulk insert batch with {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms");
+
+                        processedAccomulator += current.Used;
+
+                        Console.WriteLine(processedAccomulator);
+
+                        var proccessedString = "{'Type': 'Processed', 'Size': " + processedAccomulator + "}";
+                        Encoding.UTF8.GetBytes(proccessedString, 0, proccessedString.Length, ProcessedMessageArray, 0);
+                        _webSocket.SendAsync(ProcessedMessage, WebSocketMessageType.Text, true, Database.DatabaseShutdown).Wait();
                     }
 
                     using (var tx = context.OpenWriteTransaction())
@@ -168,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public BlittableJsonReaderObject ReadFromBuffer(
+        public BlittableJsonReaderObject TryReadFromBuffer(
                                                         JsonOperationContext context,
                                                         ArraySegment<byte> buffer,
                                                         int bufferSize,
@@ -194,8 +220,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulkInsert", "GET", "/databases/{databaseName:string}/bulkInsert")]
         public async Task BulkInsert()
         {
-            var unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/server");
-
             DocumentsOperationContext context;
             using (_webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             using (ContextPool.AllocateOperationContext(out context))
@@ -229,8 +253,6 @@ namespace Raven.Server.Documents.Handlers
                             }
                             var result = await receiveAsync;
 
-                            _processedAccomulator += result.Count;
-
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
                                 continue;
@@ -242,7 +264,7 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     _fullBuffers.Add(current);
                                 }
-                                catch (Exception exception)
+                                catch (Exception)
                                 {
                                     break;
                                     // error in the actual insert, we'll get it when we await on the insert task
@@ -250,11 +272,8 @@ namespace Raven.Server.Documents.Handlers
 
                                 while (_freeBuffers.TryTake(out current, 1000) == false)
                                 {
-                                    ArraySegment<byte> processedMsg = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processed', 'Size': " + _processedAccomulator + "}")); // TODO :: make field?
-                                    await _webSocket.SendAsync(processedMsg, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
-                                        .ConfigureAwait(false);
-                                    //await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
-                                    //    Database.DatabaseShutdown);
+                                   await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
+                                         Database.DatabaseShutdown);
                                 }
 
                                 if (current.Buffer.SizeInBytes < stream.SizeInBytes)
@@ -262,10 +281,6 @@ namespace Raven.Server.Documents.Handlers
                                     context.ReturnMemory(current.Buffer);
                                     current.Buffer = context.GetMemory(Bits.NextPowerOf2(stream.SizeInBytes));
                                 }
-
-                                ArraySegment<byte> processed = new ArraySegment<byte>(Encoding.UTF8.GetBytes("{'Type': 'Processed', 'Size': " + _processedAccomulator + "}")); // TODO :: make field?
-                                await _webSocket.SendAsync(processed, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
-                                    .ConfigureAwait(false);
 
                                 current.Used = 0;
                             }
@@ -294,9 +309,14 @@ namespace Raven.Server.Documents.Handlers
                             await _webSocket.SendAsync(ProcessingMessage, WebSocketMessageType.Text, true,
                                     Database.DatabaseShutdown);
                         }
+
                         var msg = $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
                         if (Log.IsDebugEnabled)
                             Log.Debug(msg);
+
+                        await _webSocket.SendAsync(CompletedMessage, WebSocketMessageType.Text, true, Database.DatabaseShutdown)
+                            .ConfigureAwait(false);
+
                         await _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg, CancellationToken.None);
                     }
                 }

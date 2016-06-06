@@ -3,14 +3,12 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
@@ -40,9 +38,9 @@ namespace Raven.Client.Document
         private DateTime _lastHeartbeat;
         private long _sentAccomulator;
 
-        private AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
-        private bool  _isThrottling;
-        private readonly long _maxDiffSizeBeforeThrottling = 3L*1024*1024;
+        private readonly AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
+        private bool _isThrottling;
+        private readonly long _maxDiffSizeBeforeThrottling = 20L*1024*1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
 
         ~WebSocketBulkInsertOperation()
         {
@@ -63,7 +61,7 @@ namespace Raven.Client.Document
             _unmanagedBuffersPool = new UnmanagedBuffersPool("bulk/insert/client");
             _jsonOperationContext = new JsonOperationContext(_unmanagedBuffersPool);
             _networkBufferWriter = new BinaryWriter(_networkBuffer);
-            this._cts = cts ?? new CancellationTokenSource();
+            _cts = cts ?? new CancellationTokenSource();
             _connection = new RavenClientWebSocket();
             _url = asyncServerClient.Url;
 
@@ -75,7 +73,7 @@ namespace Raven.Client.Document
             var uriBuilder = new UriBuilder(serverUri)
             {
                 Scheme = serverUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ? "ws" : "wss",
-                Path = serverUri.AbsolutePath + "/bulkInsert",
+                Path = serverUri.AbsolutePath + "/bulkInsert"
             };
 
             for (int i = 0; i < 64; i++)
@@ -91,13 +89,11 @@ namespace Raven.Client.Document
 
         private async Task<int> WriteToServer()
         {
-
-            const string DebugTag = "bulk/insert/document";
+            const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
             var buffer = _jsonOperationContext.GetManagedBuffer();
-            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, DebugTag))
+            using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
             {
-
                 while (_documents.IsCompleted == false)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
@@ -114,7 +110,7 @@ namespace Raven.Client.Document
                     }
 
                     using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, DebugTag,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
                         jsonParser, jsonParserState))
                     {
 
@@ -138,9 +134,10 @@ namespace Raven.Client.Document
 
                     if (_networkBuffer.Length > 32 * 1024)
                     {
-                        await _throttlingEvent.WaitAsync().ConfigureAwait(false);
-
                         await FlushBufferAsync();
+
+                        // first flush, then throttle (in case first buffer to send is big enough to throttle and we rely continuation on server's response)
+                        await _throttlingEvent.WaitAsync().ConfigureAwait(false);
                     }
                 }
 
@@ -150,7 +147,7 @@ namespace Raven.Client.Document
         }
 
 
-        public async Task<BlittableJsonReaderObject> ReadFromWebSocket(
+        public async Task<BlittableJsonReaderObject> TryReadFromWebSocket(
            JsonOperationContext context,
             RavenClientWebSocket webSocket,
            string debugTag,
@@ -172,12 +169,14 @@ namespace Raven.Client.Document
                 {
                     if (result.CloseStatus != null)
                     {
-
-                        // TODO: Should we ignore? Console.WriteLine("*************ERRR");
-                        return null;
-                        //   throw new InvalidOperationException("Partly received message but connection was closed: " +
-                        //                                     Encoding.UTF8.GetString(buffer.Array, 0, buffer.Count));
+                        // we got incomplete json response.
+                        // This might happen if we close the connection but still server sends something
+                        if (result.CloseStatus != null)
+                        {
+                            return null;
+                        }
                     }
+
                     result = await webSocket.ReceiveAsync(buffer, cancellationToken);
                     parser.SetBuffer(buffer.Array, result.Count);
                 }
@@ -197,21 +196,18 @@ namespace Raven.Client.Document
                 do
                 {
                     using (var response =
-                        await ReadFromWebSocket(context, _connection, "Bulk/Insert/GetServerResponse", _cts.Token))
+                        await TryReadFromWebSocket(context, _connection, "Bulk/Insert/GetServerResponse", _cts.Token))
                     {
-                        // TODO :: do we need to ignore here? 
                         if (response == null)
-                            continue;
-                        //if (response == null)
-                        //    throw new InvalidOperationException("Invalid response from server " +
-                        //                                        (response?.ToString() ?? "null"));
+                        {
+                            // we've got disconnection without receiving "Completed" message
+                            ReportProgress("Bulk insert aborted because connection with server was disrupted before acknowledging completion");
+                            throw new InvalidOperationException("Connection with server was disrupted before acknowledging completion");
+                        }
 
                         string responseType;
-                       
-
                         if (response.TryGet("Type", out responseType))
                         {
-
                             switch (responseType)
                             {
                                 case "Error":
@@ -230,8 +226,15 @@ namespace Raven.Client.Document
                                     throw new BulkInsertAbortedExeption(msg);
 
                                 case "Processing":
-                                    // do nothing.  this is hearbeat while server is really busy
+                                    // do nothing. this is hearbeat while server is really busy
                                 break;
+
+                                case "Waiting":
+                                    Console.WriteLine("WAITING RECVED");
+
+                                    _isThrottling = false;
+                                    _throttlingEvent.Set();
+                                    break;
 
                                 case "Processed":
                                     {
@@ -240,20 +243,26 @@ namespace Raven.Client.Document
                                             throw new InvalidOperationException("Invalid Processed response from server " +
                                                                                 (response.ToString() ?? "null"));
 
+                                        Console.WriteLine("Info: " + _sentAccomulator + " - " + processedSize + " = " +
+                                                          (_sentAccomulator - processedSize >
+                                                           _maxDiffSizeBeforeThrottling));
+
                                         if (_sentAccomulator - processedSize > _maxDiffSizeBeforeThrottling)
                                         {
                                             if (_isThrottling == false)
                                             {
                                                 _isThrottling = true;
                                                 _throttlingEvent.Reset();
+                                                Console.WriteLine("Throttle ON");
                                             }
                                         }
                                         else
                                         {
-                                            if (_isThrottling == true)
+                                            if (_isThrottling)
                                             {
                                                 _isThrottling = false;
                                                 _throttlingEvent.Set();
+                                                Console.WriteLine("Throttle OFF");
                                             }
                                         }
                                     }
@@ -288,13 +297,10 @@ namespace Raven.Client.Document
                                     }
                             }
                         }
-
                         _lastHeartbeat = SystemTime.UtcNow;
                     }
                 } while (completed == false);
             }
-
-          
         }
 
         public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
@@ -305,13 +311,13 @@ namespace Raven.Client.Document
 
             if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
             {
-                await _getServerResponseTask;
+                await _getServerResponseTask.ConfigureAwait(false);
                 return;// we should never actually get here, the await will throw
             }
 
             if (_writeToServerTask.IsFaulted || _writeToServerTask.IsCanceled)
             {
-                await _getServerResponseTask;
+                await _getServerResponseTask.ConfigureAwait(false);
                 return;// we should never actually get here, the await will throw
             }
 
@@ -367,7 +373,7 @@ namespace Raven.Client.Document
                     _documents.CompleteAdding();
                     try
                     {
-                        await _writeToServerTask;
+                        await _writeToServerTask.ConfigureAwait(false);
                     }
                     catch
                     {
@@ -388,10 +394,10 @@ namespace Raven.Client.Document
                         var res = await Task.WhenAny(timeoutTask, _getServerResponseTask);
                         if (timeoutTask != res)
                             break;
-                        if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(30))
+                        if (SystemTime.UtcNow - _lastHeartbeat > timeDelay + TimeSpan.FromSeconds(60))
                         {
                             // TODO: Waited to much for close msg from server in bulk insert.. can happen in huge bulk insert ratios.
-                            // throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
+                            throw new TimeoutException("Wait for bulk-insert closing message from server, but it didn't happen. Maybe the server went down (most likely) and maybe this is due to a bug. In any case,this needs to be investigated.");
                         }
                     }
                 }
