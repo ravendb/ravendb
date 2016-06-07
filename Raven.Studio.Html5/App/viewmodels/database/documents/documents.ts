@@ -556,7 +556,7 @@ class documents extends viewModelBase {
 
             var metadata = selectedItem["__metadata"];
             var id = metadata["id"]; 
-            var generate = new generateClassCommand(this.activeDatabase(),id, "csharp");
+            var generate = new generateClassCommand(this.activeDatabase(), id, "csharp");
             var deffered = generate.execute();
             deffered.done((code: JSON) => {
                 app.showDialog(new showDataDialog("Generated Class", code["Code"]));

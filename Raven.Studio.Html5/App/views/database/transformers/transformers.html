@@ -60,10 +60,8 @@
                             <div class="index panel panel-default">
                                 <div class="panel-body">
                                     <h4 class="pull-left">
-                                        <a data-bind="attr: { href: editUrl }">
-                                            <span data-bind="text: name"></span>
-                                            <i class="fa" data-bind="css: { 'fa-lock': isLocked(), 'fa-unlock': !isLocked() }"></i>
-                                        </a>
+                                        <a data-bind="attr: { href: editUrl }"><span data-bind="text: name"></span></a>
+                                        <i class="fa" data-bind="css: { 'fa-lock': isLocked(), 'fa-unlock': !isLocked() }"></i>
                                     </h4>
                                     <div class="pull-right index-actions-container">
                                         <a class="btn btn-default" title="Edit the transformer" data-bind="attr: { href: editUrl }">

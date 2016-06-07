@@ -9072,6 +9072,12 @@ a.global_help_link:focus {
   margin-top: 0;
   margin-bottom: 0;
 }
+.checkbox label:empty {
+  pointer-events: none;
+}
+.checkbox label::before {
+  pointer-events: auto;
+}
 /* Override default awesome bootstrap checkbox style - end */
 /**
     Multiselect customization required for awesome checkboxes, see: http://jsfiddle.net/natearmagost/aznvcLps/

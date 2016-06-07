@@ -3023,9 +3023,16 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .ko-grid .checkbox label {
     pointer-events: none;
 }
-.ko-grid .checkbox {
+
+.ko-grid .checkbox { 
     margin-top: 0;
     margin-bottom: 0;
+}
+.checkbox label:empty {
+    pointer-events: none;
+}
+.checkbox label::before {
+    pointer-events: auto;
 }
 /* Override default awesome bootstrap checkbox style - end */
 

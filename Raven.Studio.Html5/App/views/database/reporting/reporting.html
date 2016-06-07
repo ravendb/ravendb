@@ -3,10 +3,7 @@
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
             <h3>
-          
-            <a href="#resources">
-                    Databases
-                </a>
+                <a href="#resources">Databases</a>
             </h3>
         </li>
         <li data-bind="with: activeDatabase">
@@ -36,7 +33,7 @@
     </div>
     <div class="btn-group">
         <a class="btn btn-default" title="Edit the index (F2)" data-bind="attr: { href: editSelectedIndexUrl }">
-            <i class=" fa fa-pencil"></i>
+            <i class="fa fa-pencil"></i>
         </a>
     </div>
     <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
@@ -66,7 +63,6 @@
             </div>
         </div>
     </div>
-
     <div class="form-group">
         <label class="col-sm-1 control-label">
             Values
@@ -142,7 +138,7 @@
             Results
         </label>
         <div class="col-md-11">
-            <div class="panel panel-default">
+            <div class="panel panel-default panel-wo-margin">
                 <div class="panel-heading">
                     <table class="table table-condensed" style="margin-bottom: 0;">
                         <thead>
@@ -160,7 +156,7 @@
                     </table>
                 </div>
                 <div class="panel-body">
-                    <div id="reportResultsGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: reportResults, gridSelector: '#reportResultsGrid', useContextMenu: false, showIds: false, showCheckboxes: false, maxHeight: '300px' }"></div>
+                    <div id="reportResultsGrid" data-bind="widget: { kind: 'virtualTable', itemsSource: reportResults, gridSelector: '#reportResultsGrid', useContextMenu: false, showIds: false, showCheckboxes: false, maxHeight: '400px' }"></div>
                 </div>
             </div>
         </div>
