@@ -46,6 +46,7 @@ class ctor {
     ensureColumnsAnimationFrameHandle = 0;
     bottomMargin: KnockoutComputed<number>;
     headerVisible = ko.observable(false);
+    shiftPressed = ko.observable<boolean>(false);
 
     settings: {
         itemsSource: KnockoutObservable<pagedList>;
@@ -109,6 +110,9 @@ class ctor {
             this.headerVisible($(".ko-grid-column-container", this.grid).is(":visible"));
         });
 
+        this.$window.on('keydown.virtualTable', e => this.shiftPressed(e.shiftKey));
+        this.$window.on('keyup.virtualTable', e => this.shiftPressed(e.shiftKey));
+
         if (!!settings.isIndexMapReduce) {
             this.isIndexMapReduce = settings.isIndexMapReduce;
         } else {
@@ -170,6 +174,10 @@ class ctor {
         $(this.settings.gridSelector).unbind('keydown.jwerty');
 
         this.gridViewport.off('DynamicHeightSet');
+
+        this.$window.off('keydown.virtualTable');
+        this.$window.off('keyup.virtualTable');
+
         if (this.itemsSourceSubscription) {
             this.itemsSourceSubscription.dispose();
         }
@@ -248,7 +256,7 @@ class ctor {
                     // Select any right-clicked row.
 
                     if (rightClickedElement && rightClickedElement.isChecked != null && !rightClickedElement.isChecked()) {
-                        this.toggleRowChecked(rightClickedElement, e.shiftKey);
+                        this.toggleRowChecked(rightClickedElement);
                     }
                 } else {
                     if (rightClickedElement) {
@@ -616,7 +624,8 @@ class ctor {
         return undefined;
     }
 
-    toggleRowChecked(row: row, isShiftSelect = false) {
+    toggleRowChecked(row: row) {
+        var isShiftSelect = this.shiftPressed();
         if (this.settings.isAllAutoSelected()) {
             var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
             this.settings.selectedIndices(cachedIndeices);

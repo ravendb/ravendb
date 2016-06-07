@@ -86,6 +86,9 @@ class resources extends viewModelBase {
         this.counterStorages = shell.counterStorages;
         this.timeSeries = shell.timeSeries;
         this.resources = shell.resources;
+
+        // uncheck all during page load
+        this.resources().forEach(resource => resource.isChecked(false));
         
         this.systemDb = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase(); 
@@ -549,8 +552,12 @@ class resources extends viewModelBase {
                     this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
                         if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                             encryptionConfirmationDialogPromise.always(() => {
-                                var settingsDialog = new databaseSettingsDialog(bundles);
-                                app.showDialog(settingsDialog);
+                                // schedule dialog using setTimeout to avoid issue with dialog width
+                                // (it isn't recalculated when dialog is already opened)
+                                setTimeout(() => {
+                                        var settingsDialog = new databaseSettingsDialog(bundles);
+                                        app.showDialog(settingsDialog);
+                                    }, 1);
                             });
                         }
                     });
