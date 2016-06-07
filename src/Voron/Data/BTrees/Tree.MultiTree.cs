@@ -51,7 +51,7 @@ namespace Voron.Data.BTrees
 
             TreeNodeHeader* node;
             var page = FindPageFor(key, out node);
-            if ((page == null || page.LastMatch != 0))
+            if (page == null || page.LastMatch != 0)
             {
                 MultiAddOnNewValue(key, value, version, maxNodeSize);
                 return;
@@ -68,16 +68,10 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            byte* nestedPagePtr;
             if (item->Flags == TreeNodeFlags.PageRef)
-            {
-                var overFlowPage = ModifyPage(item->PageNumber);
-                nestedPagePtr = overFlowPage.Base + Constants.TreePageHeaderSize;
-            }
-            else
-            {
-                nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
-            }
+                throw new InvalidOperationException("Multi trees don't use overflows");
+
+            var nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
 
             var nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item));
 
@@ -104,13 +98,14 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            if (item->Flags == TreeNodeFlags.Data && page.HasSpaceFor(_llt, value, 0))
+            if (page.HasSpaceFor(_llt, value, 0))
             {
                 // page has space for an additional node in nested page ...
 
-                var requiredSpace = nestedPage.PageSize + nestedPage.GetRequiredSpace(value, 0) - Constants.NodeHeaderSize;
+                var requiredSpace = nestedPage.PageSize + // existing page
+                                    nestedPage.GetRequiredSpace(value, 0); // new node
 
-                if (requiredSpace <= maxNodeSize)
+                if (requiredSpace + Constants.NodeHeaderSize <= maxNodeSize)
                 {
                     // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
 
@@ -182,8 +177,11 @@ namespace Voron.Data.BTrees
 
         private void MultiAddOnNewValue(Slice key, Slice value, ushort? version, int maxNodeSize)
         {
-            var requiredPageSize = Constants.TreePageHeaderSize + TreeSizeOf.LeafEntry(-1, value, 0) + Constants.NodeOffsetSize;
-            if (requiredPageSize > maxNodeSize)
+            var requiredPageSize = Constants.TreePageHeaderSize + // header of a nested page
+                                   Constants.NodeOffsetSize +   // one node in a nested page
+                                   TreeSizeOf.LeafEntry(-1, value, 0); // node header and its value
+
+            if (requiredPageSize + Constants.NodeHeaderSize > maxNodeSize)
             {
                 // no choice, very big value, we might as well just put it in its own tree from the get go...
                 // otherwise, we would have to put this in overflow page, and that won't save us any space anyway
@@ -196,7 +194,7 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            var actualPageSize = (ushort) Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize);
+            var actualPageSize = (ushort) Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize - Constants.NodeHeaderSize);
 
             var ptr = DirectAdd(key, actualPageSize);
 
@@ -250,16 +248,10 @@ namespace Voron.Data.BTrees
                 if (nestedPage.LastMatch != 0) // value not found
                     return;
 
-                byte* nestedPagePtr;
                 if (item->Flags == TreeNodeFlags.PageRef)
-                {
-                    var overFlowPage = ModifyPage(item->PageNumber);
-                    nestedPagePtr = overFlowPage.Base + Constants.TreePageHeaderSize;
-                }
-                else
-                {
-                    nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
-                }
+                    throw new InvalidOperationException("Multi trees don't use overflows");
+
+                var nestedPagePtr = TreeNodeHeader.DirectAccess(_llt, item);
 
                 nestedPage = new TreePage(nestedPagePtr, "multi tree", (ushort)TreeNodeHeader.GetDataSize(_llt, item))
                 {
