@@ -413,12 +413,19 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                         try
                         {
                             Tuple<int, int> range;
-                            if (!ranges.TryDequeue(out range)) return;
+                            if (ranges.TryDequeue(out range) == false)
+                                return;
+
                             action(YieldFromRange(ranges, range, src, numOfBatchesUsed));
                         }
                         finally
                         {
-                            batchesCountdown.Signal(numOfBatchesUsed.Value);
+                            var numOfBatchesUsedValue = numOfBatchesUsed.Value;
+                            //handle the case when we are out of ranges
+                            if (numOfBatchesUsedValue > 0)
+                            {
+                                batchesCountdown.Signal(numOfBatchesUsedValue);
+                            }
                         }
                     },
                     Description = new OperationDescription
