@@ -296,7 +296,7 @@ namespace Voron.Data.BTrees
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.TreePageHeaderSize > _llt.DataPager.NodeMaxSize;
+            return len + Constants.NodeHeaderSize > _llt.DataPager.NodeMaxSize;
         }
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
