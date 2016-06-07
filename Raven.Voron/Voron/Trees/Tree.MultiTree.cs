@@ -54,7 +54,7 @@ namespace Voron.Trees
             Lazy<Cursor> lazy;
             NodeHeader* node;
             var page = FindPageFor(key, out node, out lazy);
-            if ((page == null || page.LastMatch != 0))
+            if (page == null || page.LastMatch != 0)
             {
                 MultiAddOnNewValue(_tx, key, value, version, maxNodeSize);
                 return;
@@ -71,16 +71,10 @@ namespace Voron.Trees
                 return;
             }
 
-            byte* nestedPagePtr;
             if (item->Flags == NodeFlags.PageRef)
-            {
-                var overFlowPage = _tx.ModifyPage(item->PageNumber, this ,null);
-                nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
-            }
-            else
-            {
-                nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
-            }
+                throw new InvalidOperationException("Multi trees don't use overflows");
+
+            var nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
 
             var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
 
@@ -109,17 +103,33 @@ namespace Voron.Trees
                 return;
             }
 
-            int pageSize = nestedPage.CalcSizeUsed() + Constants.PageHeaderSize;
-            var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(valueToInsert, 0);
-            if (newRequiredSize <= maxNodeSize)
+            if (page.HasSpaceFor(_tx, valueToInsert, 0))
             {
-                // we can just expand the current value... no need to create a nested tree yet
-                var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
+                // page has space for an additional node in nested page ...
 
-                var currentDataSize = NodeHeader.GetDataSize(_tx, item);
-                ExpandMultiTreeNestedPageSize(_tx, key, value, nestedPagePtr, actualPageSize, currentDataSize);
+                var requiredSpace = nestedPage.PageSize + // existing page
+                                    nestedPage.GetRequiredSpace(value, 0); // new node
 
-                return;
+                if (requiredSpace + Constants.NodeHeaderSize <= maxNodeSize)
+                {
+                    // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
+
+                    var movedItem = page.GetNode(page.LastSearchPosition);
+
+                    if (movedItem != item)
+                    {
+                        // HasSpaceFor could called Defrag internally - need to ensure the nested page has a valid pointer
+
+                        nestedPagePtr = NodeHeader.DirectAccess(_tx, movedItem);
+                        nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, movedItem));
+                    }
+
+                    var newPageSize = (ushort)Math.Min(Utils.NearestPowerOfTwo(requiredSpace), maxNodeSize - Constants.NodeHeaderSize);
+
+                    ExpandMultiTreeNestedPageSize(_tx, key, valueToInsert, nestedPagePtr, newPageSize, nestedPage.PageSize);
+
+                    return;
+                }
             }
             // we now have to convert this into a tree instance, instead of just a nested page
             var tree = Create(_tx, KeysPrefixing, TreeFlags.MultiValue);
@@ -134,7 +144,7 @@ namespace Voron.Trees
             DirectAdd(key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
         }
 
-        private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
+        private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, MemorySlice value, byte* nestedPagePtr, ushort newSize, int currentSize)
         {
             Debug.Assert(newSize > currentSize);
             TemporaryPage tmp;
@@ -181,8 +191,11 @@ namespace Voron.Trees
             else
                 valueToInsert = value;
 
-            var requiredPageSize = Constants.PageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
-            if (requiredPageSize > maxNodeSize)
+            var requiredPageSize = Constants.PageHeaderSize + // header of a nested page
+                                   Constants.NodeOffsetSize +   // one node in a nested page
+                                   SizeOf.LeafEntry(-1, value, 0); // node header and its value
+
+            if (requiredPageSize + Constants.NodeHeaderSize > maxNodeSize)
             {
                 // no choice, very big value, we might as well just put it in its own tree from the get go...
                 // otherwise, we would have to put this in overflow page, and that won't save us any space anyway
@@ -195,7 +208,7 @@ namespace Voron.Trees
                 return;
             }
 
-            var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(requiredPageSize), maxNodeSize);
+            var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(requiredPageSize), maxNodeSize - Constants.NodeHeaderSize);
 
             var ptr = DirectAdd(key, actualPageSize);
 
@@ -252,16 +265,10 @@ namespace Voron.Trees
                 if (nestedPage.LastMatch != 0) // value not found
                     return;
 
-                byte* nestedPagePtr;
                 if (item->Flags == NodeFlags.PageRef)
-                {
-                    var overFlowPage = _tx.ModifyPage(item->PageNumber, this, null);
-                    nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
-                }
-                else
-                {
-                    nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
-                }
+                    throw new InvalidOperationException("Multi trees don't use overflows");
+
+                var nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
 
                 nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item))
                 {

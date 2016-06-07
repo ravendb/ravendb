@@ -145,7 +145,7 @@ namespace Voron.Impl.Paging
         {
             ThrowObjectDisposedIfNeeded();
 
-            return len + Constants.PageHeaderSize > NodeMaxSize;
+            return len + Constants.NodeHeaderSize > NodeMaxSize;
         }
 
         public int GetNumberOfOverflowPages(int overflowSize)
