@@ -38,6 +38,7 @@ namespace Raven.Server.Documents
         public SubscriptionStorage(DocumentDatabase db)
         {
             _db = db;
+            //TODO: You aren't copying all the other details from the configuration
             var options = _db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(Path.Combine(_db.Configuration.Core.DataDirectory, "Subscriptions"));
@@ -73,6 +74,11 @@ namespace Raven.Server.Documents
 
         public unsafe long CreateSubscription(BlittableJsonReaderObject criteria, long ackEtag=0)
         {
+
+            // Validate that this can be properly parsed into a criteria object
+            // and doing that without holding the tx lock
+            JsonDeserialization.SubscriptionCriteria(criteria);
+
             using (var tx = _environment.WriteTransaction())
             {
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
@@ -81,9 +87,6 @@ namespace Raven.Server.Documents
 
                 long timeOfSendingLastBatch = 0;
                 long timeOfLastClientActivity = 0;
-                
-                // Validate that this can be properly parsed into a criteria object
-                JsonDeserialization.SubscriptionCriteria(criteria);
 
                 var bigEndianId = Bits.SwapBytes((ulong)id);
 
@@ -211,31 +214,27 @@ namespace Raven.Server.Documents
                 var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
                 var subscriptionId = Bits.SwapBytes((ulong)id);
 
-                if (table.VerifyKeyExists(new Slice((byte*)&subscriptionId, sizeof(long))) == false)
+                if (table.VerifyKeyExists(new Slice(&subscriptionId)) == false)
                     throw new SubscriptionDoesNotExistException(
                         "There is no subscription configuration for specified identifier (id: " + id + ")");
             }
         }
 
 
-        public void DeleteSubscription(long id)
+        public unsafe void DeleteSubscription(long id)
         {
             SubscriptionConnectionState subscriptionConnectionState;
             if (_subscriptionConnectionStates.TryRemove(id, out subscriptionConnectionState))
             {
                 subscriptionConnectionState.EndConnection();
             }
-
-            unsafe
+            using (var tx = _environment.WriteTransaction())
             {
-                using (var tx = _environment.WriteTransaction())
-                {
-                    var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
-                    var subscriptionId = id;
-                    var subscription = table.ReadByKey(new Slice((byte*)&subscriptionId, sizeof(long)));
-                    table.Delete(subscription.Id);
-                    tx.Commit();
-                }
+                var table = new Table(_subscriptionsSchema, Schema.SubsTree, tx);
+                var subscriptionId = id;
+                var subscription = table.ReadByKey(new Slice(&subscriptionId));
+                table.Delete(subscription.Id);
+                tx.Commit();
             }
         }
 

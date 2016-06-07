@@ -3,14 +3,10 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Logging;
-using Raven.Client.Data;
-using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,8 +24,7 @@ namespace Raven.Server.Documents.Handlers
         private readonly UnmanagedJsonParser _jsonParser;
         private readonly DocumentDatabase _database;
         private SubscriptionConnectionOptions _options;
-        private CancellationTokenSource _linkedCancellationTokenSource;
-        private CancellationTokenSource _internalCancellationTokenSource;
+        private readonly CancellationTokenSource _linkedCancellationTokenSource;
         private ArraySegment<byte> _clientAckBuffer;
         private SubscriptionConnectionState _state;
         protected static readonly ILog Log = LogManager.GetLogger(typeof(SubscriptionWebSocketConnection).FullName);
@@ -44,10 +39,7 @@ namespace Raven.Server.Documents.Handlers
 
             _writer = new BlittableJsonTextWriter(_context, _ms);
             _jsonParser = new UnmanagedJsonParser(_context, _ackParserState, string.Empty);
-            _internalCancellationTokenSource = new CancellationTokenSource();
-            _linkedCancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(_internalCancellationTokenSource.Token,
-                    _database.DatabaseShutdown);
+            _linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _clientAckBuffer = new ArraySegment<byte>(new byte [4096]);
         }
 
@@ -92,9 +84,9 @@ namespace Raven.Server.Documents.Handlers
                 catch (TimeoutException)
                 {
                     timeout = 500;
-                    await SendHeartBeat(_ms, _webSocket).ConfigureAwait(false);
+                    await SendHeartBeat();
                 }
-                catch (SubscriptionInUseException ex)
+                catch (SubscriptionInUseException)
                 {
                     await WriteDynamicJsonToWebsocket(new DynamicJsonValue
                     {
@@ -109,9 +101,6 @@ namespace Raven.Server.Documents.Handlers
         
         public async Task Proccess()
         {
-
-            // todo: consider performing the connection abortion in more gracefull way, allowing waiting for the last batch to complete sending
-            // maybe even create a special strategy for "gracefull takeover"
             try
             {
                 var waitForMoreDocuments = new AsyncManualResetEvent();
@@ -139,10 +128,8 @@ namespace Raven.Server.Documents.Handlers
 
                     if (string.IsNullOrWhiteSpace(criteria.FilterJavaScript) == false)
                     {
-                        spd = new SubscriptionPatchDocument(this._database, criteria.FilterJavaScript );
+                        spd = new SubscriptionPatchDocument(_database, criteria.FilterJavaScript );
                     }
-                    
-                    
 
                     while (true)
                     {
@@ -160,7 +147,6 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 hasDocuments = true;
-                                startEtag = doc.Etag;
 
                                 var matchesCriteria = false;
 
@@ -170,6 +156,8 @@ namespace Raven.Server.Documents.Handlers
                                 }
                                 catch (Exception ex)
                                 {
+                                    // TODO: should this be filtered / not filtered?
+
                                     Log.ErrorException($"Criteria script threw exception for subscription {this._options.SubscriptionId} for document id {doc.Key}",ex);
                                 }
 
@@ -177,8 +165,7 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     if (skipNumber++ % _options.MaxDocsPerBatch == 0)
                                     {
-                                        _ms.WriteByte((byte)'\r');
-                                        _ms.WriteByte((byte)'\n');
+                                        await SendHeartBeat();
                                     }
                                     continue;
                                 }
@@ -196,17 +183,15 @@ namespace Raven.Server.Documents.Handlers
                         }
                         _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         _writer.Flush();
-                        await FlushStreamToClient().ConfigureAwait(false);
+                        await FlushStreamToClient();
                         _database.SubscriptionStorage.UpdateSubscriptionTimes(id, updateLastBatch: true, updateClientActivity: false);
                         _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         if (hasDocuments == false)
                         {
-                            while (await
-                                waitForMoreDocuments.WaitAsync(TimeSpan.FromSeconds(5))
-                                    .ConfigureAwait(false) == false)
+                            while (await waitForMoreDocuments.WaitAsync(TimeSpan.FromSeconds(3)) == false)
                             {
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                                await SendHeartBeat(_ms, _webSocket).ConfigureAwait(false);
+                                await SendHeartBeat();
                             }
 
                             waitForMoreDocuments.Reset();
@@ -219,9 +204,8 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 lastEtagAcceptedFromClient = await GetLastEtagFromWebsocket();
+                                _database.SubscriptionStorage.AcknowledgeBatchProcessed(id, lastEtagAcceptedFromClient);
                             }
-                        
-                            _database.SubscriptionStorage.AcknowledgeBatchProcessed(id, startEtag);
                         }
                     }
                 }
@@ -246,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch
                 {
-                    // write to log
+                    // nothing to do
                 }
 
             }
@@ -312,10 +296,10 @@ namespace Raven.Server.Documents.Handlers
                 _ms.WriteByte((byte)'\r');
                 _ms.WriteByte((byte)'\n');
                 // just to keep the heartbeat
-                await FlushStreamToClient().ConfigureAwait(false);
+                await FlushStreamToClient();
             }
 
-            return await receiveAckTask.ConfigureAwait(false);
+            return await receiveAckTask;
         }
 
         private async Task<BlittableJsonReaderObject> GetReaderFromWebsocket(BlittableJsonDocumentBuilder builder)
@@ -324,47 +308,35 @@ namespace Raven.Server.Documents.Handlers
 
             while (builder.Read() == false)
             {
-                var result =
-                    await
-                        ReadFromWebSocketWithKeepAlives().ConfigureAwait(false);
-                _jsonParser.SetBuffer(new ArraySegment<byte>(_clientAckBuffer.Array, 0,
-                    result.Count));
+                var result = await ReadFromWebSocketWithKeepAlives();
+                _jsonParser.SetBuffer(new ArraySegment<byte>(_clientAckBuffer.Array, 0, result.Count));
             }
 
             builder.FinalizeDocument();
 
-            var reader2 = builder.CreateReader();
-            return reader2;
+            return builder.CreateReader();
         }
 
         private async Task FlushStreamToClient(bool endMessage = false)
         {
             ArraySegment<byte> bytes;
             _ms.TryGetBuffer(out bytes);
-            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, endMessage, _linkedCancellationTokenSource.Token).ConfigureAwait(false);
+            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, endMessage, _linkedCancellationTokenSource.Token);
             _ms.SetLength(0);
         }
 
-        private async Task SendHeartBeat(MemoryStream ms, WebSocket webSocket)
+        private async Task SendHeartBeat()
         {
-            ms.WriteByte((byte)'\r');
-            ms.WriteByte((byte)'\n');
+            _ms.WriteByte((byte)'\r');
+            _ms.WriteByte((byte)'\n');
             // just to keep the heartbeat
-            await
-                FlushStreamToClient()
-                    .ConfigureAwait(false);
+            await FlushStreamToClient();
         }
 
         private async Task WriteDynamicJsonToWebsocket(DynamicJsonValue ackMessage)
         {
             _context.Write(_writer, ackMessage);
-            await FlushStreamToClient().ConfigureAwait(false);
-        }
-
-        private bool MatchCriteria(DocumentsOperationContext context, Document doc, SubscriptionPatchDocument spd)
-        {
-            // todo: implement
-            return  spd.MatchCriteria(context, doc);
+            await FlushStreamToClient();
         }
 
         public void Dispose()

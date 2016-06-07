@@ -1,26 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Logging;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Voron.Data.Tables;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Net.WebSockets;
-using System.Diagnostics;
-using System.Threading;
-using System.IO;
-using System.Net.Http.Headers;
-using Raven.Abstractions.Util;
-using Raven.Server.Extensions;
-using Sparrow;
-using Sparrow.Binary;
 
 
 namespace Raven.Server.Documents.Handlers
@@ -37,13 +22,12 @@ namespace Raven.Server.Documents.Handlers
 
                 var subscriptionCriteriaRaw = await context.ReadForDiskAsync(RequestBodyStream(), null).ConfigureAwait(false);
                 var subscriptionId = Database.SubscriptionStorage.CreateSubscription(subscriptionCriteriaRaw, startEtag);
-                var ack = new DynamicJsonValue
-                {
-                    ["Id"] = subscriptionId
-                };
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, ack);
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["Id"] = subscriptionId
+                    });
                 }
 
                 HttpContext.Response.StatusCode = 201; // NoContent
@@ -89,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     await webSocket.CloseAsync(WebSocketCloseStatus.InternalServerError,
-                        // yuck
+                        // TODO: Replace this with real error generation
                         "{'Type':'Error', 'Exception':'" + e.ToString().Replace("'", "\\'") + "'}", Database.DatabaseShutdown).ConfigureAwait(false);
                 }
                 catch

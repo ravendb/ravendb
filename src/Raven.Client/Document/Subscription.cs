@@ -6,20 +6,15 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
@@ -30,6 +25,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Platform;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 using Sparrow;
 using Sparrow.Collections;
@@ -43,7 +39,7 @@ namespace Raven.Client.Document
     public delegate bool BeforeAcknowledgment();
 
     public delegate void AfterAcknowledgment();
-    
+
     // todo: find a way to use subscriptions in a way that will track and catch exceptions of the pulling proccess
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
@@ -66,11 +62,11 @@ namespace Raven.Client.Document
         private Task pullingTask;
         private Task startPullingTask;
 
-        internal Subscription(long id, string database, SubscriptionConnectionOptions options,
+        internal Subscription(long id, SubscriptionConnectionOptions options,
             IAsyncDatabaseCommands commands, DocumentConvention conventions)
         {
             this.id = id;
-            this._options = options;
+            _options = options;
             this.commands = commands;
             this.conventions = conventions;
             webSocket = new RavenClientWebSocket();
@@ -79,10 +75,9 @@ namespace Raven.Client.Document
             {
                 isStronglyTyped = true;
                 generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
-                    entity =>
-                        AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
+                    entity => { throw new InvalidOperationException("Shouldn't be generating new ids here"); });
             }
-            
+
             Start();
         }
 
@@ -127,17 +122,15 @@ namespace Raven.Client.Document
 
                 subscribers.Clear();
 
-                if (endedBulkInsertsObserver != null)
-                    endedBulkInsertsObserver.Dispose();
+                endedBulkInsertsObserver?.Dispose();
 
-                if (dataSubscriptionReleasedObserver != null)
-                    dataSubscriptionReleasedObserver.Dispose();
+                dataSubscriptionReleasedObserver?.Dispose();
 
                 cts.Cancel();
 
                 anySubscriber.Set();
 
-                foreach (var task in new[] {pullingTask, startPullingTask})
+                foreach (var task in new[] { pullingTask, startPullingTask })
                 {
                     if (task == null)
                         continue;
@@ -160,7 +153,7 @@ namespace Raven.Client.Document
                                     throw;
                                 }
                             }
-                            catch (WebSocketException ex)
+                            catch (WebSocketException)
                             {
 
                             }
@@ -174,7 +167,7 @@ namespace Raven.Client.Document
 
                 await CloseSubscription().ConfigureAwait(false);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // ignored
             }
@@ -182,12 +175,12 @@ namespace Raven.Client.Document
             {
                 try
                 {
-                    if (webSocket!= null && webSocket.State == WebSocketState.Open)
+                    if (webSocket != null && webSocket.State == WebSocketState.Open)
                     {
                         var cancellationTokenSource = new CancellationTokenSource(1000);
                         await
                             webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
-                                "Subscription disposed on client side",
+                                "{'Type': 'Closure', 'Message':'Subscription disposed on client side'}",
                                 cancellationTokenSource.Token);
                     }
                 }
@@ -220,8 +213,8 @@ namespace Raven.Client.Document
 
         public event BeforeBatch BeforeBatch = delegate { };
         public event AfterBatch AfterBatch = delegate { };
-        public event BeforeAcknowledgment BeforeAcknowledgment = () => true;
-        public event AfterAcknowledgment AfterAcknowledgment = delegate { };
+        public event BeforeAcknowledgment BeforeAcknowledgment = () => true; //TODO: what does it mean to return false here? Why would I do it?
+        public event AfterAcknowledgment AfterAcknowledgment = delegate { };// TODO: what does this gives me that before/after batch don't?
 
         private void Start()
         {
@@ -232,8 +225,6 @@ namespace Raven.Client.Document
         {
             private readonly RavenClientWebSocket _webSocket;
             private readonly CancellationToken _token;
-
-            public WebSocketReceiveResult LastResult;
 
             public WebSocketReadStream(RavenClientWebSocket webSocket, CancellationToken token)
             {
@@ -269,16 +260,15 @@ namespace Raven.Client.Document
             public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
                 var receiveAsync = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, count), _token).ConfigureAwait(false);
-                LastResult = receiveAsync;
                 return receiveAsync.Count;
             }
 
 
 
             public override bool CanRead => true;
-            public override bool CanSeek { get; }
-            public override bool CanWrite { get; }
-            public override long Length { get; }
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => -1;
             public override long Position { get; set; }
         }
 
@@ -291,17 +281,18 @@ namespace Raven.Client.Document
                 var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(connectionCts.Token, cts.Token);
                 try
                 {
+                    await anySubscriber.WaitAsync().ConfigureAwait(false);
+
                     var uri = new Uri(CreatePullingRequest().Url.Replace("http://", "ws://").Replace(".fiddler", ""));
 
                     using (var ms = new MemoryStream())
                     {
-                        ms.SetLength(1024*4);
-                        await anySubscriber.WaitAsync().ConfigureAwait(false);
+                        ms.SetLength(1024 * 4);
                         await webSocket.ConnectAsync(uri, cts.Token).ConfigureAwait(false);
                         cts.Token.ThrowIfCancellationRequested();
-                        
+
                         var firstRun = true;
-                        
+
                         using (
                             var reader = new StreamReader(new WebSocketReadStream(webSocket, cts.Token), Encoding.UTF8,
                                 true, 1024, true))
@@ -339,8 +330,8 @@ namespace Raven.Client.Document
 #pragma warning restore 4014
                                         {
                                             await ProcessDocs(queue, webSocket, linkedCts.Token).ConfigureAwait(false);
-                                        }, TaskCreationOptions.LongRunning|TaskCreationOptions.AttachedToParent);
-                                        
+                                        }, TaskCreationOptions.LongRunning | TaskCreationOptions.AttachedToParent);
+
                                         firstRun = false;
                                     }
                                 }
@@ -390,6 +381,7 @@ namespace Raven.Client.Document
                             using (var timedCancellationToken = new CancellationTokenSource(1000))
                                 await
                                     webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
+                                    //TODO: send json here
                                         "Connection terminated by client, illegal argument: " + argument.Message, timedCancellationToken.Token);
                         }
                     }
@@ -446,7 +438,7 @@ namespace Raven.Client.Document
             var proccessedDocsInCurrentBatch = 0;
             long lastReceivedEtag = 0;
 
-            
+
             while (ct.IsCancellationRequested == false)
             {
                 RavenJObject doc;
@@ -460,7 +452,7 @@ namespace Raven.Client.Document
                         AfterAcknowledgment();
                     }
 
-                AfterBatch(proccessedDocsInCurrentBatch);
+                    AfterBatch(proccessedDocsInCurrentBatch);
                     proccessedDocsInCurrentBatch = 0;
                     if (queue.TryTake(out doc, Timeout.Infinite) == false)
                         break;
@@ -522,18 +514,6 @@ namespace Raven.Client.Document
                 if (IsErroredBecauseOfSubscriber)
                     break;
 
-            }
-        }
-
-        private async Task ReceiveConnectionAck(RavenClientWebSocket ws, CancellationToken ct, SubscriptionConnectionOptions options)
-        {
-            using (var ms = new MemoryStream())
-            {
-                var optionsJson = RavenJObject.FromObject(options);
-                optionsJson.WriteTo(ms);
-                ArraySegment<byte> buffer;
-                ms.TryGetBuffer(out buffer);
-                await ws.SendAsync(buffer, WebSocketMessageType.Text, true, ct).ConfigureAwait(false);
             }
         }
 
@@ -641,9 +621,9 @@ namespace Raven.Client.Document
         {
             return
                 commands.CreateRequest(
-                    $"/subscriptions/pull?id={id}&connection={_options.ConnectionId}"+
+                    $"/subscriptions/pull?id={id}&connection={_options.ConnectionId}" +
                     $"&strategy={_options.Strategy}&maxDocsPerBatch={_options.MaxDocsPerBatch}" +
-                    (_options.MaxBatchSize.HasValue?"&maxBatchSize"+_options.MaxBatchSize.Value:""),
+                    (_options.MaxBatchSize.HasValue ? "&maxBatchSize" + _options.MaxBatchSize.Value : ""),
                     HttpMethod.Get);
         }
 

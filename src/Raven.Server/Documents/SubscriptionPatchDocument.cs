@@ -13,11 +13,11 @@ namespace Raven.Server.Documents
 {
     public class SubscriptionPatchDocument:PatchDocument
     {
-        private PatchRequest _patchRequest;
+        private readonly PatchRequest _patchRequest;
 
         public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) : base(database)
         {
-            this._patchRequest = new PatchRequest
+            _patchRequest = new PatchRequest
             {
                 Script =  filterJavaScript
             };

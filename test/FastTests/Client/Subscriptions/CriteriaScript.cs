@@ -26,7 +26,6 @@ namespace FastTests.Client.Subscriptions
                 {
                     Collection = "Things",
                     FilterJavaScript = " return this.Name == 'ThingNo1'",
-                    KeyStartsWith = "/"
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
                 var subscription = subscriptionManager.Open<Subscriptions.Thing>(subsId, new SubscriptionConnectionOptions()

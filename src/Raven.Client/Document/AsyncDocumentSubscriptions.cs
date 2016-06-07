@@ -13,7 +13,6 @@ using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -36,11 +35,12 @@ namespace Raven.Client.Document
             if (criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
-            var nonGenericCriteria = new SubscriptionCriteria();
+            var nonGenericCriteria = new SubscriptionCriteria
+            {
+                Collection = documentStore.Conventions.GetTypeTagName(typeof (T)),
+                FilterJavaScript = criteria.FilterJavaScript
+            };
 
-            nonGenericCriteria.Collection = documentStore.Conventions.GetTypeTagName(typeof(T));
-            nonGenericCriteria.KeyStartsWith = criteria.KeyStartsWith;
-            nonGenericCriteria.FilterJavaScript = criteria.FilterJavaScript;
 
             return CreateAsync(nonGenericCriteria, startEtag, database);
         }
@@ -79,7 +79,7 @@ namespace Raven.Client.Document
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-            var subscription = new Subscription<T>(id, database ?? MultiDatabase.GetDatabaseName(documentStore.Url), options, commands,
+            var subscription = new Subscription<T>(id, options, commands,
                 documentStore.Conventions); // to ensure that subscription is open try to call it with the same connection id
 
             subscriptions.Add(subscription);
