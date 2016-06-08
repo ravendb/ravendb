@@ -22,8 +22,6 @@ namespace Raven.Client.Document
     /// </summary>
     public class HiLoKeyGenerator : HiLoKeyGeneratorBase
     {
-        private readonly object generatorLock = new object();
-
         /// <summary>
         /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
         /// </summary>
@@ -57,13 +55,28 @@ namespace Raven.Client.Document
                 if (current <= myRange.Max)
                     return current;
 
-                lock (generatorLock)
+                if (Interlocked.CompareExchange(ref lockStatus, Locked, UnLocked) == Locked)
                 {
+                    Interlocked.Increment(ref threadsWaitingForRangeUpdate);
+                    mre.WaitOne();
+                    Interlocked.Decrement(ref threadsWaitingForRangeUpdate);
+                    continue;
+                }
+
+                try
+                {
+                    mre.Reset();
+
                     if (Range != myRange)
-                        // Lock was contended, and the max has already been changed. Just get a new id as usual.
+                        // Lock was contended, and the max has already been changed.
                         continue;
 
                     Range = GetNextRange(commands);
+                }
+                finally
+                {
+                    mre.Set();
+                    Interlocked.Exchange(ref lockStatus, UnLocked);
                 }
             }
         }
@@ -76,7 +89,10 @@ namespace Raven.Client.Document
 #endif
             using (databaseCommands.ForceReadFromMaster())
             {
-                ModifyCapacityIfRequired();
+                // we need the latest value of the capacity
+                var calculatedCapacity = Interlocked.Read(ref capacity);
+                ModifyCapacityIfRequired(ref calculatedCapacity);
+
                 while (true)
                 {
                     try
@@ -92,7 +108,7 @@ namespace Raven.Client.Document
                         {
                             // resolving the conflict by selecting the highest number
                             var highestMax = e.ConflictedVersionIds
-                                .Select(conflictedVersionId => GetMaxFromDocument(databaseCommands.Get(conflictedVersionId), minNextMax))
+                                .Select(conflictedVersionId => GetMaxFromDocument(databaseCommands.Get(conflictedVersionId), minNextMax, calculatedCapacity))
                                 .Max();
 
                             PutDocument(databaseCommands, new JsonDocument
@@ -106,11 +122,13 @@ namespace Raven.Client.Document
                             continue;
                         }
 
+                        IncreaseCapacityIfRequired(ref calculatedCapacity);
+
                         long min, max;
                         if (document == null)
                         {
                             min = minNextMax + 1;
-                            max = minNextMax + capacity;
+                            max = minNextMax + calculatedCapacity;
                             document = new JsonDocument
                             {
                                 Etag = Etag.Empty,
@@ -122,9 +140,9 @@ namespace Raven.Client.Document
                         }
                         else
                         {
-                            var oldMax = GetMaxFromDocument(document, minNextMax);
+                            var oldMax = GetMaxFromDocument(document, minNextMax, calculatedCapacity);
                             min = oldMax + 1;
-                            max = oldMax + capacity;
+                            max = oldMax + calculatedCapacity;
 
                             document.DataAsJson["Max"] = max;
                         }
@@ -135,6 +153,8 @@ namespace Raven.Client.Document
                     catch (ConcurrencyException)
                     {
                         // expected, we need to retry
+                        // we'll try to increase the capacity
+                        ModifyCapacityIfRequired(ref calculatedCapacity);
                     }
                 }
             }
