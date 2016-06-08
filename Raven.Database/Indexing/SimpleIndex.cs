@@ -278,7 +278,7 @@ namespace Raven.Database.Indexing
             InitializeIndexingPerformanceCompleteDelegate(performance, sourceCount, count, performanceStats);
 
             if (logIndexing.IsDebugEnabled)
-            logIndexing.Debug("Indexed {0} documents for {1}", count, PublicName);
+                logIndexing.Debug($"Indexed {count} documents for {PublicName}");
 
             return performance;
         }
@@ -300,7 +300,9 @@ namespace Raven.Database.Indexing
 
         protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
         {
-            logIndexing.Error("HandlingCommitPoint for index {0} in DB {1}", this.PublicName, this.context.DatabaseName);
+            if (logIndexing.IsDebugEnabled)
+                logIndexing.Debug($"HandlingCommitPoint for index {PublicName} in DB {context.DatabaseName}");
+
             if (ShouldStoreCommitPoint(itemsInfo) && itemsInfo.HighestETag != null)
             {
                 context.IndexStorage.StoreCommitPoint(indexId.ToString(), new IndexCommitPoint
