@@ -667,7 +667,7 @@ namespace Raven.Database.Indexing
                     {
                         context.NotifyAboutWork();
             }
-                }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Executing Indexex Reduction on {0} indexes", indexesToWorkOn.Count));
+                }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Executing Indexes Reduction on {0} indexes", indexesToWorkOn.Count));
                 Interlocked.Increment(ref executedPartially);
             }
             finally
