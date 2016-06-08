@@ -7,7 +7,6 @@
 using Xunit;
 using Voron;
 using Voron.Impl;
-using Voron.Data;
 
 namespace FastTests.Voron.ScratchBuffer
 {
@@ -73,13 +72,7 @@ namespace FastTests.Voron.ScratchBuffer
 
                     var allocated2 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
 
-                    Assert.Equal(allocated1, allocated2);
-
-                    Env.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
-
-                    var allocated3 = Env.ScratchBufferPool.GetNumberOfAllocations(0);
-
-                    Assert.True(allocated3 < allocated2);
+                    Assert.True(allocated2 < allocated1);
 
                     var read = txr2.CreateTree("foo").Read("bars/1");
 
