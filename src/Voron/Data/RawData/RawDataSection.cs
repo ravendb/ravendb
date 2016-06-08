@@ -178,8 +178,9 @@ namespace Voron.Data.RawData
 
         public static byte* DirectRead(LowLevelTransaction tx, long id, out int size)
         {
-            var posInPage = (int)(id % tx.DataPager.PageSize);
-            var pageNumberInSection = (id - posInPage) / tx.DataPager.PageSize;
+            int pageSize = tx.DataPager.PageSize;
+            var posInPage = (int)(id % pageSize);
+            var pageNumberInSection = (id - posInPage) / pageSize;
             var pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)

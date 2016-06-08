@@ -20,6 +20,7 @@ namespace Voron.Impl
     {
         private const int PagesTakenByHeader = 1;
         private readonly IVirtualPager _dataPager;
+        private readonly long _pageSize;
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
@@ -29,10 +30,13 @@ namespace Voron.Impl
         public Tree RootObjects => _root;
 
         private readonly WriteAheadJournal _journal;
+
         private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
+
         readonly Stack<long> _pagesToFreeOnCommit = new Stack<long>();
+
         private readonly IFreeSpaceHandling _freeSpaceHandling;
 
         private int _allocatedPagesInTransaction;
@@ -93,6 +97,7 @@ namespace Voron.Impl
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
         {
             _dataPager = env.Options.DataPager;
+            _pageSize = this.DataPager.PageSize;
             _env = env;
             _journal = env.Journal;
             _id = id;
@@ -241,8 +246,8 @@ namespace Voron.Impl
         {	        
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
-            Page p;
 
+            Page p;
             PageFromScratchBuffer value;
             if (_scratchPagesTable.TryGetValue(pageNumber, out value))
             {
@@ -289,14 +294,13 @@ namespace Voron.Impl
 
         private Page AllocateOverflowPage(long headerSize, long dataSize, long? pageNumber = null)
         {
-            long pageSize = this.DataPager.PageSize;
             long overflowSize = headerSize + dataSize;
             if (overflowSize > int.MaxValue - 1)
                 throw new InvalidOperationException($"Cannot allocate chunks bigger than { int.MaxValue / 1024 * 1024 } Mb.");
 
             Debug.Assert(overflowSize >= 0);
 
-            long numberOfPages = (overflowSize / pageSize) + (overflowSize % pageSize == 0 ? 0 : 1);
+            long numberOfPages = (overflowSize / _pageSize) + (overflowSize % _pageSize == 0 ? 0 : 1);
 
             var overflowPage = AllocatePage((int)numberOfPages, pageNumber);
             overflowPage.Flags = PageFlags.Overflow;
@@ -572,14 +576,18 @@ namespace Voron.Impl
             return this;
         }
 
+        private PagerState _lastState;
 
         internal void EnsurePagerStateReference(PagerState state)
         {
-            if (state == null)
+            if (state == _lastState || state == null)
                 return;
 
             if (_pagerStates.Add(state))
+            {
                 state.AddRef();
+                _lastState = state;
+            }
         }
     }
 }

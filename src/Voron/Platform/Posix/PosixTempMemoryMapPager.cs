@@ -51,7 +51,7 @@ namespace Voron.Platform.Posix
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
             PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize);
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
             PagerState.Release();
             PagerState = CreatePagerState();
         }
@@ -105,7 +105,7 @@ namespace Voron.Platform.Posix
             PagerState = newPagerState;
             tmp.Release(); //replacing the pager state --> so one less reference for it
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / _pageSize;
 
             return newPagerState;
         }

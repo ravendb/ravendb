@@ -29,7 +29,7 @@ namespace Voron.Impl.Paging
             foreach (var buffer in _buffers)
             {
                 if (page + buffer.SizeInPages > pageNumber)
-                    return buffer.Pointer + ((pageNumber - page)*PageSize);
+                    return buffer.Pointer + ((pageNumber - page)* _pageSize);
 
                 page += buffer.SizeInPages;
             }

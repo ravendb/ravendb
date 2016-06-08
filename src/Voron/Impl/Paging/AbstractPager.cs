@@ -12,11 +12,12 @@ namespace Voron.Impl.Paging
 {
     public unsafe abstract class AbstractPager : IVirtualPager
     {
-        protected int MinIncreaseSize { get { return 16 * PageSize; } } // 64 KB with 4Kb pages. 
+        protected int MinIncreaseSize { get { return 16 * _pageSize; } } // 64 KB with 4Kb pages. 
         protected int MaxIncreaseSize { get { return Constants.Size.Gigabyte; } }
 
         private long _increaseSize;
         private DateTime _lastIncrease;
+        protected readonly int _pageSize;
 
         public PagerState PagerState
         {
@@ -47,8 +48,9 @@ namespace Voron.Impl.Paging
         {
             Debug.Assert((pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
-            PageSize = pageSize;
-            PageMaxSpace = PageSize - Constants.TreePageHeaderSize;
+            _pageSize = pageSize;
+
+            PageMaxSpace = pageSize - Constants.TreePageHeaderSize;
             NodeMaxSize = PageMaxSpace / 2 - 1;
 
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
@@ -65,9 +67,7 @@ namespace Voron.Impl.Paging
         public int PageSize
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
+            get { return _pageSize; }
         }
 
         public int PageMinSpace
@@ -120,11 +120,11 @@ namespace Voron.Impl.Paging
             if (pageNumber > NumberOfAllocatedPages)
                 ThrowOnInvalidPageNumber(pageNumber);
 
-            var state = pagerState ?? PagerState;
+            var state = pagerState ?? _pagerState;
 
             tx?.EnsurePagerStateReference(state);
 
-            return state.MapBase + pageNumber * PageSize;
+            return state.MapBase + pageNumber * _pageSize;
         }
 
         public abstract void Sync();
@@ -140,8 +140,8 @@ namespace Voron.Impl.Paging
 
             // this ensure that if we want to get a range that is more than the current expansion
             // we will increase as much as needed in one shot
-            var minRequested = (requestedPageNumber + numberOfPages) * PageSize;
-            var allocationSize = Math.Max(NumberOfAllocatedPages * PageSize, PageSize);
+            var minRequested = (requestedPageNumber + numberOfPages) * _pageSize;
+            var allocationSize = Math.Max(NumberOfAllocatedPages * _pageSize, PageSize);
             while (minRequested > allocationSize)
             {
                 allocationSize = GetNewLength(allocationSize);
@@ -217,8 +217,8 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
-            int toCopy = pagesToWrite * PageSize;
-            Memory.BulkCopy(PagerState.MapBase + pagePosition * PageSize, p, toCopy);
+            int toCopy = pagesToWrite * _pageSize;
+            Memory.BulkCopy(PagerState.MapBase + pagePosition * _pageSize, p, toCopy);
 
             return toCopy;
         }

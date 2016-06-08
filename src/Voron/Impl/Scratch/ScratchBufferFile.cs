@@ -24,13 +24,14 @@ namespace Voron.Impl.Scratch
         }
 
         private readonly IVirtualPager _scratchPager;
+        private readonly int _pageSize;
         private readonly int _scratchNumber;
 
         private readonly SortedList<long, long> _freePagesByTransaction = new SortedList<long, long>(NumericDescendingComparer.Instance);
-        private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>();
-        private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>();
-        private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>();
-        
+        private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>(NumericEqualityComparer.Instance);
+        private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
+
 
         private long _allocatedPagesUsedSize;
         private long _lastUsedPage;
@@ -40,6 +41,7 @@ namespace Voron.Impl.Scratch
             _scratchPager = scratchPager;
             _scratchNumber = scratchNumber;
             _allocatedPagesUsedSize = 0;
+            _pageSize = scratchPager.PageSize;
         }
 
         public PagerState PagerState => _scratchPager.PagerState;
@@ -48,7 +50,7 @@ namespace Voron.Impl.Scratch
 
         public int NumberOfAllocations => _allocatedPages.Count;
 
-        public long Size => _scratchPager.NumberOfAllocatedPages * _scratchPager.PageSize;
+        public long Size => _scratchPager.NumberOfAllocatedPages * _pageSize;
 
         public long NumberOfAllocatedPages => _scratchPager.NumberOfAllocatedPages;
 
@@ -56,7 +58,7 @@ namespace Voron.Impl.Scratch
 
         public long SizeAfterAllocation(long sizeToAllocate)
         {
-            return (_lastUsedPage + sizeToAllocate) * _scratchPager.PageSize;
+            return (_lastUsedPage + sizeToAllocate) * _pageSize;
         }
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
@@ -230,7 +232,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 
-            return result * _scratchPager.PageSize;
+            return result * _pageSize;
         }
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
