@@ -10,6 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
@@ -42,6 +43,9 @@ namespace Raven.Client.Document
         private readonly AsyncManualResetEvent _throttlingEvent = new AsyncManualResetEvent();
         private bool _isThrottling;
         private readonly long _maxDiffSizeBeforeThrottling = 20L*1024*1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
+
+
+        private static object SendAsyncLocker = new object();
 
         ~WebSocketBulkInsertOperation()
         {
@@ -83,6 +87,7 @@ namespace Raven.Client.Document
             }
 
             _socketConnectionTask = _connection.ConnectAsync(uriBuilder.Uri, this._cts.Token);
+            _sentAccumulator = 0;
             _getServerResponseTask = GetServerResponse();
             _writeToServerTask = Task.Run(async () => await WriteToServer().ConfigureAwait(false));
 
@@ -136,9 +141,8 @@ namespace Raven.Client.Document
                     if (_networkBuffer.Length > 32 * 1024)
                     {
                         await FlushBufferAsync();
-
                         // first flush, then throttle (in case first buffer to send is big enough to throttle and we rely continuation on server's response)
-                        await _throttlingEvent.WaitAsync().ConfigureAwait(false);
+                        await _throttlingEvent.WaitAsync();
                     }
                 }
 
@@ -177,6 +181,7 @@ namespace Raven.Client.Document
                     }
 
                     result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+
                     parser.SetBuffer(buffer.Array, result.Count);
                 }
                 writer.FinalizeDocument();
@@ -186,7 +191,11 @@ namespace Raven.Client.Document
 
         private async Task GetServerResponse()
         {
-            await _socketConnectionTask;
+            lock (SendAsyncLocker)
+            {
+             //   await _socketConnectionTask;
+                _socketConnectionTask.Wait();
+            }
             string msg;
 
             bool completed = false;
@@ -226,11 +235,14 @@ namespace Raven.Client.Document
 
                                 case "Processing":
                                     // do nothing. this is hearbeat while server is really busy
-                                break;
+                                    break;
 
                                 case "Waiting":
-                                    _isThrottling = false;
-                                    _throttlingEvent.Set();
+                                    if (_isThrottling)
+                                    {
+                                        _isThrottling = false;
+                                        _throttlingEvent.SetByAsyncCompletion();
+                                    }
                                     break;
 
                                 case "Processed":
@@ -244,8 +256,8 @@ namespace Raven.Client.Document
                                         {
                                             if (_isThrottling == false)
                                             {
-                                                _isThrottling = true;
                                                 _throttlingEvent.Reset();
+                                                _isThrottling = true;
                                             }
                                         }
                                         else
@@ -253,7 +265,7 @@ namespace Raven.Client.Document
                                             if (_isThrottling)
                                             {
                                                 _isThrottling = false;
-                                                _throttlingEvent.Set();
+                                                _throttlingEvent.SetByAsyncCompletion();
                                             }
                                         }
                                     }
@@ -262,7 +274,8 @@ namespace Raven.Client.Document
                                 case "Completed":
                                     {
                                         var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
-                                        var result = await _connection.ReceiveAsync(buffer, _cts.Token);
+                                        var result = await _connection.ReceiveAsync(buffer, _cts.Token).ConfigureAwait(false);
+
                                         if (result.MessageType != WebSocketMessageType.Close)
                                         {
                                             msg =
@@ -298,7 +311,11 @@ namespace Raven.Client.Document
         {
             _cts.Token.ThrowIfCancellationRequested();
 
-            await _socketConnectionTask.ConfigureAwait(false);
+            lock (SendAsyncLocker)
+            {
+                //await _socketConnectionTask.ConfigureAwait(false);
+                _socketConnectionTask.Wait();
+            }
 
             if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
             {
@@ -335,10 +352,16 @@ namespace Raven.Client.Document
             _networkBuffer.Position = 0;
             _networkBuffer.TryGetBuffer(out segment);
 
-            await _socketConnectionTask.ConfigureAwait(false);
+            lock (SendAsyncLocker)
+            {
+                _socketConnectionTask.Wait();
+                _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token).Wait();
 
-            await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
-                .ConfigureAwait(false);
+                // await _socketConnectionTask.ConfigureAwait(false);
+
+                //await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
+                //    .ConfigureAwait(false);
+            }
 
             _sentAccumulator += _networkBuffer.Length;
 
@@ -415,13 +438,21 @@ namespace Raven.Client.Document
                 return;
             try
             {
-                await _connection.CloseOutputAsync(msgType,
+                //await _connection.CloseOutputAsync(msgType,
+                //    closeMessage,
+                //    _cts.Token)
+                //    .ConfigureAwait(false);
+
+                lock (SendAsyncLocker)
+                {
+                    _connection.CloseOutputAsync(msgType,
                     closeMessage,
-                    _cts.Token)
-                    .ConfigureAwait(false);
+                    _cts.Token).Wait();
+                }
             }
-            catch (Exception)
+            catch (Exception exp)
             {
+                Console.WriteLine("Bizzare : " + exp);
                 // ignoring this error
             }
         }

@@ -37,30 +37,25 @@ namespace Raven.Server.Documents.Handlers
         public static byte[] ProcessedMessageArray = new byte[1024];
         public static readonly ArraySegment<byte> ProcessedMessage = new ArraySegment<byte>(ProcessedMessageArray);
 
-        private readonly BlockingCollection<ArraySegment<byte>> _messagesQueue = new BlockingCollection<ArraySegment<byte>>();
-        private int _numbrtOfMsgs;
+        private WebSocket _webSocket;
+        private static readonly object SendLock = new object();
+        private static readonly object LockRecvAsync = new object();
 
-        private static object lockObj = new object();
-        private static int x;
 
+
+        private void SendCloseMessageToClient(WebSocketCloseStatus status, string msg)
+        {
+            lock (SendLock)
+            {
+                _webSocket.CloseOutputAsync(status, msg, Database.DatabaseShutdown).Wait();
+            }
+        }
 
         private void SendMessageToClient(ArraySegment<byte> msg)
         {
-            // make sure only one thread performs the send async
-            var num = Interlocked.Increment(ref _numbrtOfMsgs);
-            _messagesQueue.Add(msg);
-            ArraySegment<byte> msgToSend;
-            if (num > 1)
-                return;
-            while (num > 0)
+            lock (SendLock)
             {
-                if (_messagesQueue.TryTake(out msgToSend))
-                {
-                    AsyncHelpers.RunSync(() => _webSocket.SendAsync(msg, WebSocketMessageType.Text, true, Database.DatabaseShutdown));
-                    num = Interlocked.Decrement(ref _numbrtOfMsgs);
-                    if (num == 0)
-                        break;
-                }
+                _webSocket.SendAsync(msg, WebSocketMessageType.Text, true, Database.DatabaseShutdown).Wait();
             }
         }
 
@@ -75,8 +70,6 @@ namespace Raven.Server.Documents.Handlers
             public int Used;
             public UnmanagedBuffersPool.AllocatedMemoryData Buffer;
         }
-
-        private WebSocket _webSocket;
 
         public unsafe void InsertDocuments()
         {
@@ -94,13 +87,12 @@ namespace Raven.Server.Documents.Handlers
                         BulkBufferInfo current;
                         try
                         {
-                            int timeToWait = 500;
-                            int retry = 600;
-                            while (_fullBuffers.TryTake(out current, timeToWait, Database.DatabaseShutdown) == false)
+                            int retry = 60;
+                            while (_fullBuffers.TryTake(out current, 500, Database.DatabaseShutdown) == false)
                             {
                                 if (--retry == 0)
                                 {
-                                    throw new InvalidOperationException("Server waited " + (timeToWait * retry) / 1000 + " Seconds, but the client didn't send any documents or completion message");
+                                    throw new InvalidOperationException("Server waited " + (500 * 60) / 1000 + " Seconds, but the client didn't send any documents or completion message");
                                 }
                                 SendMessageToClient(WaitingMessage);
                             }
@@ -193,6 +185,7 @@ namespace Raven.Server.Documents.Handlers
                         processedAccumulator += current.Used;
 
                         var proccessedString = "{'Type': 'Processed', 'Size': " + processedAccumulator + "}";
+
                         Encoding.UTF8.GetBytes(proccessedString, 0, proccessedString.Length, ProcessedMessageArray, 0);
                         SendMessageToClient(ProcessedMessage);
                     }
@@ -240,7 +233,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task BulkInsert()
         {
             DocumentsOperationContext context;
-            using (_webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            using (_webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false))
             using (ContextPool.AllocateOperationContext(out context))
             {
                 Log.Debug("Starting bulk insert operation");
@@ -264,12 +257,27 @@ namespace Raven.Server.Documents.Handlers
                         var sp = Stopwatch.StartNew();
                         while (true)
                         {
-                            var receiveAsync = _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-                            while (await Task.WhenAny(receiveAsync, Task.Delay(1000)) != receiveAsync)
+                            // var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown).ConfigureAwait(false);
+
+                            WebSocketReceiveResult result;
+                            lock (LockRecvAsync)
                             {
-                                SendMessageToClient(ProcessingMessage);
+                                try
+                                {
+                                    var recvTask = _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                                    recvTask.Wait();
+                                    if (recvTask.IsFaulted)
+                                    {
+                                        Console.WriteLine("ERRR:" + recvTask.Exception);
+                                    }
+                                    result = recvTask.Result;
+                                }
+                                catch (Exception exx)
+                                {
+                                    Console.WriteLine("ERRR222:" + exx);
+                                    throw;
+                                }
                             }
-                            var result = await receiveAsync;
 
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
@@ -324,30 +332,25 @@ namespace Raven.Server.Documents.Handlers
                                 break;
 
                             SendMessageToClient(ProcessingMessage);
-
-                            var msg =
-                                $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
-                            if (Log.IsDebugEnabled)
-                                Log.Debug(msg);
-
-                            SendMessageToClient(CompletedMessage);
-
-                            await
-                                _webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, msg,
-                                    CancellationToken.None);
                         }
+                        var msg =
+                                $"Successfully bulk inserted {count} documents in {sp.ElapsedMilliseconds:#,#;;0} ms";
+                        if (Log.IsDebugEnabled)
+                            Log.Debug(msg);
+
+                        SendMessageToClient(CompletedMessage);
+
+                        SendCloseMessageToClient(WebSocketCloseStatus.NormalClosure, msg);
                     }
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine("ERRO: " + e);
                     // TODO :: check why -  "System.InvalidOperationException: Unexpected reserved bits set"
                     _fullBuffers.CompleteAdding();
                     try
                     {
-                        await _webSocket.CloseOutputAsync(WebSocketCloseStatus.InternalServerError,
-                            // yuck
-                           "{'Type': 'Error', 'Exception': '"  + e.ToString().Replace("'","\\'") + "'}", 
-                           Database.DatabaseShutdown);
+                        SendCloseMessageToClient(WebSocketCloseStatus.InternalServerError, "{'Type': 'Error', 'Exception': '" + e.ToString().Replace("'", "\\'") + "'}");
                     }
                     catch (Exception)
                     {
@@ -358,4 +361,4 @@ namespace Raven.Server.Documents.Handlers
             }
         }
     }
-}
+    }
