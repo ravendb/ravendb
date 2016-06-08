@@ -22,8 +22,6 @@ namespace Raven.Client.Document
     /// </summary>
     public class AsyncHiLoKeyGenerator : HiLoKeyGeneratorBase
     {
-        private SpinLock generatorLock = new SpinLock(enableThreadOwnerTracking: false); // Using a spin lock rather than Monitor.Enter, because it's not reentrant
-
         /// <summary>
         /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
         /// </summary>
@@ -56,17 +54,26 @@ namespace Raven.Client.Document
                 return CompletedTask.With(incrementedCurrent);
             }
 
-            bool lockTaken = false;
+            if (Interlocked.CompareExchange(ref lockStatus, Locked, UnLocked) == Locked)
+            {
+                Interlocked.Increment(ref threadsWaitingForRangeUpdate);
+                mre.WaitOne();
+                Interlocked.Decrement(ref threadsWaitingForRangeUpdate);
+                return NextIdAsync(databaseCommands);
+            }
+
             try
             {
-                generatorLock.Enter(ref lockTaken);
+                mre.Reset();
+
                 if (Range != myRange)
                 {
-                    // Lock was contended, and the max has already been changed. Just get a new id as usual.
-                    generatorLock.Exit();
+                    // Lock was contended, and the max has already been changed.
+                    mre.Set();
+                    Interlocked.Exchange(ref lockStatus, UnLocked);
                     return NextIdAsync(databaseCommands);
                 }
-                // Get a new max, and use the current value.
+                    
                 return GetNextRangeAsync(databaseCommands)
                     .ContinueWith(task =>
                     {
@@ -76,7 +83,8 @@ namespace Raven.Client.Document
                         }
                         finally
                         {
-                            generatorLock.Exit();
+                            mre.Set();
+                            Interlocked.Exchange(ref lockStatus, UnLocked);
                         }
 
                         return NextIdAsync(databaseCommands);
@@ -86,20 +94,21 @@ namespace Raven.Client.Document
             {
                 // We only unlock in exceptional cases (and not in a finally clause) because non exceptional cases will either have already
                 // unlocked or will have started a task that will unlock in the future.
-                if (lockTaken)
-                    generatorLock.Exit();
+                mre.Set();
+                Interlocked.Exchange(ref lockStatus, UnLocked);
                 throw;
             }
         }
 
         private Task<RangeValue> GetNextRangeAsync(IAsyncDatabaseCommands databaseCommands)
         {
-            ModifyCapacityIfRequired();
+            var calculatedCapacity = Interlocked.Read(ref capacity);
+            ModifyCapacityIfRequired(ref calculatedCapacity);
 
-            return GetNextMaxAsyncInner(databaseCommands);
+            return GetNextMaxAsyncInner(databaseCommands, calculatedCapacity);
         }
 
-        private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
+        private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands, long calculatedCapacity)
         {
             var minNextMax = Range.Max;
 
@@ -120,13 +129,15 @@ namespace Raven.Client.Document
                         document = null;
                     }
                     if (ce != null)
-                        return await HandleConflictsAsync(databaseCommands, ce, minNextMax).ConfigureAwait(false);
+                        return await HandleConflictsAsync(databaseCommands, ce, minNextMax, calculatedCapacity).ConfigureAwait(false);
+
+                    IncreaseCapacityIfRequired(ref calculatedCapacity);
 
                     long min, max;
                     if (document == null)
                     {
                         min = minNextMax + 1;
-                        max = minNextMax + capacity;
+                        max = minNextMax + calculatedCapacity;
                         document = new JsonDocument
                         {
                             Etag = Etag.Empty,
@@ -138,9 +149,9 @@ namespace Raven.Client.Document
                     }
                     else
                     {
-                        var oldMax = GetMaxFromDocument(document, minNextMax);
+                        var oldMax = GetMaxFromDocument(document, minNextMax, calculatedCapacity);
                         min = oldMax + 1;
-                        max = oldMax + capacity;
+                        max = oldMax + calculatedCapacity;
 
                         document.DataAsJson["Max"] = max;
                     }
@@ -151,11 +162,14 @@ namespace Raven.Client.Document
                 catch (ConcurrencyException)
                 {
                     //expected & ignored, will retry this
+                    // we'll try to increase the capacity
+                    ModifyCapacityIfRequired(ref calculatedCapacity);
                 }
             }
         }
 
-        private async Task<RangeValue> HandleConflictsAsync(IAsyncDatabaseCommands databaseCommands, ConflictException e, long minNextMax)
+        private async Task<RangeValue> HandleConflictsAsync(IAsyncDatabaseCommands databaseCommands, 
+            ConflictException e, long minNextMax, long calculatedCapacity)
         {
             // resolving the conflict by selecting the highest number
             long highestMax = -1;
@@ -164,7 +178,7 @@ namespace Raven.Client.Document
             foreach (var conflictedVersionId in e.ConflictedVersionIds)
             {
                 var doc = await databaseCommands.GetAsync(conflictedVersionId).ConfigureAwait(false);
-                highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
+                highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax, calculatedCapacity));
             }
 
             await PutDocumentAsync(databaseCommands, new JsonDocument
