@@ -114,15 +114,7 @@ namespace Voron.Trees
                 {
                     // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
 
-                    var movedItem = page.GetNode(page.LastSearchPosition);
-
-                    if (movedItem != item)
-                    {
-                        // HasSpaceFor could called Defrag internally - need to ensure the nested page has a valid pointer
-
-                        nestedPagePtr = NodeHeader.DirectAccess(_tx, movedItem);
-                        nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, movedItem));
-                    }
+                    EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
 
                     var newPageSize = (ushort)Math.Min(Utils.NearestPowerOfTwo(requiredSpace), maxNodeSize - Constants.NodeHeaderSize);
 
@@ -131,6 +123,9 @@ namespace Voron.Trees
                     return;
                 }
             }
+
+            EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
+
             // we now have to convert this into a tree instance, instead of just a nested page
             var tree = Create(_tx, KeysPrefixing, TreeFlags.MultiValue);
             for (int i = 0; i < nestedPage.NumberOfEntries; i++)
@@ -391,6 +386,20 @@ namespace Voron.Trees
             }
             pos = null;
             return false;
+        }
+
+        private void EnsureNestedPagePointer(Page page, NodeHeader* currentItem, ref Page nestedPage, ref byte* nestedPagePtr)
+        {
+            var movedItem = page.GetNode(page.LastSearchPosition);
+
+            if (movedItem == currentItem)
+                return;
+
+            // HasSpaceFor could called Defrag internally and read item has moved
+            // need to ensure the nested page has a valid pointer
+
+            nestedPagePtr = NodeHeader.DirectAccess(_tx, movedItem);
+            nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, movedItem));
         }
     }
 }
