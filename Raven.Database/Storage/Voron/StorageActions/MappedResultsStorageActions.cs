@@ -740,6 +740,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     hasResult = true;
                     result.Etag = etag;
                     result.Timestamp = DateTime.FromBinary(value.ReadLong(ScheduledReductionFields.Timestamp));
+                    currentEtag = etag;
                 }
 
                 var view = value.ReadInt(ScheduledReductionFields.IndexId);
