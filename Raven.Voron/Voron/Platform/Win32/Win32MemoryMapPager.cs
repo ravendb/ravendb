@@ -398,9 +398,18 @@ namespace Voron.Platform.Win32
                 entries[i].NumberOfBytes = (IntPtr)PagerState.AllocationInfos[i].Size;
             }
 
-            if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
-                (UIntPtr)PagerState.AllocationInfos.Length, entries, 0) == false)
-                throw new Win32Exception();
+            // We're deliberately ignoring the return value here and not throwing an exception if it returns false.
+            // 
+            // This call is merely an optimization that can fail in low-memory conditions.
+            // See https://msdn.microsoft.com/en-us/library/windows/desktop/hh780543(v=vs.85).aspx
+            // 
+            // Because of that, and because this call regularly fails on Windows Azure Web Apps (http://issues.hibernatingrhinos.com/issue/RavenDB-4670),
+            // we ignore the return value and don't throw if it fails.
+            Win32MemoryMapNativeMethods.PrefetchVirtualMemory(
+                Win32NativeMethods.GetCurrentProcess(),
+                (UIntPtr)PagerState.AllocationInfos.Length,
+                entries,
+                0);
         }
     }
 }
