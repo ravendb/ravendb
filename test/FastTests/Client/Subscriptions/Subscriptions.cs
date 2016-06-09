@@ -28,8 +28,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
-                    Collection = "People",
-                    FilterJavaScript = " var a = 'c';",
+                    Collection = "People",                    
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria);
 
@@ -56,8 +55,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
-                    Collection = "Things",
-                    FilterJavaScript = " var a = 'c';",
+                    Collection = "Things",                    
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
                 var subscription = subscriptionManager.Open<Thing>(subsId, new SubscriptionConnectionOptions()
@@ -89,8 +87,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
-                    Collection = "Things",
-                    FilterJavaScript = " var a = 'c';",
+                    Collection = "Things",                    
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
                 var acceptedSubscription = subscriptionManager.Open<Thing>(subsId, new SubscriptionConnectionOptions()
@@ -139,8 +136,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
-                    Collection = "Things",
-                    FilterJavaScript = " var a = 'c';",
+                    Collection = "Things",                    
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
                 var acceptedSubscription = subscriptionManager.Open<Thing>(subsId, new SubscriptionConnectionOptions()
@@ -209,8 +205,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
-                    Collection = "Things",
-                    FilterJavaScript = " var a = 'c';",
+                    Collection = "Things",                    
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
                 var acceptedSubscription = subscriptionManager.Open<Thing>(subsId, new SubscriptionConnectionOptions()

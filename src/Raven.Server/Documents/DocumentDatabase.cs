@@ -153,6 +153,10 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
+                SubscriptionStorage.Dispose();
+            });
+            exceptionAggregator.Execute(() =>
+            {
                 DocumentsStorage?.Dispose();
                 DocumentsStorage = null;
             });

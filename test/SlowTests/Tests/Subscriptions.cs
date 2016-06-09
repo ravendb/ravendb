@@ -56,15 +56,14 @@ namespace SlowTests.Tests
                 var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
                 {
                     Collection = "Things",
-                    FilterJavaScript = " var a = 'c';",
-                    KeyStartsWith = "/"
+                //    FilterJavaScript = " var a = 'c';"                    
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
                 var subscription = subscriptionManager.Open<FastTests.Client.Subscriptions.Subscriptions.Thing>(subsId, new SubscriptionConnectionOptions());
-                var list = new List<FastTests.Client.Subscriptions.Subscriptions.Thing>();
-                subscription.Subscribe<FastTests.Client.Subscriptions.Subscriptions.Thing>(x =>
+                var list = new List<FastTests.Client.Subscriptions.SubscriptionTestBase.Thing>();
+                subscription.Subscribe(x =>
                 {
-                    AsyncHelpers.RunSync(() => Task.Delay(1000));
+                    AsyncHelpers.RunSync(() => Task.Delay(100));
                     list.Add(x);
                 });
                 

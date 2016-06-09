@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
             }
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
 
-            var etag = GetLongQueryString("etag");
+            var etag = GetLongQueryString("etag",false);
             IEnumerable<Document> documents;
             if (etag != null)
             {

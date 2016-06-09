@@ -22,18 +22,18 @@ namespace FastTests.Client.Subscriptions
                 var lastEtag = store.GetLastWrittenEtag() ?? 0;
                 CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
+                var subscriptionCriteria = new SubscriptionCriteria
                 {
                     Collection = "Things",
                     FilterJavaScript = " return this.Name == 'ThingNo1'",
                 };
                 var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
-                var subscription = subscriptionManager.Open<Subscriptions.Thing>(subsId, new SubscriptionConnectionOptions()
+                var subscription = subscriptionManager.Open<Thing>(subsId, new SubscriptionConnectionOptions()
                 {
                     SubscriptionId = subsId
                 });
-                var list = new List<Subscriptions.Thing>();
-                subscription.Subscribe<Subscriptions.Thing>(x =>
+                var list = new List<Thing>();
+                subscription.Subscribe(x =>
                 {
                     list.Add(x);
                 });

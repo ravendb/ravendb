@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 _linkedCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 hasDocuments = true;
-
+                                startEtag = doc.Etag;
                                 var matchesCriteria = false;
 
                                 try
