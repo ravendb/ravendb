@@ -10,15 +10,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Exceptions;
 using Bits = Sparrow.Binary.Bits;
@@ -38,23 +35,16 @@ namespace Raven.Server.Documents.Handlers
         public static readonly ArraySegment<byte> ProcessedMessage = new ArraySegment<byte>(ProcessedMessageArray);
 
         private WebSocket _webSocket;
-        private static readonly object SendLock = new object();
-        private static readonly object LockRecvAsync = new object();
 
 
-
-        private async Task SendCloseMessageToClient(WebSocketCloseStatus status, string msg)
+        private async void SendCloseMessageToClient(WebSocketCloseStatus status, string msg)
         {
-            await _webSocket.CloseOutputAsync(status, msg, Database.DatabaseShutdown);
-
+            await _webSocket.CloseOutputAsync(status, msg, Database.DatabaseShutdown).ConfigureAwait(false);
         }
 
-        private void SendMessageToClient(ArraySegment<byte> msg)
+        private async void SendMessageToClient(ArraySegment<byte> msg)
         {
-            lock (SendLock)
-            {
-                _webSocket.SendAsync(msg, WebSocketMessageType.Text, true, Database.DatabaseShutdown).Wait();
-            }
+            await _webSocket.SendAsync(msg, WebSocketMessageType.Text, true, Database.DatabaseShutdown).ConfigureAwait(false);
         }
 
         public enum ResponseMessageType
@@ -204,29 +194,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public BlittableJsonReaderObject TryReadFromBuffer(
-                                                        JsonOperationContext context,
-                                                        ArraySegment<byte> buffer,
-                                                        int bufferSize,
-                                                        string debugTag)
-        {
-            var jsonParserState = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
-            {
-                var writer = new BlittableJsonDocumentBuilder(context,
-                    BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);
-
-                writer.ReadObject();
-
-                parser.SetBuffer(buffer.Array, bufferSize);
-                if (writer.Read() == false)
-                    return null;
-
-                writer.FinalizeDocument();
-                return writer.CreateReader();
-            }
-        }
-
         [RavenAction("/databases/*/bulkInsert", "GET", "/databases/{databaseName:string}/bulkInsert")]
         public async Task BulkInsert()
         {
@@ -234,45 +201,6 @@ namespace Raven.Server.Documents.Handlers
             using (_webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false))
             using (ContextPool.AllocateOperationContext(out context))
             {
-
-
-                //var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
-                //WebSocketReceiveResult result;
-                //while (true)
-                //{
-                //    try
-                //    {
-                //         result =await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-                //        //result.EndOfMessage
-                //        if (result.CloseStatus != null)
-                //        {
-                //            Console.WriteLine("Closing on " + result.CloseStatus + "," + result.CloseStatusDescription);
-                //            try
-                //            {
-                //                await SendCloseMessageToClient(WebSocketCloseStatus.NormalClosure, "normal closer");
-                //            }
-                //            catch (Exception eee)
-                //            {
-                //                Console.WriteLine("HERE " + eee);
-                //            }
-                //            break;
-                //        }
-                //    }
-                //    catch (Exception exx)
-                //    {
-                //        Console.WriteLine("ERRR222:" + exx);
-                //        await SendCloseMessageToClient(WebSocketCloseStatus.InternalServerError, "{'Type': 'Error', 'Exception': 'TEST'}");
-                //        throw;
-                //    }
-                //}
-
-
-
-
-
-
-
-
                 Log.Debug("Starting bulk insert operation");
 
                 for (int i = 0; i < NumberOfBuffersUsed; i++)
@@ -294,27 +222,7 @@ namespace Raven.Server.Documents.Handlers
                         var sp = Stopwatch.StartNew();
                         while (true)
                         {
-                            // var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown).ConfigureAwait(false);
-
-                            WebSocketReceiveResult result;
-                            lock (LockRecvAsync)
-                            {
-                                try
-                                {
-                                    var recvTask = _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
-                                    recvTask.Wait();
-                                    if (recvTask.IsFaulted)
-                                    {
-                                        Console.WriteLine("ERRR:" + recvTask.Exception);
-                                    }
-                                    result = recvTask.Result;
-                                }
-                                catch (Exception exx)
-                                {
-                                    Console.WriteLine("ERRR222:" + exx);
-                                    throw;
-                                }
-                            }
+                            var result = await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown).ConfigureAwait(false);
 
                             stream.Write(buffer.Array, 0, result.Count);
                             if (result.EndOfMessage == false)
@@ -382,8 +290,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("ERRO: " + e);
-                    // TODO :: check why -  "System.InvalidOperationException: Unexpected reserved bits set"
+                    // TODO :: "System.InvalidOperationException: Unexpected reserved bits set" (or mask error etc..) - because of KeepAliveInterval Ping/Pong bug
                     _fullBuffers.CompleteAdding();
                     try
                     {

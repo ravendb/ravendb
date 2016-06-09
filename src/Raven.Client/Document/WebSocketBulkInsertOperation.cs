@@ -3,14 +3,12 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
@@ -44,8 +42,6 @@ namespace Raven.Client.Document
         private bool _isThrottling;
         private readonly long _maxDiffSizeBeforeThrottling = 20L*1024*1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
 
-
-        private static object SendAsyncLocker = new object();
 
         ~WebSocketBulkInsertOperation()
         {
@@ -167,7 +163,8 @@ namespace Raven.Client.Document
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState);
 
                 writer.ReadObject();
-                var result = await webSocket.ReceiveAsync(buffer, cancellationToken);
+
+                var  result = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
 
                 parser.SetBuffer(buffer.Array, result.Count);
                 while (writer.Read() == false)
@@ -191,13 +188,9 @@ namespace Raven.Client.Document
 
         private async Task GetServerResponse()
         {
-            lock (SendAsyncLocker)
-            {
-             //   await _socketConnectionTask;
-                _socketConnectionTask.Wait();
-            }
-            string msg;
+            await _socketConnectionTask;
 
+            string msg;
             bool completed = false;
             using (var context = new JsonOperationContext(_unmanagedBuffersPool))
             {
@@ -274,7 +267,9 @@ namespace Raven.Client.Document
                                 case "Completed":
                                     {
                                         var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
-                                        var result = await _connection.ReceiveAsync(buffer, _cts.Token).ConfigureAwait(false);
+
+                                        var result =
+                                            await _connection.ReceiveAsync(buffer, _cts.Token).ConfigureAwait(false);
 
                                         if (result.MessageType != WebSocketMessageType.Close)
                                         {
@@ -311,12 +306,8 @@ namespace Raven.Client.Document
         {
             _cts.Token.ThrowIfCancellationRequested();
 
-            lock (SendAsyncLocker)
-            {
-                //await _socketConnectionTask.ConfigureAwait(false);
-                _socketConnectionTask.Wait();
-            }
-
+            await _socketConnectionTask.ConfigureAwait(false);
+               
             if (_getServerResponseTask.IsFaulted || _getServerResponseTask.IsCanceled)
             {
                 await _getServerResponseTask.ConfigureAwait(false);
@@ -347,22 +338,15 @@ namespace Raven.Client.Document
         }
 
         private int verify;
+
         private async Task FlushBufferAsync()
         {
             ArraySegment<byte> segment;
             _networkBuffer.Position = 0;
             _networkBuffer.TryGetBuffer(out segment);
 
-            lock (SendAsyncLocker)
-            {
-                _socketConnectionTask.Wait();
-                _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token).Wait();
-
-                // await _socketConnectionTask.ConfigureAwait(false);
-
-                //await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token)
-                //    .ConfigureAwait(false);
-            }
+            await _socketConnectionTask.ConfigureAwait(false);
+            await _connection.SendAsync(segment, WebSocketMessageType.Binary, true, _cts.Token).ConfigureAwait(false);
 
             _sentAccumulator += _networkBuffer.Length;
 
@@ -439,21 +423,10 @@ namespace Raven.Client.Document
                 return;
             try
             {
-                //await _connection.CloseOutputAsync(msgType,
-                //    closeMessage,
-                //    _cts.Token)
-                //    .ConfigureAwait(false);
-
-                lock (SendAsyncLocker)
-                {
-                    _connection.CloseOutputAsync(msgType,
-                    closeMessage,
-                    _cts.Token).Wait();
-                }
+                await _connection.CloseOutputAsync(msgType, closeMessage, _cts.Token).ConfigureAwait(false);
             }
-            catch (Exception exp)
+            catch (Exception)
             {
-                Console.WriteLine("Bizzare : " + exp);
                 // ignoring this error
             }
         }
