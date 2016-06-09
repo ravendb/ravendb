@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Patch
             return result;
         }
 
-        private PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, bool isTestOnly, PatchRequest patch)
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, bool isTestOnly, PatchRequest patch)
         {
             var scope = new PatcherOperationScope(_database, context, isTestOnly)
             {
@@ -250,16 +250,13 @@ namespace Raven.Server.Documents.Patch
                 jintEngine.Options.MaxStatements(totalScriptSteps);
             }
 
-            jintEngine.Global.Delete("PutDocument", false);
+            
             jintEngine.Global.Delete("LoadDocument", false);
-            jintEngine.Global.Delete("DeleteDocument", false);
             jintEngine.Global.Delete("IncreaseNumberOfAllowedStepsBy", false);
 
             CustomizeEngine(jintEngine, scope);
-
-            jintEngine.SetValue("PutDocument", (Func<string, JsValue, JsValue, JsValue, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, jintEngine)));
+            
             jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
-            jintEngine.SetValue("DeleteDocument", (Action<string>)scope.DeleteDocument);
             jintEngine.SetValue("__document_id", document.Key);
 
             jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
@@ -289,7 +286,7 @@ namespace Raven.Server.Documents.Patch
             var scriptWithProperLines = patch.Script.NormalizeLineEnding();
             // NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
             // This will all us to show proper line number using user lines locations.
-            var wrapperScript = string.Format(@"function ExecutePatchScript(docInner){{ (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
+            var wrapperScript = string.Format(@"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
 
             var jintEngine = new Engine(cfg =>
             {
@@ -327,6 +324,10 @@ namespace Raven.Server.Documents.Patch
 
         protected virtual void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
+            engine.Global.Delete("PutDocument", false);
+            engine.Global.Delete("DeleteDocument", false);
+            engine.SetValue("PutDocument", (Func<string, JsValue, JsValue, JsValue, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, engine)));
+            engine.SetValue("DeleteDocument", (Action<string>)scope.DeleteDocument);
         }
 
         protected virtual void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)

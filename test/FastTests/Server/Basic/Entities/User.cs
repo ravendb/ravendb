@@ -23,4 +23,23 @@ namespace Raven.Tests.Core.Utils.Entities
         public string Street { get; set; }
         public int ZipCode { get; set; }
     }
+
+    public class Person
+    {
+        public string Id { get; set; }
+
+        public string Name { get; set; }
+
+        public string AddressId { get; set; }
+    }
+
+    public class PersonWithAddress
+    {
+        public string Id { get; set; }
+
+        public string Name { get; set; }
+
+        public Address Address { get; set; }
+    }
+
 }

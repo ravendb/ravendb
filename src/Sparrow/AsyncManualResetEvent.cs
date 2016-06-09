@@ -21,6 +21,13 @@ namespace Sparrow
             return result == waitAsync;
         }
 
+        public async Task<bool> WaitAsync(int milisecondsDelay)
+        {
+            var waitAsync = _tcs.Task;
+            var result = await Task.WhenAny(waitAsync, Task.Delay(milisecondsDelay));
+            return result == waitAsync;
+        }
+
         public void Set() { _tcs.TrySetResult(true); }
 
         public void SetByAsyncCompletion()
