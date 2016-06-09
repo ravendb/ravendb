@@ -42,10 +42,12 @@ namespace Raven.Server.Documents
             SqlReplicationLoader = new SqlReplicationLoader(this, metricsScheduler);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-
+            SubscriptionStorage = new SubscriptionStorage(this);
             Metrics = new MetricsCountersManager(metricsScheduler);
             Patch = new PatchDocument(this);
         }
+
+        public SubscriptionStorage SubscriptionStorage { get; set; }
 
         public string Name { get; }
 
@@ -103,6 +105,7 @@ namespace Raven.Server.Documents
             {
                 _indexStoreTask = null;
             }
+            SubscriptionStorage.Initialize();
         }
 
         public void Dispose()
@@ -148,6 +151,10 @@ namespace Raven.Server.Documents
                 SqlReplicationLoader = null;
             });
 
+            exceptionAggregator.Execute(() =>
+            {
+                SubscriptionStorage.Dispose();
+            });
             exceptionAggregator.Execute(() =>
             {
                 DocumentsStorage?.Dispose();

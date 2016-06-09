@@ -41,7 +41,7 @@ namespace Raven.Client.Platform
         {
             if (Sparrow.Platform.Platform.RunningOnPosix)
                 return await unixInstance.ReceiveAsync(arraySegment, token);
-            return await winInstance.ReceiveAsync(arraySegment, token);
+            return await winInstance.ReceiveAsync(arraySegment, token).ConfigureAwait(false);
         }
 
         public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken token)

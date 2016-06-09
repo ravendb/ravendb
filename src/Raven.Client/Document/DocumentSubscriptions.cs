@@ -20,39 +20,39 @@ namespace Raven.Client.Document
             innerAsync = new AsyncDocumentSubscriptions(documentStore);
         }
 
-        public long Create(SubscriptionCriteria criteria, string database = null)
+        public long Create(SubscriptionCriteria criteria,long startEtag=0, string database = null)
         {
-            return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, database));
+            return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, startEtag, database));
         }
 
-        public long Create<T>(SubscriptionCriteria<T> criteria, string database = null)
+        public long Create<T>(SubscriptionCriteria<T> criteria, long startEtag=0, string database = null)
         {
-            return AsyncHelpers.RunSync(() =>  innerAsync.CreateAsync(criteria, database));
+            return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, startEtag, database));
         }
 
         public Subscription<RavenJObject> Open(long id, SubscriptionConnectionOptions options, string database = null)
         {
-            return AsyncHelpers.RunSync(() =>  innerAsync.OpenAsync(id, options, database));
+            return AsyncHelpers.RunSync(() => innerAsync.OpenAsync(id, options, database));
         }
 
-        public Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class 
+        public Subscription<T> Open<T>(long id, SubscriptionConnectionOptions options, string database = null) where T : class
         {
-            return AsyncHelpers.RunSync(() =>  innerAsync.OpenAsync<T>(id, options, database));
+            return AsyncHelpers.RunSync(() => innerAsync.OpenAsync<T>(id, options, database));
         }
 
         public List<SubscriptionConfig> GetSubscriptions(int start, int take, string database = null)
         {
-            return AsyncHelpers.RunSync(() =>  innerAsync.GetSubscriptionsAsync(start, take, database));
+            return AsyncHelpers.RunSync(() => innerAsync.GetSubscriptionsAsync(start, take, database));
         }
 
         public void Delete(long id, string database = null)
         {
-            AsyncHelpers.RunSync(() =>  innerAsync.DeleteAsync(id, database));
+            AsyncHelpers.RunSync(() => innerAsync.DeleteAsync(id, database));
         }
 
         public void Release(long id, string database = null)
         {
-            AsyncHelpers.RunSync(() =>  innerAsync.ReleaseAsync(id, database));
+            AsyncHelpers.RunSync(() => innerAsync.ReleaseAsync(id, database));
         }
 
         public void Dispose()

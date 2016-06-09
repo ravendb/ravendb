@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 case IndexType.MapReduce:
                     _converter = new AnonymousLuceneDocumentConverter(fields.ToArray(), reduceOutput: _indexType.IsMapReduce());
                     break;
-                case IndexType.Unknown:
+                case IndexType.Faulty:
                     _converter = null;
                     break;
                 default:
@@ -151,9 +151,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void Dispose()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Index));
 

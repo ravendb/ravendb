@@ -1,10 +1,10 @@
 {
   "version": "1.15.0",
   "frameworks": {
-    "netcoreapp1.0": {
+    "netstandard1.5": {
       "bin": {
-        "assembly": "netcoreapp1.0\\NetTopologySuite.dll",
-        "pdb": "netcoreapp1.0\\NetTopologySuite.pdb"
+        "assembly": "netstandard1.5\\NetTopologySuite.dll",
+        "pdb": "netstandard1.5\\NetTopologySuite.pdb"
       }
     }
   }

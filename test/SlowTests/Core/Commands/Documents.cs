@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using FastTests;
-
+using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
@@ -93,20 +93,23 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanDeleteAndUpdateDocumentByIndex()
         {
             using (var store = await GetDocumentStore())
             {
                 store.DatabaseCommands.PutIndex("MyIndex", new IndexDefinition
                 {
-                    Maps = { "from doc in docs select new { doc.Name }" }
+                    Maps = { "from doc in docs.Items select new { doc.Name }" }
                 });
 
                 store.DatabaseCommands.Put("items/1", null, RavenJObject.FromObject(new
                 {
                     Name = "testname"
-                }), new RavenJObject());
+                }), new RavenJObject
+                {
+                    {"Raven-Entity-Name",  "Items"}
+                });
                 WaitForIndexing(store);
 
                 store.DatabaseCommands.UpdateByIndex("MyIndex", new IndexQuery { Query = "" }, new PatchRequest { Script = "this.NewName = 'NewValue';" }, null).WaitForCompletion();
@@ -135,65 +138,6 @@ namespace SlowTests.Core.Commands
                 var documents = await store.AsyncDatabaseCommands.StartsWithAsync("Companies", null, 0, 25);
                 Assert.Equal(1, documents.Length);
             }
-        }
-
-        [Fact(Skip = "Missing feature: Static indexes")]
-        public Task Replacing_Value()
-        {
-            throw new NotImplementedException();
-
-            //const string oldTagName = "old";
-            //using (var store = await GetDocumentStore())
-            //{
-
-            //    store.DatabaseCommands.PutIndex("MyIndex", new IndexDefinition
-            //    {
-            //        Maps = { "from doc in docs from note in doc.Comment.Notes select new { note}" }
-            //    });
-
-            //    store.DatabaseCommands.Put("items/1", null, RavenJObject.FromObject(new
-            //    {
-            //        Comment = new
-            //        {
-            //            Notes = new[] { "old", "item" }
-            //        }
-            //    }), new RavenJObject());
-            //    WaitForIndexing(store);
-
-            //    store.DatabaseCommands.UpdateByIndex("MyIndex",
-            //       new IndexQuery
-            //       {
-            //           Query = "note:" + oldTagName
-            //       },
-            //       new[]
-            //       {
-            //           new PatchRequest
-            //           {
-            //               Name = "Comment",
-            //               Type = PatchCommandType.Modify,
-            //               AllPositions = true,
-            //               Nested = new[]
-            //               {
-            //                   new PatchRequest
-            //                   {
-            //                       Type = PatchCommandType.Remove,
-            //                       Name = "Notes",
-            //                       Value = oldTagName
-            //                   },
-            //                   new PatchRequest
-            //                   {
-            //                       Type = PatchCommandType.Add,
-            //                       Name = "Notes",
-            //                       Value = "new"
-            //                   }
-            //               }
-            //           }
-            //       },
-            //       null
-            //   ).WaitForCompletion();
-
-            //    Assert.Equal("{\"Comment\":{\"Notes\":[\"item\",\"new\"]}}", store.DatabaseCommands.Get("items/1").DataAsJson.ToString(Formatting.None));
-            //}
         }
 
         [Fact(Skip = "Missing feature: /docs/stream")]

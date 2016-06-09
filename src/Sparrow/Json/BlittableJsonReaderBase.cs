@@ -63,6 +63,24 @@ namespace Sparrow.Json
                 BlittableJsonToken.String |
                 BlittableJsonToken.CompressedString;
 
+        public BlittableJsonToken ProcessTokenTypeFlags(BlittableJsonToken currentType)
+        {
+            switch (currentType & TypesMask)
+            {
+                case BlittableJsonToken.StartObject:
+                case BlittableJsonToken.StartArray:
+                case BlittableJsonToken.Integer:
+                case BlittableJsonToken.Float:
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                case BlittableJsonToken.Boolean:
+                case BlittableJsonToken.Null:
+                    return currentType & TypesMask;
+                default:
+                    throw new ArgumentException("Illegal type");
+            }
+        }
+
         public int ReadNumber(byte* value, long sizeOfValue)
         {
             int returnValue;

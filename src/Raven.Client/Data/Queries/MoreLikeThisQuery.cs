@@ -152,7 +152,7 @@ namespace Raven.Client.Data.Queries
                 throw new InvalidOperationException("Index name cannot be null or empty");
 
             var uri = new StringBuilder();
-            uri.AppendFormat("/queries/morelikethis/{0}?", Uri.EscapeUriString(IndexName));
+            uri.AppendFormat("/queries/{0}?&op=morelikethis", Uri.EscapeUriString(IndexName));
 
             if (MapGroupFields.Count > 0)
                 MapGroupFields.ApplyIfNotNull(mgf => uri.AppendFormat("&mgf-{0}={1}", mgf.Key, mgf.Value));
@@ -161,7 +161,7 @@ namespace Raven.Client.Data.Queries
                 if (DocumentId == null)
                     throw new ArgumentNullException(nameof(DocumentId), "DocumentId cannot be null");
 
-                uri.AppendFormat("docid={0}", DocumentId);
+                uri.AppendFormat("&docid={0}", DocumentId);
             }
 
             if (string.IsNullOrWhiteSpace(AdditionalQuery) == false)

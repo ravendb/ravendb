@@ -18,11 +18,6 @@ namespace FastTests.Server.Documents.Expiration
 {
     public class Expiration : RavenTestBase
     {
-        public Expiration()
-        {
-            SystemTime.UtcDateTime = () => DateTime.UtcNow;
-        }
-
         protected async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
@@ -65,9 +60,11 @@ namespace FastTests.Server.Documents.Expiration
                     Assert.Equal(expiry.ToString("O"), expirationDate.ToString());
                 }
 
-                SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
-                (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner.CleanupExpiredDocs();
+                var expiredDocumentsCleaner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner;
+                expiredDocumentsCleaner.UtcNow = () => DateTime.UtcNow.AddMinutes(10);
+
+                expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -77,12 +74,12 @@ namespace FastTests.Server.Documents.Expiration
             }
         }
 
-        [Fact]
-        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
+        [Theory]
+        [InlineData(100)]
+        public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
         {
             var company = new { Name = "Company Name" };
             var companyJson = RavenJObject.FromObject(company);
-            const int count = 100;
 
             using (var store = await GetDocumentStore())
             {
@@ -111,21 +108,17 @@ namespace FastTests.Server.Documents.Expiration
                     Assert.NotNull(company2);
                 }
 
-                SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
                 var expiredDocumentsCleaner =
                     (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.ExpiredDocumentsCleaner;
+
+                expiredDocumentsCleaner.UtcNow = () => DateTime.UtcNow.AddMinutes(10);
+
                 expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
                 Assert.Equal(1, stats.CountOfDocuments);
             }
-        }
-
-        public override void Dispose()
-        {
-            SystemTime.UtcDateTime = null;
-            base.Dispose();
         }
     }
 }

@@ -165,9 +165,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "GET")]
         public Task GetAll()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count > 1)
-                throw new ArgumentException($"Query string value 'name' must appear exactly once");
+            var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -178,17 +176,17 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 IndexDefinition[] indexDefinitions;
-                if (names.Count == 0)
+                if (string.IsNullOrEmpty(name))
                     indexDefinitions = Database.IndexStore
                         .GetIndexes()
-                        .OrderBy(x => x.IndexId)
+                        .OrderBy(x => x.Name)
                         .Skip(start)
                         .Take(pageSize)
                         .Select(x => x.GetIndexDefinition())
                         .ToArray();
                 else
                 {
-                    var index = Database.IndexStore.GetIndex(names[0]);
+                    var index = Database.IndexStore.GetIndex(name);
                     if (index == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

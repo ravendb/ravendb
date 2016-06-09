@@ -93,10 +93,11 @@ namespace Raven.Server.Documents.Handlers
             }
             HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
 
+            var etag = GetLongQueryString("etag",false);
             IEnumerable<Document> documents;
-            if (HttpContext.Request.Query.ContainsKey("etag"))
+            if (etag != null)
             {
-                documents = Database.DocumentsStorage.GetDocumentsAfter(context, GetLongQueryString("etag").Value, GetStart(), GetPageSize());
+                documents = Database.DocumentsStorage.GetDocumentsAfter(context, etag.Value, GetStart(), GetPageSize());
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
