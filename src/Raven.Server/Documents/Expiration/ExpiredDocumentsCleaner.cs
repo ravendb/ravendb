@@ -7,13 +7,13 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 
@@ -199,11 +199,11 @@ namespace Raven.Server.Documents.Expiration
 
             if (SystemTime.UtcNow >= date)
                 throw new InvalidOperationException($"Cannot put an expired document. Expired on: {date.ToString("O")}");
-
-            var ticksBigEndian = Bits.SwapBytes((ulong)date.Ticks);
+            
+            var ticksBigEndian = IPAddress.HostToNetworkOrder(date.Ticks);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);
-            tree.MultiAdd(new Slice(&ticksBigEndian), loweredKey);
+            tree.MultiAdd(new Slice((byte*)&ticksBigEndian, sizeof(long)), loweredKey);
         }
     }
 }
