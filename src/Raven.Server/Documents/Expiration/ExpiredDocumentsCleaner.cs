@@ -23,6 +23,8 @@ namespace Raven.Server.Documents.Expiration
     {
         private readonly DocumentDatabase _database;
 
+        public Func<DateTime> UtcNow = () => DateTime.UtcNow;
+
         private static readonly ILog Log = LogManager.GetLogger(typeof(ExpiredDocumentsCleaner));
 
         private const string DocumentsByExpiration = "DocumentsByExpiration";
@@ -97,7 +99,7 @@ namespace Raven.Server.Documents.Expiration
             if (Log.IsDebugEnabled)
                 Log.Debug("Trying to find expired documents to delete");
 
-            var currentTicks = SystemTime.UtcNow.Ticks;
+            var currentTicks = UtcNow().Ticks;
             int count = 0;
             bool exitWriteTransactionAndContinueAgain = true;
             DocumentsOperationContext context;
@@ -147,7 +149,7 @@ namespace Raven.Server.Documents.Expiration
                                                 DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture,
                                                     DateTimeStyles.RoundtripKind, out date) == false)
                                                 continue;
-                                            if (SystemTime.UtcNow < date)
+                                            if (UtcNow() < date)
                                                 continue;
 
                                             var deleted = _database.DocumentsStorage.Delete(context, key, null);
@@ -195,9 +197,9 @@ namespace Raven.Server.Documents.Expiration
 
             DateTime date;
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
-                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {SystemTime.UtcNow.ToString("O")}");
+                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {UtcNow().ToString("O")}");
 
-            if (SystemTime.UtcNow >= date)
+            if (UtcNow() >= date)
                 throw new InvalidOperationException($"Cannot put an expired document. Expired on: {date.ToString("O")}");
             
             var ticksBigEndian = IPAddress.HostToNetworkOrder(date.Ticks);
