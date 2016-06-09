@@ -199,8 +199,8 @@ class patch extends viewModelBase {
         });
 
         this.selectedDocumentIndices.subscribe(list => {
-            var firstCheckedOnList = list.last();
-            if (firstCheckedOnList != null) {
+            if (list.length === 1) {
+                var firstCheckedOnList = list.first();
                 this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
                     .done(document => {
                         // load document directly from server as documents on list are loaded using doc-preview endpoint, which doesn't display entire document

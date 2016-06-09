@@ -21,6 +21,8 @@ import timeSeriesType = require("models/timeSeries/timeSeriesType");
 class ctor {
 
     static idColumnWidth = 200;
+    static selectColumnWidth = 38;
+    static optionalScrollSize = 20;
 
     $window = $(window);
 
@@ -129,13 +131,15 @@ class ctor {
             this.recycleRows().forEach(r => {
                 r.resetCells();
                 this.recycleRows.valueHasMutated();
-                this.columns.valueHasMutated();
                 r.isInUse(false);
             });
+            this.columns.valueHasMutated();
             this.items = list;
             this.settings.selectedIndices.removeAll();
             this.columns.remove(c => (c.binding !== "Id" && c.binding !== "__IsChecked"));
-            this.gridViewport.scrollTop(0);
+            if (this.gridViewport) {
+                this.gridViewport.scrollTop(0);    
+            }
             this.onGridScrolled();
 
             this.refreshIdAndCheckboxColumn();
@@ -274,7 +278,7 @@ class ctor {
         if (!containsId && !this.isIndexMapReduce()) {
             var containsCheckbox = this.columns().first(x => x.binding === "__IsChecked");
             if (!containsCheckbox && this.settings.showCheckboxes) {
-                this.columns.push(new column("__IsChecked", 38));
+                this.columns.push(new column("__IsChecked", ctor.selectColumnWidth));
             }
             if (this.settings.showIds !== false) {
                 this.columns.push(new column("Id", ctor.idColumnWidth));
@@ -492,28 +496,34 @@ class ctor {
             columnsCurrentTotalWidth += existingColumns[i].width();
         }
 
-        var availiableWidth = this.grid.width() - 200 * idColumnExists - columnsCurrentTotalWidth;
+        var checkboxesWidth = this.settings.showCheckboxes ? ctor.selectColumnWidth : 0;
+        var availiableWidth = this.grid.width() - checkboxesWidth - ctor.idColumnWidth * idColumnExists - columnsCurrentTotalWidth - ctor.optionalScrollSize;
         var freeWidth = availiableWidth;
         var fontSize = parseInt(this.grid.css("font-size"), 10);
         var columnCount = 0;
         for (var binding in columnsNeeded) {
-            var curColWidth = (binding.length + 2) * fontSize;
-            if (freeWidth - curColWidth < 0) {
-                break;
+            if (columnsNeeded.hasOwnProperty(binding)) {
+                var curColWidth = (binding.length + 2) * fontSize;
+                
+                if (freeWidth < curColWidth) {
+                    break;
+                }
+                freeWidth -= curColWidth;
+                columnCount++;
             }
-            freeWidth -= curColWidth;
-            columnCount++;
         }
-        var freeWidthPerColumn = (freeWidth / (columnCount + 1));
+        var freeWidthPerColumn = Math.floor((freeWidth / (columnCount + 1)));
 
         var firstRow = this.recycleRows().length > 0 ? this.recycleRows()[0] : null;
         for (var binding in columnsNeeded) {
             var curColWidth = (binding.length + 2) * fontSize + freeWidthPerColumn;
             var columnWidth = this.getColumnWidth(binding, curColWidth);
+           
             availiableWidth -= columnWidth;
             if (availiableWidth <= 0) {
                 break;
             }
+
             var columnName = this.getColumnName(binding);
 
             // Give priority to any Name column. Put it after the check column (0) and Id (1) columns.

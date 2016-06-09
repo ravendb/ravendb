@@ -253,6 +253,11 @@ class replicationDestination {
             this.hasLocal(false);
             this.isUserCredentials(gConfig.isUserCredentials());
             this.isApiKeyCredentials(gConfig.isApiKeyCredentials());
+
+            this.specifiedCollectionsNames([]);
+            this.specifiedCollections([]);
+            this.withScripts([]);
+            this.enableReplicateOnlyFromCollections(false);
         }
     }
 
