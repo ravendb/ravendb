@@ -334,7 +334,11 @@ class editIndex extends viewModelBase {
     }
 
     removeLuceneField(fieldIndex: number) {
+        var fieldToRemove = this.editedIndex().luceneFields()[fieldIndex];
         this.editedIndex().luceneFields.splice(fieldIndex, 1);
+        if (fieldToRemove.name() === "__all_fields") {
+            this.editedIndex().setOrRemoveStoreAllFields(false);
+        }
     }
 
     removeSpatialField(fieldIndex: number) {
