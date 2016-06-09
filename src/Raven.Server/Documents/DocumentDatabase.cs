@@ -154,7 +154,7 @@ namespace Raven.Server.Documents
 
             exceptionAggregator.Execute(() =>
             {
-                SubscriptionStorage.Dispose();
+                SubscriptionStorage?.Dispose();
             });
             exceptionAggregator.Execute(() =>
             {
