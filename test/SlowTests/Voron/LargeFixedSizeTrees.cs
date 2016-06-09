@@ -272,7 +272,7 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
-			var random = new Random(seed);
+            var random = new Random(seed);
             // del exactly 1 page
             for (var i = 0; i < count/100; i++)
             {
@@ -302,9 +302,9 @@ namespace SlowTests.Voron
                 using (var tx = Env.WriteTransaction())
                 {
                     var fst = tx.FixedTreeFor("test", valSize: 48);
-					if (fst.NumberOfEntries == 0)
-						break;
-					for (int j = start; j <= end; j++)
+                    if (fst.NumberOfEntries == 0)
+                        break;
+                    for (int j = start; j <= end; j++)
                     {
                         status.Set(j, false);
                     }
@@ -335,6 +335,7 @@ namespace SlowTests.Voron
         [InlineDataWithRandomSeed(1000000)]
         [InlineDataWithRandomSeed(2000000)]
         [InlineData(100000, 1684385375)]// reproduced a bug, do not remove
+        [InlineData(1000000, 288291468)]// reproduced a bug, do not remove
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
             var bytes = new byte[48];
@@ -355,8 +356,8 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
-			var random = new Random(seed);
-			for (var i = 0; i < count/100; i++)
+            var random = new Random(seed);
+            for (var i = 0; i < count/100; i++)
             {
                 var start = random.Next(count);
                 var end = random.Next(start, count);
@@ -364,9 +365,9 @@ namespace SlowTests.Voron
                 using (var tx = Env.WriteTransaction())
                 {
                     var fst = tx.FixedTreeFor("test", valSize: 48);
-					if (fst.NumberOfEntries == 0)
-						break;
-					for (int j = start; j <= end; j++)
+                    if (fst.NumberOfEntries == 0)
+                        break;
+                    for (int j = start; j <= end; j++)
                     {
                         status[j] = false;
                     }
@@ -415,9 +416,9 @@ namespace SlowTests.Voron
                 using (var tx = Env.WriteTransaction())
                 {
                     var fst = tx.FixedTreeFor("test", valSize: 48);
-	                if (fst.NumberOfEntries == 0)
-		                break;
-	                for (int j = start; j <= end; j++)
+                    if (fst.NumberOfEntries == 0)
+                        break;
+                    for (int j = start; j <= end; j++)
                     {
                         status[j] = false;
                     }
@@ -448,14 +449,14 @@ namespace SlowTests.Voron
             var bytes = new byte[48];
             var slice = new Slice(bytes);
 
-	        int lastId = -1;
-	        using (var tx = Env.WriteTransaction())
+            int lastId = -1;
+            using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor("test", valSize: 48);
                 for (var i = 1; i < count; i++)
                 {
                     fst.Add(i, slice);
-	                lastId = i;
+                    lastId = i;
                 }
 
                 tx.Commit();
@@ -464,11 +465,11 @@ namespace SlowTests.Voron
             using (var tx = Env.ReadTransaction())
             {
                 var fst = tx.FixedTreeFor("test", valSize: 48);
-	            using (var it = fst.Iterate())
-	            {
-		            Assert.True(it.SeekToLast(), "Failed to seek to last");
-		            Assert.Equal(lastId, it.CurrentKey);
-	            }
+                using (var it = fst.Iterate())
+                {
+                    Assert.True(it.SeekToLast(), "Failed to seek to last");
+                    Assert.Equal(lastId, it.CurrentKey);
+                }
             }
         }
     }

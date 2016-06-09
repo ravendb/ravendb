@@ -1,10 +1,10 @@
 {
   "version": "3.0.4",
   "frameworks": {
-    "netcoreapp1.0": {
+    "netstandard1.5": {
       "bin": {
-        "assembly": "netcoreapp1.0\\Lucene.Net.dll",
-        "pdb": "netcoreapp1.0\\Lucene.Net.pdb"
+        "assembly": "netstandard1.5\\Lucene.Net.dll",
+        "pdb": "netstandard1.5\\Lucene.Net.pdb"
       }
     }
   }

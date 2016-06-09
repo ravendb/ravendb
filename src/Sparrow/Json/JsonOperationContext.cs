@@ -284,6 +284,10 @@ namespace Sparrow.Json
             return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
+        public Task<BlittableJsonReaderObject> ReadForMemoryAsync(Stream stream, string documentId)
+        {
+            return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
+        }
 
         public BlittableJsonReaderObject ReadForMemory(Stream stream, string documentId)
         {

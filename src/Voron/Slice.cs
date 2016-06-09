@@ -76,12 +76,6 @@ namespace Voron
             Array = key;
         }
 
-        public Slice(ulong* ptr):
-            this((byte*)ptr, sizeof(ulong))
-        {
-            
-        }
-
         public Slice(TreeNodeHeader* node)
         {
             Options = SliceOptions.Key;
@@ -91,6 +85,18 @@ namespace Voron
         public Slice(string key) //todo: fix allocation
             : this(Encoding.UTF8.GetBytes(key))
         { }
+
+        public Slice(long* ptr)
+            : this((byte*)ptr, sizeof(long))
+        {
+
+        }
+
+        public Slice(ulong* ptr)
+            : this((byte*)ptr, sizeof(ulong))
+        {
+
+        }
 
         public override bool Equals(object obj)
         {

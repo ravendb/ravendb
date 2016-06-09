@@ -49,7 +49,7 @@ namespace FastTests.Server.Documents.Replication
                         ["Foo"] = "Bar",
                         [Constants.Metadata] = new DynamicJsonValue
                         {
-                            [Constants.DocumentReplication.DocumentChangeVector] = new DynamicJsonArray(collection)
+                            [Constants.Replication.DocumentChangeVector] = new DynamicJsonArray(collection)
                         }
                     }, "foo/bar");
 

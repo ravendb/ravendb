@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private PropertyAccessor GetPropertyAccessor(object document)
         {
             var type = document.GetType();
-            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create(type));
+            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
         }
     }
 }

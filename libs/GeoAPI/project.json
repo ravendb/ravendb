@@ -1,10 +1,10 @@
 {
   "version": "1.7.5",
   "frameworks": {
-    "netcoreapp1.0": {
+    "netstandard1.5": {
       "bin": {
-        "assembly": "netcoreapp1.0\\GeoAPI.dll",
-        "pdb": "netcoreapp1.0\\GeoAPI.pdb"
+        "assembly": "netstandard1.5\\GeoAPI.dll",
+        "pdb": "netstandard1.5\\GeoAPI.pdb"
       }
     }
   }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
@@ -27,9 +28,12 @@ namespace Raven.Server.Documents.Indexes.Static
             if (definition.Fields == null || definition.Fields.Count == 0)
                 return new IndexField[0];
 
+            IndexFieldOptions allFields;
+            definition.Fields.TryGetValue(Constants.AllFields, out allFields);
+
             return definition
                 .Fields
-                .Select(x => IndexField.Create(x.Key, x.Value))
+                .Select(x => IndexField.Create(x.Key, x.Value, allFields))
                 .ToArray();
         }
 

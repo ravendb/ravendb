@@ -128,7 +128,6 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     Name = "Users_ByAge",
                     Maps = { "from user in docs.Users select new { user.Age }" },
-                    Type = IndexType.Unknown
                 };
                 Assert.Equal(4, database.IndexStore.CreateIndex(indexDefinition4));
 
