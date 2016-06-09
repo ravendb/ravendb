@@ -29,9 +29,9 @@ namespace Voron.Data.BTrees
      * The actual values are stored as keys in a separate tree per key. In order to optimize
      * space usage, multi trees work in the following fashion.
      * 
-     * If the totale size of the values per key is less than NodeMaxSize, we store them as an embedded
+     * If the total size of the values per key is less than NodeMaxSize, we store them as an embedded
      * page inside the owning tree. If then are more than the node max size, we create a separate tree
-     * for them and then only store the tree root infromation.
+     * for them and then only store the tree root information.
      */
     public unsafe partial class Tree
     {

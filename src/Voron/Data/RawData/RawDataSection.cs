@@ -11,11 +11,15 @@ namespace Voron.Data.RawData
     public unsafe class RawDataSection
     {
         protected const ushort ReservedHeaderSpace = 96;
+
         private readonly HashSet<long> _dirtyPages = new HashSet<long>();
-        protected readonly int _pageSize;
+
         protected readonly LowLevelTransaction _tx;
+        protected readonly int _pageSize;
+
         public readonly int MaxItemSize;
-        protected RawDataSmallSectionPageHeader* _sectionHeader;
+                
+        protected RawDataSmallSectionPageHeader* _sectionHeader;        
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RawDataEntrySizes
@@ -27,7 +31,7 @@ namespace Voron.Data.RawData
         public RawDataSection(LowLevelTransaction tx, long pageNumber)
         {
             PageNumber = pageNumber;
-            _tx = tx;
+            _tx = tx;         
             _pageSize = _tx.DataPager.PageSize;
 
             MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
@@ -178,9 +182,8 @@ namespace Voron.Data.RawData
 
         public static byte* DirectRead(LowLevelTransaction tx, long id, out int size)
         {
-            int pageSize = tx.DataPager.PageSize;
-            var posInPage = (int)(id % pageSize);
-            var pageNumberInSection = (id - posInPage) / pageSize;
+            var posInPage = (int)(id % tx.PageSize);
+            var pageNumberInSection = (id - posInPage) / tx.PageSize;
             var pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)

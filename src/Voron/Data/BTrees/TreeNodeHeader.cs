@@ -36,13 +36,13 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Slice ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type = ByteStringType.Mutable)
         {
-            return new Slice(SliceOptions.Key, context.From((byte*)node + Constants.NodeHeaderSize, node->KeySize, type));
+            return new Slice(context.From((byte*)node + Constants.NodeHeaderSize, node->KeySize, type | (ByteStringType)SliceOptions.Key));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Slice ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type = ByteStringType.Mutable)
         {
-            return new Slice(SliceOptions.Key, context.FromPtr((byte*)node + Constants.NodeHeaderSize, node->KeySize, type));
+            return new Slice(context.FromPtr((byte*)node + Constants.NodeHeaderSize, node->KeySize, type | (ByteStringType)SliceOptions.Key));
         }
 
         public static byte* DirectAccess(LowLevelTransaction tx, TreeNodeHeader* node)

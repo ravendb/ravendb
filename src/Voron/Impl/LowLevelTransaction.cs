@@ -75,6 +75,8 @@ namespace Voron.Impl
             get { return _id; }
         }
 
+        public readonly int PageSize;
+
         public bool Committed { get; private set; }
 
         public bool RolledBack { get; private set; }
@@ -96,7 +98,7 @@ namespace Voron.Impl
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null )
         {
-            _dataPager = env.Options.DataPager;
+            _dataPager = env.Options.DataPager;            
             _pageSize = this.DataPager.PageSize;
             _env = env;
             _journal = env.Journal;
@@ -105,6 +107,7 @@ namespace Voron.Impl
             _allocator = context ?? new ByteStringContext();
 
             Flags = flags;
+            PageSize = _dataPager.PageSize;
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
             foreach (var scratchPagerState in scratchPagerStates.Values)

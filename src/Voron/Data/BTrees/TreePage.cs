@@ -124,7 +124,8 @@ namespace Voron.Data.BTrees
 
                             LastMatch = SliceComparer.CompareInline(key, pageKey);
 
-                            pageKey.ReleaseExternal(allocator); // Ensure we will reuse the external reference.
+                            // Ensure we will reuse the external reference improving memory locality.
+                            pageKey.ReleaseExternal(allocator); 
 
                             if (LastMatch == 0)
                                 break;
