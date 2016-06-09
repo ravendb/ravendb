@@ -8,16 +8,32 @@ namespace Sparrow
     public class AsyncManualResetEvent
     {
         private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
+        private readonly CancellationToken _token;
 
-        public Task WaitAsync()
+        public AsyncManualResetEvent()
+        {
+            _token = CancellationToken.None;		    
+        }
+
+        public AsyncManualResetEvent(CancellationToken token)
+        {
+            _token = token;
+            // ReSharper disable once ImpureMethodCallOnReadonlyValueField
+            _token.Register(() => _tcs.TrySetResult(false));
+        }
+
+        public Task<bool> WaitAsync()
         {
             return _tcs.Task;
         }
 
         public async Task<bool> WaitAsync(TimeSpan timeout)
-        {
-            var waitAsync = _tcs.Task;
-            var result = await Task.WhenAny(waitAsync, Task.Delay(timeout));
+        {			
+            var waitAsync = _tcs.Task;			
+            var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _token));
+            if (_token != CancellationToken.None)
+                return result == waitAsync && !_token.IsCancellationRequested;
+
             return result == waitAsync;
         }
 

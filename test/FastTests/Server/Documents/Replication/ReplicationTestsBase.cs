@@ -9,6 +9,16 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
+        protected void WaitForReplicationBetween(DocumentStore storeFrom, DocumentStore storeTo, int timeout)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                
+            }
+        }
+
+
         protected T WaitForDocumentToReplicate<T>(DocumentStore store, string id, int timeout)
             where T : class
         {
@@ -41,7 +51,7 @@ namespace FastTests.Server.Documents.Replication
                             Url = toStore.Url
                         }
                     }
-                }, Constants.DocumentReplication.DocumentReplicationConfiguration);
+                }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }

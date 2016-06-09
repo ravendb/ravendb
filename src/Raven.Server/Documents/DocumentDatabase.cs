@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
 using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -28,7 +30,6 @@ namespace Raven.Server.Documents
         public readonly PatchDocument Patch;
 
         private readonly object _idleLocker = new object();
-
         private Task _indexStoreTask;
 
         public DocumentDatabase(string name, RavenConfiguration configuration, MetricsScheduler metricsScheduler)

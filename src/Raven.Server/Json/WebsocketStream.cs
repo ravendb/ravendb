@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +12,6 @@ namespace Raven.Server.Json
     {
         private readonly WebSocket _webSocket;
         private readonly CancellationToken _cancellationToken;
-        private readonly byte[] _buffer;
         public override bool CanRead => true;
         public override bool CanSeek => false;
         public override bool CanWrite => true;
@@ -29,7 +25,7 @@ namespace Raven.Server.Json
         /// </summary>
         /// <remarks>This is not a thread-safe implementation</remarks>
         /// <param name="webSocket"></param>
-        public WebsocketStream(WebSocket webSocket, CancellationToken cancellationToken, byte[] buffer = null)
+        public WebsocketStream(WebSocket webSocket, CancellationToken cancellationToken)
         {
             _isDisposed = false;
             if (webSocket == null)
@@ -38,7 +34,6 @@ namespace Raven.Server.Json
                 throw new InvalidOperationException("The passed websocket is not open, it must be open when passed to the WebSocketStream");
             _webSocket = webSocket;
             _cancellationToken = cancellationToken;
-            _buffer = buffer ?? new byte[1024];
         }
 
         public override long Length
@@ -51,17 +46,23 @@ namespace Raven.Server.Json
         public override void Write(byte[] buffer, int offset, int count)
         {
             ThrowOnDisposed();
-
             var sendTask = _webSocket.SendAsync(new ArraySegment<byte>(buffer), 
                                                 WebSocketMessageType.Text, 
                                                 false,_cancellationToken);
-
             _activeWriteTasks.Add(sendTask);
-            sendTask.ContinueWith(t => _activeWriteTasks.TryRemove(t), _cancellationToken);
+            try
+            {
+                sendTask.ContinueWith(t => _activeWriteTasks.TryRemove(t), _cancellationToken);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
+        /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is <see langword="null" />.</exception>
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             ThrowOnDisposed();
 
             await _webSocket.SendAsync(new ArraySegment<byte>(buffer),
@@ -70,14 +71,6 @@ namespace Raven.Server.Json
         }
 
         private static readonly ArraySegment<byte> emptyBuffer = new ArraySegment<byte>(new byte[0]);
-        public async Task WriteEndOfMessageAsync()
-        {
-            ThrowOnDisposed();
-
-            await _webSocket.SendAsync(emptyBuffer,
-                WebSocketMessageType.Text,
-                true, _cancellationToken).ConfigureAwait(false);
-        }
 
         public override void SetLength(long value)
         {
@@ -91,21 +84,7 @@ namespace Raven.Server.Json
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            ThrowOnDisposed();
-
-            int read = 0;
-            while (read < count)
-            {
-                var bufferSegment = new ArraySegment<byte>(buffer, read, count - read);
-                var result = AsyncHelpers.RunSync(() => 
-                                _webSocket.ReceiveAsync(bufferSegment, _cancellationToken));
-
-                read += result.Count;
-                if (result.EndOfMessage)
-                    break;
-            }
-
-            return read;
+            throw new NotSupportedException();
         }
 
         //reading and writing byte-by-byte does not make sense 
@@ -120,8 +99,10 @@ namespace Raven.Server.Json
             throw new NotSupportedException();
         }
 
+        /// <exception cref="ArgumentNullException"><paramref name="buffer" /> is null.</exception>
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             ThrowOnDisposed();
             
             int read = 0;
@@ -146,29 +127,24 @@ namespace Raven.Server.Json
 
         public override void Flush()
         {
-            ThrowOnDisposed();
-            if(_activeWriteTasks.Count > 0)
-                AsyncHelpers.RunSync(() =>
-                    Task.WhenAll(_activeWriteTasks)
-                        .ContinueWith(t => _activeWriteTasks.Clear(), _cancellationToken));
+            throw new NotSupportedException();
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            if(_activeWriteTasks.Count > 0)
-                await Task.WhenAll(_activeWriteTasks)
-                          .ContinueWith(t => 
-                                _activeWriteTasks.Clear(), cancellationToken);
+            if (_activeWriteTasks.Count > 0)
+            {
+                await Task.WhenAll(_activeWriteTasks).ConfigureAwait(false);
+                _activeWriteTasks.Clear();
+            }
         }
 
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
 
-            AsyncHelpers.RunSync(() => 
-                Task.WhenAll(_activeWriteTasks)
-                    .ContinueWith(t => _isDisposed = true, _cancellationToken));
-
+            AsyncHelpers.RunSync(() => Task.WhenAll(_activeWriteTasks));
+            _isDisposed = true;
         }
     }
 }

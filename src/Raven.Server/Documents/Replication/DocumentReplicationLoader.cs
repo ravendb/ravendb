@@ -1,38 +1,55 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Server.Json;
-using Raven.Server.ReplicationUtil;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Replication
 {
     //TODO: add code to handle DocumentReplicationStatistics from each replication executer (also aggregation code?)
     //TODO: add support to destinations changes, so they can be changed dynamically (added/removed)
-    public class DocumentReplicationLoader : BaseReplicationLoader
+    public class DocumentReplicationLoader
     {
-        private ReplicationDocument _replicationDocument;        
+        private readonly ILog _log;
+        private readonly DocumentDatabase _database;
 
-        public DocumentReplicationLoader(DocumentDatabase database) : base(database)
+        private ReplicationDocument _replicationDocument;
+        private readonly List<OutgoingDocumentReplication> _outgoingReplications;
+
+        public DocumentReplicationLoader(DocumentDatabase database) 
         {
+            _outgoingReplications = new List<OutgoingDocumentReplication>();
+            _database = database;
+            _log = LogManager.GetLogger(GetType());
+            _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
+            ReplicationUniqueName = $"{_database.Name} -> {_database.DbId}";
         }
 
-        protected override bool ShouldReloadConfiguration(string systemDocumentKey)
-        {
-            return systemDocumentKey.Equals(Constants.DocumentReplication.DocumentReplicationConfiguration,
-                StringComparison.OrdinalIgnoreCase);
-        }      
+        public string ReplicationUniqueName { get; }
 
-        protected override void LoadConfigurations()
+        public void Initialize()
+        {
+            LoadConfigurations();
+        }
+
+        protected bool ShouldReloadConfiguration(string systemDocumentKey)
+        {
+            return systemDocumentKey.Equals(Constants.Replication.DocumentReplicationConfiguration,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        protected void LoadConfigurations()
         {
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 var configurationDocument = _database.DocumentsStorage.Get(context,
-                    Constants.DocumentReplication.DocumentReplicationConfiguration);
+                    Constants.Replication.DocumentReplicationConfiguration);
 
                 if (configurationDocument == null)
                     return;
@@ -42,83 +59,59 @@ namespace Raven.Server.Documents.Replication
                     _replicationDocument = JsonDeserialization.ReplicationDocument(configurationDocument.Data);
                     //the destinations here are the ones that are outbound..
                     if (_replicationDocument.Destinations == null) //precaution, should not happen
-                    {
-                        _log.Warn(
-                            "Invalid configuration document, Destinations property must not be null. Replication will not be active");
-                    }
+                        _log.Warn("Invalid configuration document, Destinations property must not be null. Replication will not be active");
                 }
                 catch (Exception e)
                 {
-                    _log.Error(
-                        "failed to deserialize replication configuration document. This is something that is not supposed to happen. Reason:" +
-                        e);
+                    _log.Error("failed to deserialize replication configuration document. This is something that is not supposed to happen. Reason:" + e);
                 }
 
-                for (int i = 0; i < _replicationDocument.Destinations.Count; i++)
-                {
-                    var destination = _replicationDocument.Destinations[i];
-                    try
-                    {
-                        bool _;
-                        var executer = RegisterConnection(Guid.Empty, destination.Url, destination.Database, out _);
-                        if (executer.HasOutgoingReplication)
-                            executer.Start();
-                    }
-                    catch (Exception e)
-                    {
-                        _log.Error($"Failed to register connection for destination {destination.Url} -> {destination.Database}", e);
-                    }
-                }
+                Debug.Assert(_replicationDocument.Destinations != null);
+                OnConfigurationChanged(_replicationDocument.Destinations);
             }
         }
 
-        //inbound replication source will get it's ReplicationExecuter as well as
-        //the outgoing ones		
-        public DocumentReplicationExecuter RegisterConnection(
-            Guid srcDbId, 
-            string url, 
-            string dbName, 
-            out bool shouldConnectBack)
+        //TODO: add here error handling for the following cases
+        //1) what if unexpected exception happens in outgoing replication dispose?
+        //2) what if sending a replication batch is happening during a call to dispose?
+        protected void OnConfigurationChanged(List<ReplicationDestination> destinations)
         {
-            //since this should be done once per destination node, 
-            //the mutext is not likely to be a bottleneck
-            lock (Replications)
+            lock (_outgoingReplications)
             {
-                shouldConnectBack = false;
+                foreach (var replication in _outgoingReplications)
+                    replication.Dispose();
+                _outgoingReplications.Clear();
 
-                var existingExecuter =
-                    Replications.Select(x => x as DocumentReplicationExecuter)
-                        .FirstOrDefault(x => x.DbId == srcDbId ||
-                                        (x.Url.Equals(url,StringComparison.OrdinalIgnoreCase) &&
-                                         x.DbName.Equals(dbName,StringComparison.OrdinalIgnoreCase)));
-
-                if (existingExecuter != null)
-                    return existingExecuter;
-
-
-                ReplicationDestination destination = null;
-                if (_replicationDocument?.Destinations != null)
+                var initializationTasks = new List<Task>();
+                foreach (var dest in destinations)
                 {
-                    destination = _replicationDocument.Destinations
-                        .FirstOrDefault(x => x.Url.Equals(url, StringComparison.OrdinalIgnoreCase) &&
-                                             x.Database.Equals(dbName, StringComparison.OrdinalIgnoreCase));
-
-                    if (destination != null)
-                        shouldConnectBack = true;
+                    var outgoingDocumentReplication = new OutgoingDocumentReplication(_database, dest);
+                    initializationTasks.Add(outgoingDocumentReplication.InitializeAsync());
+                    _outgoingReplications.Add(outgoingDocumentReplication);
                 }
 
-                var documentReplicationExecuter = new DocumentReplicationExecuter(_database, url, destination);
-                Replications.Add(documentReplicationExecuter);
-                return documentReplicationExecuter;
+                Task.WhenAll(initializationTasks).Wait(_database.DatabaseShutdown);
             }
         }
 
-        public void HandleConnectionDisconnection(DocumentReplicationExecuter replicationExecuter)
+        public void Dispose()
         {
-            lock (Replications)
+            lock (_outgoingReplications)
             {
-                replicationExecuter.Dispose();
-                Replications.TryRemove(replicationExecuter);
+                foreach (var replication in _outgoingReplications)
+                    replication.Dispose();
+            }
+            _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
+        }
+
+        private void HandleSystemDocumentChange(DocumentChangeNotification notification)
+        {
+            if (ShouldReloadConfiguration(notification.Key))
+            {
+                LoadConfigurations();
+
+                if (_log.IsDebugEnabled)
+                    _log.Debug($"Replication configuration was changed: {notification.Key}");
             }
         }
     }

@@ -1,13 +1,36 @@
 ﻿using System;
 using System.IO;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Server.Documents.Replication;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server
 {
     public static class BlittableExtensions
     {
+        public static void PrepareForStorage(this BlittableJsonReaderObject doc)
+        {
+            DynamicJsonValue mutableMetadata;
+            BlittableJsonReaderObject metadata;
+            if (doc.TryGet(Constants.Metadata, out metadata))
+            {
+                metadata.Modifications = mutableMetadata = new DynamicJsonValue(metadata);
+            }
+            else
+            {
+                doc.Modifications = new DynamicJsonValue(doc)
+                {
+                    [Constants.Metadata] = mutableMetadata = new DynamicJsonValue()
+                };
+            }
+
+            mutableMetadata["Raven-Last-Modified"] = SystemTime.UtcNow.GetDefaultRavenFormat(isUtc: true);
+        }
+
+
         public static string GetIdFromMetadata(this BlittableJsonReaderObject document)
         {
             string id;
@@ -39,7 +62,7 @@ namespace Raven.Server
             BlittableJsonReaderObject metadata;
             BlittableJsonReaderArray changeVector;
             if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                metadata.TryGet(Constants.DocumentReplication.DocumentChangeVector,
+                metadata.TryGet(Constants.Replication.DocumentChangeVector,
                 out changeVector) == false)
             {
                 return new ChangeVectorEntry[0];
