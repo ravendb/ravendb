@@ -7,13 +7,24 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class DynamicDocumentObject : DynamicObject
     {
-        private readonly Document _document;
         private readonly DynamicBlittableJson _dynamicJson;
+        private Document _document;
 
         public DynamicDocumentObject(Document document)
         {
             _document = document;
             _dynamicJson = new DynamicBlittableJson(document.Data);
+        }
+
+        public DynamicDocumentObject()
+        {
+            _dynamicJson = new DynamicBlittableJson(null);
+        }
+
+        public void Set(Document document)
+        {
+            _document = document;
+            _dynamicJson.Set(_document.Data);
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
