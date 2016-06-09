@@ -87,6 +87,7 @@ namespace Tryouts
 
         private string RandomString(int length)
         {
+            // return new string(Enumerable.Repeat('A', length).ToArray());
             const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[_random.Next(s.Length)]).ToArray());
@@ -209,6 +210,10 @@ namespace Tryouts
 
                 if (args.Length == 1)
                     k = Convert.ToInt32(args[0]);
+
+                //Console.WriteLine("metoraf...");
+                //massiveObj.PerformBulkInsert("warmup", 1000 * k, 30 * kb * kb);
+
 
                 Console.WriteLine("warmup...");
                 massiveObj.PerformBulkInsert("warmup", 10 * k, 2 * kb);

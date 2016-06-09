@@ -43,12 +43,10 @@ namespace Raven.Server.Documents.Handlers
 
 
 
-        private void SendCloseMessageToClient(WebSocketCloseStatus status, string msg)
+        private async Task SendCloseMessageToClient(WebSocketCloseStatus status, string msg)
         {
-            lock (SendLock)
-            {
-                _webSocket.CloseOutputAsync(status, msg, Database.DatabaseShutdown).Wait();
-            }
+            await _webSocket.CloseOutputAsync(status, msg, Database.DatabaseShutdown);
+
         }
 
         private void SendMessageToClient(ArraySegment<byte> msg)
@@ -113,7 +111,7 @@ namespace Raven.Server.Documents.Handlers
                                 using (var tx = context.OpenWriteTransaction())
                                 {
                                     tx.InnerTransaction.LowLevelTransaction.IsLazyTransaction = true;
-                                    
+
                                     byte* docPtr = (byte*)current.Buffer.Address;
                                     var end = docPtr + current.Used;
                                     while (docPtr < end)
@@ -124,7 +122,7 @@ namespace Raven.Server.Documents.Handlers
                                         if (size + docPtr > end) //TODO: Better error
                                             throw new InvalidDataException(
                                                 "The blittable size specified is more than the available data, aborting...");
-                                        
+
                                         //TODO: Paranoid mode, has to validate the data is safe
                                         var reader = new BlittableJsonReaderObject(docPtr, size, context);
                                         docPtr += size;
@@ -236,6 +234,45 @@ namespace Raven.Server.Documents.Handlers
             using (_webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false))
             using (ContextPool.AllocateOperationContext(out context))
             {
+
+
+                //var buffer = new ArraySegment<byte>(context.GetManagedBuffer());
+                //WebSocketReceiveResult result;
+                //while (true)
+                //{
+                //    try
+                //    {
+                //         result =await _webSocket.ReceiveAsync(buffer, Database.DatabaseShutdown);
+                //        //result.EndOfMessage
+                //        if (result.CloseStatus != null)
+                //        {
+                //            Console.WriteLine("Closing on " + result.CloseStatus + "," + result.CloseStatusDescription);
+                //            try
+                //            {
+                //                await SendCloseMessageToClient(WebSocketCloseStatus.NormalClosure, "normal closer");
+                //            }
+                //            catch (Exception eee)
+                //            {
+                //                Console.WriteLine("HERE " + eee);
+                //            }
+                //            break;
+                //        }
+                //    }
+                //    catch (Exception exx)
+                //    {
+                //        Console.WriteLine("ERRR222:" + exx);
+                //        await SendCloseMessageToClient(WebSocketCloseStatus.InternalServerError, "{'Type': 'Error', 'Exception': 'TEST'}");
+                //        throw;
+                //    }
+                //}
+
+
+
+
+
+
+
+
                 Log.Debug("Starting bulk insert operation");
 
                 for (int i = 0; i < NumberOfBuffersUsed; i++)
@@ -361,4 +398,4 @@ namespace Raven.Server.Documents.Handlers
             }
         }
     }
-    }
+}

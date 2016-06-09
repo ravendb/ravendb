@@ -31,7 +31,7 @@ namespace Raven.Server
             app.UseWebSockets(new WebSocketOptions
             {
                 KeepAliveInterval = Debugger.IsAttached ? 
-                    TimeSpan.FromHours(24) : TimeSpan.FromSeconds(30),
+                    TimeSpan.FromHours(24) : TimeSpan.FromHours(24), // TODO: KeepAlive causes "Unexpect reserved bit set" (we are sending our own hearbeats, so we do not need this)
                 ReceiveBufferSize = 4096,
             });
 
