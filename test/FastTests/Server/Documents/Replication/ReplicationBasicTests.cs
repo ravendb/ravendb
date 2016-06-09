@@ -98,7 +98,7 @@ namespace FastTests.Server.Documents.Replication
                     using (context.OpenWriteTransaction())
                     {
                         BlittableJsonReaderObject inner;
-                        doc.TryGetEmbedded("Inner", out inner);
+                        doc.TryGet("Inner", out inner);
                         Assert.NotNull(inner);
                         db.DocumentsStorage.Put(context, "foo/bar", null, inner);
                         context.Transaction.Commit();
@@ -107,8 +107,8 @@ namespace FastTests.Server.Documents.Replication
                     using (context.OpenWriteTransaction())
                     {
                         BlittableJsonReaderObject inner;
-                        doc.TryGetEmbedded("Inner", out inner);
-                        inner.Modifications = new DynamicJsonValue
+                        doc.TryGet("Inner", out inner);
+                        inner.Modifications = new DynamicJsonValue(inner)
                         {
                             ["Bar"] = "AAA"
                         };

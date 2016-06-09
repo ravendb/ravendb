@@ -10,9 +10,10 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new SlowTests.Core.Querying.Filtering())
+                var x = new SlowTests.Core.Bundles.ExpirationStressTest();
                 {
-                    x.BasicFiltering().Wait();
+                    x.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(
+                        1000).Wait();
                 }
 
             }
