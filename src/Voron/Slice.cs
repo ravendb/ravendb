@@ -76,12 +76,6 @@ namespace Voron
             Array = key;
         }
 
-        public Slice(ulong* ptr):
-            this((byte*)ptr, sizeof(ulong))
-        {
-            
-        }
-
         public Slice(TreeNodeHeader* node)
         {
             Options = SliceOptions.Key;
