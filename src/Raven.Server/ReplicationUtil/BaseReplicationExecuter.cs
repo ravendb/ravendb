@@ -1,7 +1,10 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Server.Documents;
+using Sparrow;
 
 namespace Raven.Server.ReplicationUtil
 {
@@ -15,7 +18,7 @@ namespace Raven.Server.ReplicationUtil
 
         protected readonly CancellationTokenSource _cancellationTokenSource;
         public CancellationToken CancellationToken => _cancellationTokenSource.Token;
-        public readonly ManualResetEventSlim WaitForChanges = new ManualResetEventSlim();
+        public readonly AsyncManualResetEvent WaitForChanges;
 
         public abstract string ReplicationUniqueName { get; }
 
@@ -24,6 +27,7 @@ namespace Raven.Server.ReplicationUtil
             _log = LogManager.GetLogger(GetType());
             _database = database;
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+            WaitForChanges = new AsyncManualResetEvent(_cancellationTokenSource.Token);
         }
 
         public void Start()
@@ -31,7 +35,8 @@ namespace Raven.Server.ReplicationUtil
             if (_replicationThread != null)
                 return;
 
-            _replicationThread = new Thread(ExecuteReplicationLoop)
+            //haven't found better way to synchronize async method
+            _replicationThread = new Thread(() => AsyncHelpers.RunSync(ExecuteReplicationLoop))
             {
                 Name = $"Replication thread, {ReplicationUniqueName}",
                 IsBackground = true
@@ -40,7 +45,7 @@ namespace Raven.Server.ReplicationUtil
             _replicationThread.Start();
         }
 
-        protected abstract void ExecuteReplicationOnce();
+        protected abstract Task ExecuteReplicationOnce();
 
         /// <summary>
         /// returns true if there are items left to replicate, and false 
@@ -48,7 +53,7 @@ namespace Raven.Server.ReplicationUtil
         /// </summary>
         protected abstract bool HasMoreDocumentsToSend();
 
-        private void ExecuteReplicationLoop()
+        private async Task ExecuteReplicationLoop()
         {
             while (_cancellationTokenSource.IsCancellationRequested == false)
             {
@@ -61,7 +66,7 @@ namespace Raven.Server.ReplicationUtil
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    ExecuteReplicationOnce();
+                    await ExecuteReplicationOnce();
 
                     if (_log.IsDebugEnabled)
                         _log.Debug($"Finished replication for '{ReplicationUniqueName}'.");
@@ -80,12 +85,15 @@ namespace Raven.Server.ReplicationUtil
                     _log.WarnException($"Exception occured for '{ReplicationUniqueName}'.", e);
                 }
 
-                if (!HasMoreDocumentsToSend())
+                if (HasMoreDocumentsToSend())
                     continue;
 
                 try
                 {
-                    WaitForChanges.Wait(_cancellationTokenSource.Token);
+                    //if this returns false, this means canceled token is activated                    
+                    if (await WaitForChanges.WaitAsync() == false)
+                        //thus, if code reaches here, cancellation token source has "cancel" requested
+                        return; 
                 }
                 catch (OperationCanceledException)
                 {

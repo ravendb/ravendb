@@ -276,8 +276,22 @@ namespace Raven.Abstractions.Data
             public const string RavenDisableVersioning = "Raven-Disable-Versioning";
         }
 
-        public class DocumentReplication
+        public const string MessageType = "MessageType";
+
+        public class Replication
         {
+            public class MessageTypes
+            {
+                public const string ReplicationBatch = "ReplicationBatch";
+                public const string GetLastEtag = "GetLastEtag";
+            }
+
+            public class PropertyNames
+            {
+                public const string LastSentEtag = "LastSentEtag";
+                public const string ReplicationBatch = "ReplicationBatch";
+            }
+
             public const string DocumentChangeVector = "Raven-Document-Change-Vector";
 
             public const string DocumentReplicationTenantChangeVector = "Raven/DocumentReplication/TenantData";

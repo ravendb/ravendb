@@ -172,12 +172,17 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }	   
+
+        private static void AssertTransaction(DocumentsOperationContext context)
+        {
+            if (context.Transaction == null) //precaution
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
         }
 
         public ChangeVectorEntry[] GetChangeVector(DocumentsOperationContext context)
         {
-            if(context.Transaction == null) //precaution
-                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+            AssertTransaction(context);
 
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
             var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
@@ -208,7 +213,7 @@ namespace Raven.Server.Documents
             {
                 var entry = changeVector[i];
                 tree.Add(new Slice((byte*)&entry.DbId, (ushort)sizeof(Guid)),
-                    new Slice((byte*)&entry.Etag, (ushort)sizeof(Guid)));
+                    new Slice((byte*)&entry.Etag, (ushort)sizeof(long)));
             }
         }
 
@@ -303,7 +308,7 @@ namespace Raven.Server.Documents
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
-            {
+            {				
                 if (start > 0)
                 {
                     start--;

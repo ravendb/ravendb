@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Platform.Unix;
@@ -45,7 +41,7 @@ namespace Raven.Server.ReplicationUtil
             _cancellationToken = cancellationToken;
             _context = context;
             _disposed = false;
-        }
+        }	   
 
         public async Task EnsureConnectionAsync()
         {
@@ -56,27 +52,28 @@ namespace Raven.Server.ReplicationUtil
             }
         }
 
-        public long GetLastEtag()
+        public async Task<long> GetLastEtag()
         {
             using (var writer = new BlittableJsonTextWriter(_context, _websocketStream))
             {
                 _context.Write(writer, new DynamicJsonValue
                 {
-                    ["Raven/GetLastEtag"] = true
+                    [Constants.MessageType] = Constants.Replication.MessageTypes.GetLastEtag
                 });
 
                 writer.Flush();
             }
 
-            var lastEtagMessage = _context.ReadForMemory(_websocketStream, null);
+            var lastEtagMessage = await _context.ReadForMemoryAsync(_websocketStream, null);
 
             long etag;
-            if (!lastEtagMessage.TryGet("Raven/LastSentEtag", out etag))
+            if (!lastEtagMessage.TryGet(Constants.Replication.PropertyNames.LastSentEtag, out etag))
                 throw new InvalidDataException(
-                    "Received invalid last etag message. Failed to get Raven/LastSentEtag property from received result");
+                    $"Received invalid last etag message. Failed to get {Constants.Replication.PropertyNames.LastSentEtag} property from received result");
             return etag;
         }
 
+        //TODO : add here logic so reconnection is attempted couple of times before giving up
         private async Task<WebSocket> GetAndConnectWebSocketAsync()
         {
             var uri = new Uri(
@@ -103,26 +100,27 @@ namespace Raven.Server.ReplicationUtil
             }
         }
 
-        public async Task SendDocumentBatchAsync(Document[] docs)
+        public async Task<long> SendDocumentBatchAsync(IEnumerable<Document> docs)
         {
+            long lastEtag;
             await EnsureConnectionAsync();
             using (var writer = new BlittableJsonTextWriter(_context, _websocketStream))
             {
-                for (int i = 0; i < docs.Length; i++)
-                {
-                    docs[i].EnsureMetadata();
-                    _context.Write(writer, docs[i].Data);
-                    writer.Flush();
-                }
-            }
-            await _websocketStream.WriteEndOfMessageAsync();
-        }		
+                writer.WriteStartObject();
+                writer.WritePropertyName(_context.GetLazyStringForFieldWithCaching(Constants.MessageType));
+                writer.WriteString(_context.GetLazyStringForFieldWithCaching(
+                    Constants.Replication.MessageTypes.ReplicationBatch));			
 
-        public async Task SendHeartbeatAsync(DocumentsOperationContext context)
-        {
-            await EnsureConnectionAsync();
-            //TODO : finish heartbeat
-        }
+                writer.WritePropertyName(
+                    _context.GetLazyStringForFieldWithCaching(
+                        Constants.Replication.PropertyNames.ReplicationBatch));
+                lastEtag = writer.WriteDocuments(_context,docs,false);
+
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+            return lastEtag;
+        }	    
 
         public void Dispose()
         {

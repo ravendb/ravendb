@@ -78,23 +78,7 @@ namespace Raven.Server.Documents.Handlers
 
                             // we need to split this document to an independent blittable document
                             // and this time, we'll prepare it for disk.
-
-                            DynamicJsonValue mutableMetadata;
-                            BlittableJsonReaderObject metadata;
-                            if (doc.TryGet(Constants.Metadata, out metadata))
-                            {
-                                metadata.Modifications = mutableMetadata = new DynamicJsonValue(metadata);
-                            }
-                            else
-                            {
-                                doc.Modifications = new DynamicJsonValue(doc)
-                                {
-                                    [Constants.Metadata] = mutableMetadata = new DynamicJsonValue()
-                                };
-                            }
-
-                            mutableMetadata["Raven-Last-Modified"] = SystemTime.UtcNow.GetDefaultRavenFormat(isUtc: true);
-
+                            doc.PrepareForStorage();
                             parsedCommands[i].Document = context.ReadObject(doc, parsedCommands[i].Key,
                                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             break;
