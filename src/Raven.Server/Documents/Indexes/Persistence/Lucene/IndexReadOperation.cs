@@ -119,8 +119,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<Document> IntersectQuery(IndexQuery query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
-            throw new NotImplementedException();
-
             var subQueries = query.Query.Split(IntersectSeparators, StringSplitOptions.RemoveEmptyEntries);
             if (subQueries.Length <= 1)
                 throw new InvalidOperationException("Invalid INTERSECT query, must have multiple intersect clauses.");
@@ -133,63 +131,66 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query);
             var sort = GetSort(query.SortedFields);
-            //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-            var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
-            currentBaseQueryMatches = search.ScoreDocs.Length;
-            var intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
 
-            do
+            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
             {
-                token.ThrowIfCancellationRequested();
-                if (skippedResultsInCurrentLoop > 0)
+                //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
+                var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
+                currentBaseQueryMatches = search.ScoreDocs.Length;
+                var intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
+
+                do
                 {
-                    // We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
-                    pageSizeBestGuess = pageSizeBestGuess * 2;
+                    token.ThrowIfCancellationRequested();
+                    if (skippedResultsInCurrentLoop > 0)
+                    {
+                        // We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
+                        pageSizeBestGuess = pageSizeBestGuess * 2;
 
-                    search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
-                    previousBaseQueryMatches = currentBaseQueryMatches;
-                    currentBaseQueryMatches = search.ScoreDocs.Length;
-                    intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
-                }
+                        search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
+                        previousBaseQueryMatches = currentBaseQueryMatches;
+                        currentBaseQueryMatches = search.ScoreDocs.Length;
+                        intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs);
+                    }
 
-                for (var i = 1; i < subQueries.Length; i++)
-                {
-                    var luceneSubQuery = GetLuceneQuery(subQueries[i], query);
-                    _searcher.Search(luceneSubQuery, null, intersectionCollector);
-                }
+                    for (var i = 1; i < subQueries.Length; i++)
+                    {
+                        var luceneSubQuery = GetLuceneQuery(subQueries[i], query);
+                        _searcher.Search(luceneSubQuery, null, intersectionCollector);
+                    }
 
-                var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
-                intersectMatches = currentIntersectResults.Count;
-                skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
-            } while (intersectMatches < query.PageSize                      //stop if we've got enough results to satisfy the pageSize
+                    var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
+                    intersectMatches = currentIntersectResults.Count;
+                    skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
+                } while (intersectMatches < query.PageSize                      //stop if we've got enough results to satisfy the pageSize
                     && currentBaseQueryMatches < search.TotalHits           //stop if increasing the page size wouldn't make any difference
                     && previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
 
-            var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
-            //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
-            //because it's before the INTERSECTION has been applied, so only some of those results make it out.
-            //Trying to give an accurate answer is going to be too costly, so we aren't going to try.
-            totalResults.Value = search.TotalHits;
-            //query.SkippedResults.Value = skippedResultsInCurrentLoop; // TODO [ppekrol]
+                var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
+                //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
+                //because it's before the INTERSECTION has been applied, so only some of those results make it out.
+                //Trying to give an accurate answer is going to be too costly, so we aren't going to try.
+                totalResults.Value = search.TotalHits;
+                skippedResults.Value = skippedResultsInCurrentLoop;
 
-            //Using the final set of results in the intersectionCollector
-            int returnedResults = 0;
-            for (int i = query.Start; i < intersectResults.Count && (i - query.Start) < pageSizeBestGuess; i++)
-            {
-                var document = retriever.Get(_searcher.Doc(intersectResults[i].LuceneId));
-                //IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]); // TODO [ppekrol]
+                //Using the final set of results in the intersectionCollector
+                int returnedResults = 0;
+                for (int i = query.Start; i < intersectResults.Count && (i - query.Start) < pageSizeBestGuess; i++)
+                {
+                    var document = retriever.Get(_searcher.Doc(intersectResults[i].LuceneId));
 
-                //if (ShouldIncludeInResults(indexQueryResult) == false)
-                //{
-                //    //query.SkippedResults.Value++;
-                //    skippedResultsInCurrentLoop++;
-                //    continue;
-                //}
+                    if (scope.ShouldIncludeInResults(document) == false)
+                    {
+                        skippedResults.Value++;
+                        skippedResultsInCurrentLoop++;
+                        continue;
+                    }
 
-                returnedResults++;
-                yield return document;
-                if (returnedResults == query.PageSize)
-                    yield break;
+                    returnedResults++;
+                    yield return document;
+                    if (returnedResults == query.PageSize)
+                        yield break;
+                }
             }
         }
 

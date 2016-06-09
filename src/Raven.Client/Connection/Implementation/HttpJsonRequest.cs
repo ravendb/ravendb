@@ -28,6 +28,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 

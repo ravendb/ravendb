@@ -110,9 +110,6 @@ namespace Raven.Server.Documents.Indexes
 
                 Index index;
 
-                if (definition.Type == IndexType.Unknown)
-                    definition.Type = definition.DetectIndexType();
-
                 switch (definition.Type)
                 {
                     case IndexType.Map:
@@ -420,6 +417,10 @@ namespace Raven.Server.Documents.Indexes
                         var autoMapIndex = (AutoMapIndex)index;
                         var autoMapIndexDefinition = autoMapIndex.Definition;
                         return CreateIndex(autoMapIndexDefinition);
+                    case IndexType.Map:
+                        var staticMapIndex = (StaticMapIndex)index;
+                        var staticMapIndexDefinition = staticMapIndex.Definition.IndexDefinition;
+                        return CreateIndex(staticMapIndexDefinition);
                     default:
                         throw new NotSupportedException(index.Type.ToString());
                 }

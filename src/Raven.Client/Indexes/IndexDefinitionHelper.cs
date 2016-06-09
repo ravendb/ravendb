@@ -6,6 +6,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Client.Util;
 using Raven.Abstractions;
+using Raven.Client.Exceptions;
 
 namespace Raven.Client.Indexes
 {

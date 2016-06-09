@@ -174,7 +174,24 @@ namespace Raven.Client.Indexing
             }
         }
 
-        public IndexType Type { get; set; }
+        private IndexType? _indexType;
+
+        public IndexType Type
+        {
+            get
+            {
+                if (_indexType == null)
+                {
+                    _indexType = DetectStaticIndexType();
+                }
+
+                return _indexType.Value;
+            }
+            internal set
+            {
+                _indexType = value;
+            }
+        }
 
         /// <summary>
         /// Whatever this is a temporary test only index
@@ -237,11 +254,8 @@ namespace Raven.Client.Indexing
                 Fields.Remove(key);
         }
 
-        public IndexType DetectIndexType()
+        private IndexType DetectStaticIndexType()
         {
-            if (Type != IndexType.Unknown)
-                return Type;
-
             if (string.IsNullOrWhiteSpace(Reduce))
                 return IndexType.Map;
 

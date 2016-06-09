@@ -44,9 +44,20 @@ namespace Raven.Server.Documents.Indexes.Static
                 var ctx = Hashing.Streamed.XXHash32.BeginProcess();
                 foreach (var str in items)
                 {
-                    fixed (char* p = str)
+                    fixed (char* buffer = str)
                     {
-                        Hashing.Streamed.XXHash32.Process(ctx, (byte*)p, str.Length * sizeof(char));
+                        var toProcess = str.Length;
+                        var current = buffer;
+                        do
+                        {
+                            if (toProcess < Hashing.Streamed.XXHash32.Alignment)
+                                break; // TODO [ppekrol] This is bad, fix me
+                            
+                            ctx = Hashing.Streamed.XXHash32.Process(ctx, (byte*)current, Hashing.Streamed.XXHash32.Alignment);
+                            toProcess -= Hashing.Streamed.XXHash32.Alignment;
+                            current += Hashing.Streamed.XXHash32.Alignment;
+                        }
+                        while (toProcess > 0);
                     }
                 }
                 _hash = (int)Hashing.Streamed.XXHash32.EndProcess(ctx);
