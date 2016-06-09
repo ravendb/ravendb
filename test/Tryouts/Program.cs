@@ -12,7 +12,7 @@ namespace Tryouts
                 using (var t = new Expiration())
                 {
                     Console.WriteLine(i);
-                    t.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry()
+                    t.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(100)
                         .Wait();
                 }
             }

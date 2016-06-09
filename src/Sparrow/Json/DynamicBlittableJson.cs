@@ -11,6 +11,8 @@ namespace Sparrow.Json
 
         public class DynamicBlittableArray : DynamicObject, IEnumerable<DynamicObject>
         {
+            private IEnumerator<DynamicObject> _enumerator;
+
             protected BlittableJsonReaderArray BlittableJsonReaderArray;
 
             public DynamicBlittableArray(BlittableJsonReaderArray blittableJsonReaderArray)
@@ -84,7 +86,7 @@ namespace Sparrow.Json
 
             public IEnumerator<DynamicObject> GetEnumerator()
             {
-                return Items.GetEnumerator();
+                return _enumerator ?? (_enumerator = Items.GetEnumerator());
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -95,6 +97,11 @@ namespace Sparrow.Json
 
 
         public DynamicBlittableJson(BlittableJsonReaderObject blittableJsonReaderObject)
+        {
+            BlittableJsonReaderObject = blittableJsonReaderObject;
+        }
+
+        public void Set(BlittableJsonReaderObject blittableJsonReaderObject)
         {
             BlittableJsonReaderObject = blittableJsonReaderObject;
         }
