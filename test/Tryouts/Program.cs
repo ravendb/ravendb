@@ -9,9 +9,10 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                using (var x = new SlowTests.Voron.LargeFixedSizeTrees())
+                Console.WriteLine(i);
+                using (var x = new SlowTests.Core.Querying.Filtering())
                 {
-                    x.CanDeleteRange_RandomRanges(count: 2000000, seed: 288291468);
+                    x.BasicFiltering().Wait();
                 }
 
             }
