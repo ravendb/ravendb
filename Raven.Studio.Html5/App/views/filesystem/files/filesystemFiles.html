@@ -65,7 +65,7 @@
                     <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1 , click: renameSelectedFile" title="Rename file">
                         <i class="fa fa-random"></i>
                     </button>
-                    <button type="button" class="btn btn-default" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">
+                    <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">
                         <i class="fa fa-trash-o"></i>
                     </button>
                 </div>
@@ -92,9 +92,9 @@
         </div>
     </div>
     <div class="row">
-        <div id="uploadQueueContainer" class="upload-queue panel panel-info">
+        <div id="uploadQueueContainer" data-bind="attr: { class: uploadsStatus() + ' upload-queue panel '}">
             <div class="panel-heading">
-                <span><i class="fa fa-upload bold blue"></i>&nbsp;Upload Queue</span>
+                <span><i class="fa fa-fw bold blue" data-bind="css: { 'fa-spin':  anyUploadInProgess(), 'fa-circle-o-notch': anyUploadInProgess() , 'fa-upload': !anyUploadInProgess()  }"></i>&nbsp;Upload Queue</span>
                 <a href="#" id="uploadQueuePanelToggle" class="opened pull-right" style="float:right; padding-right:10px" data-bind="click: toggleCollapseUploadQueue"><i class="fa fa-angle-double-down bold red"></i></a>
             </div>
             <div class="panel-body">

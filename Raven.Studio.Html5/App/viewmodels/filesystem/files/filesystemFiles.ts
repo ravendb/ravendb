@@ -48,6 +48,9 @@ class filesystemFiles extends viewModelBase {
     isAllFilesAutoSelected = ko.observable<boolean>(false);
     inRevisionsFolder = ko.observable<boolean>(false);
 
+    anyUploadInProgess: KnockoutComputed<boolean>;
+    uploadsStatus: KnockoutComputed<string>;
+
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
 
@@ -114,6 +117,38 @@ class filesystemFiles extends viewModelBase {
                 return checkbox.SomeChecked;
             }
             return checkbox.UnChecked;
+        });
+
+        this.anyUploadInProgess = ko.pureComputed(() => {
+            var queue = this.uploadQueue();
+            for (var i = 0; i < queue.length; i++) {
+                if (queue[i].status() === uploadQueueHelper.uploadingStatus) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        this.uploadsStatus = ko.pureComputed(() => {
+            var queue = this.uploadQueue();
+
+            if (queue.length === 0) {
+                return 'panel-info';
+            }
+
+            var allSuccess = true;
+
+            for (var i = 0; i < queue.length; i++) {
+                if (queue[i].status() === uploadQueueHelper.failedStatus) {
+                    return 'panel-danger';
+                }
+
+                if (queue[i].status() !== uploadQueueHelper.uploadedStatus) {
+                    allSuccess = false;
+                }
+            }
+
+            return allSuccess ? 'panel-success' : 'panel-info';
         });
     }
 

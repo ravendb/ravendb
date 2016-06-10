@@ -82,7 +82,7 @@ class shell extends viewModelBase {
     static canReadSettings = ko.observable<boolean>(false);
     static canExposeConfigOverTheWire = ko.observable<boolean>(false);
     maxResourceNameWidth: KnockoutComputed<string>;
-    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
+    isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ throttle: 100 });
 
     static databases = ko.observableArray<database>();
     listedResources: KnockoutComputed<resource[]>;

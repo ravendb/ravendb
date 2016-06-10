@@ -63,11 +63,11 @@ class filesystemEditFile extends viewModelBase {
 
     setupKeyboardShortcuts() {
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteFile(), filesystemEditFile.editFileSelector);
-        }
+    }
 
     focusOnEditor() {
         this.metadataEditor.focus();
-        }
+    }
 
     loadFile(fileName: string) {
         new getFileCommand(this.activeFilesystem(), fileName)
@@ -83,7 +83,6 @@ class filesystemEditFile extends viewModelBase {
     saveFileMetadata() {
         //the name of the document was changed and we have to save it as a new one
         var meta = JSON.parse(this.fileMetadataText());
-        var currentDocumentId = this.fileName();
 
         this.metaPropsToRestoreOnSave.forEach(p => meta[p.name] = p.value);
 
@@ -190,11 +189,11 @@ class filesystemEditFile extends viewModelBase {
     }
 
     appendRecentFile(fileId: string) {
-        var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName == this.filesystemForEditedFile.name);
+        var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName === this.filesystemForEditedFile.name);
         if (existingRecentFilesStore) {
             var existingDocumentInStore = existingRecentFilesStore.recentFiles.first(x=> x === fileId);
             if (!existingDocumentInStore) {
-                if (existingRecentFilesStore.recentFiles().length == 5) {
+                if (existingRecentFilesStore.recentFiles().length === 5) {
                     existingRecentFilesStore.recentFiles.pop();
                 }
                 existingRecentFilesStore.recentFiles.unshift(fileId);

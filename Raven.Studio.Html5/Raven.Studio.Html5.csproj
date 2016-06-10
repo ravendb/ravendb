@@ -339,7 +339,7 @@
     <Content Include="App\views\filesystem\search\search.html" />
     <Content Include="App\views\filesystem\settings\settings.html" />
     <Content Include="App\views\filesystem\settings\versioning.html" />
-    <Content Include="App\views\filesystem\status\resetIndexConfirm.html" />
+    <Content Include="App\views\filesystem\search\resetIndexConfirm.html" />
     <Content Include="App\views\filesystem\status\status.html" />
     <Content Include="App\views\filesystem\synchronization\resolveConflict.html" />
     <Content Include="App\views\filesystem\synchronization\synchronization.html" />
