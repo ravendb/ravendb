@@ -319,7 +319,7 @@ namespace Raven.Database.FileSystem.Controllers
 
                     Publisher.Publish(new ConflictNotification
                     {
-                        FileName = filename,
+                        FileName = canonicalFilename,
                         Status = ConflictStatus.Resolved
                     });
 
@@ -415,7 +415,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             Publisher.Publish(new ConflictNotification
             {
-                FileName = filename,
+                FileName = canonicalFilename, 
                 SourceServerUrl = remoteServerUrl,
                 Status = ConflictStatus.Detected,
                 RemoteFileHeader = new FileHeader(canonicalFilename, remoteMetadata)
