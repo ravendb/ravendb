@@ -11,8 +11,6 @@ namespace Sparrow.Json
 
         public class DynamicBlittableArray : DynamicObject, IEnumerable<DynamicObject>
         {
-            private IEnumerator<DynamicObject> _enumerator;
-
             protected BlittableJsonReaderArray BlittableJsonReaderArray;
 
             public DynamicBlittableArray(BlittableJsonReaderArray blittableJsonReaderArray)
@@ -61,41 +59,60 @@ namespace Sparrow.Json
                 return true;
             }
 
-            public IEnumerable<DynamicObject> Items
-            {
-                get
-                {
-                    foreach (var item in BlittableJsonReaderArray.Items)
-                    {
-                        if (item is BlittableJsonReaderObject)
-                        {
-                            yield return new DynamicBlittableJson((BlittableJsonReaderObject)item);
-                            continue;
-                        }
-
-                        if (item is BlittableJsonReaderArray)
-                        {
-                            yield return new DynamicBlittableArray((BlittableJsonReaderArray)item);
-                            continue;
-                        }
-
-                        throw new NotSupportedException();
-                    }
-                }
-            }
-
             public IEnumerator<DynamicObject> GetEnumerator()
             {
-                return _enumerator ?? (_enumerator = Items.GetEnumerator());
+                return new DynamicBlittableArrayIterator(BlittableJsonReaderArray.Items);
             }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
                 return GetEnumerator();
             }
+
+            private class DynamicBlittableArrayIterator : IEnumerator<DynamicObject>
+            {
+                private readonly IEnumerator<object> _inner;
+
+                public DynamicBlittableArrayIterator(IEnumerable<object> items)
+                {
+                    _inner = items.GetEnumerator();
+                }
+
+                public bool MoveNext()
+                {
+                    if (_inner.MoveNext() == false)
+                        return false;
+
+                    if (_inner.Current is BlittableJsonReaderObject)
+                    {
+                        Current = new DynamicBlittableJson((BlittableJsonReaderObject)_inner.Current);
+                        return true;
+                    }
+
+                    if (_inner.Current is BlittableJsonReaderArray)
+                    {
+                        Current = new DynamicBlittableArray((BlittableJsonReaderArray)_inner.Current);
+                        return true;
+                    }
+
+                    throw new NotSupportedException("Unknown blittable object");
+                }
+
+                public void Reset()
+                {
+                    throw new NotImplementedException();
+                }
+
+                public DynamicObject Current { get; set; }
+
+                object IEnumerator.Current => Current;
+
+                public void Dispose()
+                {
+                }
+            }
         }
-
-
+        
         public DynamicBlittableJson(BlittableJsonReaderObject blittableJsonReaderObject)
         {
             BlittableJsonReaderObject = blittableJsonReaderObject;
