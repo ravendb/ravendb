@@ -1,212 +1,10 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.Diagnostics;
-//using System.Globalization;
-//using System.IO;
-//using System.IO.Compression;
-//using System.Linq;
-//using System.Security.Cryptography.X509Certificates;
-//using System.Threading.Tasks;
-//using Microsoft.AspNetCore.Server.Kestrel;
-//using Raven.Abstractions;
-//using Raven.Abstractions.Json;
-//using Raven.Client.Document;
-//using Raven.Client.Extensions;
-//using Raven.Imports.Newtonsoft.Json;
-//using Raven.Json.Linq;
-//using Raven.Server;
-//using FastTests;
-
-//namespace Tryouts
-//{
-//    public class Program
-//    {
-//        public static void Main(string[] args)
-//        {
-//            using (var store = new DocumentStore
-//            {
-//                Url = "http://127.0.0.1:8081",
-//                DefaultDatabase = "test"
-//            })
-//            {
-//                store.Initialize();
-//                CreateDb(store);
-//                var importTask = Tester.ImportData(store);
-//                importTask.Wait();
-//            }
-//            Console.WriteLine("End test");
-//            Console.ReadKey();
-
-//            // pure mem:
-
-//            // var d = new Tester();
-//            // d.DoWork().Wait();
-
-//        }
-//        public static void CreateDb(DocumentStore store, string dbname = null)
-//        {
-//            try
-//            {
-//                if (dbname == null)
-//                    dbname = "test";
-//                var doc = MultiDatabase.CreateDatabaseDocument(dbname);
-//                store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).Wait();
-//            }
-//            catch (Exception ex)
-//            {
-//                if (ex.Message.Contains("already exists"))
-//                {
-//                    Console.WriteLine($"Database '{dbname}' already exists!");
-//                }
-//                else
-//                {
-//                    Console.WriteLine("Cannot create DB " + dbname + ". Exception : " + ex.Message, true);
-//                    throw;
-//                }
-//            }
-//        }
-//    }
-
-//    public class Tester : RavenTestBase
-//    {
-//        public async Task DoWork()
-//        {
-
-//            using (var store = await GetDocumentStore().ConfigureAwait(false))
-//            {
-//                {
-//                    store.Initialize();
-//                    var importTask = ImportData(store);
-//                    importTask.Wait();
-//                }
-//                Console.WriteLine("End test");
-//                Console.ReadKey();
-//            }
-//        }
-
-
-
-
-//        public static async Task ImportData(DocumentStore store)
-//        {
-//            var buf = new List<DocInfo>();
-//            long totalLen = 0;
-
-
-//            string filePath = @"C:\freedb.raven.dump";
-//            Stream dumpStream = File.OpenRead(filePath);
-//            var gZipStream = new GZipStream(dumpStream, CompressionMode.Decompress, leaveOpen: true);
-//            using (var streamReader = new StreamReader(gZipStream))
-//            using (var reader = new RavenJsonTextReader(streamReader))
-//            {
-
-//                if (reader.Read() == false /* { */|| reader.Read() == false /* prop*/)
-//                    throw new InvalidOperationException("empty document?");
-
-//                if (reader.TokenType != JsonToken.PropertyName)
-//                    throw new InvalidOperationException("Expected property");
-
-//                if ((string)reader.Value != "Docs")
-//                    throw new InvalidOperationException("Expected property name 'Docs'");
-
-//                if (reader.Read() == false)
-//                    throw new InvalidOperationException("corrupt document");
-
-//                if (reader.TokenType != JsonToken.StartArray)
-//                    throw new InvalidOperationException("corrupt document, missing array");
-
-//                if (reader.Read() == false)
-//                    throw new InvalidOperationException("corrupt document, array value");
-
-//                //var sp = Stopwatch.StartNew();
-//                //int i = 0;
-//                //using (var bulk = store.BulkInsert())
-//                //{
-//                //    while (reader.TokenType != JsonToken.EndArray)
-//                //    {
-//                //        var document = RavenJObject.Load(reader);
-//                //        var metadata = document.Value<RavenJObject>("@metadata");
-//                //        var key = metadata.Value<string>("@id");
-//                //        document.Remove("@metadata");
-//                //        await bulk.StoreAsync(document, metadata, key).ConfigureAwait(false);
-
-//                //        if (i % (100 * 1000) == 0)
-//                //            Console.WriteLine($"Progress {i:N} ...");
-//                //        i++;
-
-//                //        if (reader.Read() == false)
-//                //            throw new InvalidOperationException("corrupt document, array value");
-//                //    }
-//                //}
-//                //sp.Stop();
-
-
-
-//                // in mem:
-//                int i = 0;
-
-//                while (reader.TokenType != JsonToken.EndArray)
-//                {
-//                    var document = RavenJObject.Load(reader);
-//                    var metadata = document.Value<RavenJObject>("@metadata");
-//                    var key = metadata.Value<string>("@id");
-//                    document.Remove("@metadata");
-//                    // await bulk.StoreAsync(document, metadata, key).ConfigureAwait(false);
-
-//                    var inf = new DocInfo
-//                    {
-//                        Document = document,
-//                        MetaData = metadata,
-//                        Key = key
-//                    };
-
-//                    buf.Add(inf);
-
-//                   //  totalLen += document.ToString().Length + metadata.ToString().Length + key.Length;
-
-//                    if (i % (100 * 1000) == 0)
-//                        Console.WriteLine($"Progress {i:N} ...");
-//                    i++;
-//                    if (i == 1 * 1000 * 1000)
-//                        break;
-//                    if (reader.Read() == false)
-//                        throw new InvalidOperationException("corrupt document, array value");
-//                }
-//            }
-//            Stopwatch sp = null;
-
-//            using (var bulk = store.BulkInsert())
-//            {
-//                sp = Stopwatch.StartNew();
-
-//                foreach (var x in buf)
-//                {
-//                    await bulk.StoreAsync(x.Document, x.MetaData, x.Key).ConfigureAwait(false);
-//                }
-
-//            }
-//            sp.Stop();
-
-
-//            Console.WriteLine($"Ellapsed time = {sp.ElapsedMilliseconds:#,#}, total={totalLen:#,#}");
-//            }
-//        }
-
-//        public class DocInfo
-//        {
-//            public RavenJObject Document;
-//            public RavenJObject MetaData;
-//            public string Key;
-//     //   }
-//    }
-//}
-
-
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using FastTests.Voron.Compaction;
+using FastTests.Voron.ScratchBuffer;
 using Raven.Abstractions;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -403,7 +201,15 @@ namespace Tryouts
 
     public class Program
     {
-        public static void Main(string[] args)
+        static void Main(string[] args)
+        {
+            using (var x = new ScratchCanForceToFlushOldPages())
+            {
+                x.CanForceToFlushPagesOlderThanOldestActiveTransactionToFreePagesFromScratch();
+            }
+        }
+
+        public static void Main2(string[] args)
         {
             using (var massiveObj = new MassiveTest("http://localhost:8081", 1805861237))
             {
