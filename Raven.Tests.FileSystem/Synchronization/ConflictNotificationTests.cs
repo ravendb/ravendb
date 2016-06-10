@@ -57,7 +57,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
                 var conflictDetected = await notificationTask;
 
-                Assert.Equal("abc.txt", conflictDetected.FileName);
+                Assert.Equal("/abc.txt", conflictDetected.FileName);
                 Assert.Equal(new Uri(sourceStore.Url).Port, new Uri(conflictDetected.SourceServerUrl).Port);
             }
         }
