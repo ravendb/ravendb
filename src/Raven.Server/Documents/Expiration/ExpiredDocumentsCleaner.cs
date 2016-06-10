@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -99,82 +100,98 @@ namespace Raven.Server.Documents.Expiration
             if (Log.IsDebugEnabled)
                 Log.Debug("Trying to find expired documents to delete");
 
-            var currentTicks = UtcNow().Ticks;
-            int count = 0;
             bool exitWriteTransactionAndContinueAgain = true;
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
+                var currentTime = UtcNow();
+
                 while (exitWriteTransactionAndContinueAgain)
                 {
-                    exitWriteTransactionAndContinueAgain = false;
-                    var sp = Stopwatch.StartNew();
-                    using (var tx = context.OpenWriteTransaction())
-                    {
-                        var tree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
-                        using (var it = tree.Iterate())
-                        {
-                            if (it.Seek(Slice.BeforeAllKeys) == false)
-                                return;
+                    exitWriteTransactionAndContinueAgain = CleanupDocumentsOnce(context, currentTime);
 
-                            while (it.CurrentKey.CreateReader().ReadBigEndianInt64() < currentTicks)
-                            {
-                                using (var multiIt = tree.MultiRead(it.CurrentKey, allowWrites: true))
-                                {
-                                    if (multiIt.Seek(Slice.BeforeAllKeys))
-                                    {
-                                        do
-                                        {
-                                            if (sp.ElapsedMilliseconds > 150)
-                                            {
-                                                exitWriteTransactionAndContinueAgain = true;
-                                                break;
-                                            }
-
-                                            var key = multiIt.CurrentKey.ToString();
-                                            var document = _database.DocumentsStorage.Get(context, key);
-                                            if (document == null)
-                                                continue;
-
-                                            // Validate that the expiration value in metadata is still the same.
-                                            // We have to check this as the user can update this valud.
-                                            string expirationDate;
-                                            BlittableJsonReaderObject metadata;
-                                            if (document.Data.TryGet(Constants.Metadata, out metadata) == false ||
-                                                metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate) ==
-                                                false)
-                                                continue;
-                                            DateTime date;
-                                            if (
-                                                DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture,
-                                                    DateTimeStyles.RoundtripKind, out date) == false)
-                                                continue;
-                                            if (UtcNow() < date)
-                                                continue;
-
-                                            var deleted = _database.DocumentsStorage.Delete(context, key, null);
-                                            count++;
-                                            if (Log.IsDebugEnabled && deleted == false)
-                                                Log.Debug(
-                                                    $"Tried to delete expired document '{key}' but document was not found.");
-                                        } while (multiIt.DeleteCurrentAndMoveNext());
-                                    }
-                                }
-
-                                if (exitWriteTransactionAndContinueAgain || it.MoveNext() == false)
-                                    break;
-                            }
-                        }
-
-                        tx.Commit();
-                    }
-                    if (Log.IsDebugEnabled)
-                        Log.Debug(
-                            $"Successfully deleted {count:#,#;;0} documents in {sp.ElapsedMilliseconds:#,#;;0} ms. Found more staff to delete? {exitWriteTransactionAndContinueAgain}");
                     if (exitWriteTransactionAndContinueAgain)
                         Thread.Sleep(16); // give up the thread for a short while, to let other transactions run
                 }
             }
+        }
+
+        private bool CleanupDocumentsOnce(DocumentsOperationContext context, DateTime currentTime)
+        {
+            int count = 0;
+            var earlyExit = false;
+            var keysToDelete = new List<Slice>();
+            var currentTicks = currentTime.Ticks;
+            var sp = Stopwatch.StartNew();
+
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var expirationTree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
+                while (true)
+                {
+                    using (var it = expirationTree.Iterate())
+                    {
+                        if (it.Seek(Slice.BeforeAllKeys) == false)
+                            break;
+                        var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                        if (entryTicks >= currentTicks)
+                            break;
+                        using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
+                        {
+                            if (multiIt.Seek(Slice.BeforeAllKeys))
+                            {
+                                do
+                                {
+                                    if (sp.ElapsedMilliseconds > 150)
+                                    {
+                                        earlyExit = true;
+                                        break;
+                                    }
+
+                                    keysToDelete.Add(multiIt.CurrentKey.Clone());
+
+                                    var key = multiIt.CurrentKey.ToString();
+                                    var document = _database.DocumentsStorage.Get(context, key);
+                                    if (document == null)
+                                        continue;
+
+                                    // Validate that the expiration value in metadata is still the same.
+                                    // We have to check this as the user can update this valud.
+                                    string expirationDate;
+                                    BlittableJsonReaderObject metadata;
+                                    if (document.Data.TryGet(Constants.Metadata, out metadata) == false ||
+                                        metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate) == false)
+                                        continue;
+
+                                    DateTime date;
+                                    if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
+                                        continue;
+                                    if (currentTime < date)
+                                        continue;
+
+                                    var deleted = _database.DocumentsStorage.Delete(context, key, null);
+                                    count++;
+                                    if (Log.IsDebugEnabled && deleted == false)
+                                        Log.Debug(
+                                            $"Tried to delete expired document '{key}' but document was not found.");
+                                } while (multiIt.MoveNext());
+                            }
+                        }
+                        var treeKey = it.CurrentKey.Clone();
+                        foreach (var slice in keysToDelete)
+                        {
+                            expirationTree.MultiDelete(treeKey, slice);
+                        }
+                    }
+                    if (earlyExit)
+                        break;
+                }
+
+                tx.Commit();
+            }
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Successfully deleted {count:#,#;;0} documents in {sp.ElapsedMilliseconds:#,#;;0} ms. Found more stuff to delete? {earlyExit}");
+            return earlyExit;
         }
 
         /// <summary>
@@ -201,7 +218,7 @@ namespace Raven.Server.Documents.Expiration
 
             if (UtcNow() >= date)
                 throw new InvalidOperationException($"Cannot put an expired document. Expired on: {date.ToString("O")}");
-            
+
             var ticksBigEndian = IPAddress.HostToNetworkOrder(date.Ticks);
 
             var tree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);

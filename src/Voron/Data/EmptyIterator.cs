@@ -34,11 +34,6 @@ namespace Voron.Data
 
         public event Action<IIterator> OnDisposal;
 
-        public bool DeleteCurrentAndMoveNext()
-        {
-            return false;
-        }
-
         public IEnumerable<string> DumpValues()
         {
             yield break;

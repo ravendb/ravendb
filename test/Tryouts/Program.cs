@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using FastTests.Server.Documents.Expiration;
 using FastTests.Voron.Compaction;
 using FastTests.Voron.ScratchBuffer;
 using Raven.Abstractions;
@@ -203,9 +204,10 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var x = new ScratchCanForceToFlushOldPages())
+            using (var x = new Expiration())
             {
-                x.CanForceToFlushPagesOlderThanOldestActiveTransactionToFreePagesFromScratch();
+                x.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(1000)
+                    .Wait();
             }
         }
 

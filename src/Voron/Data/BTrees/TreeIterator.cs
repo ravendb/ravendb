@@ -74,17 +74,6 @@ namespace Voron.Data.BTrees
             }
         }
 
-        /// <summary>
-        /// Deletes the current key/value pair and returns true if there is 
-        /// another key after it
-        /// </summary>
-        public bool DeleteCurrentAndMoveNext()
-        {
-            var currentKey = CurrentKey;
-            _tree.Delete(currentKey);
-            return Seek(currentKey);
-        }
-
         public TreeNodeHeader* Current
         {
             get
