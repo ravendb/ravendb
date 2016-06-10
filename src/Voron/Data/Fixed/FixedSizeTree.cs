@@ -807,7 +807,6 @@ namespace Voron.Data.Fixed
                 largeHeader = (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                 largeHeader->NumberOfEntries -= nextPage.NumberOfEntries;
 
-
                 var treeDeleted = RemoveEntirePage(nextPage, largeHeader); // this will rebalance the tree if needed
                 System.Diagnostics.Debug.Assert(treeDeleted == false);
             }
@@ -1004,7 +1003,7 @@ namespace Voron.Data.Fixed
             // have to move the memory
             UnmanagedMemory.Move(page.Pointer + page.StartPosition + (pos * size),
                    page.Pointer + page.StartPosition + ((pos + 1) * size),
-                   (page.NumberOfEntries - pos + 1) * size);
+                   (page.NumberOfEntries - pos) * size);
         }
 
         private FixedSizeTreePage RebalancePage(FixedSizeTreePage page, FixedSizeTreeHeader.Large* largeTreeHeader)
