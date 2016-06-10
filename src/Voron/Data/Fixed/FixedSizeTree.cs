@@ -1114,6 +1114,8 @@ namespace Voron.Data.Fixed
                 if (siblingPage.FixedTreeFlags != page.FixedTreeFlags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
+                siblingPage = ModifyPage(siblingPage);
+
                 if (siblingPage.NumberOfEntries <= minNumberOfEntriesBeforeRebalance * 2)
                 {
                     // we can merge both pages into a single one and still have enough over
