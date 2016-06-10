@@ -365,7 +365,7 @@ namespace Voron.Data.Tables
 
                 var pkIndex = GetTree(pk);
 
-                pkIndex.Add(pkval, Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), ByteStringType.Immutable));                      
+                pkIndex.Add(pkval, Slice.External(_tx.Allocator, (byte*)&id, sizeof(long)));                      
             }
 
             foreach (var indexDef in _schema.Indexes.Values)
@@ -642,7 +642,7 @@ namespace Voron.Data.Tables
             var read = builder.Read(_schema.Key.StartIndex, out size);
 
             long id;
-            if (TryFindIdFromPrimaryKey(Slice.External(_tx.Allocator, read, (ushort)size, ByteStringType.Immutable), out id))
+            if (TryFindIdFromPrimaryKey(Slice.External(_tx.Allocator, read, (ushort)size), out id))
             {
                 id = Update(id, builder);
                 return id;

@@ -76,7 +76,7 @@ namespace Voron.Data.BTrees
                 var overFlowPage = tx.GetPage(node->PageNumber);
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
                     throw new InvalidOperationException("Cannot convert big data to a slice, too big");
-                return Slice.External(tx.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize, (ushort)overFlowPage.OverflowSize, ByteStringType.Immutable);
+                return Slice.External(tx.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize, (ushort)overFlowPage.OverflowSize);
             }
             return Slice.External(tx.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize, (ushort) node->DataSize);
         }

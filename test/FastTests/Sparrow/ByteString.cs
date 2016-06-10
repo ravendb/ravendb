@@ -1,4 +1,4 @@
-﻿//#define VALIDATE
+﻿#define VALIDATE
 
 using Sparrow;
 using System;
@@ -98,7 +98,7 @@ namespace FastTests.Sparrow
             using (var context = new ByteStringContext(allocationBlockSize))
             {
                 // Will be only 128 bytes left for the allocation unit.
-                var byteStringInFirst = context.Allocate(2 * ByteStringContext.MinBlockSizeInBytes - sizeof(ByteStringStorage));          
+                var byteStringInFirst = context.Allocate(2 * ByteStringContext.MinBlockSizeInBytes - sizeof(ByteStringStorage));
 
                 long ptrLocation = (long)byteStringInFirst._pointer;
                 long nextPtrLocation = ptrLocation + byteStringInFirst._pointer->Size;
@@ -164,7 +164,7 @@ namespace FastTests.Sparrow
             using (var otherContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
             {
                 var first = context.Allocate(1);
-                Assert.Throws<InvalidOperationException>(() => otherContext.Release(ref first));
+                Assert.Throws<ByteStringValidationException>(() => otherContext.Release(ref first));
             }
 #else
             throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
@@ -183,6 +183,40 @@ namespace FastTests.Sparrow
 
                 Assert.Throws<InvalidOperationException>(() => context.Release(ref firstAlias));
             }
+#else
+            throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
+#endif
+        }
+
+
+        [SkippableFact]
+        public void DetectImmutableChangeOnValidation()
+        {
+#if VALIDATE
+            using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+            {
+                var value = context.From("string", ByteStringType.Immutable);
+                value.Ptr[2] = (byte)'t';
+
+                Assert.Throws<ByteStringValidationException>(() => context.Release(ref value));
+            }
+#else
+            throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
+#endif
+        }
+
+        [SkippableFact]
+        public void DetectImmutableChangeOnContextDispose()
+        {
+#if VALIDATE
+            Assert.Throws<ByteStringValidationException>(() =>
+            {
+                using (var context = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes))
+                {
+                    var value = context.From("string", ByteStringType.Immutable);
+                    value.Ptr[2] = (byte)'t';
+                }
+            });
 #else
             throw new SkipTestException("Compile with the 'VALIDATE' compiler directive to create binaries compatible with validation");
 #endif

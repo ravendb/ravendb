@@ -170,7 +170,7 @@ namespace FastTests.Voron
 
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, string key)
         {
-            return ReadKey(txh, tree, Slice.From(txh.Allocator, key, ByteStringType.Immutable));
+            return ReadKey(txh, tree, Slice.From(txh.Allocator, key));
         }
 
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction txh, Tree tree, Slice key)
@@ -186,7 +186,7 @@ namespace FastTests.Voron
             if (!SliceComparer.Equals(item1,key))
                 return null;
 
-            return Tuple.Create(item1, Slice.External( txh.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize,(ushort)node->DataSize, ByteStringType.Immutable));
+            return Tuple.Create(item1, Slice.External( txh.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize,(ushort)node->DataSize));
         }
     }
 }

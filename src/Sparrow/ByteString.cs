@@ -1,4 +1,4 @@
-﻿//#define VALIDATE
+﻿#define VALIDATE
 
 using Sparrow.Binary;
 using System;
@@ -68,9 +68,27 @@ namespace Sparrow
         /// <summary>
         /// The validation key for the storage value.
         /// </summary>
-        [FieldOffset(20)]
         public ulong Key;
 #endif
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ulong GetContentHash()
+        {
+            // Given how the size of slices can vary it is better to lose a bit (10%) on smaller slices 
+            // (less than 20 bytes) and to win big on the bigger ones. 
+            //
+            // After 24 bytes the gain is 10%
+            // After 64 bytes the gain is 2x
+            // After 128 bytes the gain is 4x.
+            //
+            // We should control the distribution of this over time.
+
+            // JIT will remove the corresponding line based on the target architecture using dead code removal.
+            if (IntPtr.Size == 4)
+                return Hashing.XXHash32.CalculateInline(Ptr, Length);
+            else
+                return Hashing.XXHash64.CalculateInline(Ptr, Length);
+        }
     }
 
     public unsafe struct ByteString : IEquatable<ByteString>
@@ -277,7 +295,8 @@ namespace Sparrow
             return obj is ByteString && this == (ByteString)obj;
         }
 
-        public override int GetHashCode()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ulong GetContentHash()
         {
             // Given how the size of slices can vary it is better to lose a bit (10%) on smaller slices 
             // (less than 20 bytes) and to win big on the bigger ones. 
@@ -291,11 +310,12 @@ namespace Sparrow
             if (_pointer == null)
                 return 0;
 
-            // JIT will remove the corresponding line based on the target architecture using dead code removal.
-            if (IntPtr.Size == 4)  
-                return (int)Hashing.XXHash32.CalculateInline(_pointer->Ptr, _pointer->Length);
-            else
-                return (int)Hashing.XXHash64.CalculateInline(_pointer->Ptr, _pointer->Length);
+            return _pointer->GetContentHash();
+        }
+
+        public override int GetHashCode()
+        {
+            return (int)GetContentHash();
         }
 
         public static bool operator ==(ByteString x, ByteString y)
@@ -430,11 +450,14 @@ namespace Sparrow
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
                 _externalCurrent.Current += _externalAlignedSize;
                 _externalCurrentLeft--;
-            }     
+            }
 
             storagePtr->Flags = type;
             storagePtr->Length = size;
             storagePtr->Ptr = valuePtr;
+
+            // We are registering the storage for validation here. Not the ByteString itself
+            RegisterForValidation(storagePtr);
 
             return new ByteString(storagePtr);
         }
@@ -526,7 +549,7 @@ namespace Sparrow
                 }                    
 
                 var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);                
-                _internalCurrent.Current += byteString._pointer->Size;                
+                _internalCurrent.Current += byteString._pointer->Size;
 
                 return byteString;
             }
@@ -542,6 +565,9 @@ namespace Sparrow
             basePtr->Length = length;
             basePtr->Ptr = (byte*)ptr + sizeof(ByteStringStorage);                        
             basePtr->Size = size;
+
+            // We are registering the storage for validation here. Not the ByteString itself
+            RegisterForValidation(basePtr);
 
             return new ByteString(basePtr);
         }
@@ -577,7 +603,7 @@ namespace Sparrow
                 return;
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
-            Validate(value);
+            ValidateAndUnregister(value);
 
             // We release the pointer in the appropriate reuse pool.
             if (this._externalFastPoolCount < ExternalFastPoolSize)
@@ -594,6 +620,10 @@ namespace Sparrow
             // Setting the null key ensures that in between we can validate that no further deallocation
             // happens on this memory segment.
             value._pointer->Key = ByteStringStorage.NullKey;
+
+            // Setting the length to zero ensures that the hash returns 0 and do not 
+            // fail with an AccessViolationException because there is garbage stored here.
+            value._pointer->Length = 0;
 #endif
 
             // WE WANT it to happen, no matter what. 
@@ -607,7 +637,7 @@ namespace Sparrow
                 return;
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
-            Validate(value);
+            ValidateAndUnregister(value);
 
             if ( value.IsExternal )
             {
@@ -652,6 +682,10 @@ namespace Sparrow
             // Setting the null key ensures that in between we can validate that no further deallocation
             // happens on this memory segment.
             value._pointer->Key = ByteStringStorage.NullKey;
+
+            // Setting the length to zero ensures that the hash returns 0 and do not 
+            // fail with an AccessViolationException because there is garbage stored here.
+            value._pointer->Length = 0;
 #endif
 
             // WE WANT it to happen, no matter what. 
@@ -860,23 +894,51 @@ namespace Sparrow
             value.EnsureIsNotBadPointer();
 
             if (!value.IsMutable)
-                throw new NotImplementedException("Validation still not implemented for immutable Byte Strings");
-        }
+            {
+                ulong index = (ulong)value._pointer;
+                ulong hash = value.GetContentHash();
 
-        private void Validate(ByteString value)
+                _immutableTracker[index] = new Tuple<IntPtr, ulong, string>(new IntPtr(value._pointer), hash, Environment.StackTrace);
+            }                
+        }        
+
+        private void ValidateAndUnregister(ByteString value)
         {
             value.EnsureIsNotBadPointer();
 
             if (value._pointer->Key == ByteStringStorage.NullKey)
-                throw new InvalidOperationException("Trying to release an alias of an already removed object. You have a dangling pointer in hand.");
+                throw new ByteStringValidationException("Trying to release an alias of an already removed object. You have a dangling pointer in hand.");
 
             if (value._pointer->Key >> 32 != (ulong)this.ContextId)
-                throw new InvalidOperationException("The owner of the ByteString is a different context. You are mixing contexts, which has undefined behavior.");
+                throw new ByteStringValidationException("The owner of the ByteString is a different context. You are mixing contexts, which has undefined behavior.");
 
             if (!value.IsMutable)
-                throw new NotImplementedException("Validation still not implemented for immutable Byte Strings");
-
+            {                
+                ValidateAndUnregister(value._pointer);
+            }
         }
+
+        private void ValidateAndUnregister(ByteStringStorage* value)
+        {
+            ulong index = (ulong)value;
+            ulong hash = value->GetContentHash();
+
+            try
+            {                
+                Tuple<IntPtr, ulong, string> item;
+                if (!_immutableTracker.TryGetValue(index, out item))
+                    throw new ByteStringValidationException($"The ByteStream is being released as Immutable, but it was not registered. Potential buffer overflow detected.");
+
+                if (hash != item.Item2)
+                    throw new ByteStringValidationException($"The ByteString in location {(ulong)value} and size {value->Length} was modified but it was created as immutable. {Environment.NewLine} {item.Item3}" );
+            }
+            finally
+            {
+                _immutableTracker.Remove(index);
+            }
+        }
+
+        private readonly Dictionary<ulong, Tuple<IntPtr, ulong, string>> _immutableTracker = new Dictionary<ulong, Tuple<IntPtr, ulong, string>>();
 
 #else
         [Conditional("VALIDATE")]
@@ -905,6 +967,15 @@ namespace Sparrow
                 {
                     // TODO: dispose managed state (managed objects).
                 }
+
+#if VALIDATE
+                foreach ( var item in _immutableTracker.ToArray() )
+                {
+                    var storage = (ByteStringStorage*) item.Value.Item1.ToPointer();
+
+                    ValidateAndUnregister(storage);
+                }
+#endif
 
                 foreach (var segment in _wholeSegments)
                 {
@@ -935,5 +1006,22 @@ namespace Sparrow
         }
 
         #endregion
+    }
+
+    public class ByteStringValidationException : Exception
+    {
+        public ByteStringValidationException()
+        {
+        }
+
+        public ByteStringValidationException(string message)
+            : base(message)
+        {
+        }
+
+        public ByteStringValidationException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
     }
 }

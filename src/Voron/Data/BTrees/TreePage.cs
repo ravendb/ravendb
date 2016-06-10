@@ -527,7 +527,7 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Slice GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type = ByteStringType.Immutable | ByteStringType.External)
+        public Slice GetNodeKey(LowLevelTransaction tx, int nodeNumber, ByteStringType type = ByteStringType.Mutable | ByteStringType.External)
         {            
             var node = GetNode(nodeNumber);
 
