@@ -582,16 +582,7 @@ namespace Voron.Impl.Journal
 
                             FreeScratchPages(unusedJournals, txw ?? transaction);
 
-                            if (txw != null)
-                            {
-                                // we force a dummy change to a page, so when we commit, this will be written to the journal
-                                // as well as force us to generate a new transaction id, which will mean that the next time
-                                // that we run, we have freed lazy transactions, we have freed all the pages that were freed
-                                // in this transaction
-                                txw.ModifyPage(0); 
-
-                                txw.Commit();
-                            }
+                            txw?.Commit();
                         }
                     }
                     finally
@@ -857,7 +848,7 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
 
                 if(_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"The last synced transaction {_lastSyncedTransactionId} doesn't follow the next write transaction {_waj._env.NextWriteTransactionId}");
                     
                 _waj._files = _waj._files.RemoveFront(1);
                 _waj.CurrentFile = null;
