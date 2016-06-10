@@ -1,5 +1,4 @@
 import app = require("durandal/app");
-import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
@@ -13,9 +12,13 @@ import resolveConflictCommand = require("commands/filesystem/resolveConflictComm
 
 class synchronizationConflicts extends viewModelBase {
 
+    conflictStatus = {
+        detected: "Detected",
+        resolved: "Resolved"
+    };
+
     conflicts = ko.observableArray<conflictItem>();
     selectedConflicts = ko.observableArray<string>();
-    isConflictsVisible = ko.computed(() => this.conflicts().length > 0);
 
     private isSelectAllValue = ko.observable<boolean>(false); 
     private activeFilesystemSubscription: any;
@@ -24,7 +27,7 @@ class synchronizationConflicts extends viewModelBase {
         super.activate(args);
         this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
 
-        this.loadConflicts();
+        return this.loadConflicts();
     }
 
     deactivate() {
@@ -37,20 +40,13 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     private processFsConflicts(e: synchronizationConflictNotification) {
-        // treat notifications events
         switch (e.Status) {
-            case conflictStatus.Detected:
-                {
-                    this.addConflict(e);
-                    break;
-                }
-            case conflictStatus.Resolved:
-                {
-                    this.removeResolvedConflict(e);
-                    break;
-                }
-            default:
-                console.error("unknown notification action");
+            case this.conflictStatus.detected:
+                this.addConflict(e);
+                break;
+            case this.conflictStatus.resolved:
+                this.removeResolvedConflict(e);
+                break;
         }
     }
 
@@ -78,43 +74,28 @@ class synchronizationConflicts extends viewModelBase {
         return match;
     }
 
-
-    private loadConflicts(): JQueryPromise<any> {
+    private loadConflicts(): JQueryPromise<conflictItem[]> {
         var fs = this.activeFilesystem();
-        if (fs) {
-            var deferred = $.Deferred();
-
-            var conflictsTask = new getFilesConflictsCommand(fs).execute()
-                .done(x => this.conflicts(x));
-
-            conflictsTask.done(() => deferred.resolve());
-
-            return deferred;
-        }
+        return new getFilesConflictsCommand(fs)
+            .execute()
+            .done(x => this.conflicts(x));
     }
 
-    collapseAll() {
-        $(".synchronization-group-content").collapse('hide');
-    }
-
-    expandAll() {
-        $(".synchronization-group-content").collapse('show');
-    }
-    
     resolveWithLocalVersion() {
-
-        var message = this.selectedConflicts().length == 1 ?
+        var message = this.selectedConflicts().length === 1 ?
             "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the local version?" :
             "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the local version?";
 
         var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with local");
         resolveConflictViewModel
             .resolveTask
-            .done(x => {
+            .done(() => {
                 var fs = this.activeFilesystem();
 
-                for (var i = 0; i < this.selectedConflicts().length; i++) {
-                    var conflict = this.selectedConflicts()[i];
+                var selectedConflicts = this.selectedConflicts();
+
+                for (var i = 0; i < selectedConflicts.length; i++) {
+                    var conflict = selectedConflicts[i];
                     new resolveConflictCommand(conflict, 2, fs).execute().done(() => {
                         this.selectedConflicts.remove(conflict);
                     });
@@ -124,15 +105,14 @@ class synchronizationConflicts extends viewModelBase {
     }
 
     resolveWithRemoteVersion() {
-
-        var message = this.selectedConflicts().length == 1 ?
+        var message = this.selectedConflicts().length === 1 ?
             "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the remote version?" :
             "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the remote version?";
 
         var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with remote");
         resolveConflictViewModel
             .resolveTask
-            .done(x => {
+            .done(() => {
                 var fs = this.activeFilesystem();
 
                 for (var i = 0; i < this.selectedConflicts().length; i++) {
@@ -141,7 +121,6 @@ class synchronizationConflicts extends viewModelBase {
                 }
             });
         app.showDialog(resolveConflictViewModel);
-
     }
 
     fileSystemChanged(fs: filesystem) {

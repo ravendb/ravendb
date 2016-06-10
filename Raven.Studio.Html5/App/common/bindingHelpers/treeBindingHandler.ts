@@ -8,6 +8,12 @@ import getFoldersCommand = require("commands/filesystem/getFoldersCommand");
  * A custom Knockout binding handler transforms the target element (a <div>) into a directory tree, powered by jquery-dynatree
  * Usage: data-bind="tree: { value: someObservableTreeObject }"
  */
+type bindingOptions = {
+    selectedNode: KnockoutObservable<string>;
+    addedNode: KnockoutObservable<string>;
+    currentLevelNodes: KnockoutObservableArray<string>;
+};
+
 class treeBindingHandler {
 
     static transientNodeStyle = "temp-folder";
@@ -26,12 +32,8 @@ class treeBindingHandler {
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
-        var options: {
-            selectedNode: KnockoutObservable<string>;
-            addedNode: KnockoutObservable<string>;
-            currentLevelNodes: KnockoutObservableArray<string>;
-        } = <any>ko.utils.unwrapObservable(valueAccessor());
+    init(element: HTMLElement, valueAccessor: () => KnockoutObservable<bindingOptions>, allBindings, viewModel, bindingContext: any) {
+        var options: bindingOptions = ko.utils.unwrapObservable(valueAccessor());
 
         var tree = $(element).dynatree({
             children: [{ title: appUrl.getFileSystem().name, key: "/", isLazy: true, isFolder: true }],
@@ -59,7 +61,7 @@ class treeBindingHandler {
         firstNode.expand(null);
     }
 
-    static loadNodeChildren(tree: string, node: DynaTreeNode, options : any) {
+    static loadNodeChildren(tree: string, node: DynaTreeNode, options: bindingOptions) {
         var dir;
         if (node && node.data && node.data.key != "/") {
             dir = node.data.key;
@@ -95,7 +97,7 @@ class treeBindingHandler {
                 //mark deleted nodes filtering transient
                 for (var k = 0; k < node.getChildren().length; k++) {
                     var nodeK = node.getChildren()[k];
-                    if (!newSet[nodeK.data.key] && differenceSet[nodeK.data.key] && differenceSet[nodeK.data.key].data.addClass != treeBindingHandler.transientNodeStyle) {
+                    if (!newSet[nodeK.data.key] && differenceSet[nodeK.data.key] && differenceSet[nodeK.data.key].data.addClass !== treeBindingHandler.transientNodeStyle) {
                         nodesToRemove.push(k);
                     }
                     else {
@@ -118,7 +120,8 @@ class treeBindingHandler {
             }
 
             if (options && node.hasChildren()) {
-                options.currentLevelNodes.push(node.getChildren().map(x => x.data.key));
+                var keys: string[] = node.getChildren().map(x => x.data.key);
+                options.currentLevelNodes.pushAll(keys);
             }
         });
     }
