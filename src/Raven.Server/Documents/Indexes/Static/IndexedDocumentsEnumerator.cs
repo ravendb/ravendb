@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             public void Dispose()
             {
-
+                _previous?.Data.Dispose();
             }
         }
     }
