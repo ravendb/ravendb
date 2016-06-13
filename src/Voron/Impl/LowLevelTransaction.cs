@@ -24,6 +24,7 @@ namespace Voron.Impl
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
+        private readonly PageCache _pageCache;
         private Tree _root;
 
         public bool FlushedToJournal { get; private set; }
@@ -105,6 +106,7 @@ namespace Voron.Impl
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
             _allocator = context ?? new ByteStringContext();
+            _pageCache = new PageCache(this, 8);
 
             Flags = flags;
             PageSize = _dataPager.PageSize;
@@ -217,11 +219,21 @@ namespace Voron.Impl
         {
             _env.AssertFlushingNotFailed();
 
-            var currentPage = GetPage(num);
-            if (_dirtyPages.Contains(num))
-            {
+            // Check if we can hit the lowest level locality cache.
+            bool isReadOnly;
+            Page currentPage = _pageCache.TryGetWritablePage(num, out isReadOnly);
+            if (currentPage != null && !isReadOnly)
                 return currentPage;
-            }
+
+            // We only go to get it if we had a complete cache miss (not even read). 
+            if ( currentPage == null )
+                currentPage = GetPage(num);
+
+            if (_dirtyPages.Contains(num))
+                return currentPage;
+
+            // We no longer care of the ReadOnly cached page (in case the get page was a hit).
+            _pageCache.Reset(num);
 
             int pageSize;
             Page newPage;
@@ -239,6 +251,9 @@ namespace Voron.Impl
             Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);
 
             TrackWritablePage(newPage);
+            
+            // We add the new page. 
+            _pageCache.AddWritable(newPage);
 
             return newPage;
         }
@@ -252,7 +267,11 @@ namespace Voron.Impl
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
-            Page p;
+            // Check if we can hit the lowest level locality cache.
+            Page p = _pageCache.TryGetReadOnlyPage(pageNumber);
+            if (p != null)
+                return p; 
+
             PageFromScratchBuffer value;
             if (_scratchPagesTable.TryGetValue(pageNumber, out value))
             {
@@ -279,9 +298,10 @@ namespace Voron.Impl
                 p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.ReadPage(this, pageNumber);
                 Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
             }
-
+            
             TrackReadOnlyPage(p);
 
+            _pageCache.AddReadOnly(p);
             return p;
         }
 
@@ -466,6 +486,8 @@ namespace Voron.Impl
             UntrackPage(pageNumber);
             Debug.Assert(pageNumber >= 0);
 
+            _pageCache.Reset(pageNumber);
+
             _freeSpaceHandling.FreePage(this, pageNumber);
 
             _freedPages.Add(pageNumber);
@@ -493,7 +515,7 @@ namespace Voron.Impl
 
                 if (numberOfOverflowPages > 1) // prevent adding range which length is 0
                     _dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
-            }
+            }            
         }
 
 
@@ -697,5 +719,112 @@ namespace Voron.Impl
         [Conditional("VALIDATE_PAGES")]
         private void UntrackPage(long pageNumber) { }
 #endif
+
+
+        private class PageCache
+        {
+            private readonly LowLevelTransaction _tx;
+            private readonly PageHandlePtr[] _cache;
+            private int current = 0;
+
+            public PageCache(LowLevelTransaction tx, int cacheSize = 8)
+            {
+                Debug.Assert(tx != null);
+
+                this._tx = tx;
+                this._cache = new PageHandlePtr[cacheSize];
+            }
+
+            public Page TryGetReadOnlyPage(long pageNumber)
+            {
+                int position = current;
+
+                int itemsLeft = _cache.Length;
+                while (itemsLeft > 0)
+                {
+                    int i = position % _cache.Length;
+
+                    // If the value is not valid or the page number is not equal
+                    if (!_cache[i].IsValid || _cache[i].PageNumber != pageNumber)
+                    {
+                        // we continue.
+                        itemsLeft--;
+                        position++;
+
+                        continue;
+                    }
+
+                    return _cache[i].Value;
+                }
+
+                return null;
+            }
+
+            private const int Invalid = -1;
+
+            public Page TryGetWritablePage(long pageNumber, out bool isReadOnly)
+            {
+                isReadOnly = false;
+                int position = current;
+
+                int itemsLeft = _cache.Length;
+                while (itemsLeft > 0)
+                {
+                    int i = position % _cache.Length;
+
+                    // If the value is not valid or the page number is not equal
+                    if (!_cache[i].IsValid || _cache[i].PageNumber != pageNumber)
+                    {
+                        // we continue.
+                        itemsLeft--;
+                        position++;
+
+                        continue;
+                    }
+
+                    if (!_cache[i].IsWritable)
+                    {
+                        Page result = _cache[i].Value;
+                        isReadOnly = true;
+
+                        _cache[i] = default(PageHandlePtr);
+                        return result;
+                    }
+                                               
+                    return _cache[i].Value;
+                }
+
+                return null;
+            }
+
+            public void AddWritable(Page page)
+            {
+                current = (++current) % _cache.Length;
+                _cache[current] = new PageHandlePtr(page, true);
+            }
+
+            public void AddReadOnly(Page page)
+            {
+                current = (++current) % _cache.Length;
+                _cache[current] = new PageHandlePtr(page, false);
+            }
+
+            public void Clear()
+            {
+                Array.Clear(_cache, 0, _cache.Length);
+            }
+
+            public void Reset(long pageNumber)
+            {
+                for (int i = 0; i < _cache.Length; i++)
+                {
+                    if (_cache[i].IsValid && _cache[i].PageNumber == pageNumber)
+                    {
+                        _cache[i] = new PageHandlePtr();
+                        return;
+                    }
+                }
+            }
+        }
     }
 }
