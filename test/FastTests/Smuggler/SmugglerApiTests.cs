@@ -74,12 +74,12 @@ namespace FastTests.Smuggler
 
                     await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileDestination
                     {
-                        File = file,
+                        FilePath = file,
                     });
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), new DatabaseSmugglerFileDestination
                     {
-                        File = file,
+                        FilePath = file,
                     });
 
                     var docs = store2.DatabaseCommands.GetDocuments(0, 10);

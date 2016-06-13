@@ -175,9 +175,6 @@ namespace Raven.Abstractions.Data
         public const string RavenReplicationIndexesTombstones = "Raven/Replication/Indexes/Tombstones";
         public const string RavenReplicationTransformerTombstones = "Raven/Replication/Transformers/Tombstones";
 
-        //Periodic export
-        public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
-
         public const int ChangeHistoryLength = 50;
 
         //Spatial
@@ -300,6 +297,10 @@ namespace Raven.Abstractions.Data
 
         public class PeriodicExport
         {
+            public const string ConfigurationDocumentKey = "Raven/PeriodicExport/Configuration";
+
+            public const string StatusDocumentKey = "Raven/PeriodicExport/Status";
+
             public const string AwsAccessKey = "Raven/AWSAccessKey";
 
             public const string AwsSecretKey = "Raven/AWSSecretKey";
@@ -348,7 +349,7 @@ namespace Raven.Abstractions.Data
 
         public class Expiration
         {
-            public const string RavenExpirationConfiguration = "Raven/Expiration/Configuration";
+            public const string ConfigurationDocumentKey = "Raven/Expiration/Configuration";
 
             public const string RavenExpirationDate = "Raven-Expiration-Date";
         }

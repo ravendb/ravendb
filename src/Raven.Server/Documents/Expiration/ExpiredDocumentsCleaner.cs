@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Expiration
             {
                 context.OpenReadTransaction();
 
-                var configuration = database.DocumentsStorage.Get(context, Constants.Expiration.RavenExpirationConfiguration);
+                var configuration = database.DocumentsStorage.Get(context, Constants.Expiration.ConfigurationDocumentKey);
                 if (configuration == null)
                     return null;
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Expiration
                     //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
                     //TODO: a config
                     if (Log.IsWarnEnabled)
-                        Log.WarnException($"Cannot enable expired documents cleaner as the configuration document {Constants.Expiration.RavenExpirationConfiguration} is not valid: {configuration.Data}", e);
+                        Log.WarnException($"Cannot enable expired documents cleaner as the configuration document {Constants.Expiration.ConfigurationDocumentKey} is not valid: {configuration.Data}", e);
                     return null;
                 }
             }
