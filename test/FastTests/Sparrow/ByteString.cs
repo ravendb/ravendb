@@ -1,6 +1,4 @@
-﻿#define VALIDATE
-
-using Sparrow;
+﻿using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Linq;

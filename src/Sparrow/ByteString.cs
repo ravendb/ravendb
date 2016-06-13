@@ -1,6 +1,4 @@
-﻿#define VALIDATE
-
-using Sparrow.Binary;
+﻿using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -951,7 +949,7 @@ namespace Sparrow
         private void RegisterForValidation(ByteString _) { }
 
         [Conditional("VALIDATE")]
-        private void Validate(ByteString _) { }
+        private void ValidateAndUnregister(ByteString _) { }
 
 #endif
 
