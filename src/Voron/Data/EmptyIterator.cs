@@ -11,6 +11,11 @@ namespace Voron.Data
             return false;
         }
 
+        public bool DoRequireValidation
+        {
+            get { throw new InvalidOperationException("No current page"); }
+        }
+
         public Slice CurrentKey
         {
             get { throw new InvalidOperationException("No current page"); }

@@ -40,7 +40,10 @@ namespace Voron.Data.BTrees
             _currentInternalKey = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current);
             _currentKey = _currentInternalKey;
 
-            return this.ValidateCurrentKey(_tx, current);
+            if (DoRequireValidation)
+                return this.ValidateCurrentKey(_tx, current);
+
+            return true;
         }
 
         public TreeNodeHeader* Current
@@ -77,8 +80,33 @@ namespace Voron.Data.BTrees
         }
 
 
-        public Slice RequiredPrefix { get; set; }
-        public Slice MaxKey { get; set; }
+       private bool _requireValidation;
+        public bool DoRequireValidation
+        {
+            get { return _requireValidation; }
+        }
+
+        private Slice _requiredPrefix;
+        public Slice RequiredPrefix
+        {
+            get { return _requiredPrefix; }
+            set
+            {
+                _requiredPrefix = value;
+                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
+            }
+        }
+
+        private Slice _maxKey;
+        public Slice MaxKey
+        {
+            get { return _maxKey; }
+            set
+            {
+                _maxKey = value;
+                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
+            }
+        }
 
         public bool MoveNext()
         {
@@ -110,7 +138,7 @@ namespace Voron.Data.BTrees
                 return false;
 
             var current = _page.GetNode(_page.LastSearchPosition);
-            if (this.ValidateCurrentKey(_tx, current) == false)
+            if (DoRequireValidation && this.ValidateCurrentKey(_tx, current) == false)
             {
                 return false;
             }

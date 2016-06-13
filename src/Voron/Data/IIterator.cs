@@ -4,6 +4,8 @@ namespace Voron.Data
 {
     public interface IIterator : IDisposable
     {
+        bool DoRequireValidation { get; }
+
         Slice CurrentKey { get; }
         Slice RequiredPrefix { get; set; }
         Slice MaxKey { get; set; }
