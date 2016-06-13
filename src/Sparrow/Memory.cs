@@ -24,7 +24,7 @@ namespace Sparrow
 
         private static readonly int Inc = Unsafe.SizeOf<Vector<byte>>();
 
-        private static int CompareBulk(void* p1, void* p2, int size)
+        private static int CompareBulkVectorized(void* p1, void* p2, int size)
         {
             byte* bpx = (byte*)p1, bpy = (byte*)p2;
 
@@ -125,9 +125,12 @@ namespace Sparrow
             // If we use an unmanaged bulk version with an inline compare the caller site does not get optimized properly.
             // If you know you will be comparing big memory chunks do not use the inline version. 
             int l = size;
-            if (size >= 256) 
-                return CompareBulk(p1, p2, l);
-       
+            if ( Vector.IsHardwareAccelerated )
+            {
+                if (size >= 256)
+                    return CompareBulkVectorized(p1, p2, l);
+            }
+
             byte* bpx = (byte*)p1, bpy = (byte*)p2;
             int last;
             for (int i = 0; i < l / 8; i++, bpx += 8, bpy += 8)
