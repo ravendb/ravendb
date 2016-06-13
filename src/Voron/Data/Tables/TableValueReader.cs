@@ -24,6 +24,7 @@ namespace Voron.Data.Tables
                 _elementSize = 2;
             if (size > ushort.MaxValue)
                 _elementSize = 4;
+
             _count = _ptr[0];
         }
 
@@ -35,34 +36,40 @@ namespace Voron.Data.Tables
 
         public byte* Read(int index, out int size)
         {
+            byte* ptr = _ptr + 1;
+            bool hasNext = index + 1 < _count;
+
             if (index < 0 || index >= _count)
                 throw new ArgumentOutOfRangeException(nameof(index));
 
-            var pos = GetPositionByIndex(index);
+            int position;
+            int nextPos;                        
 
-            var nextPos = index + 1 < _count ? GetPositionByIndex(index + 1) : _size;
-            size = nextPos - pos;
-            return _ptr + pos;
+            switch ( _elementSize )
+            {
+                case 1:
+                    position = ptr[index];
+                    nextPos = hasNext ? ptr[index + 1] : _size;
+                    break;
+                case 2:
+                    position = ((ushort*)ptr)[index];
+                    nextPos = hasNext ? ((ushort*)ptr)[index + 1] : _size;
+                    break;
+                case 4:
+                    position = ((int*)ptr)[index];
+                    nextPos = hasNext ? ((int*)ptr)[index + 1] : _size;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
+            }
+
+            size = nextPos - position;
+            return _ptr + position;
         }
 
         public long* Read(int index, out object size)
         {
             throw new NotImplementedException();
-        }
-
-        private int GetPositionByIndex(int index)
-        {
-            switch (_elementSize)
-            {
-                case 1:
-                    return _ptr[index + 1];
-                case 2:
-                    return ((ushort*)(_ptr + 1))[index];
-                case 4:
-                    return ((int*)(_ptr + 1))[index];
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
-            }
         }
     }
 }
