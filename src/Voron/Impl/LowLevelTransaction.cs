@@ -232,9 +232,6 @@ namespace Voron.Impl
             if (_dirtyPages.Contains(num))
                 return currentPage;
 
-            // We no longer care of the ReadOnly cached page (in case the get page was a hit).
-            _pageCache.Reset(num);
-
             int pageSize;
             Page newPage;
             if ( currentPage.IsOverflow )
@@ -250,10 +247,7 @@ namespace Voron.Impl
             
             Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);
 
-            TrackWritablePage(newPage);
-            
-            // We add the new page. 
-            _pageCache.AddWritable(newPage);
+            TrackWritablePage(newPage);           
 
             return newPage;
         }
@@ -395,6 +389,8 @@ namespace Voron.Impl
                 pageFromScratchBuffer.PositionInScratchBuffer);
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;
+
+            _pageCache.AddWritable(newPage);            
 
             TrackWritablePage(newPage);
 
@@ -737,7 +733,9 @@ namespace Voron.Impl
 
             public Page TryGetReadOnlyPage(long pageNumber)
             {
-                int position = current;
+                // We initiate the check from the 1 modulus upward to ensure that we don't need to 
+                // reset pages on addition. Since we will always pick the last one added. 
+                int position = current + _cache.Length;
 
                 int itemsLeft = _cache.Length;
                 while (itemsLeft > 0)
@@ -749,7 +747,7 @@ namespace Voron.Impl
                     {
                         // we continue.
                         itemsLeft--;
-                        position++;
+                        position--;
 
                         continue;
                     }
@@ -765,7 +763,10 @@ namespace Voron.Impl
             public Page TryGetWritablePage(long pageNumber, out bool isReadOnly)
             {
                 isReadOnly = false;
-                int position = current;
+
+                // We initiate the check from the 1 modulus upward to ensure that we don't need to 
+                // reset pages on addition. Since we will always pick the last one added. 
+                int position = current + _cache.Length;
 
                 int itemsLeft = _cache.Length;
                 while (itemsLeft > 0)
@@ -777,7 +778,7 @@ namespace Voron.Impl
                     {
                         // we continue.
                         itemsLeft--;
-                        position++;
+                        position--;
 
                         continue;
                     }
@@ -816,13 +817,11 @@ namespace Voron.Impl
 
             public void Reset(long pageNumber)
             {
+                // There can be multiple instances of the same page in the cache. 
                 for (int i = 0; i < _cache.Length; i++)
                 {
                     if (_cache[i].IsValid && _cache[i].PageNumber == pageNumber)
-                    {
                         _cache[i] = new PageHandlePtr();
-                        return;
-                    }
                 }
             }
         }

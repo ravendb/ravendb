@@ -12,7 +12,7 @@ namespace Voron.Data.RawData
     {
         protected const ushort ReservedHeaderSpace = 96;
 
-        private readonly HashSet<long> _dirtyPages = new HashSet<long>();
+        private readonly PageLocator _pageLocator;
 
         protected readonly LowLevelTransaction _tx;
         protected readonly int _pageSize;
@@ -33,10 +33,11 @@ namespace Voron.Data.RawData
             PageNumber = pageNumber;
             _tx = tx;         
             _pageSize = _tx.DataPager.PageSize;
+            _pageLocator = new PageLocator(_tx, 8);
 
             MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
 
-            _sectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(pageNumber).Pointer;
+            _sectionHeader = (RawDataSmallSectionPageHeader*)_pageLocator.GetReadOnlyPage(pageNumber).Pointer;
         }
 
         public long PageNumber { get; }
@@ -293,18 +294,14 @@ namespace Voron.Data.RawData
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureHeaderModified()
         {
-            if (_dirtyPages.Add(_sectionHeader->PageNumber) == false)
-                return;
-            var page = _tx.ModifyPage(_sectionHeader->PageNumber);
+            var page = _pageLocator.GetWritablePage(_sectionHeader->PageNumber);
             _sectionHeader = (RawDataSmallSectionPageHeader*)page.Pointer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected RawDataSmallPageHeader* ModifyPage(RawDataSmallPageHeader* pageHeader)
         {
-            if (_dirtyPages.Add(pageHeader->PageNumber) == false)
-                return pageHeader;
-            var page = _tx.ModifyPage(pageHeader->PageNumber);
+            var page = _pageLocator.GetWritablePage(pageHeader->PageNumber);
             return (RawDataSmallPageHeader*)page.Pointer;
         }
 
