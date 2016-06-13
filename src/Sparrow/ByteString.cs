@@ -553,7 +553,7 @@ namespace Sparrow
             }
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString Create(void* ptr, int length, int size, ByteStringType type = ByteStringType.Immutable)
         {
             Debug.Assert(length <= size - sizeof(ByteStringStorage));
@@ -751,12 +751,16 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            byte[] utf8 = Encoding.UTF8.GetBytes(value);
-
-            var result = AllocateInternal(utf8.Length, type);
-            fixed (byte* ptr = utf8)
+            int maxSize = 4 * value.Length;
+            // Important if not working with Unicode. 
+            // http://stackoverflow.com/questions/9533258/what-is-the-maximum-number-of-bytes-for-a-utf-8-encoded-character
+            var result = AllocateInternal(maxSize, type);
+            fixed (char* ptr = value)
             {
-                Memory.Copy(result._pointer->Ptr, ptr, utf8.Length);
+                int length = Encoding.UTF8.GetBytes(ptr, value.Length, result.Ptr, maxSize);
+
+                // We can do this because it is internal. See if it makes sense to actually give this ability. 
+                result._pointer->Length = length;
             }
 
             RegisterForValidation(result);
@@ -767,12 +771,16 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            byte[] encodedBytes = encoding.GetBytes(value);
-
-            var result = AllocateInternal(encodedBytes.Length, type);
-            fixed (byte* ptr = encodedBytes)
+            int maxSize = 4 * value.Length;
+            // Important if not working with Unicode. 
+            // http://stackoverflow.com/questions/9533258/what-is-the-maximum-number-of-bytes-for-a-utf-8-encoded-character
+            var result = AllocateInternal(maxSize, type);
+            fixed (char* ptr = value)
             {
-                Memory.Copy(result._pointer->Ptr, ptr, encodedBytes.Length);
+                int length = encoding.GetBytes(ptr, value.Length, result.Ptr, maxSize);
+
+                // We can do this because it is internal. See if it makes sense to actually give this ability. 
+                result._pointer->Length = length;
             }
 
             RegisterForValidation(result);
