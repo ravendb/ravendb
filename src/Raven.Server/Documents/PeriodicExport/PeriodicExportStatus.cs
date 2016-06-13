@@ -1,11 +1,11 @@
 using System;
 
-namespace Raven.Client.Data
+namespace Raven.Server.Documents.PeriodicExport
 {
     public class PeriodicExportStatus
     {
-        public DateTime LastBackup { get; set; }
-        public DateTime LastFullBackup { get; set; }
+        public DateTime LastExportAt { get; set; }
+        public DateTime LastFullExportAt { get; set; }
 
         public long? LastDocsEtag { get; set; }
     }

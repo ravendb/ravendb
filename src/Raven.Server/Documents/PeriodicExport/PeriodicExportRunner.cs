@@ -34,12 +34,12 @@ namespace Raven.Server.Documents.PeriodicExport
         // This will be canceled once the configuration document will be changed
         private readonly CancellationTokenSource _cancellationToken;
 
-        private readonly Timer _incrementalBackupTimer;
+        private readonly Timer _incrementalExportTimer;
         private readonly TimeSpan _incrementalIntermediateInterval;
-        private readonly Timer _fullBackupTimer;
-        private readonly TimeSpan _fullBackupIntermediateInterval;
+        private readonly Timer _fullExportTimer;
+        private readonly TimeSpan _fullExportIntermediateInterval;
 
-        private TimeSpan _fullBackupInterval;
+        private TimeSpan _fullExportInterval;
         private TimeSpan _incrementalInterval;
 
         private readonly object _locker = new object();
@@ -64,14 +64,14 @@ namespace Raven.Server.Documents.PeriodicExport
 
                 if (IsValidTimespanForTimer(_incrementalInterval))
                 {
-                    var timeSinceLastBackup = SystemTime.UtcNow - _status.LastBackup;
-                    var nextBackup = timeSinceLastBackup >= _incrementalInterval ? TimeSpan.Zero : _incrementalInterval - timeSinceLastBackup;
+                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastExportAt;
+                    var nextExport = timeSinceLastExport >= _incrementalInterval ? TimeSpan.Zero : _incrementalInterval - timeSinceLastExport;
 
-                    _incrementalBackupTimer = new Timer(TimerCallback, false, nextBackup, _incrementalInterval);
+                    _incrementalExportTimer = new Timer(TimerCallback, false, nextExport, _incrementalInterval);
                 }
                 else
                 {
-                    _incrementalBackupTimer = new Timer(LongPeriodTimerCallback, false, _maxTimerTimeout, Timeout.InfiniteTimeSpan);
+                    _incrementalExportTimer = new Timer(LongPeriodTimerCallback, false, _maxTimerTimeout, Timeout.InfiniteTimeSpan);
                 }
             }
             else
@@ -79,21 +79,21 @@ namespace Raven.Server.Documents.PeriodicExport
                 Log.Warn("Incremental periodic export interval is set to zero or less, incremental periodic export is now disabled");
             }
 
-            if (configuration.FullBackupIntervalMilliseconds.HasValue && configuration.FullBackupIntervalMilliseconds.Value > 0)
+            if (configuration.FullExportIntervalMilliseconds.HasValue && configuration.FullExportIntervalMilliseconds.Value > 0)
             {
-                _fullBackupIntermediateInterval = _fullBackupInterval = TimeSpan.FromMilliseconds(configuration.FullBackupIntervalMilliseconds.Value);
-                Log.Info("Full periodic export started, will export every" + _fullBackupInterval.TotalMinutes + "minutes");
+                _fullExportIntermediateInterval = _fullExportInterval = TimeSpan.FromMilliseconds(configuration.FullExportIntervalMilliseconds.Value);
+                Log.Info("Full periodic export started, will export every" + _fullExportInterval.TotalMinutes + "minutes");
 
-                if (IsValidTimespanForTimer(_fullBackupInterval))
+                if (IsValidTimespanForTimer(_fullExportInterval))
                 {
-                    var timeSinceLastBackup = SystemTime.UtcNow - _status.LastFullBackup;
-                    var nextBackup = timeSinceLastBackup >= _fullBackupInterval ? TimeSpan.Zero : _fullBackupInterval - timeSinceLastBackup;
+                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastFullExportAt;
+                    var nextExport = timeSinceLastExport >= _fullExportInterval ? TimeSpan.Zero : _fullExportInterval - timeSinceLastExport;
 
-                    _fullBackupTimer = new Timer(TimerCallback, true, nextBackup, _fullBackupInterval);
+                    _fullExportTimer = new Timer(TimerCallback, true, nextExport, _fullExportInterval);
                 }
                 else
                 {
-                    _fullBackupTimer = new Timer(LongPeriodTimerCallback, true, _maxTimerTimeout, Timeout.InfiniteTimeSpan);
+                    _fullExportTimer = new Timer(LongPeriodTimerCallback, true, _maxTimerTimeout, Timeout.InfiniteTimeSpan);
                 }
             }
             else
@@ -106,15 +106,15 @@ namespace Raven.Server.Documents.PeriodicExport
         {
            /* lock (this)
             {
-                if (fullBackup)
+                if (fullExport)
                 {
-                    ReleaseTimerIfNeeded(_fullBackupTimer);
-                    _fullBackupTimer = RescheduleLongTimer(true);
+                    ReleaseTimerIfNeeded(_fullExportTimer);
+                    _fullExportTimer = RescheduleLongTimer(true);
                 }
                 else
                 {
-                    ReleaseTimerIfNeeded(_incrementalBackupTimer);
-                    _incrementalBackupTimer = RescheduleLongTimer(false);
+                    ReleaseTimerIfNeeded(_incrementalExportTimer);
+                    _incrementalExportTimer = RescheduleLongTimer(false);
                 }
             }*/
         }
@@ -240,9 +240,9 @@ namespace Raven.Server.Documents.PeriodicExport
 
                     _status.LastDocsEtag = exportResult.LastDocsEtag;
                     if (fullExport)
-                        _status.LastFullBackup = SystemTime.UtcNow;
+                        _status.LastFullExportAt = SystemTime.UtcNow;
                     else
-                        _status.LastBackup = SystemTime.UtcNow;
+                        _status.LastExportAt = SystemTime.UtcNow;
 
                     WriteStatus();
                 }
@@ -265,8 +265,8 @@ namespace Raven.Server.Documents.PeriodicExport
                 var status = new DynamicJsonValue
                 {
                     ["LastDocsEtag"] = _status.LastDocsEtag,
-                    ["LastBackup"] = _status.LastBackup,
-                    ["LastFullBackup"] = _status.LastFullBackup,
+                    ["LastExportAt"] = _status.LastExportAt,
+                    ["LastFullExportAt"] = _status.LastFullExportAt,
                 };
                 var readerObject = context.ReadObject(status, Constants.PeriodicExport.StatusDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 var putResult = _database.DocumentsStorage.Put(context, Constants.PeriodicExport.StatusDocumentKey, null, readerObject);
@@ -277,23 +277,23 @@ namespace Raven.Server.Documents.PeriodicExport
             }
         }
 
-        private void UploadToServer(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+        private void UploadToServer(string exportPath, PeriodicExportSetup localExportConfigs, bool isFullExport)
         {
             if (!string.IsNullOrWhiteSpace(localExportConfigs.GlacierVaultName))
             {
-                UploadToGlacier(backupPath, localExportConfigs, isFullBackup);
+                UploadToGlacier(exportPath, localExportConfigs, isFullExport);
             }
             else if (!string.IsNullOrWhiteSpace(localExportConfigs.S3BucketName))
             {
-                UploadToS3(backupPath, localExportConfigs, isFullBackup);
+                UploadToS3(exportPath, localExportConfigs, isFullExport);
             }
             else if (!string.IsNullOrWhiteSpace(localExportConfigs.AzureStorageContainer))
             {
-                UploadToAzure(backupPath, localExportConfigs, isFullBackup);
+                UploadToAzure(exportPath, localExportConfigs, isFullExport);
             }
         }
 
-        private void UploadToS3(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+        private void UploadToS3(string exportPath, PeriodicExportSetup localExportConfigs, bool isFullExport)
         {
             if (awsAccessKey == Constants.DataCouldNotBeDecrypted ||
                 awsSecretKey == Constants.DataCouldNotBeDecrypted)
@@ -301,20 +301,20 @@ namespace Raven.Server.Documents.PeriodicExport
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
             using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
-            using (var fileStream = File.OpenRead(backupPath))
+            using (var fileStream = File.OpenRead(exportPath))
             {
-                var key = Path.GetFileName(backupPath);
+                var key = Path.GetFileName(exportPath);
                 client.PutObject(localExportConfigs.S3BucketName, CombinePathAndKey(localExportConfigs.S3RemoteFolderName, key), fileStream, new Dictionary<string, string>
                                                                                    {
-                                                                                       { "Description", GetArchiveDescription(isFullBackup) }
+                                                                                       { "Description", GetArchiveDescription(isFullExport) }
                                                                                    }, 60 * 60);
 
-                Log.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, with key {2}",
-                                              Path.GetFileName(backupPath), localExportConfigs.S3BucketName, key));
+                Log.Info(string.Format("Successfully uploaded export {0} to S3 bucket {1}, with key {2}",
+                                              Path.GetFileName(exportPath), localExportConfigs.S3BucketName, key));
             }
         }
 
-        private void UploadToGlacier(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+        private void UploadToGlacier(string exportPath, PeriodicExportSetup localExportConfigs, bool isFullExport)
         {
             if (awsAccessKey == Constants.DataCouldNotBeDecrypted ||
                 awsSecretKey == Constants.DataCouldNotBeDecrypted)
@@ -322,15 +322,15 @@ namespace Raven.Server.Documents.PeriodicExport
                 throw new InvalidOperationException("Could not decrypt the AWS access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
             using (var client = new RavenAwsGlacierClient(awsAccessKey, awsSecretKey, localExportConfigs.AwsRegionEndpoint ?? RavenAwsClient.DefaultRegion))
-            using (var fileStream = File.OpenRead(backupPath))
+            using (var fileStream = File.OpenRead(exportPath))
             {
-                var key = Path.GetFileName(backupPath);
+                var key = Path.GetFileName(exportPath);
                 var archiveId = client.UploadArchive(localExportConfigs.GlacierVaultName, fileStream, key, 60 * 60);
-                Log.Info(string.Format("Successfully uploaded backup {0} to Glacier, archive ID: {1}", Path.GetFileName(backupPath), archiveId));
+                Log.Info(string.Format("Successfully uploaded export {0} to Glacier, archive ID: {1}", Path.GetFileName(exportPath), archiveId));
             }
         }
 
-        private void UploadToAzure(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+        private void UploadToAzure(string exportPath, PeriodicExportSetup localExportConfigs, bool isFullExport)
         {
             if (azureStorageAccount == Constants.DataCouldNotBeDecrypted ||
                 azureStorageKey == Constants.DataCouldNotBeDecrypted)
@@ -341,17 +341,17 @@ namespace Raven.Server.Documents.PeriodicExport
             using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey))
             {
                 client.PutContainer(localExportConfigs.AzureStorageContainer);
-                using (var fileStream = File.OpenRead(backupPath))
+                using (var fileStream = File.OpenRead(exportPath))
                 {
-                    var key = Path.GetFileName(backupPath);
+                    var key = Path.GetFileName(exportPath);
                     client.PutBlob(localExportConfigs.AzureStorageContainer, CombinePathAndKey(localExportConfigs.AzureRemoteFolderName, key), fileStream, new Dictionary<string, string>
                                                                                               {
-                                                                                                  { "Description", GetArchiveDescription(isFullBackup) }
+                                                                                                  { "Description", GetArchiveDescription(isFullExport) }
                                                                                               });
 
                     Log.Info(string.Format(
-                        "Successfully uploaded backup {0} to Azure container {1}, with key {2}",
-                        Path.GetFileName(backupPath),
+                        "Successfully uploaded export {0} to Azure container {1}, with key {2}",
+                        Path.GetFileName(exportPath),
                         localExportConfigs.AzureStorageContainer,
                         key));
                 }
@@ -363,16 +363,16 @@ namespace Raven.Server.Documents.PeriodicExport
             return string.IsNullOrEmpty(path) == false ? path + "/" + fileName : fileName;
         }
 
-        private string GetArchiveDescription(bool isFullBackup)
+        private string GetArchiveDescription(bool isFullExport)
         {
-            return (isFullBackup ? "Full" : "Incremental") + "periodic export for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
+            return (isFullExport ? "Full" : "Incremental") + "periodic export for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
         }
 
         public void Dispose()
         {
             _cancellationToken.Cancel();
-            _incrementalBackupTimer?.Dispose();
-            _fullBackupTimer?.Dispose();
+            _incrementalExportTimer?.Dispose();
+            _fullExportTimer?.Dispose();
         }
 
         public static PeriodicExportRunner LoadConfigurations(DocumentDatabase database)

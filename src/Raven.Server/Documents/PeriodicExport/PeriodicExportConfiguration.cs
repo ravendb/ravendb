@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.PeriodicExport
         public string AzureStorageContainer { get; set; }
 
         /// <summary>
-        /// Path to local folder. If not empty, backups will be held in this folder and not deleted. Otherwise, backups will be created in DataDir of a database and deleted after successful upload to Glacier/S3/Azure.
+        /// Path to local folder. If not empty, exports will be held in this folder and not deleted. Otherwise, exports will be created in DataDir of a database and deleted after successful upload to Glacier/S3/Azure.
         /// </summary>
         public string LocalFolderName { get; set; }
 
@@ -49,13 +49,13 @@ namespace Raven.Server.Documents.PeriodicExport
         public string S3RemoteFolderName { get; set; }
 
         /// <summary>
-        /// Interval between incremental backups in milliseconds. If set to null or 0 then incremental periodic export will be disabled.
+        /// Interval between incremental exports in milliseconds. If set to null or 0 then incremental periodic export will be disabled.
         /// </summary>
         public long? IntervalMilliseconds { get; set; }
 
         /// <summary>
-        /// Interval between full backups in milliseconds. If set to null or 0 then full periodic export will be disabled.
+        /// Interval between full exports in milliseconds. If set to null or 0 then full periodic export will be disabled.
         /// </summary>
-        public long? FullBackupIntervalMilliseconds { get; set; }
+        public long? FullExportIntervalMilliseconds { get; set; }
     }
 }
