@@ -34,7 +34,7 @@ namespace Voron.Impl
 
         private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
-        private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
+        private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>(PagerState.Comparer.Instance);
 
         readonly Stack<long> _pagesToFreeOnCommit = new Stack<long>();
 
