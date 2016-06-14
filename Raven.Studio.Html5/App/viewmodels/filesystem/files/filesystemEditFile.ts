@@ -23,6 +23,7 @@ class filesystemEditFile extends viewModelBase {
     fileMetadataText = ko.observable<string>();
     isBusy = ko.observable(false);
     metaPropsToRestoreOnSave = [];
+    isSaveEnabled: KnockoutComputed<boolean>;
 
     static editFileSelector = "#editFileContainer";
     static recentDocumentsInFilesystem = ko.observableArray<{ filesystemName: string; recentFiles: KnockoutObservableArray<string> }>();
@@ -31,6 +32,7 @@ class filesystemEditFile extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         this.fileName.subscribe(x => this.loadFile(x));
+        this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty());
     }
 
     activate(args) {
@@ -41,6 +43,7 @@ class filesystemEditFile extends viewModelBase {
             this.appendRecentFile(args.id);
             this.fileName(args.id);
         }
+        this.dirtyFlag = new ko.DirtyFlag([this.fileMetadataText]);
 
         this.metadata.subscribe((meta: fileMetadata) => this.metadataChanged(meta));
     }
@@ -72,7 +75,10 @@ class filesystemEditFile extends viewModelBase {
     loadFile(fileName: string) {
         new getFileCommand(this.activeFilesystem(), fileName)
             .execute()
-            .done((result: file) => this.file(result));
+            .done((result: file) => {
+                this.file(result);
+                this.dirtyFlag().reset();
+            });
     }
 
     navigateToFiles() {
@@ -89,8 +95,6 @@ class filesystemEditFile extends viewModelBase {
         var saveCommand = new updateFileMetadataCommand(this.fileName(), meta, this.activeFilesystem(), true);
         var saveTask = saveCommand.execute();
         saveTask.done(() => {
-            this.dirtyFlag().reset(); // Resync Changes
-
             this.loadFile(this.fileName());
         });
     }

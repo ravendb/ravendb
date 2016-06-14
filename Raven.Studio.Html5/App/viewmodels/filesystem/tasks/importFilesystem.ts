@@ -98,10 +98,10 @@ class importDatabase extends viewModelBase {
 
     private importStatusRetrieved(fs: filesystem, operationId: number, result: importOperationStatusDto) {
         if (result.Completed) {
-            if (result.ExceptionDetails == null && result.State != null && result.State.Progress != null) {
+            if (result.ExceptionDetails == null) {
                 this.hasFileSelected(false);
                 $(this.filePickerTag).val('');
-                fs.importStatus("Last import was from '" + this.importedFileName() + "', " + result.State.Progress.toLocaleLowerCase());
+                fs.importStatus("Last import was from '" + this.importedFileName());
                 messagePublisher.reportSuccess("Successfully imported data to " + fs.name);
             } else {
                 fs.importStatus("");

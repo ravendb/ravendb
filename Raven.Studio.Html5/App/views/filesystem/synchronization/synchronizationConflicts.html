@@ -9,8 +9,8 @@
                 </div>
             </span>
             <span class="btn-group">
-                <button class="btn btn-primary" data-bind="click: resolveWithLocalVersion">Resolve with Local</button>
-                <button class="btn btn-primary" data-bind="click: resolveWithRemoteVersion">Resolve with Remote</button>
+                <button class="btn btn-primary" data-bind="click: resolveWithLocalVersion, enable: hasAnyConflictSelected()">Resolve with Local</button>
+                <button class="btn btn-primary" data-bind="click: resolveWithRemoteVersion, enable: hasAnyConflictSelected()">Resolve with Remote</button>
             </span>
         </h4>
         <div class="clearfix"></div>

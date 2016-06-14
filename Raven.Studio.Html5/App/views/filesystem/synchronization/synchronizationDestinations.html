@@ -49,8 +49,20 @@
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Credentials</label>
                             <div class="col-sm-7">
-                                <button type="button" class="btn btn-default" data-bind="click: toggleUserCredentials, css: {active:isUserCredentials}">User</button>
-                                <button type="button" class="btn btn-default" data-bind="click: toggleApiKeyCredentials, css: {active:isApiKeyCredentials}">ApiKey</button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                        <span data-bind="visible: !isUserCredentials() && !isApiKeyCredentials()">None</span>
+                                        <span data-bind="visible: isUserCredentials">User</span>
+                                        <span data-bind="visible: isApiKeyCredentials">API key</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu">
+                                        <li><a href="#" data-bind="click: useNoCredentials">None</a></li>
+                                        <li class="divider"></li>
+                                        <li><a href="#" data-bind="click: useUserCredentials">User</a></li>
+                                        <li><a href="#" data-bind="click: useApiKeyCredentials">API key</a></li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                         <div data-bind="if: isUserCredentials, visible: isUserCredentials">

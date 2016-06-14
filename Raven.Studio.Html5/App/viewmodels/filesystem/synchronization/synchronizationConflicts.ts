@@ -20,6 +20,8 @@ class synchronizationConflicts extends viewModelBase {
     conflicts = ko.observableArray<conflictItem>();
     selectedConflicts = ko.observableArray<string>();
 
+    hasAnyConflictSelected = ko.pureComputed(() => this.selectedConflicts().length > 0);
+
     private isSelectAllValue = ko.observable<boolean>(false); 
     private activeFilesystemSubscription: any;
 
@@ -94,12 +96,11 @@ class synchronizationConflicts extends viewModelBase {
 
                 var selectedConflicts = this.selectedConflicts();
 
-                for (var i = 0; i < selectedConflicts.length; i++) {
-                    var conflict = selectedConflicts[i];
+                selectedConflicts.forEach(conflict => {
                     new resolveConflictCommand(conflict, 2, fs).execute().done(() => {
                         this.selectedConflicts.remove(conflict);
                     });
-                }
+                });
             });
         app.showDialog(resolveConflictViewModel);
     }
@@ -115,10 +116,11 @@ class synchronizationConflicts extends viewModelBase {
             .done(() => {
                 var fs = this.activeFilesystem();
 
-                for (var i = 0; i < this.selectedConflicts().length; i++) {
-                    var conflict = this.selectedConflicts()[i];
-                    new resolveConflictCommand(conflict, 1, fs).execute();
-                }
+                var selectedConflicts = this.selectedConflicts();
+                selectedConflicts.forEach(conflict => {
+                    new resolveConflictCommand(conflict, 1, fs).execute()
+                        .done(() => this.selectedConflicts.remove(conflict));
+                });
             });
         app.showDialog(resolveConflictViewModel);
     }
@@ -137,8 +139,7 @@ class synchronizationConflicts extends viewModelBase {
         this.isSelectAllValue(!this.isSelectAllValue());
         if (this.isSelectAllValue()) {
             this.selectedConflicts.pushAll(this.conflicts().map(x => x.fileName));
-        }
-        else {
+        } else {
             this.selectedConflicts.removeAll();
         }
     }
