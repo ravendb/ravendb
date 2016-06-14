@@ -23,6 +23,7 @@ namespace Voron.Platform.Win32
         private readonly SafeFileHandle _handle;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
+        private static readonly IntPtr _currentProcess = Win32NativeMethods.GetCurrentProcess();
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -150,6 +151,15 @@ namespace Voron.Platform.Win32
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
 
+            if (Sparrow.Platform.Platform.CanPrefetch)
+            {
+                // We are asking to allocate pages. It is a good idea that they should be already in memory to only cause a single page fault (as they are continuous).
+                Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
+                entry.VirtualAddress = allocationInfo.BaseAddress;
+                entry.NumberOfBytes = (IntPtr)allocationInfo.Size;
+
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(_currentProcess, (UIntPtr)1, &entry, 0);
+            }
             return true;
         }
 

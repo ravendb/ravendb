@@ -139,7 +139,7 @@ namespace FastTests.Voron.Bugs
 
                 tx.Commit();
 
-                using (var iterator = tree.Iterate())
+                using (var iterator = tree.Iterate(false))
                 {
                     Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 
@@ -205,7 +205,7 @@ namespace FastTests.Voron.Bugs
 
                 tx.Commit();
 
-                using (var iterator = tree.Iterate())
+                using (var iterator = tree.Iterate(false))
                 {
                     Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 

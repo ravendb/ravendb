@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Sparrow;
 using Voron.Util;
 using Sparrow.Binary;
+using Voron.Platform.Win32;
+using System.Runtime.InteropServices;
 
 namespace Voron.Impl.Paging
 {
@@ -14,6 +16,7 @@ namespace Voron.Impl.Paging
     {
         protected int MinIncreaseSize { get { return 16 * _pageSize; } } // 64 KB with 4Kb pages. 
         protected int MaxIncreaseSize { get { return Constants.Size.Gigabyte; } }
+        private static readonly IntPtr _currentProcess = Win32NativeMethods.GetCurrentProcess();
 
         private long _increaseSize;
         private DateTime _lastIncrease;
@@ -258,5 +261,28 @@ namespace Voron.Impl.Paging
 
             return true;
         }
+
+        public void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        {
+            if (Sparrow.Platform.Platform.CanPrefetch == false)
+                return; // not supported
+
+            if (pagesToPrefetch.Count == 0)
+                return;
+
+            var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
+            for (int i = 0; i < entries.Length; i++)
+            {
+                entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
+                entries[i].VirtualAddress = AcquirePagePointer(null, pagesToPrefetch[i]);
+            }
+
+            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entriesPtr = entries)
+            {
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(_currentProcess,
+                    (UIntPtr)PagerState.AllocationInfos.Length, entriesPtr, 0);
+            }
+        }
     }
 }
+

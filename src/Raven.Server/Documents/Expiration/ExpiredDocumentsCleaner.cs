@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Expiration
                 var expirationTree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
                 while (true)
                 {
-                    using (var it = expirationTree.Iterate())
+                    using (var it = expirationTree.Iterate(false))
                     {
                         if (it.Seek(Slices.BeforeAllKeys) == false)
                             break;

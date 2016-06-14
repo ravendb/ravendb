@@ -62,7 +62,7 @@ namespace FastTests.Voron.Trees
                 tree.Add("a", StreamFor("1"));
                 var actual = tree.Read("a");
 
-                using (var it = tree.Iterate())
+                using (var it = tree.Iterate(false))
                 {
                     Assert.True(it.Seek(Slice.From(tx.Allocator, "a")));
                     Assert.Equal("a", it.CurrentKey.ToString());
@@ -131,7 +131,7 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                using (var it = tree.Iterate())
+                using (var it = tree.Iterate(false))
                 {
                     for (int i = 0; i < count; i++)
                     {

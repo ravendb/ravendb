@@ -37,7 +37,7 @@ namespace FastTests.Voron.Bugs
             {
                 foreach (var tree in trees)
                 {
-                    using (var iterator = txr.ReadTree(tree).Iterate())
+                    using (var iterator = txr.ReadTree(tree).Iterate(false))
                     {
                         if (!iterator.Seek(Slices.BeforeAllKeys))
                             continue;

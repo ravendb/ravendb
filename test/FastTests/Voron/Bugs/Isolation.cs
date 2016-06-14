@@ -139,7 +139,7 @@ namespace FastTests.Voron.Bugs
 
                 using (var txr = env.ReadTransaction())
                 {
-                    using (var iterator = txr.CreateTree("tree0").Iterate())
+                    using (var iterator = txr.CreateTree("tree0").Iterate(false))
                     {
                         Assert.True(iterator.Seek(Slices.BeforeAllKeys)); // all pages are from scratch (one from position 11)
 

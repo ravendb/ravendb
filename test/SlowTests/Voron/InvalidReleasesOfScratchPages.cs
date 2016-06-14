@@ -77,7 +77,7 @@ namespace SlowTests.Voron
                                         var treeName = trees[tIndex];
 
                                         using (var snapshot = Env.ReadTransaction())
-                                        using (var iterator = snapshot.ReadTree(treeName).Iterate())
+                                        using (var iterator = snapshot.ReadTree(treeName).Iterate(false))
                                         {
                                             if (!iterator.Seek(Slices.BeforeAllKeys))
                                             {

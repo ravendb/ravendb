@@ -22,6 +22,7 @@ namespace Voron.Impl.Paging
         void Sync();
         PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages);
         int WriteDirect(byte* p, long pagePosition, int pagesToWrite);
+        void MaybePrefetchMemory(List<long> list);
     }
 
     public static unsafe class VirtualPagerLegacyExtensions
@@ -69,9 +70,11 @@ namespace Voron.Impl.Paging
 
     public static unsafe class VirtualPagerWin32Extensions
     {
+        private static readonly IntPtr _currentProcess = Win32NativeMethods.GetCurrentProcess();
+
         public static void TryPrefetchingWholeFile(this IVirtualPager pager)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
+            if (Sparrow.Platform.Platform.CanPrefetch == false)
                 return; // not supported
 
             var pagerState = pager.PagerState;
@@ -85,14 +88,14 @@ namespace Voron.Impl.Paging
             }
 
 
-            if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
+            if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(_currentProcess,
                 (UIntPtr) pagerState.AllocationInfos.Length, entries, 0) == false)
                 throw new Win32Exception();
         }
 
         public static void MaybePrefetchMemory(this IVirtualPager pager, List<TreePage> sortedPages)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
+            if (Sparrow.Platform.Platform.CanPrefetch == false)
                 return; // not supported
 
             if (sortedPages.Count == 0)
@@ -149,7 +152,7 @@ namespace Voron.Impl.Paging
 
             fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = list.ToArray())
             {
-                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32NativeMethods.GetCurrentProcess(),
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(_currentProcess,
                     (UIntPtr) list.Count,
                     entries, 0);
             }

@@ -18,7 +18,7 @@ namespace FastTests.Voron.Bugs
 
             using (var tx = Env.ReadTransaction())
             {
-                var treeIterator = tx.CreateTree("events").Iterate();
+                var treeIterator = tx.CreateTree("events").Iterate(false);
 
                 Assert.False(treeIterator.Seek(Slices.AfterAllKeys));
 

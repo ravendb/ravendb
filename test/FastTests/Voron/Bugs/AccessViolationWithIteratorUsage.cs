@@ -31,7 +31,7 @@ namespace FastTests.Voron.Bugs
             }
 
             using (var txr = Env.ReadTransaction())
-            using (var iterator = txr.ReadTree("test").Iterate())
+            using (var iterator = txr.ReadTree("test").Iterate(false))
             {
                 using (var tx = Env.WriteTransaction())
                 {

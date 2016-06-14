@@ -118,7 +118,7 @@ namespace Raven.Server.ServerWide
         public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
         {
             var dbs = ctx.Transaction.InnerTransaction.ReadTree("items");
-            using (var it = dbs.Iterate())
+            using (var it = dbs.Iterate(true))
             {
                 it.RequiredPrefix = Slice.From(ctx.Allocator, prefix, ByteStringType.Immutable);
                 if (it.Seek(it.RequiredPrefix) == false)

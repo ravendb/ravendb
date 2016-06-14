@@ -59,7 +59,7 @@ namespace SlowTests.Voron
                 foreach (var treeName in trees)
                 {
                     var tree = snapshot.ReadTree(treeName);
-                    using (var iterator = tree.Iterate())
+                    using (var iterator = tree.Iterate(false))
                     {
                         Assert.True(iterator.Seek(Slices.BeforeAllKeys));
 

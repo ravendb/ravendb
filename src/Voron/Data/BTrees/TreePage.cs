@@ -633,5 +633,20 @@ namespace Voron.Data.BTrees
             if (HasSpaceFor(tx, key, len) == false)
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
+
+        public List<long> GetAllOverflowPages()
+        {
+            var results = new List<long>(NumberOfEntries);
+            for (int i = 0; i < NumberOfEntries; i++)
+            {
+                var nodeOffset = KeysOffsets[i];
+                var nodeHeader = (TreeNodeHeader*)(Base + nodeOffset);
+
+                if (nodeHeader->Flags == TreeNodeFlags.PageRef)
+                    results.Add(nodeHeader->PageNumber);
+            }
+
+            return results;
+        }
     }
 }

@@ -534,7 +534,7 @@ namespace Voron.Data.Tables
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith = false)
         {
             var tree = GetTree(index);
-            using (var it = tree.Iterate())
+            using (var it = tree.Iterate(false))
             {
                 if (startsWith)
                     it.RequiredPrefix = value.Clone(_tx.Allocator);
@@ -557,7 +557,7 @@ namespace Voron.Data.Tables
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
-            using (var it = tree.Iterate())
+            using (var it = tree.Iterate(false))
             {
                 if (it.Seek(value) == false)
                     yield break;
@@ -574,7 +574,7 @@ namespace Voron.Data.Tables
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
-            using (var it = tree.Iterate())
+            using (var it = tree.Iterate(false))
             {
                 if (it.Seek(Slices.AfterAllKeys) == false)
                     return null;
@@ -687,7 +687,7 @@ namespace Voron.Data.Tables
 
             var toDelete = new List<long>();
             var tree = GetTree(index);
-            using (var it = tree.Iterate())
+            using (var it = tree.Iterate(false))
             {
                 if (it.Seek(value) == false)
                     return 0;

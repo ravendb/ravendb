@@ -90,7 +90,7 @@ namespace SlowTests.Voron.Bugs
                 var keyByEtagTree = tx.ReadTree(keyByEtag);
 
                 var count = 0;
-                using (var iterator = keyByEtagTree.Iterate())
+                using (var iterator = keyByEtagTree.Iterate(false))
                 {
                     iterator.Seek(Slices.BeforeAllKeys);
                     do

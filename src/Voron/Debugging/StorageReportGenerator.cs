@@ -136,7 +136,7 @@ namespace Voron.Debugging
         {
             var multiValues = new MultiValuesReport();
 
-            using (var multiTreeIterator = tree.Iterate())
+            using (var multiTreeIterator = tree.Iterate(false))
             {
                 if (multiTreeIterator.Seek(Slices.BeforeAllKeys))
                 {

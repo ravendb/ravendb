@@ -190,7 +190,7 @@ namespace Raven.Server.Documents
 
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
             var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
-            using (var iter = tree.Iterate())
+            using (var iter = tree.Iterate(false))
             {
                 if (iter.Seek(Slices.BeforeAllKeys) == false)
                     return changeVector;
@@ -852,7 +852,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CollectionStat> GetCollections(DocumentsOperationContext context)
         {
-            using (var it = context.Transaction.InnerTransaction.LowLevelTransaction.RootObjects.Iterate())
+            using (var it = context.Transaction.InnerTransaction.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                     yield break;
@@ -915,7 +915,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
         {
-            using (var it = transaction.LowLevelTransaction.RootObjects.Iterate())
+            using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 it.RequiredPrefix = HashTagSlice;
 
