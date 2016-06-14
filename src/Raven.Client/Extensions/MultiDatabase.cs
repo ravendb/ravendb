@@ -77,7 +77,7 @@ namespace Raven.Client.Extensions
             if (name == null) throw new ArgumentNullException("name");
 
             if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
-                return;
+                throw new InvalidOperationException("<system> is not valid name. We don't have system database anymore.");
 
             var result = Regex.Matches(name, ValidDbNameChars);
             if (result.Count == 0 || result[0].Value != name)
