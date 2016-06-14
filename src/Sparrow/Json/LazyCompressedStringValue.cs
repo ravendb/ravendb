@@ -50,7 +50,7 @@ namespace Sparrow.Json
 
             if (UncompressedSize > 128)
             {
-                uncompressedSize = LZ4.Decode64(Buffer,
+                uncompressedSize = LZ4Reference.Decode64(Buffer,
                     CompressedSize,
                     tempBuffer,
                     UncompressedSize,

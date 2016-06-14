@@ -71,12 +71,12 @@ using System.Runtime.InteropServices;
 
 namespace Sparrow.Compression
 {
-    public unsafe class LZ4 : IDisposable
+    public unsafe class LZ4Reference : IDisposable
     {
         private readonly ushort* _hashtable64K;
         private readonly uint* _hashtable;
 
-        public LZ4()
+        public LZ4Reference()
         {
             _hashtable64K = (ushort*)Marshal.AllocHGlobal(HASH64K_TABLESIZE*sizeof (ushort)).ToPointer();
             _hashtable = (uint*)Marshal.AllocHGlobal(HASH_TABLESIZE * sizeof(uint)).ToPointer();

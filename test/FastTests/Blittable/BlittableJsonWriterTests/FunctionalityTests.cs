@@ -86,14 +86,14 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             byte* encodeInput = (byte*)Marshal.AllocHGlobal(size);
             int compressedSize;
             byte* encodeOutput;
-            using (var lz4 = new LZ4())
+            using (var lz4 = new LZ4Reference())
             {
 
                 var originStr = string.Join("", Enumerable.Repeat(1, size).Select(x => "sample"));
                 var bytes = Encoding.UTF8.GetBytes(originStr);
                 fixed (byte* pb = bytes)
                 {
-                    var maximumOutputLength = LZ4.MaximumOutputLength(bytes.Length);
+                    var maximumOutputLength = LZ4Reference.MaximumOutputLength(bytes.Length);
                     encodeOutput = (byte*)Marshal.AllocHGlobal(maximumOutputLength);
                     compressedSize = lz4.Encode64(pb, encodeOutput, bytes.Length, maximumOutputLength);
                 }
@@ -101,7 +101,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Array.Clear(bytes, 0, bytes.Length);
                 fixed (byte* pb = bytes)
                 {
-                    LZ4.Decode64(encodeOutput, compressedSize, pb, bytes.Length, true);
+                    LZ4Reference.Decode64(encodeOutput, compressedSize, pb, bytes.Length, true);
                 }
                 var actual = Encoding.UTF8.GetString(bytes);
                 Assert.Equal(originStr, actual);

@@ -157,7 +157,7 @@ namespace Voron.Impl.Journal
             try
             {
                 byte* dataPtr = _pager.AcquirePagePointer(null, _readingPage) + sizeof(TransactionHeader);
-                LZ4.Decode64(dataPtr, current->CompressedSize, outputPage, current->UncompressedSize, true);
+                LZ4Reference.Decode64(dataPtr, current->CompressedSize, outputPage, current->UncompressedSize, true);
             }
             catch (Exception e)
             {

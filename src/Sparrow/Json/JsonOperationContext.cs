@@ -28,7 +28,7 @@ namespace Sparrow.Json
         private byte[] _managedBuffer;
         private byte[] _parsingBuffer;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
-        public LZ4 Lz4 = new LZ4();
+        public LZ4Reference Lz4 = new LZ4Reference();
         public UTF8Encoding Encoding;
 
         public CachedProperties CachedProperties;
