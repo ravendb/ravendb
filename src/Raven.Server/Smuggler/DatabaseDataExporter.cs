@@ -6,7 +6,6 @@ namespace Raven.Server.Smuggler
     public class DatabaseDataExporter
     {
         public long? StartDocsEtag;
-        public bool Incremental;
 
         public int? Limit;
 
