@@ -56,7 +56,7 @@ namespace Raven.Client.Counters.Changes
             }
         }
 
-        protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, CountersConnectionState>> connections)
+        protected override void NotifySubscribers(string type, RavenJObject value, List<CountersConnectionState> connections)
         {
             switch (type)
             {
@@ -64,28 +64,28 @@ namespace Raven.Client.Counters.Changes
                     var changeNotification = value.JsonDeserialization<ChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(changeNotification);
+                        counter.Send(changeNotification);
                     }
                     break;               
                 case "StartingWithNotification":
                     var counterStartingWithNotification = value.JsonDeserialization<StartingWithNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(counterStartingWithNotification);
+                        counter.Send(counterStartingWithNotification);
                     }
                     break;
                 case "InGroupNotification":
                     var countersInGroupNotification = value.JsonDeserialization<InGroupNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(countersInGroupNotification);
+                        counter.Send(countersInGroupNotification);
                     }
                     break;
                 case "BulkOperationNotification":
                     var bulkOperationNotification = value.JsonDeserialization<BulkOperationNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(bulkOperationNotification);
+                        counter.Send(bulkOperationNotification);
                     }
                     break;
                 default:
