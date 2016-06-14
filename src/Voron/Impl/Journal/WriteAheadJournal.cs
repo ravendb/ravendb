@@ -27,7 +27,7 @@ namespace Voron.Impl.Journal
     public unsafe class WriteAheadJournal : IDisposable
     {
         private readonly StorageEnvironment _env;
-        private readonly IVirtualPager _dataPager;
+        private readonly AbstractPager _dataPager;
 
         private long _currentJournalFileSize;
         private DateTime _lastFile;
@@ -44,7 +44,7 @@ namespace Voron.Impl.Journal
         internal JournalFile CurrentFile;
 
         private readonly HeaderAccessor _headerAccessor;
-        private readonly IVirtualPager _compressionPager;
+        private readonly AbstractPager _compressionPager;
 
         private LazyTransactionBuffer _lazyTransactionBuffer;
 
@@ -262,7 +262,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private void RecoverCurrentJournalSize(IVirtualPager pager)
+        private void RecoverCurrentJournalSize(AbstractPager pager)
         {
             var journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * pager.PageSize);
             if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
@@ -894,7 +894,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, IVirtualPager compressionPager)
+        private IntPtr[] CompressPages(LowLevelTransaction tx, int numberOfPages, AbstractPager compressionPager)
         {
             // numberOfPages include the tx header page, which we don't compress
             var dataPagesCount = numberOfPages - 1;

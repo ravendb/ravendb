@@ -19,7 +19,7 @@ namespace Voron.Impl
     public unsafe class LowLevelTransaction : IDisposable
     {
         private const int PagesTakenByHeader = 1;
-        private readonly IVirtualPager _dataPager;
+        private readonly AbstractPager _dataPager;
         private readonly long _pageSize;
         private readonly StorageEnvironment _env;
         private readonly long _id;
@@ -66,7 +66,7 @@ namespace Voron.Impl
             get { return _env; }
         }
 
-        public IVirtualPager DataPager
+        public AbstractPager DataPager
         {
             get { return _dataPager; }
         }

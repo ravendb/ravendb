@@ -11,7 +11,7 @@ namespace Voron.Impl.Journal
         private long? _firstPositionInJournalFile;
         private int _lastUsedPage;
         private readonly StorageEnvironmentOptions _options;
-        private readonly IVirtualPager _lazyTransactionPager;
+        private readonly AbstractPager _lazyTransactionPager;
         public int NumberOfPages { get; set; }
 
         public LazyTransactionBuffer(StorageEnvironmentOptions options)

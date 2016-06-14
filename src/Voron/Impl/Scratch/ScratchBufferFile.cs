@@ -23,7 +23,7 @@ namespace Voron.Impl.Scratch
             public long ValidAfterTransactionId;
         }
 
-        private readonly IVirtualPager _scratchPager;
+        private readonly AbstractPager _scratchPager;
         private readonly int _pageSize;
         private readonly int _scratchNumber;
 
@@ -36,7 +36,7 @@ namespace Voron.Impl.Scratch
         private long _allocatedPagesUsedSize;
         private long _lastUsedPage;
 
-        public ScratchBufferFile(IVirtualPager scratchPager, int scratchNumber)
+        public ScratchBufferFile(AbstractPager scratchPager, int scratchNumber)
         {
             _scratchPager = scratchPager;
             _scratchNumber = scratchNumber;

@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Sparrow;
-using Voron.Util;
 using Sparrow.Binary;
 
 namespace Voron.Impl.Paging
 {
-    public unsafe abstract class AbstractPager : IVirtualPager
+    public unsafe abstract class AbstractPager : IDisposable
     {
         protected int MinIncreaseSize { get { return 16 * _pageSize; } } // 64 KB with 4Kb pages. 
         protected int MaxIncreaseSize { get { return Constants.Size.Gigabyte; } }
