@@ -32,13 +32,13 @@ namespace Raven.Server.Documents.PeriodicExport
         // This will be canceled once the configuration document will be changed
         private readonly CancellationTokenSource _cancellationToken;
 
-        private readonly Timer _incrementalExportTimer;
-        private readonly TimeSpan _incrementalIntermediateInterval;
-        private readonly Timer _fullExportTimer;
-        private readonly TimeSpan _fullExportIntermediateInterval;
+        private Timer _incrementalExportTimer;
+        private Timer _fullExportTimer;
+        private TimeSpan _incrementalIntermediateInterval;
+        private TimeSpan _fullExportIntermediateInterval;
 
-        private TimeSpan _fullExportInterval;
-        private TimeSpan _incrementalInterval;
+        private readonly TimeSpan _fullExportInterval;
+        private readonly TimeSpan _incrementalInterval;
 
         private readonly object _locker = new object();
         private int? _exportLimit;
@@ -47,6 +47,7 @@ namespace Raven.Server.Documents.PeriodicExport
         //this is the maximum interval acceptable in .Net's threading timer
         private readonly TimeSpan _maxTimerTimeout = TimeSpan.FromMilliseconds(Math.Pow(2, 32) - 2);
 
+        /* TODO: How should we set this value, in the configuration document? If so, how do we encrypt them? */
         private string _awsAccessKey, _awsSecretKey;
         private string _azureStorageAccount, _azureStorageKey;
 
@@ -105,21 +106,42 @@ namespace Raven.Server.Documents.PeriodicExport
             }
         }
 
-        private void LongPeriodTimerCallback(object state)
+        private void LongPeriodTimerCallback(object fullExport)
         {
-            /* lock (this)
+            if (_database.DatabaseShutdown.IsCancellationRequested)
+                return;
+
+            lock (this)
             {
-                if (fullExport)
+                if ((bool)fullExport)
                 {
-                    ReleaseTimerIfNeeded(_fullExportTimer);
-                    _fullExportTimer = RescheduleLongTimer(true);
+                    _fullExportTimer?.Dispose();
+                    _fullExportTimer = ScheduleNextLongTimer(true);
                 }
                 else
                 {
-                    ReleaseTimerIfNeeded(_incrementalExportTimer);
-                    _incrementalExportTimer = RescheduleLongTimer(false);
+                    _incrementalExportTimer?.Dispose();
+                    _incrementalExportTimer = ScheduleNextLongTimer(false);
                 }
-            }*/
+            }
+        }
+
+        private Timer ScheduleNextLongTimer(bool isFullbackup)
+        {
+            var intermediateTimespan = isFullbackup ? _fullExportIntermediateInterval : _incrementalIntermediateInterval;
+            var remainingInterval = intermediateTimespan - _maxTimerTimeout;
+            var shouldExecuteTimer = remainingInterval.TotalMilliseconds <= 0;
+            if (shouldExecuteTimer)
+            {
+                TimerCallback(isFullbackup);
+            }
+
+            if (isFullbackup)
+                _fullExportIntermediateInterval = shouldExecuteTimer ? _fullExportInterval : remainingInterval;
+            else
+                _incrementalIntermediateInterval = shouldExecuteTimer ? _incrementalInterval : remainingInterval;
+
+            return new Timer(LongPeriodTimerCallback, isFullbackup, shouldExecuteTimer ? _maxTimerTimeout : remainingInterval, Timeout.InfiniteTimeSpan);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -128,7 +150,7 @@ namespace Raven.Server.Documents.PeriodicExport
             return timespan < _maxTimerTimeout;
         }
 
-        private void TimerCallback(object _)
+        private void TimerCallback(object fullExport)
         {
             if (_database.DatabaseShutdown.IsCancellationRequested)
                 return;
@@ -138,7 +160,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
             try
             {
-                _runningTask = RunPeriodicExport();
+                _runningTask = RunPeriodicExport((bool)fullExport);
                 _runningTask.Wait();
             }
             catch (Exception e)
