@@ -307,7 +307,7 @@ namespace Raven.Client.Document
 
             try
             {
-                var status = await GetOperationStatus(operationId);
+                var status = await GetOperationStatus(operationId).ConfigureAwait(false);
 
                 if (status == null)
                     return true;
@@ -374,10 +374,10 @@ namespace Raven.Client.Document
 
                 while (true)
                 {
-                    if (await IsOperationCompleted(responseOperationId))
+                    if (await IsOperationCompleted(responseOperationId).ConfigureAwait(false))
                         break;
 
-                    await Task.Delay(100);
+                    await Task.Delay(100).ConfigureAwait(false);
                 }
                 if (previousTask == null)
                 {

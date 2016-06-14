@@ -4,12 +4,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using System.Collections.Generic;
@@ -91,9 +89,9 @@ namespace Raven.Client.Changes
 
         public void WaitForAllPendingSubscriptions()
         {
-            foreach (var kvp in Counters)
+            foreach (var value in Counters.ValuesSnapshot)
             {
-                kvp.Value.Task.Wait();
+                value.Task.Wait();
             }
         }
 
@@ -205,14 +203,13 @@ namespace Raven.Client.Changes
                         AvoidCachingRequest = true
                     };
                     var request = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-                    return lastSendTask =
-                        request.ExecuteRequestAsync()
-                            .ObserveException()
-                            .ContinueWith(task =>
-                            {
-                                lastSendTask = null;
-                                request.Dispose();
-                            });
+                    lastSendTask = request.ExecuteRequestAsync().ObserveException();
+
+                    return lastSendTask.ContinueWith(task =>
+                    {
+                        lastSendTask = null;
+                        request.Dispose();
+                    });
                 }
                 catch (Exception e)
                 {
@@ -277,9 +274,9 @@ namespace Raven.Client.Changes
                     if (task.IsFaulted == false)
                         return;
 
-                    foreach (var keyValuePair in Counters)
+                    foreach (var value in Counters.ValuesSnapshot)
                     {
-                        keyValuePair.Value.Error(task.Exception);
+                        value.Error(task.Exception);
                     }
                     Counters.Clear();
                 });
@@ -306,13 +303,13 @@ namespace Raven.Client.Changes
                 case "Heartbeat":
                     break;
                 default:
-                    NotifySubscribers(type, value, Counters.Snapshot);
+                    NotifySubscribers(type, value, Counters.ValuesSnapshot);
                     break;
             }
         }
 
         protected abstract Task SubscribeOnServer();
-        protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);
+        protected abstract void NotifySubscribers(string type, RavenJObject value, List<TConnectionState> connections);
 
         public virtual void OnCompleted()
         { }

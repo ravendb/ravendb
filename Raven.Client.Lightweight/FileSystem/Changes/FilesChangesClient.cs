@@ -192,7 +192,7 @@ namespace Raven.Client.FileSystem.Changes
 
         private ConcurrentDictionary<string, ConflictNotification> delayedConflictNotifications = new ConcurrentDictionary<string, ConflictNotification>();
 
-        protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, FilesConnectionState>> connections)
+        protected override void NotifySubscribers(string type, RavenJObject value, List<FilesConnectionState> connections)
         {
             switch (type)
             {
@@ -200,21 +200,21 @@ namespace Raven.Client.FileSystem.Changes
                     var configChangeNotification = value.JsonDeserialization<ConfigurationChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(configChangeNotification);
+                        counter.Send(configChangeNotification);
                     }
                     break;
                 case "FileChangeNotification":
                     var fileChangeNotification = value.JsonDeserialization<FileChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(fileChangeNotification);
+                        counter.Send(fileChangeNotification);
                     }
                     break;
                 case "SynchronizationUpdateNotification":
                     var synchronizationUpdateNotification = value.JsonDeserialization<SynchronizationUpdateNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(synchronizationUpdateNotification);
+                        counter.Send(synchronizationUpdateNotification);
                     }
                     break;
 
@@ -272,13 +272,13 @@ namespace Raven.Client.FileSystem.Changes
             }
         }
 
-        private static void NotifyConflictSubscribers(IEnumerable<KeyValuePair<string, FilesConnectionState>> connections, ConflictNotification conflictNotification)
+        private static void NotifyConflictSubscribers(List<FilesConnectionState> connections, ConflictNotification conflictNotification)
         {
             // Check if we are delaying the broadcast.
             if (conflictNotification != null)
             {
                 foreach (var counter in connections)
-                    counter.Value.Send(conflictNotification);
+                    counter.Send(conflictNotification);
             }
         }
 
