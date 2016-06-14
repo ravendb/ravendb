@@ -7,6 +7,20 @@
             <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationConnectionStringsUrl()}" accesskey="M" title="Manage SQL connection strings (Alt+M)">
                 <i class="fa fa-database"></i> Manage connection strings
             </a>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default" title="Disable All SQL Replications" data-bind="disable: areAllSqlReplicationsDisabled, click: $root.toggleDisable.bind($root, true), visible: replications().length > 0">
+                    <i class="fa fa-lock"></i>
+                </button>
+                <button type="button" class="btn btn-default" title="Enable All SQL Replications" data-bind="disable: areAllSqlReplicationsEnabled, click: $root.toggleDisable.bind($root, false), visible: replications().length > 0">
+                    <i class="fa fa-unlock"></i>
+                </button>
+            </div>
+            <div class="btn-group">
+                <input type="text" accesskey="/" class="form-control" placeholder="Search" data-bind="value: searchText, valueUpdate: 'afterkeydown', visible: replications().length > 0" title="Search for a database or file system (Alt+/)">
+            </div>
+            <div class="btn-group">
+                <span data-bind="text: summary"></span>
+            </div>
         </div>
         <div class="panel-body">
             <div data-bind="visible: replications().length === 0">
@@ -16,7 +30,7 @@
                 </p>
             </div>
             <div class="replications-container" data-bind="foreach: replications">
-                <div class="replication">
+                <div class="replication" data-bind="visible: isVisible">
                     <h4 data-bind="attr: { 'href': '', titel:'$root.appUrl.forEditSqlReplication(name, this.activeDatabase()) '}">
                         <a data-bind="text: name, attr: { href: $root.getSqlReplicationUrl(name()) }"></a>
                     </h4>

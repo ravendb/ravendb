@@ -63,6 +63,9 @@ class resources extends viewModelBase {
     visibleResource = ko.observable("");
     has40Features = ko.computed(() => shell.has40Features());
     visibleOptions: { value:string, name: string }[];
+    databasesSummary: KnockoutComputed<string>;
+    fileSystemsSummary: KnockoutComputed<string>;
+    isCommaNeeded: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -176,9 +179,34 @@ class resources extends viewModelBase {
             return false;
         });
 
+        this.databasesSummary = ko.computed(() => this.getResourcesSummary(this.databases(), "database"));
+        this.fileSystemsSummary = ko.computed(() => this.getResourcesSummary(this.fileSystems(), "file system"));
+        this.isCommaNeeded = ko.computed(() => 
+            this.databases().filter(x => x.isVisible()).length > 0 &&
+            this.fileSystems().filter(x => x.isVisible()).length > 0);
+
         this.fetchAlerts();
         this.visibleResource.subscribe(() => this.filterResources());
         this.filterResources();
+    }
+
+    private getResourcesSummary(resourcesCollection: Array<resource>, type: string) {
+        var summary = "";
+
+	    var resources = resourcesCollection.filter(x => x.isVisible());
+	    if (resources.length > 0) {
+		    summary += resources.length + " "  + type;
+		    if (resources.length > 1) {
+			    summary += "s";
+		    }
+
+		    var disabled = resources.filter(x => x.disabled()).length;
+		    if (disabled > 0) {
+			    summary += " (" + disabled + " disabled)";
+		    }
+	    }
+
+        return summary;
     }
 
     private fetchAlerts() {

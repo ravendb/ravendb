@@ -373,6 +373,38 @@ for(var customFunction in customFunctions) {{
             }
         }
 
+        [HttpPost]
+        [RavenRoute("studio-tasks/sql-replication-toggle-disable")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/sql-replication-toggle-disable")]
+        public Task<HttpResponseMessage> SqlReplicationToggleDisable(bool disable)
+        {
+            try
+            {
+                Database.TransactionalStorage.Batch(actions =>
+                {
+                    var documents = actions.Documents.GetDocumentsWithIdStartingWith(
+                        "Raven/SqlReplication/Configuration/", 0, int.MaxValue, null);
+
+                    foreach (var document in documents)
+                    {
+                        document.DataAsJson["Disabled"] = disable;
+                        actions.Documents.AddDocument(document.Key, document.Etag, document.DataAsJson, document.Metadata);
+                    }
+                });
+
+                return GetEmptyMessageAsTask(HttpStatusCode.NoContent);
+            }
+            catch (Exception ex)
+            {
+                var action = disable ? "disable" : "enable";
+                return GetMessageWithObjectAsTask(new
+                {
+                    Error = $"Failed to {action} all SQL Replications",
+                    Exception = ex
+                }, HttpStatusCode.BadRequest);
+            }
+        }
+
         [HttpGet]
         [RavenRoute("studio-tasks/createSampleDataClass")]
         [RavenRoute("databases/{databaseName}/studio-tasks/createSampleDataClass")]

@@ -6942,6 +6942,9 @@ body {
 #resources-page .resources-container .resource .checkbox img {
   height: 25px;
 }
+#resources-page .resources-container .resource .checkbox label {
+  right: -9px;
+}
 #resources-page .resources-container .resource .details {
   float: left;
   line-height: 215%;
