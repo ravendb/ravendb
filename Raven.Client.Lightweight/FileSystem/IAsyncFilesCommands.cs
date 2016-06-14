@@ -160,6 +160,7 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
         Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
         Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
+        Task ResolveConflictsAsync(ConflictResolutionStrategy strategy);
         Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
         Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
         Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);

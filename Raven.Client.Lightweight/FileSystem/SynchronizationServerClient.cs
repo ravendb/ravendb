@@ -195,6 +195,24 @@ namespace Raven.Client.FileSystem
             }
         }
 
+        public async Task ResolveConflictsAsync(ConflictResolutionStrategy strategy)
+        {
+            var requestUriString = string.Format("{0}/synchronization/resolveConflicts?strategy={1}",
+                baseUrl, Uri.EscapeDataString(strategy.ToString()));
+
+            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Patch, Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
+            {
+                try
+                {
+                    await request.ExecuteRequestAsync().ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    throw e.SimplifyException();
+                }
+            }
+        }
+
         public async Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId,
             RavenJObject remoteMetadata, string remoteServerUrl)
         {

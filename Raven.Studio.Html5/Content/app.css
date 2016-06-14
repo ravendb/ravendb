@@ -9112,3 +9112,15 @@ a.global_help_link:focus {
 a#uploadQueuePanelToggle {
   color: white;
 }
+#synchronization-conflicts-page .conflicts-select {
+  text-align: center;
+  background-color: #ffc;
+  margin-top: 5px;
+  border: 1px solid;
+  padding: 5px;
+  border: 1px solid #999999;
+}
+#synchronization-conflicts-page .conflicts-select .select-link {
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -46,6 +46,7 @@
     <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\fsCheckSufficientDiskSpaceCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationsByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\resolveConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getResourceDrives.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />

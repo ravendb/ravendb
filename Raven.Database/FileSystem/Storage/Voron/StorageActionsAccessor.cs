@@ -783,37 +783,58 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return storage.Config.Contains(Snapshot, key, writeBatch.Value);
         }
 
-        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take)
+        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take, out int total)
         {
-            var key = CreateKey(prefix);
-            var keySlice = (Slice)key;
-            var result = new List<RavenJObject>();
+            total = 0;
+            var results = new List<RavenJObject>();
+
+            var key = (Slice)CreateKey(prefix);
 
             using (var iterator = storage.Config.Iterate(Snapshot, writeBatch.Value))
             {
-                if (!iterator.Seek(keySlice) || !iterator.Skip(start))
-                    return result;
+                if (!iterator.Seek(key))
+                    return results;
+
+                var skippedCount = 0;
+                for (var i = 0; i < start; i++)
+                {
+                    skippedCount++;
+
+                    if (iterator.MoveNext() == false)
+                    {
+                        total = skippedCount;
+                        return results;
+                    }
+                }
 
                 var count = 0;
 
                 do
                 {
-                    var config = iterator.CreateReaderForCurrent()
-                                         .AsStream()
-                                         .ToJObject();
+                    var config = iterator
+                            .CreateReaderForCurrent()
+                            .AsStream()
+                            .ToJObject();
 
-                    var metadata = config.Value<RavenJObject>("metadata");
-                    var name = config.Value<string>("name");
-                    if (name == null || name.StartsWith(key, StringComparison.InvariantCultureIgnoreCase) == false)
+                    
+                    var configName = config.Value<string>("name");
+
+                    if (configName == null || configName.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase) == false)
                         break;
 
-                    result.Add(metadata);
+                    if (count < take)
+                    {
+                        var metadata = config.Value<RavenJObject>("metadata");
+                        results.Add(metadata);
+                    }
 
                     count++;
-                } while (iterator.MoveNext() && count < take);
+                } while (iterator.MoveNext());
+
+                total = skippedCount + count;
             }
 
-            return result;
+            return results;
         }
 
         public IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total)
@@ -831,13 +852,13 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 var skippedCount = 0;
                 for (var i = 0; i < start; i++)
                 {
+                    skippedCount++;
+
                     if (iterator.MoveNext() == false)
                     {
                         total = skippedCount;
                         return results;
                     }
-
-                    skippedCount++;
                 }
 
                 var count = 0;

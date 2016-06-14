@@ -863,8 +863,10 @@ namespace Raven.Database.FileSystem.Storage.Esent
             return Api.TrySeek(session, Config, SeekGrbit.SeekEQ);
         }
 
-        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take)
+        public IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take, out int totalCount)
         {
+            totalCount = 0;
+
             var configs = new List<RavenJObject>();
 
             Api.JetSetCurrentIndex(session, Config, "by_name");
@@ -882,17 +884,47 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
             catch (EsentNoCurrentRecordException)
             {
+                // looke like we requested start higher then amount of available objects
+                // however we have to provide total count
+                // restart index and compute total count
+                Api.MakeKey(session, Config, prefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                Api.TrySeek(session, Config, SeekGrbit.SeekGE);
+
+                Api.MakeKey(session, Config, prefix, Encoding.Unicode,
+                       MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
+
+                totalCount = 0;
+
+                if (Api.TrySetIndexRange(session, Config,
+                    SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
+                {
+                    do
+                    {
+                        totalCount++;
+                    } while (Api.TryMoveNext(session, Config));
+                }
+
                 return configs;
             }
 
             if (Api.TrySetIndexRange(session, Config, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
             {
+                var hasNextRecord = false;
                 do
                 {
                     var metadata = Api.RetrieveColumnAsString(session, Config, tableColumnsCache.ConfigColumns["metadata"], Encoding.Unicode);
                     configs.Add(RavenJObject.Parse(metadata));
+                    hasNextRecord = Api.TryMoveNext(session, Config);
                 } 
-                while (Api.TryMoveNext(session, Config) && configs.Count < take);
+                while (hasNextRecord && configs.Count < take);
+
+                var extraRecords = 0;
+                if (hasNextRecord)
+                {
+                    Api.JetIndexRecordCount(session, Config, out extraRecords, 0);
+                }
+                    
+                totalCount = start + configs.Count + extraRecords;
             }
 
             return configs;
@@ -917,11 +949,30 @@ namespace Raven.Database.FileSystem.Storage.Esent
                             MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
                 try
                 {
-                    Api.JetMove(session, Config, 0, MoveGrbit.MoveKeyNE);
+                    Api.JetMove(session, Config, start, MoveGrbit.MoveKeyNE);
                 }
                 catch (EsentNoCurrentRecordException)
                 {
+                    // looke like we requested start higher then amount of available objects
+                    // however we have to provide total count
+                    // restart index and compute total count
+                    Api.MakeKey(session, Config, prefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+                    Api.TrySeek(session, Config, SeekGrbit.SeekGE);
+
+                    Api.MakeKey(session, Config, prefix, Encoding.Unicode,
+                           MakeKeyGrbit.NewKey | MakeKeyGrbit.PartialColumnEndLimit);
+
                     total = 0;
+
+                    if (Api.TrySetIndexRange(session, Config,
+                        SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit))
+                    {
+                        do
+                        {
+                            total++;
+                        } while (Api.TryMoveNext(session, Config));
+                    }
+                        
                     return configs;
                 }
 
@@ -941,18 +992,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
                 }
             }
 
-            var skippedCount = 0;
-
-            for (int i = 0; i < start; i++)
-            {
-                if (Api.TryMoveNext(session, Config) == false)
-                {
-                    total = skippedCount;
-                    return configs;
-                }
-                skippedCount++;
-            }
-
             var hasNextRecord = false;
             do
             {
@@ -966,7 +1005,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
             {
                 Api.JetIndexRecordCount(session, Config, out extraRecords, 0);
             }
-            total = skippedCount + configs.Count + extraRecords;
+            total = start + configs.Count + extraRecords;
 
             return configs;
         }

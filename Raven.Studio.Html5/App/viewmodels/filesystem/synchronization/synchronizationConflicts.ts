@@ -2,39 +2,90 @@ import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
 import resolveConflict = require("viewmodels/filesystem/synchronization/resolveConflict");
-
+import customColumns = require("models/database/documents/customColumns");
+import customColumnParams = require('models/database/documents/customColumnParams');
 import conflictItem = require("models/filesystem/conflictItem");
+import virtualTable = require("widgets/virtualTable/viewModel");
+
 import filesystem = require("models/filesystem/filesystem");
 import changeSubscription = require("common/changeSubscription");
+import pagedList = require("common/pagedList");
 
 import getFilesConflictsCommand = require("commands/filesystem/getFilesConflictsCommand");
 import resolveConflictCommand = require("commands/filesystem/resolveConflictCommand");
+import resolveConflictsCommand = require("commands/filesystem/resolveConflictsCommand");
 
 class synchronizationConflicts extends viewModelBase {
+
+    static gridSelector = "#synchronizationConflictsGrid";
 
     conflictStatus = {
         detected: "Detected",
         resolved: "Resolved"
     };
 
-    conflicts = ko.observableArray<conflictItem>();
-    selectedConflicts = ko.observableArray<string>();
+    currentConflictsPagedItems = ko.observable<pagedList>();
+    selectedDocumentIndices = ko.observableArray<number>();
+    currentColumns = ko.observable(customColumns.empty());
+    conflictsSelection: KnockoutComputed<checkbox>;
+    hasAnyConflictsSelected: KnockoutComputed<boolean>;
+    hasAllConflictsSelected: KnockoutComputed<boolean>;
+    conflictsCount: KnockoutComputed<number>;
+    isAnyConflictsAutoSelected = ko.observable<boolean>(false);
+    isAllConflictsAutoSelected = ko.observable<boolean>(false);
+    selectedConflictsText: KnockoutComputed<string>;
 
-    hasAnyConflictSelected = ko.pureComputed(() => this.selectedConflicts().length > 0);
+    constructor() {
+        super();
 
-    private isSelectAllValue = ko.observable<boolean>(false); 
-    private activeFilesystemSubscription: any;
+        this.conflictsCount = ko.computed(() => {
+            if (!!this.currentConflictsPagedItems()) {
+                var p: pagedList = this.currentConflictsPagedItems();
+                return p.totalResultCount();
+            }
+            return 0;
+        });
+
+        this.selectedConflictsText = ko.computed(() => {
+            if (!!this.selectedDocumentIndices()) {
+                var documentsText = "conflict";
+                if (this.selectedDocumentIndices().length !== 1) {
+                    documentsText += "s";
+                }
+                return documentsText;
+            }
+            return "";
+        });
+
+        this.hasAnyConflictsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
+
+        this.hasAllConflictsSelected = ko.computed(() => {
+            var filesCount = this.conflictsCount();
+            return filesCount > 0 && filesCount === this.selectedDocumentIndices().length;
+        });
+
+        this.conflictsSelection = ko.computed(() => {
+            var selected = this.selectedDocumentIndices();
+            if (this.hasAllConflictsSelected()) {
+                return checkbox.Checked;
+            }
+            if (selected.length > 0) {
+                return checkbox.SomeChecked;
+            }
+            return checkbox.UnChecked;
+        });
+    }
 
     activate(args) {
         super.activate(args);
-        this.activeFilesystemSubscription = this.activeFilesystem.subscribe((fs: filesystem) => this.fileSystemChanged(fs));
 
-        return this.loadConflicts();
-    }
+        this.currentColumns().columns([
+            new customColumnParams({ Header: "File Name", Binding: "fileName", DefaultWidth: 400 }),
+            new customColumnParams({ Header: "Remote Server Url", Binding: "remoteServerUrl", DefaultWidth: 400 })
+        ]);
+        this.currentColumns().customMode(true);
 
-    deactivate() {
-        super.deactivate();
-        this.activeFilesystemSubscription.dispose();
+        this.fetchConflicts(this.activeFilesystem());
     }
 
     createNotifications(): Array<changeSubscription> {
@@ -44,49 +95,45 @@ class synchronizationConflicts extends viewModelBase {
     private processFsConflicts(e: synchronizationConflictNotification) {
         switch (e.Status) {
             case this.conflictStatus.detected:
-                this.addConflict(e);
-                break;
             case this.conflictStatus.resolved:
-                this.removeResolvedConflict(e);
-                break;
+                this.fetchConflicts(this.activeFilesystem());
+            break;
         }
     }
 
-    addConflict(conflictUpdate: synchronizationConflictNotification) {
-        var match = this.conflictsContains(conflictUpdate);
-        if (!match) {
-            this.conflicts.push(conflictItem.fromConflictNotificationDto(conflictUpdate));
+    private fetchConflicts(fs: filesystem) {
+        this.currentConflictsPagedItems(this.createPagedList(fs));
+    }
+
+    private createPagedList(fs: filesystem): pagedList {
+        var fetcher = (skip: number, take: number) => new getFilesConflictsCommand(fs, skip, take).execute();
+        return new pagedList(fetcher);
+    }
+
+    selectedConflicts(): string[] {
+        return this.getDocumentsGrid().getSelectedItems().map(x => x.getId());
+    }
+
+    private getDocumentsGrid(): virtualTable {
+        var gridContents = $(synchronizationConflicts.gridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
         }
-    }
 
-    removeResolvedConflict(conflictUpdate: synchronizationConflictNotification) {
-        var match = this.conflictsContains(conflictUpdate);
-        if (match) {
-            this.conflicts.remove(match);
-            this.selectedConflicts.remove(match.fileName);
-        }
-        this.isSelectAllValue(false);
-    }
-
-    private conflictsContains(e: synchronizationConflictNotification) : conflictItem {
-        var match = ko.utils.arrayFirst(this.conflicts(), (item) => {
-            return item.fileName === e.FileName;
-        });
-
-        return match;
-    }
-
-    private loadConflicts(): JQueryPromise<conflictItem[]> {
-        var fs = this.activeFilesystem();
-        return new getFilesConflictsCommand(fs)
-            .execute()
-            .done(x => this.conflicts(x));
+        return null;
     }
 
     resolveWithLocalVersion() {
-        var message = this.selectedConflicts().length === 1 ?
-            "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the local version?" :
-            "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the local version?";
+        var message: string;
+        if (this.hasAllConflictsSelected()) {
+            message = "Are you sure you want to resolve all conflicts by choosing the local version?";
+        } else if (this.selectedConflicts().length === 1) {
+            message = "Are you sure you want to resolve the conflict for file <b>" +
+                this.selectedConflicts()[0] +
+                "</b> by choosing the local version?";
+        } else {
+            message = "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the local version?";
+        }
 
         var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with local");
         resolveConflictViewModel
@@ -94,21 +141,36 @@ class synchronizationConflicts extends viewModelBase {
             .done(() => {
                 var fs = this.activeFilesystem();
 
-                var selectedConflicts = this.selectedConflicts();
+                if (this.hasAllConflictsSelected()) {
+                    new resolveConflictsCommand(2, fs)
+                        .execute()
+                        .done(() => this.fetchConflicts(this.activeFilesystem()));
+                } else {
+                    var selectedConflicts = this.selectedConflicts();
 
-                selectedConflicts.forEach(conflict => {
-                    new resolveConflictCommand(conflict, 2, fs).execute().done(() => {
-                        this.selectedConflicts.remove(conflict);
-                    });
-                });
+                    for (var i = 0; i < selectedConflicts.length; i++) {
+                        var conflict = selectedConflicts[i];
+                        new resolveConflictCommand(conflict, 2, fs)
+                            .execute();
+                    }
+                }
+
+                this.selectNone();
             });
         app.showDialog(resolveConflictViewModel);
     }
 
     resolveWithRemoteVersion() {
-        var message = this.selectedConflicts().length === 1 ?
-            "Are you sure you want to resolve the conflict for file <b>" + this.selectedConflicts()[0] + "</b> by choosing the remote version?" :
-            "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the remote version?";
+        var message: string;
+        if (this.hasAllConflictsSelected()) {
+            message = 'Are you sure you want to resolve all conflicts by choosing the remote version?';
+        } else if (this.selectedConflicts().length === 1) {
+            message = "Are you sure you want to resolve the conflict for file <b>" +
+                this.selectedConflicts()[0] +
+                "</b> by choosing the remote version?";
+        } else {
+            message = "Are you sure you want to resolve the conflict for <b>" + this.selectedConflicts().length + "</b> selected files by choosing the remote version?";
+        }
 
         var resolveConflictViewModel: resolveConflict = new resolveConflict(message, "Resolve conflict with remote");
         resolveConflictViewModel
@@ -116,33 +178,49 @@ class synchronizationConflicts extends viewModelBase {
             .done(() => {
                 var fs = this.activeFilesystem();
 
-                var selectedConflicts = this.selectedConflicts();
-                selectedConflicts.forEach(conflict => {
-                    new resolveConflictCommand(conflict, 1, fs).execute()
-                        .done(() => this.selectedConflicts.remove(conflict));
-                });
+                if (this.hasAllConflictsSelected()) {
+                    new resolveConflictsCommand(1, fs)
+                        .execute()
+                        .done(() => this.fetchConflicts(this.activeFilesystem()));
+                } else {
+                    for (var i = 0; i < this.selectedConflicts().length; i++) {
+                        var conflict = this.selectedConflicts()[i];
+                        new resolveConflictCommand(conflict, 1, fs).execute();
+                    }
+                }
+
+                this.selectNone();
             });
         app.showDialog(resolveConflictViewModel);
     }
 
-    fileSystemChanged(fs: filesystem) {
-        if (fs) {
-            this.loadConflicts();
-        }
-    }
-
-    isSelectAll(): boolean {
-        return this.isSelectAllValue();
-    }
-
     toggleSelectAll() {
-        this.isSelectAllValue(!this.isSelectAllValue());
-        if (this.isSelectAllValue()) {
-            this.selectedConflicts.pushAll(this.conflicts().map(x => x.fileName));
-        } else {
-            this.selectedConflicts.removeAll();
+        var conflictsGrid = this.getDocumentsGrid();
+        if (!!conflictsGrid) {
+            if (this.hasAnyConflictsSelected()) {
+                conflictsGrid.selectNone();
+            } else {
+                conflictsGrid.selectSome();
+                this.isAnyConflictsAutoSelected(this.hasAllConflictsSelected() === false);
+            }
         }
     }
+
+     selectAll() {
+        var conflictsGrid = this.getDocumentsGrid();
+        if (!!conflictsGrid && !!this.currentConflictsPagedItems()) {
+            var p: pagedList = this.currentConflictsPagedItems();
+            conflictsGrid.selectAll(p.totalResultCount());
+        }
+    }
+
+    selectNone() {
+        var conflictsGrid = this.getDocumentsGrid();
+        if (!!conflictsGrid) {
+            conflictsGrid.selectNone();
+        }
+    }
+
 }
 
 export = synchronizationConflicts;

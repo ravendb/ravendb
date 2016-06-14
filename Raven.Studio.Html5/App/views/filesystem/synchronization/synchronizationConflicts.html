@@ -1,16 +1,16 @@
-<div class="synchronization-group panel panel-default" >
+<div class="synchronization-group panel panel-default panel-wo-margin" id="synchronization-conflicts-page">
 
-    <div class="panel-heading">
+    <div class="panel-heading" >
         <h4 class="panel-title">
-            <span class="btn-group">
+            <div class="btn-group">
                 <div class="checkbox">
-                    <input id="files_all" class="styled" type="checkbox" data-bind="value: isSelectAll, event: { change: toggleSelectAll }" title="Select all or none">
+                    <input id="files_all" class="styled" type="checkbox" data-bind="checkboxTriple: conflictsSelection, event: { change: toggleSelectAll }" title="Select all or none">
                     <label for="files_all">&nbsp;</label>
                 </div>
-            </span>
+            </div>
             <span class="btn-group">
-                <button class="btn btn-primary" data-bind="click: resolveWithLocalVersion, enable: hasAnyConflictSelected()">Resolve with Local</button>
-                <button class="btn btn-primary" data-bind="click: resolveWithRemoteVersion, enable: hasAnyConflictSelected()">Resolve with Remote</button>
+                <button class="btn btn-primary" data-bind="click: resolveWithLocalVersion, enable: selectedDocumentIndices().length">Resolve with Local</button>
+                <button class="btn btn-primary" data-bind="click: resolveWithRemoteVersion, enable: selectedDocumentIndices().length">Resolve with Remote</button>
             </span>
         </h4>
         <div class="clearfix"></div>
@@ -18,19 +18,28 @@
 
     <div class="synchronization-group-content">
         <div class="panel-body">
-
-            <h4 class="text-info text-center" data-bind="visible: conflicts().length === 0">
-                You've got no conflicts.
-            </h4>
-
-            <p data-bind="visible: conflicts().length">
-                You've got <span data-bind="text: conflicts().length"></span> conflicts:
-            </p>
-
-            <div data-bind="foreach: conflicts">
-                <div class="checkbox">
-                    <input class="styled" type="checkbox" data-bind="checked: $root.selectedConflicts, checkedValue: fileName, attr: { id: 'conflict_' + $index() }">
-                    <label data-bind="text: fileName, attr: { for: 'conflict_' + $index() }"></label>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="conflicts-select" data-bind="visible: hasAnyConflictsSelected() && !hasAllConflictsSelected() && isAnyConflictsAutoSelected()">
+                        <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: selectedDocumentIndices().length.toLocaleString()"></strong> <span data-bind="text: selectedConflictsText"></span>.
+                        <span class="select-link" data-bind="click: selectAll.bind($root)">
+                            Select all <strong data-bind="text: conflictsCount"></strong> conflicts 
+                        </span>
+                    </div>
+                    <div class="conflicts-select" data-bind="visible: hasAllConflictsSelected() && isAllConflictsAutoSelected()">
+                        You have selected <strong data-bind="text: selectedDocumentIndices().length"></strong> <span data-bind="text: selectedConflictsText"></span>
+                        <span class="select-link" data-bind="click: selectNone.bind($root)">
+                            Clear selection
+                        </span>
+                    </div>
+                    <div id="synchronizationConflictsGrid" data-bind="widget: {
+                        kind: 'virtualTable', itemsSource: currentConflictsPagedItems,
+                        selectedIndices: selectedDocumentIndices, gridSelector: '#synchronizationConflictsGrid',
+                        showCheckboxes: true, useContextMenu: false, showIds: false, 
+                        isAnyAutoSelected: isAnyConflictsAutoSelected, isAllAutoSelected: isAllConflictsAutoSelected,
+                        customColumns: currentColumns, container: '.synchronization-group',
+                        noResultsMessage: 'No conflicts found'
+                    }"></div>
                 </div>
             </div>
         </div>
