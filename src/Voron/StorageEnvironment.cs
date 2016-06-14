@@ -36,7 +36,7 @@ namespace Voron
 
         private readonly ConcurrentSet<LowLevelTransaction> _activeTransactions = new ConcurrentSet<LowLevelTransaction>();
 
-        private readonly IVirtualPager _dataPager;
+        private readonly AbstractPager _dataPager;
 
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();

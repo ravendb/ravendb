@@ -7,42 +7,24 @@ using Voron.Platform.Win32;
 
 namespace Voron.Impl.Paging
 {
-    public unsafe interface IVirtualPager : IDisposable
-    {
-        PagerState PagerState { get; }
-        bool Disposed { get; }
-        long NumberOfAllocatedPages { get; }
-        int PageMinSpace { get; }
-        bool DeleteOnClose { get; set; }
-        int PageSize { get; }
-        int NodeMaxSize { get; }
-        int PageMaxSpace { get; }
-        string DebugInfo { get; }
-        byte* AcquirePagePointer(LowLevelTransaction tx, long pageNumber, PagerState pagerState = null);
-        void Sync();
-        PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages);
-        int WriteDirect(byte* p, long pagePosition, int pagesToWrite);
-        void MaybePrefetchMemory(List<long> list);
-    }
-
     public static unsafe class VirtualPagerLegacyExtensions
     {
-        public static Page ReadPage(this IVirtualPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+         public static Page ReadPage(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
         {
             return new Page(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager);
         }
 
-        public static TreePage Read(this IVirtualPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+        public static TreePage Read(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
         {
             return new TreePage(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager.DebugInfo, pager.PageSize);
         }
 
-        public static bool WillRequireExtension(this IVirtualPager pager, long requestedPageNumber, int numberOfPages)
+        public static bool WillRequireExtension(this AbstractPager pager, long requestedPageNumber, int numberOfPages)
         {
             return requestedPageNumber + numberOfPages > pager.NumberOfAllocatedPages;
         }
 
-        public static int Write(this IVirtualPager pager, TreePage page, long? pageNumber = null)
+       public static int Write(this AbstractPager pager, TreePage page, long? pageNumber = null)
         {
             var startPage = pageNumber ?? page.PageNumber;
 
@@ -53,7 +35,7 @@ namespace Voron.Impl.Paging
 
 
 
-        public static int WritePage(this IVirtualPager pager, Page page, long? pageNumber = null)
+        public static int WritePage(this AbstractPager pager, Page page, long? pageNumber = null)
         {
             var startPage = pageNumber ?? page.PageNumber;
 
@@ -61,7 +43,7 @@ namespace Voron.Impl.Paging
 
             return pager.WriteDirect(page.Pointer, startPage, toWrite);
         }
-        public static int GetNumberOfOverflowPages(this IVirtualPager pager, int overflowSize)
+        public static int GetNumberOfOverflowPages(this AbstractPager pager, int overflowSize)
         {
             overflowSize += Constants.TreePageHeaderSize;
             return (overflowSize/pager.PageSize) + (overflowSize%pager.PageSize == 0 ? 0 : 1);
@@ -72,7 +54,7 @@ namespace Voron.Impl.Paging
     {
         private static readonly IntPtr _currentProcess = Win32NativeMethods.GetCurrentProcess();
 
-        public static void TryPrefetchingWholeFile(this IVirtualPager pager)
+        public static void TryPrefetchingWholeFile(this AbstractPager pager)
         {
             if (Sparrow.Platform.Platform.CanPrefetch == false)
                 return; // not supported
@@ -88,12 +70,13 @@ namespace Voron.Impl.Paging
             }
 
 
+         
             if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(_currentProcess,
                 (UIntPtr) pagerState.AllocationInfos.Length, entries, 0) == false)
                 throw new Win32Exception();
         }
 
-        public static void MaybePrefetchMemory(this IVirtualPager pager, List<TreePage> sortedPages)
+        public static void MaybePrefetchMemory(this AbstractPager pager, List<TreePage> sortedPages)
         {
             if (Sparrow.Platform.Platform.CanPrefetch == false)
                 return; // not supported
