@@ -21,10 +21,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Returns operation method. In this case DELETE.
         /// </summary>
-        public string Method
-        {
-            get { return "DELETE"; }
-        }
+        public string Method => "DELETE";
 
         /// <summary>
         /// Current document etag, used for concurrency checks (null to skip check)
