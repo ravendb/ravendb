@@ -11,12 +11,12 @@
             <div class="form-group">
                 <label>File size between: </label>
                 <div class="input-group">
-                    <input style="width: 120px" type="number" class="form-control" data-bind="value: inputs[0], valueUpdate: 'afterkeydown'" />
+                    <input style="width: 120px" type="number" min="0" class="form-control" data-bind="value: inputs[0], valueUpdate: 'afterkeydown'" />
                     <select style="width: 70px" class="form-control" data-bind="options: units, value: sizeFromUnit, optionsText: 'name'"></select>
                 </div>
                 <label> and: </label>
                 <div class="input-group">
-                    <input style="width: 120px" type="number" class="form-control" data-bind="value: inputs[1], valueUpdate: 'afterkeydown'" />
+                    <input style="width: 120px" type="number" min="0" class="form-control" data-bind="value: inputs[1], valueUpdate: 'afterkeydown'" />
                     <select style="width: 70px" class="form-control" data-bind="options: units, value: sizeToUnit, optionsText: 'name'"></select>
                 </div>
             </div>

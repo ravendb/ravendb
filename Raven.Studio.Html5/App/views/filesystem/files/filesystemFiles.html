@@ -62,10 +62,10 @@
                     <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1, click: downloadSelectedFiles" title="Download selected document">
                         <i class="fa fa-download"></i>
                     </button>
-                    <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1 , click: renameSelectedFile" title="Rename file">
+                    <button type="button" class="btn btn-default" data-bind="enable: selectedFilesIndices().length == 1 && !inRevisionsFolder() , click: renameSelectedFile" title="Rename file">
                         <i class="fa fa-random"></i>
                     </button>
-                    <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedFiles" title="Delete selected documents (DEL)">
+                    <button type="button" class="btn btn-danger" data-bind="enable: !inRevisionsFolder(), click: deleteSelectedFiles" title="Delete selected documents (DEL)">
                         <i class="fa fa-trash-o"></i>
                     </button>
                 </div>

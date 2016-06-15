@@ -59,13 +59,11 @@ class importDatabase extends viewModelBase {
                     this.importedFileName(importFileName);
                     fs.importStatus("");
                 })
-                .fail(
-                () => {
+                .fail(() => {
                     fs.importStatus("No sufficient diskspace for import, consider using Raven.Smuggler.exe directly.");
                     this.hasFileSelected(false);
                     this.importedFileName("");
-                }
-                )
+                });
         }
     }
 
@@ -86,7 +84,10 @@ class importDatabase extends viewModelBase {
                 this.waitForOperationToComplete(fs, operationId);
                 fs.importStatus("Processing uploaded file");
             })
-            .fail(() => fs.importStatus(""))
+            .fail(() => {
+                fs.importStatus("");
+                fs.isImporting(false);
+            })
             .always(() => this.isUploading = false);
     }
 

@@ -196,8 +196,7 @@ class filesystemFiles extends viewModelBase {
             this.folderNotificationSubscriptions[newFolder] = changesContext.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
                     var callbackFolder = new folder(newFolder);
-                    if (!callbackFolder)
-                        return;
+
                     switch (e.Action) {
 
                     case "Add":
@@ -378,15 +377,8 @@ class filesystemFiles extends viewModelBase {
         var grid = this.getFilesGrid();
         if (grid) {
             var selectedItem = <documentBase>grid.getSelectedItems(1).first();
-            var selectedFolder = this.selectedFolder();
-
-            if (selectedFolder == null)
-                selectedFolder = "";
-
             var fs = this.activeFilesystem();
-            var fileName = selectedItem.getId();
-
-            var url = appUrl.forResourceQuery(fs) + "/files" + selectedFolder + "/" + encodeURIComponent(fileName);
+            var url = appUrl.forResourceQuery(fs) + "/files/" + encodeURIComponent(selectedItem.getUrl());
             this.downloader.download(fs, url);
         }
     }
