@@ -5,6 +5,7 @@ using System.Text;
 using Sparrow;
 using Voron.Util;
 using Sparrow.Binary;
+using Sparrow.Platform;
 
 namespace Voron
 {
@@ -213,7 +214,10 @@ namespace Voron
 
         public int CompareTo(ValueReader other)
         {
-            int r = Memory.CompareInline(_val, other._val, Math.Min(Length, other.Length));
+            int size = Math.Min(Length, other.Length);
+
+            int r = Memory.CompareInline(_val, other._val, size);
+
             if (r != 0)
                 return r;
 
