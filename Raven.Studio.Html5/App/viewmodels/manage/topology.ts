@@ -233,6 +233,30 @@ class topology extends viewModelBase {
         }
     }
 
+    private getScaleFactorAndLeftOffset(containerWidth, graphWidth): { scaleFactor: number; leftOffset: number } {
+        const extraPadding = 50;
+        var scaleFactor = containerWidth / (graphWidth + extraPadding);
+        if (scaleFactor > 1) {
+            return {
+                leftOffset: (containerWidth - graphWidth) / 2,
+                scaleFactor: 1
+            };
+        } else {
+            /*
+            left offset is more complicated:
+            - initially we compute scaleFactor with extra padding
+            - multiply graphWidth by scaleFactor, it gives us width of graph
+            - use: (containerWidth - graphWidth) / 2
+            */
+            var scaledGraphWidth = graphWidth * scaleFactor;
+            var leftOffset = (containerWidth - scaledGraphWidth) / 2;
+            return {
+                leftOffset: leftOffset,
+                scaleFactor: scaleFactor
+            }
+        }
+    }
+
     renderTopology(topologyGraph) {
         var self = this;
 
@@ -242,7 +266,6 @@ class topology extends viewModelBase {
         if (graphWidth === -Infinity) {
             graphWidth = 0;
         }
-        graph.attr('transform', 'translate(' + ((self.width - graphWidth) / 2) + ',10)');
 
         this.dagreGraphSize = [topologyGraph.graph().width, topologyGraph.graph().height];
 
@@ -252,7 +275,14 @@ class topology extends viewModelBase {
         enteringGraphZoom.append('g').attr('class', 'nodes');
         enteringGraphZoom.append('g').attr('class', 'edges');
 
-        enteringGraph.attr('transform', 'translate(' + ((self.width - graphWidth) / 2) + ',10)');
+        var { scaleFactor, leftOffset } = this.getScaleFactorAndLeftOffset(self.width, graphWidth);
+
+        this.zoom.translate([leftOffset, 10]);
+        this.zoom.scale(scaleFactor);
+
+        graph
+            .select('.graphZoom')
+            .attr('transform', 'translate(' + leftOffset + ',10)scale(' + scaleFactor + ')');
 
         var mappedNodes = topologyGraph.nodes().map(n => topologyGraph.node(n));
 
@@ -382,8 +412,6 @@ class topology extends viewModelBase {
     filter(criteria: string) {
         var filtered: globalTopologyDto = jQuery.extend(true, {}, this.topology());
 
-        this.resetZoom();
-
         if (!criteria) {
             this.topologyFiltered(filtered);
             this.syncGraph();
@@ -411,14 +439,6 @@ class topology extends viewModelBase {
         this.topologyFiltered(filtered);
 
         this.syncGraph();
-    }
-
-    private resetZoom() {
-        this.zoom.scale(1);
-        this.zoom.translate([0, 0]);
-        this.svg.select('.graphZoom')
-            .transition()
-            .attr('transform', 'translate(0,0)scale(1)');
     }
 
 }
