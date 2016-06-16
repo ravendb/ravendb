@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
@@ -118,12 +117,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         var field = sortedField.Field;
 
-                        if (field == Constants.Headers.TemporaryScoreValue)
+                        if (field.StartsWith(Constants.RandomFieldName) ||
+                            field.StartsWith(Constants.CustomSortFieldName) ||
+                            field.StartsWith(Constants.Headers.TemporaryScoreValue))
                             continue;
 
-                        if (field.StartsWith(Constants.AlphaNumericFieldName) ||
-                            field.StartsWith(Constants.RandomFieldName) ||
-                            field.StartsWith(Constants.CustomSortFieldName))
+                        if (field.StartsWith(Constants.AlphaNumericFieldName))
                         {
                             field = SortFieldHelper.CustomField(field).Name;
                         }
