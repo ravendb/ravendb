@@ -26,7 +26,7 @@ namespace SlowTests.Core.Commands
 {
     public class Indexes : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
         {
             using (var store = await GetDocumentStore())
@@ -129,7 +129,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: Static indexes")]
+        [Fact(Skip = "Missing feature: query for index entries only")]
         public async Task CanQueryForMetadataAndIndexEntriesOnly()
         {
             using (var store = await GetDocumentStore())
@@ -146,7 +146,7 @@ namespace SlowTests.Core.Commands
                 store.DatabaseCommands.PutIndex("test",
                                                 new IndexDefinition
                                                 {
-                                                    Maps = { "from doc in docs select new { doc.Name }" },
+                                                    Maps = { "from doc in docs.Users select new { doc.Name }" },
                                                     Fields = new Dictionary<string, IndexFieldOptions>
                                                                  {
                                                                      { "Name", new IndexFieldOptions { Sort = SortOptions.String } }
