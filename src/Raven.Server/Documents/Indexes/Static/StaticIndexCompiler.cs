@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleSyntaxInMap(MapRewriter mapRewriter, ExpressionSyntax expression)
+        private static StatementSyntax HandleSyntaxInMap(MapRewriterBase mapRewriter, ExpressionSyntax expression)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
             if (string.IsNullOrWhiteSpace(mapRewriter.CollectionName))
