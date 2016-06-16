@@ -313,7 +313,6 @@ namespace Raven.Database.Config
             Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
             Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
             Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
-            Storage.SkipConsistencyCheck = ravenSettings.Voron.SkipConsistencyChecks.Value;
 
             // Esent settings
             Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;

@@ -404,8 +404,9 @@ namespace Raven.Abstractions.Data
             public const string InitialSize = "Raven/Voron/InitialSize";
 
             public const string MaxScratchBufferSize = "Raven/Voron/MaxScratchBufferSize";
+
             public const string AllowOn32Bits = "Raven/Voron/AllowOn32Bits";
-            public const string SkipConsistencyChecks = "Raven/Voron/SkipConsistencyChecks";
+
             public const string ScratchBufferSizeNotificationThreshold = "Raven/Voron/ScratchBufferSizeNotificationThreshold";
         }
 
