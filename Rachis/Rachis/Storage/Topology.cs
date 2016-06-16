@@ -95,12 +95,12 @@ namespace Rachis.Storage
         {
             get { return _allVotingNodes.Count > 0; }
         }
-
+        public static readonly string EmptyTopology = "<empty topology>";
         private void CreateTopologyString()
         {
             if (_allNodes.Count == 0)
             {
-                _topologyString = "<empty topology>";
+                _topologyString = EmptyTopology;
                 return;
             }
 

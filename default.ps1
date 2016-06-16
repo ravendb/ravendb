@@ -104,6 +104,7 @@ task CompileHtml5 {
     exec { & $tools_dir\Pvc\pvc.exe optimized-build }
     
     Copy-Item $base_dir\Raven.Studio.Html5\optimized-build $build_dir\Html5 -Recurse
+    Copy-Item $base_dir\Raven.Studio.Html5\favicon.ico $build_dir\Html5
     Copy-Item $base_dir\Raven.Studio.Html5\fonts $build_dir\Html5 -Recurse -Force
     Copy-Item $base_dir\Raven.Studio.Html5\Content $build_dir\Html5 -Recurse -Force
     
@@ -269,10 +270,12 @@ task CopyMonitor {
     Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\amd64 $build_dir\Output\Monitor\amd64 -recurse
     Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\x86 $build_dir\Output\Monitor\x86 -recurse
     Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.exe $build_dir\Output\Monitor
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Microsoft.Diagnostics.Tracing.TraceEvent.dll  $build_dir\Output\Monitor
 }
 
 task CopySmuggler {
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Smuggler
+    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Database.??? $build_dir\Output\Smuggler
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
@@ -705,7 +708,7 @@ task CreateNugetPackages -depends Compile, CompileDnx, CompileHtml5, InitNuget {
     New-Item $nuget_dir\RavenDB.Server\tools -Type directory | Out-Null
     @("Raven.Database.???", "Raven.Server.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Server\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
     Copy-Item "$build_dir\Raven.Studio.Html5.zip" $nuget_dir\RavenDB.Server\tools
-    @("Raven.Smuggler.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Smuggler\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
+    @("Raven.Smuggler.???", "Raven.Abstractions.???", "Raven.Database.???") |% { Copy-Item "$base_dir\Raven.Smuggler\bin\$global:configuration\$_" $nuget_dir\RavenDB.Server\tools }
     Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $nuget_dir\RavenDB.Server\tools\Raven.Server.exe.config
 
     New-Item $nuget_dir\RavenDB.Embedded\lib\net45 -Type directory | Out-Null

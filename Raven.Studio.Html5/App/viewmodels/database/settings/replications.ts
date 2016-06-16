@@ -68,12 +68,12 @@ class replications extends viewModelBase {
             }
         });
 
-        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
-            return 'all';
-
         // ReSharper disable once ConditionIsAlwaysConst
         if (countOfSkipIndexReplication === 0)
             return 'none';
+
+        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
+            return 'all';
 
         return 'mixed';
     }
@@ -145,7 +145,6 @@ class replications extends viewModelBase {
             dest.specifiedCollections.subscribe(array => {
                 dest.ignoredClient(dest.specifiedCollections.length > 0);
             });
-            this.addScriptHelpPopover();
         });
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
 
@@ -163,6 +162,11 @@ class replications extends viewModelBase {
         this.fetchCollections(db).done(results => {
             this.collections(results);
         });
+    }
+
+    attached() {
+        super.attached();
+        $.each(this.replicationsSetup().destinations(), this.addScriptHelpPopover);
     }
 
     private fetchServerPrefixForHiLoCommand(db): JQueryPromise<any> {
@@ -219,10 +223,11 @@ class replications extends viewModelBase {
         $(".scriptPopover").popover({
             html: true,
             trigger: 'hover',
+            container: ".form-horizontal",
             content:
-            'Return <code>null</code> in transform script to skip document from replication. <br />' +
-            'Example: ' +
-            '<pre>if (this.Region !== "Europe") { <br />   return null; <br />}<br/>this.Currency = "EUR"; </pre>'
+            '<p>Return <code>null</code> in transform script to skip document from replication. </p>' +
+            '<p>Example: </p>' +
+            '<pre><span class="code-keyword">if</span> (<span class="code-keyword">this</span>.Region !== <span class="code-string">"Europe"</span>) { <br />   <span class="code-keyword">return null</span>; <br />}<br/><span class="code-keyword">this</span>.Currency = <span class="code-string">"EUR"</span>; </pre>'
         });
     }
 

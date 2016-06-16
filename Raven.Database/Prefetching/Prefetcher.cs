@@ -27,11 +27,11 @@ namespace Raven.Database.Prefetching
         {
             lock (this)
             {
-                var newPrefetcher = 
-                    new PrefetchingBehavior(user, 
-                                            workContext, 
-                                            autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), 
-                                            prefetchingUserDescription, 
+                var newPrefetcher =
+                    new PrefetchingBehavior(user,
+                                            workContext,
+                                            autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user),
+                                            prefetchingUserDescription,
                                             isDefault,
                                             GetPrefetchintBehavioursCount,
                                             GetPrefetchingBehaviourSummary);
@@ -108,17 +108,19 @@ namespace Raven.Database.Prefetching
             }
         }
 
-        public void HandleLowMemory()
+        public LowMemoryHandlerStatistics HandleLowMemory()
         {
+            var count = prefetchingBehaviors.Count;
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
                 prefetchingBehavior.ClearQueueAndFutureBatches();
             }
-        }
-
-        public void SoftMemoryRelease()
-        {
-            
+            return new LowMemoryHandlerStatistics
+            {
+                Name = "Prefetcher",
+                DatabaseName = workContext.DatabaseName,
+                Summary = $"Clear {count} queue and future batches"
+            };
         }
 
         // todo: consider removing ILowMemoryHandler implementation, because the prefetching behaviors already implement it

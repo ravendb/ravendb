@@ -39,6 +39,15 @@ namespace Raven.Database.Config.Retriever
             return local;
         }
 
+        protected override SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> PostProcessLocalOnly(SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> local)
+        {
+            foreach (var predefinedSqlConnectionWithConfigurationOrigin in local.PredefinedConnections)
+            {
+                predefinedSqlConnectionWithConfigurationOrigin.HasLocal = true;
+            }
+            return local;
+        }
+
         protected override SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> ConvertGlobalDocumentToLocal(SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> global, DocumentDatabase systemDatabase, DocumentDatabase localDatabase)
         {
             foreach (var localConnection in global.PredefinedConnections)

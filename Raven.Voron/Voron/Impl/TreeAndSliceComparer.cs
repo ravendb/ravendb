@@ -4,9 +4,9 @@ using Voron.Trees;
 
 namespace Voron.Impl
 {
-    internal class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, MemorySlice>>
+    internal class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
     {
-        public bool Equals(Tuple<Tree, MemorySlice> x, Tuple<Tree, MemorySlice> y)
+        public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
         {
             if (x == null && y == null)
                 return true;
@@ -19,7 +19,7 @@ namespace Voron.Impl
             return x.Item2.Compare(y.Item2) == 0;
         }
 
-        public int GetHashCode(Tuple<Tree, MemorySlice> obj)
+        public int GetHashCode(Tuple<Tree, Slice> obj)
         {
             return obj.Item1.GetHashCode() ^ 397 * obj.Item2.GetHashCode();
         }

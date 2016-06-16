@@ -1,4 +1,3 @@
-import resetIndexCommand = require("commands/database/index/resetIndexCommand");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
@@ -7,7 +6,7 @@ import index = require("models/database/index/index");
 
 class indexLockAllConfirm extends dialogViewModelBase {
 
-    constructor(private setLockOperation: string, private db: database, private allIndexes: index[], private title: string) {
+    constructor(private setLockOperation: string, private db: database, private allIndexes: index[], private message: string) {
         super();
     }
 

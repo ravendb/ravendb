@@ -142,11 +142,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             if (newValue == 0)
             {
-                DeleteReduceKeyCount(keySlice, view, viewKey, version);
+                DeleteReduceKeyCount(keySlice, viewKey, version, shouldIgnoreConcurrencyExceptions: true);
                 return;
             }
 
-            AddReduceKeyCount(keySlice, view, viewKey, reduceKey, newValue, version);
+            AddReduceKeyCount(keySlice, view, viewKey, reduceKey, newValue, version, shouldIgnoreConcurrencyExceptions: true);
         }
 
         private void DecrementReduceKeyCounter(int view, string reduceKey, int val)
@@ -165,7 +165,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, keySlice, writeBatch.Value);
 
-                    DeleteReduceKeyCount(keySlice, view, viewKeySlice, reduceKeyCountVersion);
+                    DeleteReduceKeyCount(keySlice, viewKeySlice, reduceKeyCountVersion);
                     DeleteReduceKeyType(keySlice, viewKeySlice, reduceKeyTypeVersion);
                     return;
                 }
@@ -740,6 +740,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     hasResult = true;
                     result.Etag = etag;
                     result.Timestamp = DateTime.FromBinary(value.ReadLong(ScheduledReductionFields.Timestamp));
+                    currentEtag = etag;
                 }
 
                 var view = value.ReadInt(ScheduledReductionFields.IndexId);
@@ -949,11 +950,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
             AddReduceKeyType(reduceKeySlice, view, reduceKey, reduceType, reduceKeyTypeVersion);
         }
 
-        private void DeleteReduceKeyCount(Slice key, int view, Slice viewKey, ushort? expectedVersion)
+        private void DeleteReduceKeyCount(Slice key, Slice viewKey, 
+            ushort? expectedVersion, bool shouldIgnoreConcurrencyExceptions = false)
         {
             var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
-            tableStorage.ReduceKeyCounts.Delete(writeBatch.Value, key, expectedVersion);
+            tableStorage.ReduceKeyCounts.Delete(writeBatch.Value, key, expectedVersion, shouldIgnoreConcurrencyExceptions);
             reduceKeyCountsByView.MultiDelete(writeBatch.Value, viewKey, key);
         }
 
@@ -965,7 +967,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             reduceKeyTypesByView.MultiDelete(writeBatch.Value, viewKey, key);
         }
 
-        private void AddReduceKeyCount(Slice key, int view, Slice viewKey, string reduceKey, int count, ushort? expectedVersion)
+        private void AddReduceKeyCount(Slice key, int view, Slice viewKey, string reduceKey, int count, 
+            ushort? expectedVersion, bool shouldIgnoreConcurrencyExceptions = false)
         {
             var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
@@ -976,7 +979,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     .Set(ReduceKeyCountFields.IndexId, view)
                     .Set(ReduceKeyCountFields.MappedItemsCount, count)
                     .Set(ReduceKeyCountFields.ReduceKey, reduceKey),
-                expectedVersion);
+                expectedVersion, shouldIgnoreConcurrencyExceptions);
 
             reduceKeyCountsByView.MultiAdd(writeBatch.Value, viewKey, key);
         }

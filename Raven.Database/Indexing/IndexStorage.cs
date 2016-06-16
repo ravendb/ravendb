@@ -82,14 +82,16 @@ namespace Raven.Database.Indexing
                 }
             }
 
-            public void HandleLowMemory()
+            public LowMemoryHandlerStatistics HandleLowMemory()
             {
                 FieldCache_Fields.DEFAULT.PurgeAllCaches();
-
-            }
-
-            public void SoftMemoryRelease()
-            {
+                var stat = GetStats();
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = stat.Name,
+                    DatabaseName = stat.DatabaseName,
+                    Summary = "Field Cache forcibly expunges all entries from the underlying caches"
+                };
             }
 
             public LowMemoryHandlerStatistics GetStats()
@@ -1559,7 +1561,7 @@ namespace Raven.Database.Indexing
         private static void FlushIndex(Index value, bool onlyAddIndexError = false)
         {
             var sp = Stopwatch.StartNew();
-            
+
             try
             {
                 value.Flush(value.GetLastEtagFromStats());
@@ -1602,7 +1604,7 @@ namespace Raven.Database.Indexing
             }
 
             return indexIds;
-        } 
+        }
 
         public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
         {

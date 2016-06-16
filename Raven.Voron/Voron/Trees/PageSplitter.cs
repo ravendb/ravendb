@@ -1,8 +1,7 @@
 using System;
 using System.Diagnostics;
-using System.IO;
+using System.Linq;
 using System.Text;
-using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
@@ -101,6 +100,8 @@ namespace Voron.Trees
                 // sequential inserts, at that point, we are going to keep the current page as is and create a new 
                 // page, this will allow us to do minimal amount of work to get the best density
 
+                Page branchOfSeparator;
+
                 byte* pos;
                 if (_page.IsBranch)
                 {
@@ -115,19 +116,24 @@ namespace Voron.Trees
 
                         var separatorKey = _page.GetNodeKey(node);
 
-                        AddSeparatorToParentPage(rightPage.PageNumber, separatorKey);
+                        AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
 
                         _page.RemoveNode(_page.NumberOfEntries - 1);
                     }
                     else
                     {
                         _tree.FreePage(rightPage); // return the unnecessary right page
-                        return AddSeparatorToParentPage(_pageNumber, _newKey);
+                        pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
+
+                        if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
+                            _cursor.Push(branchOfSeparator);
+
+                        return pos;
                     }
                 }
                 else
                 {
-                    AddSeparatorToParentPage(rightPage.PageNumber, _newKey);
+                    AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
                     pos = AddNodeToPage(rightPage, 0);
                 }
                 _cursor.Push(rightPage);
@@ -204,7 +210,10 @@ namespace Voron.Trees
                 seperatorKey = currentKey;
             }
 
-            AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey);
+            Page parentOfRight;
+            AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
+
+            var parentOfPage = _cursor.CurrentPage;
 
             MemorySlice instance = _page.CreateNewEmptyKey();
 
@@ -253,6 +262,13 @@ namespace Voron.Trees
             {
                 try
                 {
+                    if (toRight && _cursor.CurrentPage.PageNumber != parentOfRight.PageNumber)
+                    {
+                        // modify the cursor if we are going to insert to the right page
+                        _cursor.Pop();
+                        _cursor.Push(parentOfRight);
+                    }
+
                     // actually insert the new key
                     pos = toRight ? InsertNewKey(rightPage) : InsertNewKey(_page);
                 }
@@ -276,10 +292,10 @@ namespace Voron.Trees
                 Debug.Assert(rightPage.NumberOfEntries > 0);
 
                 if (_page.NumberOfEntries == 1)
-                    RemoveBranchWithOneEntry(_page, _cursor.ParentPage);
+                    RemoveBranchWithOneEntry(_page, parentOfPage);
 
                 if (rightPage.NumberOfEntries == 1)
-                    RemoveBranchWithOneEntry(rightPage, _cursor.ParentPage);
+                    RemoveBranchWithOneEntry(rightPage, parentOfRight);
             }
 
             return pos;
@@ -301,7 +317,7 @@ namespace Voron.Trees
                     break;
             }
 
-            Debug.Assert(nodeHeader->PageNumber == page.PageNumber);
+            Debug.Assert(nodeHeader->PageNumber == page.PageNumber, string.Format("Node page number: {0}, page number: {1}", nodeHeader->PageNumber, page.PageNumber));
 
             nodeHeader->PageNumber = pageRefNumber;
 
@@ -334,20 +350,15 @@ namespace Voron.Trees
             return dataPos;
         }
 
-        private byte* AddSeparatorToParentPage(long pageNumber, MemorySlice seperatorKey)
+        private byte* AddSeparatorToParentPage(long pageRefNumber, MemorySlice separatorKey, out Page parentOfPageRef)
         {
-            var pos = _parentPage.NodePositionFor(seperatorKey); // select the appropriate place for this
+            var parent = new ParentPageAction(_parentPage, _page, _tree, _cursor, _tx);
 
-            var separatorKeyToInsert = _parentPage.PrepareKeyToInsert(seperatorKey, pos);
+            var pos = parent.AddSeparator(separatorKey, pageRefNumber);
 
-            if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
-            {
-                var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
-                    0, _cursor);
-                return pageSplitter.Execute();
-            }
+            parentOfPageRef = parent.ParentOfAddedPageRef;
 
-            return _parentPage.AddPageRefNode(pos, separatorKeyToInsert, pageNumber);
+            return pos;
         }
 
         private int AdjustSplitPosition(int currentIndex, int splitIndex, PrefixNode[] prefixes, ref bool toRight)

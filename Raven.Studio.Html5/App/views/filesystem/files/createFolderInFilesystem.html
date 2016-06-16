@@ -1,5 +1,5 @@
-<div class="messageBox" tabindex="-1">
-    <form data-bind="submit: create">
+<div class="messageBox" tabindex="-1" style="width: 515px">
+    <form class="form-horizontal" data-bind="submit: create">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="fa fa-times"></i>
@@ -8,8 +8,10 @@
         </div>
         <div class="modal-body">
             <div class="form-group">
-                <label for="folderName">Name</label>
-                <input required type="text" class="form-control" id="filesystemName" placeholder="Folder Name" data-bind="value: folderName">
+                <label class="col-sm-2 control-label" for="folderName">Name</label>
+                <div class="col-sm-10">
+                    <input required type="text" class="form-control" autofocus id="folderName" placeholder="Folder Name" data-bind="value: folderName, customValidity: folderNameCustomValidityError, valueUpdate: 'afterkeydown'">
+                </div>
             </div>
         </div>
         <div class="modal-footer">

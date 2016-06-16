@@ -14,7 +14,7 @@ using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Mono.CSharp;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Storage;
@@ -148,7 +148,6 @@ namespace Raven.Database.Raft
         public async Task<CanJoinResult> SendJoinServerInternalAsync(NodeConnectionInfo leaderNode, NodeConnectionInfo newNode)
         {
             var url = leaderNode.Uri.AbsoluteUri + "admin/cluster/join";
-
             using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
             {
                 var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(newNode))).ConfigureAwait(false);
@@ -278,7 +277,12 @@ namespace Raven.Database.Raft
                 var response = await request.ExecuteAsync().ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
+                {
+                    var voter = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    if (voter == "NonVoter")
+                        return CanJoinResult.CanJoinAsNonVoter;
                     return CanJoinResult.CanJoin;
+                }
 
                 switch (response.StatusCode)
                 {
@@ -522,6 +526,39 @@ namespace Raven.Database.Raft
                 queue.Enqueue(client);
             }
         }
+
+        private static readonly int MaxSecondsToWaitForLeaderWhileChangingVoteMode = 60;
+        public async Task<bool> SendVotingModeChangeRequestAsync(NodeConnectionInfo nodeConnectionInfo, bool isVoting)
+        {
+            bool noLeaderThrown;
+            DateTime start = DateTime.UtcNow;
+            do
+            {
+                try
+                {
+                    noLeaderThrown = false;
+                    var leaderNode = raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds);
+                    var url = $"{leaderNode.Uri.AbsoluteUri}admin/cluster/changeVotingMode?isVoting={isVoting}";
+                    using (var request = CreateRequest(leaderNode, url, HttpMethods.Post))
+                    {
+                        var response = await request.WriteAsync(() => new JsonContent(RavenJToken.FromObject(nodeConnectionInfo))).ConfigureAwait(false);
+
+                        if (response.IsSuccessStatusCode)
+                            return true;
+                    }
+                }
+                //while we send this request to the leader it might have steped down while we sent this request.
+                //I'm putting a Max time to wait because the cluster might not have a leader for a long time.
+                catch (NotLeadingException)
+                {
+                    noLeaderThrown = true;
+                    Thread.Yield();
+                    if ((DateTime.UtcNow - start).TotalSeconds >= MaxSecondsToWaitForLeaderWhileChangingVoteMode)
+                        throw;
+                }
+            } while (noLeaderThrown && (DateTime.UtcNow - start).TotalSeconds< MaxSecondsToWaitForLeaderWhileChangingVoteMode);
+            return false;
+        }
     }
 
     public enum CanJoinResult
@@ -535,6 +572,7 @@ namespace Raven.Database.Raft
         /// <summary>
         /// Used when target server contains any resource
         /// </summary>
-        IsNonEmpty
+        IsNonEmpty,
+        CanJoinAsNonVoter
     }
 }

@@ -12,11 +12,7 @@
             </div>
             <div class="panel-collapse collapse in" id="storageBreakdown" data-bind="with: data">
                 <div class="panel-body">
-                    <pre>
-                    <!-- ko foreach: $parent -->
-                        <span data-bind="html: $data"></span><br />
-                    <!-- /ko -->
-                    </pre>
+                    <pre><!-- ko foreach: $parent --><span data-bind="html: $data"></span><br /><!-- /ko --></pre>
                 </div>
             </div>
         </div>

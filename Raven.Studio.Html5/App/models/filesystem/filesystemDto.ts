@@ -169,13 +169,8 @@ interface synchronizationConflictNotification {
     FileSystemName: string;
     FileName: string;
     SourceServerUrl: string;
-    Status: conflictStatus;
+    Status: string;
     RemoteFileHeader: any;
-}
-
-const enum conflictStatus {
-    Detected = 0,
-    Resolved = 1
 }
 
 interface fileChangeNotification {

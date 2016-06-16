@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -19,6 +20,12 @@ namespace Raven.Client.Document
         protected string lastServerPrefix;
         protected DateTime lastRequestedUtc1, lastRequestedUtc2;
 
+        protected readonly ManualResetEvent mre = new ManualResetEvent(false);
+        protected int lockStatus = 0;
+        protected const int Locked = 1;
+        protected const int UnLocked = 0;
+        protected long threadsWaitingForRangeUpdate = 0;
+
         protected HiLoKeyGeneratorBase(string tag, long capacity)
         {
             this.tag = tag;
@@ -36,13 +43,13 @@ namespace Raven.Client.Document
                                  nextId);
         }
 
-        protected long GetMaxFromDocument(JsonDocument document, long minMax)
+        protected long GetMaxFromDocument(JsonDocument document, long minMax, long calculatedCapacity)
         {
             long max;
             if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
             {
                 var hi = document.DataAsJson.Value<long>("ServerHi");
-                max = ((hi - 1) * capacity);
+                max = ((hi - 1) * calculatedCapacity);
                 document.DataAsJson.Remove("ServerHi");
                 document.DataAsJson["Max"] = max;
             }
@@ -57,26 +64,55 @@ namespace Raven.Client.Document
 
         public bool DisableCapacityChanges { get; set; }
 
-        protected void ModifyCapacityIfRequired()
+        protected void ModifyCapacityIfRequired(ref long calculatedCapacity)
         {
             if (DisableCapacityChanges)
                 return;
+
+            var capacityChanged = false;
             var span = SystemTime.UtcNow - lastRequestedUtc1;
             if (span.TotalSeconds < 5)
             {
+                capacityChanged = true;
                 span = SystemTime.UtcNow - lastRequestedUtc2;
                 if (span.TotalSeconds < 3)
-                    capacity = Math.Max(capacity, Math.Max(capacity * 2, capacity * 4));
+                    calculatedCapacity = Math.Max(calculatedCapacity, Math.Max(calculatedCapacity * 2, calculatedCapacity * 4));
                 else
-                    capacity = Math.Max(capacity, capacity * 2);
+                    calculatedCapacity = Math.Max(calculatedCapacity, calculatedCapacity * 2);
             }
             else if (span.TotalMinutes > 1)
             {
-                capacity = Math.Max(baseCapacity, capacity / 2);
+                capacityChanged = true;
+                calculatedCapacity = Math.Max(baseCapacity, calculatedCapacity / 2);
             }
 
+            if (capacityChanged)
+            {
+                //there is only one thread that is updating the capacity
+                capacity = calculatedCapacity;
+            }
+                
             lastRequestedUtc2 = lastRequestedUtc1;
             lastRequestedUtc1 = SystemTime.UtcNow;
+        }
+
+        protected void IncreaseCapacityIfRequired(ref long calculatedCapacity)
+        {
+            var waitingForRangeUpdate = Interlocked.Read(ref threadsWaitingForRangeUpdate);
+            var capacityChanged = false;
+
+            //we want to have at least 90% of free capacity in the new range
+            while ((calculatedCapacity - waitingForRangeUpdate) < 0.9 * calculatedCapacity)
+            {
+                capacityChanged = true;
+                calculatedCapacity = calculatedCapacity * 2;
+            }
+
+            if (capacityChanged)
+            {
+                //there is only one thread that is updating the capacity
+                capacity = calculatedCapacity;
+            }
         }
 
         protected JsonDocument HandleGetDocumentResult(MultiLoadResult documents)

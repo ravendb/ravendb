@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -23,11 +22,10 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.Common;
 using Raven.Database.Config;
+using Raven.Database.Common;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -45,7 +43,7 @@ namespace Raven.Database.Server.Controllers
         {
             public int ReplicationActiveTasksCount { get; set; }
 
-            public IDictionary<string,CounterDestinationStats> ReplicationDestinationStats { get; set; }
+            public IDictionary<string, CounterDestinationStats> ReplicationDestinationStats { get; set; }
 
             public CounterStorageStats Summary { get; set; }
 
@@ -62,7 +60,7 @@ namespace Raven.Database.Server.Controllers
         {
             var infos = new List<CounterDebugInfo>();
 
-            CountersLandlord.ForAllCounters(counterStorage => 
+            CountersLandlord.ForAllCounters(counterStorage =>
                 infos.Add(new CounterDebugInfo
                 {
                     ReplicationActiveTasksCount = counterStorage.ReplicationTask.GetActiveTasksCount(),
@@ -78,11 +76,11 @@ namespace Raven.Database.Server.Controllers
 
         [HttpGet]
         [RavenRoute("cs/{counterStorageName}/debug/")]
-        public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName,int skip, int take)
+        public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName, int skip, int take)
         {
             var counter = await CountersLandlord.GetResourceInternal(counterStorageName).ConfigureAwait(false);
             if (counter == null)
-                return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName),HttpStatusCode.NotFound);
+                return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName), HttpStatusCode.NotFound);
 
             using (var reader = counter.CreateReader())
             {
@@ -187,7 +185,7 @@ namespace Raven.Database.Server.Controllers
             catch (InvalidDataException e)
             {
                 if (Log.IsDebugEnabled)
-                    Log.DebugException("Failed to deserialize debug request." , e);
+                    Log.DebugException("Failed to deserialize debug request.", e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -237,19 +235,19 @@ namespace Raven.Database.Server.Controllers
                         let k = new { Name = nameAndStatsManager.Key, perf }
                         group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond
                             into g
-                            orderby g.Key
-                            select new
-                            {
-                                Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
-                                Stats = from k in g
-                                        group k by k.Name into gg
-                                        select new
-                                        {
-                                            ReplicationName = gg.Key,
-                                            DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-                                            BatchSize = gg.Sum(x => x.perf.BatchSize)
-                                        }
-                            };
+                        orderby g.Key
+                        select new
+                        {
+                            Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
+                            Stats = from k in g
+                                    group k by k.Name into gg
+                                    select new
+                                    {
+                                        ReplicationName = gg.Key,
+                                        DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+                                        BatchSize = gg.Sum(x => x.perf.BatchSize)
+                                    }
+                        };
             return GetMessageWithObject(stats);
         }
 
@@ -272,19 +270,19 @@ namespace Raven.Database.Server.Controllers
                         let k = new { Name = nameAndStatsManager.Key, perf }
                         group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond
                             into g
-                            orderby g.Key
-                            select new
-                            {
-                                Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
-                                Stats = from k in g
-                                        group k by k.Name into gg
-                                        select new
-                                        {
-                                            Destination = gg.Key,
-                                            DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-                                            BatchSize = gg.Sum(x => x.perf.BatchSize)
-                                        }
-                            };
+                        orderby g.Key
+                        select new
+                        {
+                            Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
+                            Stats = from k in g
+                                    group k by k.Name into gg
+                                    select new
+                                    {
+                                        Destination = gg.Key,
+                                        DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
+                                        BatchSize = gg.Sum(x => x.perf.BatchSize)
+                                    }
+                        };
             return GetMessageWithObject(stats);
         }
 
@@ -375,7 +373,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/debug/indexing-batch-stats")]
         public HttpResponseMessage IndexingBatchStats(int lastId = 0)
         {
-            
+
             var indexingBatches = Database.WorkContext.LastActualIndexingBatchInfo.ToArray();
             var indexingBatchesTrimmed = indexingBatches.SkipWhile(x => x.Id < lastId).ToArray();
             return GetMessageWithObject(indexingBatchesTrimmed);
@@ -389,6 +387,16 @@ namespace Raven.Database.Server.Controllers
             var reducingBatches = Database.WorkContext.LastActualReducingBatchInfo.ToArray();
             var reducingBatchesTrimmed = reducingBatches.SkipWhile(x => x.Id < lastId).ToArray();
             return GetMessageWithObject(reducingBatchesTrimmed);
+        }
+
+        [HttpGet]
+        [RavenRoute("debug/deletion-batch-stats")]
+        [RavenRoute("databases/{databaseName}/debug/deletion-batch-stats")]
+        public HttpResponseMessage DeletionBatchStats(int lastId = 0)
+        {
+            var deletionBatches = Database.WorkContext.LastActualDeletionBatchInfo.ToArray();
+            var deletionBatchesTrimmed = deletionBatches.SkipWhile(x => x.Id < lastId).ToArray();
+            return GetMessageWithObject(deletionBatchesTrimmed);
         }
 
         [HttpGet]
@@ -699,6 +707,18 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpGet]
+        [RavenRoute("debug/auto-tuning-info")]
+        [RavenRoute("databases/{databaseName}/debug/auto-tuning-info")]
+        public HttpResponseMessage DebugAutoTuningInfo()
+        {
+            return GetMessageWithObject(new
+            {
+                Reason = Database.AutoTuningTrace.ToList(),
+                LowMemoryCallsRecords = MemoryStatistics.LowMemoryCallRecords.ToList()
+            });
+        }
+
+        [HttpGet]
         [RavenRoute("debug/user-info")]
         [RavenRoute("databases/{databaseName}/debug/user-info")]
         public HttpResponseMessage UserInfo()
@@ -723,14 +743,14 @@ namespace Raven.Database.Server.Controllers
 
             var info = GetUserInfo();
             var databases = info.Databases;
-            
+
 
             var db = databases.Find(d => d.Database.Equals(database));
             if (db == null)
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "The database "+  database+ " was not found on the server"
+                    Error = "The database " + database + " was not found on the server"
                 }, HttpStatusCode.NotFound);
             }
 
@@ -821,7 +841,7 @@ namespace Raven.Database.Server.Controllers
             var debugInfo = DebugInfoProvider.GetTasksForDebug(Database);
 
             var debugSummary = debugInfo
-                .GroupBy(x => new {x.Type, x.IndexId, x.IndexName})
+                .GroupBy(x => new { x.Type, x.IndexId, x.IndexName })
                 .Select(x => new
                 {
                     Type = x.Key.Type,
@@ -953,10 +973,10 @@ namespace Raven.Database.Server.Controllers
             Database.TransactionalStorage.Batch(accessor => identities = accessor.General.GetIdentities(start, pageSize, out totalCount));
 
             return GetMessageWithObject(new
-                                        {
-                                            TotalCount = totalCount,
-                                            Identities = identities
-                                        });
+            {
+                TotalCount = totalCount,
+                Identities = identities
+            });
         }
 
 
@@ -980,9 +1000,9 @@ namespace Raven.Database.Server.Controllers
                     {
                         return GetMessageWithString("Unable to find database named: " + name, HttpStatusCode.NotFound);
                     }
-                    drives = FindUniqueDrives(new [] { config.IndexStoragePath, 
-                        config.Storage.Esent.JournalsStoragePath, 
-                        config.Storage.Voron.JournalsStoragePath, 
+                    drives = FindUniqueDrives(new[] { config.IndexStoragePath,
+                        config.Storage.Esent.JournalsStoragePath,
+                        config.Storage.Voron.JournalsStoragePath,
                         config.DataDirectory });
                     break;
                 case ResourceType.FileSystem:
@@ -991,7 +1011,7 @@ namespace Raven.Database.Server.Controllers
                     {
                         return GetMessageWithString("Unable to find filesystem named: " + name, HttpStatusCode.NotFound);
                     }
-                    drives = FindUniqueDrives(new [] { config.FileSystem.DataDirectory,
+                    drives = FindUniqueDrives(new[] { config.FileSystem.DataDirectory,
                         config.FileSystem.IndexStoragePath,
                         config.Storage.Esent.JournalsStoragePath,
                         config.Storage.Voron.JournalsStoragePath});
@@ -1002,7 +1022,7 @@ namespace Raven.Database.Server.Controllers
                     {
                         return GetMessageWithString("Unable to find counter named: " + name, HttpStatusCode.NotFound);
                     }
-                    drives = FindUniqueDrives(new [] { config.Counter.DataDirectory,
+                    drives = FindUniqueDrives(new[] { config.Counter.DataDirectory,
                         config.Storage.Esent.JournalsStoragePath,
                         config.Storage.Voron.JournalsStoragePath,
                         config.DataDirectory});
@@ -1013,7 +1033,7 @@ namespace Raven.Database.Server.Controllers
                     {
                         return GetMessageWithString("Unable to find time series named: " + name, HttpStatusCode.NotFound);
                     }
-                    drives = FindUniqueDrives(new [] { config.TimeSeries.DataDirectory,
+                    drives = FindUniqueDrives(new[] { config.TimeSeries.DataDirectory,
                         config.Storage.Esent.JournalsStoragePath,
                         config.Storage.Voron.JournalsStoragePath,
                         config.DataDirectory});
@@ -1054,8 +1074,8 @@ namespace Raven.Database.Server.Controllers
                 var response = new HttpResponseMessage();
 
                 response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-                                   {
-                                       Headers =
+                {
+                    Headers =
                                        {
                                            ContentDisposition = new ContentDispositionHeaderValue("attachment")
                                                                 {
@@ -1063,7 +1083,7 @@ namespace Raven.Database.Server.Controllers
                                                                 },
                                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
                                        }
-                                   };
+                };
 
                 return response;
             }
@@ -1090,7 +1110,7 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage Subscriptions()
         {
             return GetMessageWithObject(Database.Subscriptions.GetDebugInfo());
-}
+        }
 
         [HttpGet]
         [RavenRoute("databases/{databaseName}/debug/thread-pool")]
@@ -1128,7 +1148,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("debug/gc-info")]
         public HttpResponseMessage GCInfo()
         {
-            return GetMessageWithObject(new GCInfo {LastForcedGCTime = RavenGC.LastForcedGCTime, MemoryBeforeLastForcedGC = RavenGC.MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC = RavenGC.MemoryAfterLastForcedGC});
+            return GetMessageWithObject(new GCInfo { LastForcedGCTime = RavenGC.LastForcedGCTime, MemoryBeforeLastForcedGC = RavenGC.MemoryBeforeLastForcedGC, MemoryAfterLastForcedGC = RavenGC.MemoryAfterLastForcedGC });
         }
     }
 

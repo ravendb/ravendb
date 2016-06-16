@@ -35,6 +35,7 @@
     <TypeScriptCompile Include="App\commands\database\cluster\removeClusteringCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\cluster\initializeNewClusterCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\debug\getDeletionBatchStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getDocumentsPreviewCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
@@ -45,6 +46,7 @@
     <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\fsCheckSufficientDiskSpaceCommand.ts" />
     <TypeScriptCompile Include="App\commands\filesystem\getConfigurationsByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\resolveConflictsCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getResourceDrives.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
@@ -89,12 +91,15 @@
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\bindingHelpers\autoRefreshBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
+    <TypeScriptCompile Include="App\common\awesomeMultiselect.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
     <TypeScriptCompile Include="App\common\changesContext.ts" />
+    <TypeScriptCompile Include="App\common\tableNavigationTrait.ts" />
     <TypeScriptCompile Include="App\common\recentPatchesStorage.ts" />
     <TypeScriptCompile Include="App\common\numberFormattingStorage.ts" />
     <TypeScriptCompile Include="App\common\svgDownloader.ts" />
     <TypeScriptCompile Include="App\models\counter\counterGroup.ts" />
+    <TypeScriptCompile Include="App\models\database\debug\logEntry.ts" />
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\runningTask.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
@@ -146,6 +151,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\debug\statusDebugTasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\filteredOutIndexInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\prefetchInfo.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\deletionBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceStatsInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapStatsInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceBatchInfo.ts" />
@@ -185,7 +191,9 @@
     <TypeScriptCompile Include="App\common\changesApiWarnStorage.ts" />
     <TypeScriptCompile Include="App\common\apiKeyLocalStorage.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\indexPerformance.ts" />
+    <Content Include="App\commands\database\cluster\changeNodeVotingModeCommand.ts" />
     <Content Include="App\commands\database\replication\resolveAllConflictsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\sqlReplication\toggleDisable.ts" />
     <Content Include="App\main.js" />
     <Content Include="App\views\common\confirmationDialog.html" />
     <Content Include="App\views\common\deleteDocuments.html" />
@@ -203,6 +211,7 @@
     <Content Include="App\views\database\indexes\indexLockAllConfirm.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\filteredOutIndexInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\prefetchInfo.html" />
+    <Content Include="App\views\database\status\indexing\perfDialogs\deletionBatchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceStatsInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\mapStatsInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceBatchInfo.html" />
@@ -259,7 +268,6 @@
     <Content Include="App\views\database\settings\sqlReplicationConnectionStringsManagement.html" />
     <Content Include="App\views\database\settings\sqlReplications.html" />
     <Content Include="App\views\database\settings\versioning.html" />
-    <Content Include="App\views\database\status\alerts.html" />
     <Content Include="App\views\database\status\alerts.html" />
     <Content Include="App\views\database\status\debug\statusDebug.html" />
     <Content Include="App\views\database\status\debug\statusDebugChanges.html" />
@@ -333,7 +341,7 @@
     <Content Include="App\views\filesystem\search\search.html" />
     <Content Include="App\views\filesystem\settings\settings.html" />
     <Content Include="App\views\filesystem\settings\versioning.html" />
-    <Content Include="App\views\filesystem\status\resetIndexConfirm.html" />
+    <Content Include="App\views\filesystem\search\resetIndexConfirm.html" />
     <Content Include="App\views\filesystem\status\status.html" />
     <Content Include="App\views\filesystem\synchronization\resolveConflict.html" />
     <Content Include="App\views\filesystem\synchronization\synchronization.html" />
@@ -1081,7 +1089,6 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requests.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestsCount.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\runningTasks.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\sqlReplicationPerfStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\sqlReplicationSimulationDialog.ts" />

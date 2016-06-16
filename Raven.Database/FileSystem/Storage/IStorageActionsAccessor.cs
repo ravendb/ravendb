@@ -7,6 +7,7 @@ using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.FileSystem.Storage
 {
@@ -70,7 +71,7 @@ namespace Raven.Database.FileSystem.Storage
 
         bool ConfigExists(string name);
 
-        IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take);
+        IList<RavenJObject> GetConfigsStartWithPrefix(string prefix, int start, int take, out int total);
 
         IList<string> GetConfigNamesStartingWithPrefix(string prefix, int start, int take, out int total);
 

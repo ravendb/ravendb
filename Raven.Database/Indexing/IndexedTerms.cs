@@ -4,14 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
-using Lucene.Net.Support;
 using Lucene.Net.Util;
+using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -35,8 +34,9 @@ namespace Raven.Database.Indexing
                 MemoryStatistics.RegisterLowMemoryHandler(this);
             }
 
-            public void HandleLowMemory()
+            public LowMemoryHandlerStatistics HandleLowMemory()
             {
+                int keysCount = Keys.Count;
                 lock (this)
                 {
                     foreach (var reference in Keys)
@@ -48,11 +48,13 @@ namespace Raven.Database.Indexing
 
                     Keys.Clear();
                 }
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = "WeakCache",
+                    Summary = $"Terms cache for {keysCount} keys reader were freed"
+                };
             }
 
-            public void SoftMemoryRelease()
-            {
-            }
 
             public LowMemoryHandlerStatistics GetStats()
             {
@@ -79,7 +81,7 @@ namespace Raven.Database.Indexing
                     {
                         IndexReader target;
                         Keys.RemoveAll(x => x.TryGetTarget(out target) == false);
-                    } 
+                    }
                     return cachedIndexedTerms;
                 }
             }
@@ -98,15 +100,22 @@ namespace Raven.Database.Indexing
                 MemoryStatistics.RegisterLowMemoryHandler(this);
             }
 
-            public void HandleLowMemory()
+            public LowMemoryHandlerStatistics HandleLowMemory()
             {
+                var resultsCount = Results.Count;
+                var info = Results.Values;
+                var termsCnt = info.Sum(fieldCacheInfo => fieldCacheInfo.Results.Count);
                 Results.Clear();
+
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = $"CachedIndexedTerms: {indexName}",
+                    DatabaseName = databaseName,
+                    Summary = $"Cache terms for {indexName} with {resultsCount:#,#} fields with total of {termsCnt:#,#} terms were deleted"
+                };
             }
 
-            public void SoftMemoryRelease()
-            {
-                
-            }
+            
 
             public LowMemoryHandlerStatistics GetStats()
             {
@@ -115,10 +124,10 @@ namespace Raven.Database.Indexing
                     Name = "CachedIndexedTerms",
                     Metadata = new
                     {
-                        IndexName=indexName
+                        IndexName = indexName
                     },
-                    DatabaseName = databaseName,
-                    EstimatedUsedMemory = Results.Sum(x=>x.Key.Length*sizeof(char) + x.Value.Results.Sum(y=>y.Key.Length*sizeof(char) + y.Value.Length * sizeof(int)))
+                    DatabaseName = "CachedIndexedTerms",
+                    EstimatedUsedMemory = Results.Sum(x => x.Key.Length * sizeof(char) + x.Value.Results.Sum(y => y.Key.Length * sizeof(char) + y.Value.Length * sizeof(int)))
                 };
             }
         }
@@ -132,7 +141,7 @@ namespace Raven.Database.Indexing
         public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string databaseName, string indexName)
         {
             var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(databaseName, indexName));
-            
+
             FieldCacheInfo info;
             if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
             {

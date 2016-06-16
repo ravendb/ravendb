@@ -354,7 +354,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
                                 try
                                 {
-                                    UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup);
+                                    await UploadToServer(exportResult.FilePath, localBackupConfigs, fullBackup).ConfigureAwait(false);
                                 }
                                 finally
                                 {
@@ -428,7 +428,7 @@ namespace Raven.Database.Bundles.PeriodicExports
             }
         }
 
-        private void UploadToServer(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+        private async Task UploadToServer(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
         {
             if (!string.IsNullOrWhiteSpace(localExportConfigs.GlacierVaultName))
             {
@@ -440,7 +440,7 @@ namespace Raven.Database.Bundles.PeriodicExports
             }
             else if (!string.IsNullOrWhiteSpace(localExportConfigs.AzureStorageContainer))
             {
-                UploadToAzure(backupPath, localExportConfigs, isFullBackup);
+                await UploadToAzure(backupPath, localExportConfigs, isFullBackup).ConfigureAwait(false); ;
             }
         }
 
@@ -481,7 +481,7 @@ namespace Raven.Database.Bundles.PeriodicExports
             }
         }
 
-        private void UploadToAzure(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
+        private async Task UploadToAzure(string backupPath, PeriodicExportSetup localExportConfigs, bool isFullBackup)
         {
             if (azureStorageAccount == Constants.DataCouldNotBeDecrypted ||
                 azureStorageKey == Constants.DataCouldNotBeDecrypted)
@@ -489,16 +489,18 @@ namespace Raven.Database.Bundles.PeriodicExports
                 throw new InvalidOperationException("Could not decrypt the Azure access settings, if you are running on IIS, make sure that load user profile is set to true.");
             }
 
-            using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey))
+            using (var client = new RavenAzureClient(azureStorageAccount, azureStorageKey, localExportConfigs.AzureStorageContainer))
             {
-                client.PutContainer(localExportConfigs.AzureStorageContainer);
+                await client.PutContainer().ConfigureAwait(false);
                 using (var fileStream = File.OpenRead(backupPath))
                 {
                     var key = Path.GetFileName(backupPath);
-                    client.PutBlob(localExportConfigs.AzureStorageContainer, CombinePathAndKey(localExportConfigs.AzureRemoteFolderName, key), fileStream, new Dictionary<string, string>
-                                                                                              {
-                                                                                                  { "Description", GetArchiveDescription(isFullBackup) }
-                                                                                              });
+
+                    await client.PutBlob(CombinePathAndKey(localExportConfigs.AzureRemoteFolderName, key), fileStream,
+                        new Dictionary<string, string>
+                        {
+                            {"Description", GetArchiveDescription(isFullBackup)}
+                        }).ConfigureAwait(false);
 
                     logger.Info(string.Format(
                         "Successfully uploaded backup {0} to Azure container {1}, with key {2}",
@@ -509,14 +511,14 @@ namespace Raven.Database.Bundles.PeriodicExports
             }
         }
 
-        private string CombinePathAndKey(string path, string fileName)
+        private static string CombinePathAndKey(string path, string fileName)
         {
             return string.IsNullOrEmpty(path) == false ? path + "/" + fileName : fileName;
         }
 
         private string GetArchiveDescription(bool isFullBackup)
         {
-            return (isFullBackup ? "Full" : "Incremental") + "periodic export for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
+            return (isFullBackup ? "Full" : "Incremental") + " periodic export for db " + (Database.Name ?? Constants.SystemDatabase) + " at " + SystemTime.UtcNow;
         }
 
         public void Dispose()

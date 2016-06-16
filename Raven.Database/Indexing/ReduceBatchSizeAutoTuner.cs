@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
             return lastAmountOfItemsToReduce;
         }
 
-        protected override string GetName
+        protected override string Name
         {
             get { return "ReduceBatchSizeAutoTuner"; }
         }

@@ -5,10 +5,21 @@ class conflictItem {
     remoteHistory: conflictHistory[];
     currentHistory: conflictHistory[];
 
-    constructor(public fileName: string, public remoteServerUrl: string)
-    {
+    constructor(public fileName: string, public remoteServerUrl: string) {
         this.remoteHistory = [];
         this.currentHistory = [];
+    }
+
+    getDocumentPropertyNames(): Array<string> {
+        return ["id", "fileName", "remoteServerUrl"];
+    }
+
+    getId() {
+        return this.fileName;
+    }
+
+    getUrl() {
+        return this.fileName;
     }
 
     static fromConflictItemDto(dto: filesystemConflictItemDto) : conflictItem {

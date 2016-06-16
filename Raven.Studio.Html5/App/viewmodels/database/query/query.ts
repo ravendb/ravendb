@@ -232,7 +232,7 @@ class query extends viewModelBase {
             html: true,
             trigger: "hover",
             container: ".form-horizontal",
-            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
         });
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexQueryRawData(this.activeDatabase(), this.selectedIndex()));
 
@@ -808,6 +808,11 @@ class query extends viewModelBase {
             if (option === "Numeric Double") {
                 if (from !== "*") fromPrefix = "Dx";
                 if (to !== "*") toPrefix = "Dx";
+                this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix + to + "]");
+            }
+            else if (option === "Numeric Long") {
+                if (from !== "*") fromPrefix = "Lx";
+                if (to !== "*") toPrefix = "Lx";
                 this.queryText(this.queryText() + this.searchField() + "_Range:[" + fromPrefix + from + " TO " + toPrefix + to + "]");
             }
             else if (option === "Numeric Int") {

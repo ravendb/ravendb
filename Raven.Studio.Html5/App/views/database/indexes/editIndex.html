@@ -77,10 +77,10 @@
         </div>
 
         <div class="btn-group" data-bind="visible: isEditingExistingIndex">
-            <button class="btn btn-default" title="Copy edited index to clipboard" data-bind="click: copyIndex">
+            <button class="btn btn-default" title="Copy edited index to clipboard" data-bind="click: copyIndex, enable: !$root.isSaveEnabled()">
                 <i class="fa fa-files-o"></i>
             </button>
-            <button class="btn btn-default" title="Generate C# index definition" data-bind="click: createCSharpCode">
+            <button class="btn btn-default" title="Generate C# index definition" data-bind="click: createCSharpCode, enable: !$root.isSaveEnabled()">
                 <i class="fa">C#</i>
             </button>
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshIndex">
@@ -89,19 +89,19 @@
             <button class="btn btn-danger" title="Delete index" data-bind="visible: !editedIndex().isSideBySideIndex(), click: deleteIndex">
                 <i class="fa fa-trash-o"></i>
             </button>
-             <button class="btn btn-danger" title="Cancel side-by-side index" data-bind="visible: editedIndex().isSideBySideIndex(), click: cancelSideBySideIndex">
-                <i class="fa fa-undo"></i>
-            </button>
-            
         </div>
+        
+        <button class="btn btn-danger" title="Cancel side-by-side index" data-bind="visible: editedIndex().isSideBySideIndex(), click: cancelSideBySideIndex">
+            <i class="fa fa-undo"></i>
+        </button>
     </div>
 
-    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div class="container-fluid" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }" style="overflow: auto">
         <br />
         <form class="form-horizontal" role="form" data-bind="with: editedIndex">
             
             <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set. Press &quot;Make permanent&quot; to override the original index.</div>
-
+            
             <div class="form-group">
                 <label for="indexName" class="col-md-1 control-label"  title=" index name (Alt+I)">Name</label>
                 <div class="col-md-11">
@@ -113,7 +113,7 @@
                 </div>
             </div>
             <div class="form-group">
-                <label id="indexMapsLabel" style="cursor: help;" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index maps" data-trigger="hover">
+                <label id="indexMapsLabel" style="cursor: help;" class="col-md-1 control-label" data-placement="auto right" data-original-title="Index maps" data-trigger="hover">
                     Maps
                     <i class="fa fa-info-circle text-info"></i>
                 </label>
@@ -146,63 +146,65 @@
                 </div>
             </div>
             <div class="form-group" data-bind="visible: luceneFields().length > 0">
-                <label class="col-sm-1 control-label">
+                <label class="col-md-1 control-label">
                     Fields
                 </label>
-                <div class="col-md-11" data-bind="foreach: luceneFields">
-                    <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5">
-                        <div class="panel panel-default">
-                            <div class="panel-heading">
-                                <div class="col-md-11">
-                                    <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="enable: !$parent.isSideBySideIndex(), attr: { id:'fieldName' + $index() }, value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
-                                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(),foreach: fieldNameAutocompletes">
-                                        <li role="presentation" data-bind="click: $parent.setName.bind($parent,$data)">
-                                            <a role="menuitem" tabindex="-1" href="#">
-                                                <span data-bind=" text:$data"></span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <button type="button" class="close" aria-hidden="true"><i class="fa fa-times" data-bind="click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index"></i></button>
-                                </div>
-                                <div class="clearfix"></div>
-                            </div>
-                            <div class="panel-body fieldControl">
-                                <div class="col-md-6 fieldControl">
-                                    <label class="control-label col-md-5 fieldControl">Storage</label>
-                                    <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['Yes', 'No'], value: stores, enable: !$parent.isSideBySideIndex()"></select>
-                                    </div>
-                                    <label class="control-label col-md-5 fieldControl">Sort</label>
-                                    <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['None', 'String', 'Int', 'Float', 'Long', 'Double', 'Short', 'Custom', 'Byte', 'StringVal'], value: sort, enable: !$parent.isSideBySideIndex()"></select>
-                                    </div>
-                                    <label class="control-label col-md-5 fieldControl">TermVector</label>
-                                    <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Yes', 'WithPositions', 'WithOffsets', 'WithPositionsAndOffsets'], value: termVector, enable: !$parent.isSideBySideIndex()"></select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 fieldControl">
-                                    <label class="control-label col-md-5 fieldControl">Indexing</label>
-                                    <div class="col-md-7 fieldControl">
-                                        <select class="form-control fieldControl" data-bind="options: ['No', 'Analyzed', 'NotAnalyzed', 'Default'], value: indexing, enable: !$parent.isSideBySideIndex()"></select>
-                                    </div>
-                                    <label class="control-label col-md-5 fieldControl" data-bind="visible: indexing() === 'Analyzed'">Analyzer</label>
-                                    <div class="col-md-7 fieldControl" data-bind="visible: indexing() === 'Analyzed'">
-                                        <input type="text" class="form-control fieldControl" data-bind="value: analyzer, valueUpdate: 'afterkeyup', attr: { title: analyzer }, enable: !$parent.isSideBySideIndex()" />
-                                    </div>
-                                    <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm">Suggestion</label>
-                                    <div class="col-md-7 fieldControl">
-                                        <button type="button" data-bind="enable: !$parent.isSideBySideIndex()" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                            <span data-bind="visible: suggestionEnabled()">Yes</span>
-                                            <span data-bind="visible: !suggestionEnabled()">No</span>
-                                            <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu" role="menu">
-                                            <li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, true)">Yes</a></li>
-                                            <li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, false)">No</a></li>
+                <div class="col-md-11">
+                    <div class="row" data-bind="foreach: luceneFields">
+                        <div class="col-xs-12 col-sm-9 col-md-6 col-lg-5">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <div class="col-md-11">
+                                        <input name="fieldName" type="text" class="form-control" placeholder="FieldName" data-bind="enable: !$parent.isSideBySideIndex(), attr: { id:'fieldName' + $index() }, value: name, valueUpdate: 'afterkeydown'" autocomplete="off" />
+                                        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(),foreach: fieldNameAutocompletes">
+                                            <li role="presentation" data-bind="click: $parent.setName.bind($parent,$data)">
+                                                <a role="menuitem" tabindex="-1" href="#">
+                                                    <span data-bind=" text:$data"></span>
+                                                </a>
+                                            </li>
                                         </ul>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="close" aria-hidden="true"><i class="fa fa-times" data-bind="click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index"></i></button>
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="panel-body fieldControl">
+                                    <div class="col-md-6 fieldControl">
+                                        <label class="control-label col-md-5 fieldControl">Storage</label>
+                                        <div class="col-md-7 fieldControl">
+                                            <select class="form-control fieldControl" data-bind="options: ['Yes', 'No'], value: stores, enable: !$parent.isSideBySideIndex()"></select>
+                                        </div>
+                                        <label class="control-label col-md-5 fieldControl">Sort</label>
+                                        <div class="col-md-7 fieldControl">
+                                            <select class="form-control fieldControl" data-bind="options: ['None', 'String', 'Int', 'Float', 'Long', 'Double', 'Short', 'Custom', 'Byte', 'StringVal'], value: sort, enable: !$parent.isSideBySideIndex()"></select>
+                                        </div>
+                                        <label class="control-label col-md-5 fieldControl">TermVector</label>
+                                        <div class="col-md-7 fieldControl">
+                                            <select class="form-control fieldControl" data-bind="options: ['No', 'Yes', 'WithPositions', 'WithOffsets', 'WithPositionsAndOffsets'], value: termVector, enable: !$parent.isSideBySideIndex()"></select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 fieldControl">
+                                        <label class="control-label col-md-5 fieldControl">Indexing</label>
+                                        <div class="col-md-7 fieldControl">
+                                            <select class="form-control fieldControl" data-bind="options: ['No', 'Analyzed', 'NotAnalyzed', 'Default'], value: indexing, enable: !$parent.isSideBySideIndex()"></select>
+                                        </div>
+                                        <label class="control-label col-md-5 fieldControl" data-bind="visible: indexing() === 'Analyzed'">Analyzer</label>
+                                        <div class="col-md-7 fieldControl" data-bind="visible: indexing() === 'Analyzed'">
+                                            <input type="text" class="form-control fieldControl" data-bind="value: analyzer, valueUpdate: 'afterkeyup', attr: { title: analyzer }, enable: !$parent.isSideBySideIndex()" />
+                                        </div>
+                                        <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm">Suggestion</label>
+                                        <div class="col-md-7 fieldControl">
+                                            <button type="button" data-bind="enable: !$parent.isSideBySideIndex()" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                                <span data-bind="visible: suggestionEnabled()">Yes</span>
+                                                <span data-bind="visible: !suggestionEnabled()">No</span>
+                                                <span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, true)">Yes</a></li>
+                                                <li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, false)">No</a></li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -253,21 +255,29 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="control-label col-md-7" data-bind="visible: canSpecifyUnits">Circle Radius Units</label>
-                                    <div class="col-md-5" data-bind="visible: canSpecifyUnits">
-                                        <select class="form-control" data-bind="options: ['Kilometers', 'Miles'], value: circleRadiusUnits, enable: !$parent.isSideBySideIndex()"></select>
+                                    <div class="row">
+                                        <label class="control-label col-md-4" data-bind="visible: canSpecifyUnits">Circle Radius Units</label>
+                                        <div class="col-md-4" data-bind="visible: canSpecifyUnits">
+                                            <select class="form-control" data-bind="options: ['Kilometers', 'Miles'], value: circleRadiusUnits, enable: !$parent.isSideBySideIndex()"></select>
+                                        </div>
                                     </div>
-                                    <label class="control-label col-md-7" data-bind="visible: canSpecifyTreeLevel">Max Tree Level</label>
-                                    <div class="col-md-5" data-bind="visible: canSpecifyTreeLevel">
-                                        <input type="number" class="form-control" data-bind="numericValue: maxTreeLevel, valueUpdate: 'afterkeyup', enable: !$parent.isSideBySideIndex()" />
+                                    <div class="row">
+                                        <label class="control-label col-md-4" data-bind="visible: canSpecifyTreeLevel">Max Tree Level</label>
+                                        <div class="col-md-4" data-bind="visible: canSpecifyTreeLevel">
+                                            <input type="number" class="form-control" data-bind="numericValue: maxTreeLevel, valueUpdate: 'afterkeyup', enable: !$parent.isSideBySideIndex()" />
+                                        </div>
                                     </div>
-                                    <label class="control-label col-md-7">Min Y</label>
-                                    <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="numericValue: minY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates() && !$parent.isSideBySideIndex()" />
+                                    <div class="row">
+                                        <label class="control-label col-md-4">Min Y</label>
+                                        <div class="col-md-4">
+                                            <input type="number" class="form-control" data-bind="numericValue: minY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates() && !$parent.isSideBySideIndex()" />
+                                        </div>
                                     </div>
-                                    <label class="control-label col-md-7">Max Y</label>
-                                    <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="numericValue: maxY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates() && !$parent.isSideBySideIndex()" />
+                                    <div class="row">
+                                        <label class="control-label col-md-4">Max Y</label>
+                                        <div class="col-md-4">
+                                            <input type="number" class="form-control" data-bind="numericValue: maxY, valueUpdate: 'afterkeyup', enable: canSpecifyCoordinates() && !$parent.isSideBySideIndex()" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -291,7 +301,7 @@
 
                 <label class="col-sm-1 control-label">Store All Fields</label>
                 <div class="col-md-2" style="padding-top: 3px">
-                    <button style="background-color: #f5f5f5; height: 30px; border: 2px solid #e7e7e7;" type="button" class="close pull-left" data-bind="click: $root.removeStoreAllFields.bind($root)" aria-hidden="true" title="Remove Store All Fields And Hide The Control">
+                    <button style="height: 30px;" type="button" class="close pull-left" data-bind="click: $root.removeStoreAllFields.bind($root)" aria-hidden="true" title="Remove Store All Fields And Hide The Control">
                         <i class="fa fa-times"></i>
                     </button>
                 </div>

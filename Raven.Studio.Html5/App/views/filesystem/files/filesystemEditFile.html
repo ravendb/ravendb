@@ -15,11 +15,11 @@
 
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button type="button" class="btn btn-primary" data-bind="click: saveFileMetadata" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <button type="button" class="btn btn-primary" data-bind="click: saveFileMetadata, enable: isSaveEnabled" title="Save (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
             <button type="button" class="btn btn-default" data-bind="click: refreshFile" title="Refresh (Alt+R)" accesskey="R"><i class="fa fa-refresh"></i></button>
             <button type="button" class="btn btn-default" data-bind="click: downloadFile" title="Download file (Alt+O)" accesskey="O"><i class="fa fa-download"></i></button>
             <button type="button" class="btn btn-default" data-bind="click: renameFile" title="Rename file (Alt+E)" accesskey="E"><i class="fa fa-random"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: deleteFile" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
+            <button type="button" class="btn btn-danger" data-bind="click: deleteFile" title="Delete (Alt+shift+Del)"><i class="fa fa-trash-o"></i></button>
         </div>
     </div>
     <br />
@@ -27,18 +27,16 @@
         <div class="col-md-7">
             <div class="row">
                 <div class="col-md-12">
-                    <input type="text" class="form-control" title="File name" data-bind="value: fileName, attr: { disabled: true }" />
+                    <input type="text" class="form-control" title="File name" disabled="disabled" data-bind="value: fileName" />
                 </div>
             </div>
             <br />
-            <div class="row">
-                <div class="col-md-12">
-                    <ul class="nav nav-tabs">
-                        <li accesskey="m" title="Edit file metadata (Alt+M)">File Metadata</li>
-                    </ul>
-                    <pre id="fileMetadataEditor" class="form-control" data-bind="aceEditor: { code: fileMetadataText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
-                </div>
-            </div>
+            <ul class="nav nav-tabs">
+                <li accesskey="m" title="Edit file metadata (Alt+M)">
+                    <a style="cursor: pointer">File Metadata</a>
+                </li>
+            </ul>
+            <pre id="fileMetadataEditor" class="form-control" data-bind="aceEditor: { code: fileMetadataText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
         </div>
         <div class="form-group panel panel-default col-md-5 document-addition-data side-panel">
             <div class="col-md-12" data-bind="with: metadata">

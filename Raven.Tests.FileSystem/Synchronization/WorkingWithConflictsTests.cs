@@ -292,6 +292,31 @@ namespace Raven.Tests.FileSystem.Synchronization
         }
 
         [Fact]
+        public void Can_resolve_all_conflicts()
+        {
+            var sourceClient = NewAsyncClient(0);
+            var destinationClient = NewAsyncClient(1);
+
+            for (var i = 0; i < 10; i++)
+            {
+                sourceClient.UploadAsync("test" + i, new MemoryStream(new byte[] {1, 2, 3})).Wait();
+                destinationClient.UploadAsync("test" + i, new MemoryStream(new byte[] {1, 2})).Wait();
+            }
+
+            for (var i = 0; i < 10; i++)
+            { 
+                var shouldBeConflict = sourceClient.Synchronization.StartAsync("test" + i, destinationClient).Result;
+                Assert.Equal(string.Format("File {0} is conflicted", FileHeader.Canonize("test" + i)), shouldBeConflict.Exception.Message);
+            }
+
+            destinationClient.Synchronization.ResolveConflictsAsync(ConflictResolutionStrategy.CurrentVersion).Wait();
+
+            var conflicts = destinationClient.Synchronization.GetConflictsAsync(0, 100).Result;
+            Assert.Equal(0, conflicts.TotalCount);
+            Assert.Equal(0, conflicts.Items.Count);
+        }
+
+        [Fact]
         public void Should_not_synchronize_to_destination_if_conflict_resolved_there_by_current_strategy()
         {
             var sourceClient = NewAsyncClient(0);

@@ -34,7 +34,7 @@
                     <div class="col-sm-9">
                         <div class="btn-group" data-bind="with: replicationsSetup">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.settingsAccess.isReadOnly()">
-                                <span data-bind="visible: clientFailoverBehaviour() == null">Let client decide</span>
+                                <span data-bind="visible: !clientFailoverBehaviour()">Let client decide</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondaries'">Allow reads from secondaries</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached'">Allow read from secondaries when request time SLA threshold is reached</span>
                                 <span data-bind="visible: clientFailoverBehaviour() === 'AllowReadsFromSecondariesAndWritesToSecondaries'">Allow reads from secondaries and writes to secondaries</span>
@@ -45,7 +45,7 @@
                                 <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, null)">Let client decide</a></li>
+                                <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, '')">Let client decide</a></li>
                                 <li class="divider"></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadsFromSecondaries')">Allow reads from secondaries</a></li>
                                 <li><a href="#" data-bind="click: clientFailoverBehaviour.bind(clientFailoverBehaviour, 'AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')">Allow read from secondaries when request time SLA threshold is reached</a></li>

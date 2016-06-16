@@ -34,5 +34,36 @@ namespace Voron.Tests.Bugs
                 }
             }
         }
+
+        [PrefixesFact]
+        public void MultiReadShouldKeepItemOrderWhenInsertingLotOfItems()
+        {
+            var numberOfEntries = 1000;
+
+            foreach (var treeName in CreateTrees(Env, 1, "tree"))
+            {
+                using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    for (int i = 0; i < numberOfEntries; i++)
+                    {
+                        tx.ReadTree(treeName).MultiAdd("etags", $"07000000-0000-0000-0000-0000{i:x8}");
+                    }
+
+                    tx.Commit();
+                }
+
+                using (var snapshot = Env.CreateSnapshot())
+                using (var iterator = snapshot.MultiRead(treeName, "etags"))
+                {
+                    Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+
+                    for (int i = 0; i < numberOfEntries; i++)
+                    {
+                        Assert.Equal($"07000000-0000-0000-0000-0000{i:x8}", iterator.CurrentKey.ToString());
+                        iterator.MoveNext();
+                    }
+                }
+            }
+        }
     }
 }

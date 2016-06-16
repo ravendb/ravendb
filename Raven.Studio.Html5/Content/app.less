@@ -98,6 +98,19 @@ html, body {
     white-space: pre-wrap !important;
 }
 
+.sqlRepActions {
+    .fa-cogs {
+        color: grey;
+    }
+
+    .fa-cogs:hover {
+        color: black;
+    }
+    a {
+        cursor: pointer;
+    }
+}
+
 #sqlReplicationStats {
     .sqlStatsPanel {
         overflow-x: auto;
@@ -246,8 +259,6 @@ html, body {
         overflow-y: hidden;
 
         .form-group {
-            max-height: 55vh !important;
-            height: 55vh !important;
             overflow-x: hidden;
             overflow-y: auto;
         }
@@ -383,15 +394,6 @@ html, body {
     }
 }
 
-.panel span {
-    overflow: hidden;
-    -ms-text-overflow: ellipsis;
-    -o-text-overflow: ellipsis;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: auto;
-}
-
 .page {
     padding: 0 10px 20px 10px;
     width: 98%;
@@ -441,6 +443,10 @@ html, body {
 
                 img {
                     height: 25px;
+                }
+
+                label{
+                    right: -9px;
                 }
             }
 
@@ -735,7 +741,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
             .indexGroup-actions-container {
                 display: none;
-                padding-top: 5px;
+                padding-top: 3px;
             }
 
             &:hover {
@@ -1262,8 +1268,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     .ko-grid-column-container {
         white-space: nowrap;
         overflow: hidden;
+        height: 37px;
 
         .ko-grid-column-header {
+            float: left;
             display: inline-block;
             font-weight: bold;
             padding: 8px;
@@ -1322,6 +1330,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     }
 
     .ko-grid-cell {
+        float: left;
         -ms-text-overflow: ellipsis;
         -o-text-overflow: ellipsis;
         text-overflow: ellipsis;
@@ -1393,6 +1402,12 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     left: 40%;
     z-index: 2000;
     width: 400px;
+}
+
+#editSQLReplication {
+    .btn:focus {
+        outline: 0;
+    }
 }
 
 #editDocumentContainer {
@@ -2072,7 +2087,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     bottom: 50px;
     left: 0;
     height: 300px;
-    z-index: 9999;
+    z-index: 500;
     margin-bottom: 0;
     background-color: #f5f5f5;
 }
@@ -2404,7 +2419,6 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
 .alert-danger a {
     color: white;
-    text-decoration: underline;
 }
 
 .experimental {
@@ -2964,6 +2978,9 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .panel.panel-wo-margin {
     margin: 0;
 }
+.panel-group.panel-group-wo-margin {
+    margin: 0;
+}
 
 
 
@@ -3013,8 +3030,73 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .ko-grid .checkbox label {
     pointer-events: none;
 }
-.ko-grid .checkbox {
+
+.ko-grid .checkbox { 
     margin-top: 0;
     margin-bottom: 0;
 }
+.checkbox label:empty {
+    pointer-events: none;
+}
+.checkbox label::before {
+    pointer-events: auto;
+}
 /* Override default awesome bootstrap checkbox style - end */
+
+/**
+    Multiselect customization required for awesome checkboxes, see: http://jsfiddle.net/natearmagost/aznvcLps/
+*/
+.multiselect-container {
+    div.checkbox {
+        margin: 0;
+        padding: 5px 15px 5px 35px;
+    }
+    label {
+        margin: 0;
+        white-space: nowrap;
+        width: 100%;
+    }
+}
+
+// multiselect customization ends here
+
+
+.flex-container {
+    display: flex;
+    -ms-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+
+    .flex-grow {
+        -ms-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        overflow-y: auto;
+    }
+}
+
+.form-condensed {
+    .form-group {
+        margin-bottom: 5px;
+    }
+}
+
+a#uploadQueuePanelToggle {
+    color: white;
+}
+
+#synchronization-conflicts-page {
+    .conflicts-select {
+        text-align: center;
+        background-color: @selectionColor;
+        margin-top: 5px;
+        border: 1px solid;
+        padding: 5px;
+        border: 1px solid @gray-light;
+
+        .select-link {
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    }
+}

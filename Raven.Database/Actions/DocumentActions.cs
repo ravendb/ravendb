@@ -586,8 +586,24 @@ namespace Raven.Database.Actions
                     document = actions.Documents.DocumentByKey(key);
 
                     if (nonAuthoritativeInformationBehavior != null)
-
+                    {
                         document = nonAuthoritativeInformationBehavior(document);
+                    }
+
+                    if (document != null)
+                    {
+                        if (document.Metadata.ContainsKey(Constants.RavenReplicationConflict) &&
+                            !document.Metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
+                        {
+                            JsonDocument newDocument;
+                            Database.ResolveConflict(document, actions, out newDocument);
+                            if (newDocument != null)
+                            {
+                                document = newDocument;
+                            }
+                        }
+                   }
+                    
                 });
             }
 

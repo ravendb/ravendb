@@ -13,6 +13,8 @@ using Rachis.Transport;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Database.Raft.Util;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -84,6 +86,90 @@ namespace Raven.Tests.Raft
                 var key = Constants.Database.Prefix + "Northwind";
 
                 clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), key));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Nodes")]
+        public void CanWaitUntilDatabaseIsCreatedOnCallingNode(int numberOfNodes)
+        {
+            var clusterStores = CreateRaftCluster(numberOfNodes);
+
+            var firstNonLeaderIndex = servers.FindIndex(server => !server.Options.ClusterManager.Value.IsLeader());
+
+            using (var nonLeaderStore = clusterStores[firstNonLeaderIndex])
+            {
+                nonLeaderStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                {
+                    Id = "Northwind",
+                    Settings =
+                                                                       {
+                                                                           {"Raven/DataDir", "~/Databases/Northwind"}
+                                                                       }
+                });
+
+                // if create database waits properly until database is being created on calling node
+                // then we can send request to newly created database (and won't get Could not find a resource named: Northwind exception)
+                Assert.Null(nonLeaderStore.DatabaseCommands.ForDatabase("Northwind").Get("people/1"));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Nodes")]
+        public async Task CanUpdateDatabaseOnAllNodes(int numberOfNodes)
+        {
+            var clusterStores = CreateRaftCluster(numberOfNodes);
+
+            using (var store1 = clusterStores[0])
+            {
+                // arrange
+                var requestCreator = new AdminRequestCreator((url, method) => store1.DatabaseCommands.ForSystemDatabase().CreateRequest(url, method), null);
+
+                store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+                {
+                    Id = "Northwind",
+                    Settings =
+                                    {
+                                        { "Raven/DataDir", "~/Databases/Northwind" },
+                                        { "Raven/ActiveBundles", "Replication"}
+                                    }
+                });
+
+                var key = Constants.Database.Prefix + "Northwind";
+
+                clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), key));
+
+                // act - try to add new setting
+                var databaseUpdateDocument = new DatabaseDocument
+                {
+                    Id = "Northwind",
+                    Settings =
+                    {
+                        {"Raven/DataDir", "~/Databases/Northwind"},
+                        {"Raven/ActiveBundles", "Replication"},
+                        {"Raven/New", "testing" }
+                    }
+                };
+
+                var existingDbEtag = store1.DatabaseCommands.ForSystemDatabase().Get(key).Etag;
+
+                RavenJObject doc;
+                using (var req = requestCreator.CreateDatabase(databaseUpdateDocument, out doc))
+                {
+                    req.AddHeader("If-None-Match", existingDbEtag);
+                    await req.WriteAsync(doc.ToString(Formatting.Indented)).ConfigureAwait(false);
+                }
+
+                // assert
+                clusterStores.ForEach(store =>
+                {
+                    WaitFor(store.DatabaseCommands, commands =>
+                    {
+                        var databaseDocument = commands.ForSystemDatabase().Get(key);
+                        var settings = databaseDocument.DataAsJson.Value<RavenJObject>("Settings");
+                        return "testing" == settings.Value<string>("Raven/New");
+                    });
+                });
             }
         }
 

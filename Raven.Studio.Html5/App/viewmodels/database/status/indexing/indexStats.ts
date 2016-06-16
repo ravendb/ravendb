@@ -3,7 +3,6 @@ import generalUtils = require("common/generalUtils");
 import getIndexingPerfStatsCommand = require("commands/database/debug/getIndexingPerfStatsCommand");
 import d3 = require("d3/d3");
 import nv = require('nvd3');
-import shell = require("viewmodels/shell");
 import changesContext = require("common/changesContext");
 import changeSubscription = require('common/changeSubscription');
 

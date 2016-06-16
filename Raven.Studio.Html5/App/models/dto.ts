@@ -174,6 +174,16 @@ interface reducingBatchInfoDto {
     PerfStats: indexNameAndReducingPerformanceStats[];
 }
 
+interface deletionBatchInfoDto {
+    Id: number;
+    IndexName: string;
+    TotalDocumentCount: number;
+    StartedAt: string; // ISO date string.
+    StartedAtDate?: Date;
+    TotalDurationMs: number;
+    PerformanceStats: deletionPerformanceStatsDto[];
+}
+
 interface indexNameAndReducingPerformanceStats {
     indexName: string;
     stats: reducePerformanceStatsDto;
@@ -183,6 +193,10 @@ interface indexNameAndReducingPerformanceStats {
 interface reducePerformanceStatsDto {
     ReduceType?: string;
     LevelStats: reduceLevelPeformanceStatsDto[];
+}
+
+interface deletionPerformanceStatsDto extends basePerformanceStatsDto {
+    Name: string;
 }
 
 interface reduceLevelPeformanceStatsDto {
@@ -581,7 +595,7 @@ interface transformerDto {
 
 interface indexDefinitionListItemDto {
     name: string;
-    definition: indexDefinitionDto
+    definition: indexDefinitionDto;
 }
 
 interface saveTransformerDto {
@@ -653,7 +667,7 @@ interface bulkDocumentDto {
 
 interface databaseDocumentSaveDto {
     Key: string;
-    ETag: string
+    ETag: string;
 }
 
 interface backupRequestDto {
@@ -736,7 +750,7 @@ interface sqlReplicationDto extends documentDto {
 
 interface commandData {
     CommandText: string;
-    Params:{Key:string;Value:any}[]
+    Params:{Key:string;Value:any}[];
 }
 
 interface tableQuerySummary {
@@ -960,7 +974,6 @@ interface statusDebugMetricsDto {
     StaleIndexReduces: histogramDataDto;
     Gauges: any;
     ReplicationBatchSizeMeter: dictionary<meterDataDto>;
-    ReplicationDurationMeter: dictionary<meterDataDto>;
     ReplicationBatchSizeHistogram: dictionary<histogramDataDto>;
     ReplicationDurationHistogram: dictionary<histogramDataDto>;
 }
@@ -1477,6 +1490,7 @@ interface nodeConnectionInfoDto {
     Password?: string;
     Domain?: string;
     ApiKey?: string;
+    IsNoneVoter : boolean;
 }
 
 interface clusterConfigurationDto {

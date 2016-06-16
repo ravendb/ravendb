@@ -475,6 +475,7 @@
     <Compile Include="Server\Connections\FileSystemConnectionState.cs" />
     <Compile Include="Server\Controllers\Admin\BaseAdminDatabaseApiController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminJsConsoleController.cs" />
+    <Compile Include="Server\Controllers\Admin\BenchmarkController.cs" />
     <Compile Include="Server\Controllers\ClusterAwareRavenDbApiController.cs" />
     <Compile Include="Server\Controllers\ConfigurationController.cs" />
     <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
@@ -606,6 +607,7 @@
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\MetricsTicker.cs" />
     <Compile Include="Util\MiniDumper.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />

@@ -51,9 +51,9 @@ class resources extends viewModelBase {
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
-    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
+    developerLicense = ko.computed(() => !license.licenseStatus() || !license.licenseStatus().IsCommercial);
     showCreateCluster = ko.computed(() => !shell.clusterMode());
-    canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
+    canCreateCluster = ko.computed(() => license.licenseStatus() && (!license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true"));
     canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     databaseType = database.type;
@@ -63,8 +63,9 @@ class resources extends viewModelBase {
     visibleResource = ko.observable("");
     has40Features = ko.computed(() => shell.has40Features());
     visibleOptions: { value:string, name: string }[];
-
-    
+    databasesSummary: KnockoutComputed<string>;
+    fileSystemsSummary: KnockoutComputed<string>;
+    isCommaNeeded: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -88,6 +89,9 @@ class resources extends viewModelBase {
         this.counterStorages = shell.counterStorages;
         this.timeSeries = shell.timeSeries;
         this.resources = shell.resources;
+
+        // uncheck all during page load
+        this.resources().forEach(resource => resource.isChecked(false));
         
         this.systemDb = appUrl.getSystemDatabase();
         this.appUrls = appUrl.forCurrentDatabase(); 
@@ -175,9 +179,34 @@ class resources extends viewModelBase {
             return false;
         });
 
+        this.databasesSummary = ko.computed(() => this.getResourcesSummary(this.databases(), "database"));
+        this.fileSystemsSummary = ko.computed(() => this.getResourcesSummary(this.fileSystems(), "file system"));
+        this.isCommaNeeded = ko.computed(() => 
+            this.databases().filter(x => x.isVisible()).length > 0 &&
+            this.fileSystems().filter(x => x.isVisible()).length > 0);
+
         this.fetchAlerts();
         this.visibleResource.subscribe(() => this.filterResources());
         this.filterResources();
+    }
+
+    private getResourcesSummary(resourcesCollection: Array<resource>, type: string) {
+        var summary = "";
+
+	    var resources = resourcesCollection.filter(x => x.isVisible());
+	    if (resources.length > 0) {
+		    summary += resources.length + " "  + type;
+		    if (resources.length > 1) {
+			    summary += "s";
+		    }
+
+		    var disabled = resources.filter(x => x.disabled()).length;
+		    if (disabled > 0) {
+			    summary += " (" + disabled + " disabled)";
+		    }
+	    }
+
+        return summary;
     }
 
     private fetchAlerts() {
@@ -551,8 +580,12 @@ class resources extends viewModelBase {
                     this.createDefaultDatabaseSettings(newDatabase, bundles).always(() => {
                         if (bundles.contains("Quotas") || bundles.contains("Versioning") || bundles.contains("SqlReplication")) {
                             encryptionConfirmationDialogPromise.always(() => {
-                                var settingsDialog = new databaseSettingsDialog(bundles);
-                                app.showDialog(settingsDialog);
+                                // schedule dialog using setTimeout to avoid issue with dialog width
+                                // (it isn't recalculated when dialog is already opened)
+                                setTimeout(() => {
+                                        var settingsDialog = new databaseSettingsDialog(bundles);
+                                        app.showDialog(settingsDialog);
+                                    }, 1);
                             });
                         }
                     });

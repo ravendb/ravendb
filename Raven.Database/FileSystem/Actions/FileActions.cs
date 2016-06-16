@@ -443,7 +443,8 @@ namespace Raven.Database.FileSystem.Actions
 
             var filesToDelete = new List<DeleteFileOperation>();
 
-            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun)
+            int totalCount;
+            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun, out totalCount)
                                                               .Select(config => config.JsonDeserialization<DeleteFileOperation>())
                                                               .ToList());
 
@@ -527,7 +528,8 @@ namespace Raven.Database.FileSystem.Actions
 
             Storage.Batch(accessor =>
             {
-                var renameOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10);
+                int totalCount;
+                var renameOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10, out totalCount);
 
                 filesToRename = renameOpConfigs.Select(config => config.JsonDeserialization<RenameFileOperation>()).ToList();
             });
@@ -590,7 +592,8 @@ namespace Raven.Database.FileSystem.Actions
 
             Storage.Batch(accessor =>
             {
-                var copyOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.CopyOperationConfigPrefix, 0, 10);
+                int totalCount;
+                var copyOpConfigs = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.CopyOperationConfigPrefix, 0, 10, out totalCount);
 
                 filesToCopy = copyOpConfigs.Select(config => config.JsonDeserialization<CopyFileOperation>()).ToList();
             });

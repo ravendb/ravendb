@@ -106,7 +106,7 @@ namespace Raven.Tests.Core.ChangesApi
             {
             }
 
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            protected override void NotifySubscribers(string type, RavenJObject value, List<MockConnectionState> connections)
             {
                 throw new NotImplementedException();
             }
@@ -124,7 +124,7 @@ namespace Raven.Tests.Core.ChangesApi
             {
             }
 
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            protected override void NotifySubscribers(string type, RavenJObject value, List<MockConnectionState> connections)
             {
                 throw new NotImplementedException();
             }
@@ -142,7 +142,7 @@ namespace Raven.Tests.Core.ChangesApi
             {
             }
 
-            protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, MockConnectionState>> connections)
+            protected override void NotifySubscribers(string type, RavenJObject value, List<MockConnectionState> connections)
             {
                 throw new NotImplementedException();
             }

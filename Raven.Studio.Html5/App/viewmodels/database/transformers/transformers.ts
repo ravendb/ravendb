@@ -6,11 +6,10 @@ import appUrl = require("common/appUrl");
 import deleteTransformerConfirm = require("viewmodels/database/transformers/deleteTransformerConfirm");
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
-import shell = require("viewmodels/shell");
 import changesContext = require("common/changesContext");
 import copyTransformerDialog = require("viewmodels/database/transformers/copyTransformerDialog");
 
-class Transformers extends viewModelBase {
+class transformers extends viewModelBase {
 
     newTransformerUrl = appUrl.forCurrentDatabase().newTransformer;
     appUrls: computedAppUrls;
@@ -59,10 +58,10 @@ class Transformers extends viewModelBase {
     }
 
     private processTransformerEvent(e: transformerChangeNotificationDto) {
-        if (e.Type == "TransformerRemoved") {
+        if (e.Type === "TransformerRemoved") {
             this.removeTransformersFromAllGroups(this.findTransformersByName(e.Name));
         } else {
-            if (this.transformersMutex == true) {
+            if (this.transformersMutex) {
                 this.transformersMutex = false;
                 setTimeout(() => {
                     this.fetchTransformers(this.activeDatabase()).always(() => this.transformersMutex = true);
@@ -75,7 +74,7 @@ class Transformers extends viewModelBase {
         var result = new Array<transformer>();
         this.transformersGroups().forEach(g => {
             g.transformers().forEach(i => {
-                if (i.name() == transformerName) {
+                if (i.name() === transformerName) {
                     result.push(i);
                 }
             });
@@ -90,7 +89,7 @@ class Transformers extends viewModelBase {
         var group = this.transformersGroups.first(g=> g.entityName === groupName);
 
         if (group) {
-            var existingTrans = group.transformers.first((cur: transformer)=> cur.name() == trans.name());
+            var existingTrans = group.transformers.first((cur: transformer)=> cur.name() === trans.name());
 
             if (!existingTrans) {
                 group.transformers.push(trans);
@@ -155,4 +154,4 @@ class Transformers extends viewModelBase {
     }
 }
 
-export = Transformers;
+export = transformers;

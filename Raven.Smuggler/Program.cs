@@ -32,7 +32,7 @@ namespace Raven.Smuggler
         private OptionSet filesystemOptionSet;
         private OptionSet counterOptionSet;
         private readonly OptionSet selectionDispatching;
-        private bool allowImplicitDatabase = false;
+        private bool allowOperationOnSystemDatabase;
 
         private Program()
         {
@@ -204,6 +204,7 @@ namespace Raven.Smuggler
             databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
             databaseOptionSet.Add("continuation-token:", OptionCategory.SmugglerDatabase, "Activates the usage of a continuation token in case of unreliable connections or huge imports", s => databaseOptions.ContinuationToken = s);
             databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
+            databaseOptionSet.Add("system-database", OptionCategory.SmugglerDatabase, "Set to true in order to work on a system database", _ => allowOperationOnSystemDatabase = true);
         }
 
         private NetworkCredential GetCredentials(FilesConnectionStringOptions connectionStringOptions)
@@ -290,64 +291,64 @@ namespace Raven.Smuggler
                 switch (mode)
                 {
                     case SmugglerMode.Database:
+                    {
+                        CallContext.LogicalSetData(Constants.Smuggler.CallContext, true);
+
+                        try
                         {
-                            CallContext.LogicalSetData(Constants.Smuggler.CallContext, true);
+                            databaseOptionSet.Parse(args);
+                        }
+                        catch (Exception e)
+                        {
+                            PrintUsageAndExit(e);
+                        }
 
-                            try
-                            {
-                                databaseOptionSet.Parse(args);
-                            }
-                            catch (Exception e)
-                            {
-                                PrintUsageAndExit(e);
-                            }
+                        options.Source.Url = url;
+                        options.BackupPath = args[2];
 
-                            options.Source.Url = url;
-                            options.BackupPath = args[2];
-
-                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                                smugglerApi.Options.Incremental = true;
+                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                            smugglerApi.Options.Incremental = true;
 
                         if (NetworkUtil.IsLocalhost(smugglerApi.Options.Destination.Url) ||
                             NetworkUtil.IsLocalhost(smugglerApi.Options.BackupPath))
                             smugglerApi.Options.DisableCompressionOnImport = true;
 
-                            ValidateDatabaseParameters(smugglerApi, action);
-                            var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
-                            await databaseDispatcher.Execute(action).ConfigureAwait(false);
-                        }
+                        ValidateDatabaseParameters(smugglerApi, action);
+                        var databaseDispatcher = new SmugglerDatabaseOperationDispatcher(smugglerApi);
+                        await databaseDispatcher.Execute(action).ConfigureAwait(false);
+                    }
                         break;
                     case SmugglerMode.Filesystem:
+                    {
+                        try
                         {
-                            try
-                            {
-                                filesystemOptionSet.Parse(args);
-                            }
-                            catch (Exception e)
-                            {
-                                PrintUsageAndExit(e);
-                            }
-
-                            filesOptions.Source.Url = url;
-                            filesOptions.BackupPath = args[2];
-
-                            if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                                smugglerFilesApi.Options.Incremental = true;
-
-                            var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
-                            await filesDispatcher.Execute(action).ConfigureAwait(false);
+                            filesystemOptionSet.Parse(args);
                         }
+                        catch (Exception e)
+                        {
+                            PrintUsageAndExit(e);
+                        }
+
+                        filesOptions.Source.Url = url;
+                        filesOptions.BackupPath = args[2];
+
+                        if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
+                            smugglerFilesApi.Options.Incremental = true;
+
+                        var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
+                        await filesDispatcher.Execute(action).ConfigureAwait(false);
+                    }
                         break;
                     case SmugglerMode.Counter:
                     {
                         try
                         {
                             counterOptionSet.Parse(args);
-                }
+                        }
                         catch (Exception e)
                         {
                             PrintUsageAndExit(e);
-            }
+                        }
 
                         switch (action)
                         {
@@ -368,10 +369,14 @@ namespace Raven.Smuggler
                         }
 
                         smugglerCounterApi.Options.BackupPath = args[2];
-                        
+
                         var countersDispatcher = new SmugglerCounterOperationDispatcher(smugglerCounterApi.Options);
                         await countersDispatcher.Execute(action).ConfigureAwait(false);
                     }
+                        break;
+                    default:
+                        Console.WriteLine("Smuggler mode is not identified. You should use --database or --filesystem.");
+                        Environment.Exit(-1);
                         break;
                 }
             }
@@ -393,22 +398,22 @@ namespace Raven.Smuggler
                 }
 
                 Environment.Exit(-1);
-            }            
+            }
         }
 
         private void ValidateDatabaseParameters(SmugglerDatabaseApi api, SmugglerAction action)
         {
-            if (allowImplicitDatabase)
+            if (allowOperationOnSystemDatabase)
                 return;
 
                 if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
                 {
-                    throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
+                    throw new OptionException("--database parameter must be specified or pass --system-database", "database");
                 }
 
                 if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
                 {
-                    throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
+                    throw new OptionException("--database2 parameter must be specified or pass --system-database", "database2");
                 }
             }
 

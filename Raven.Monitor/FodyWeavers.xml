@@ -2,6 +2,7 @@
 <Weavers>
     <Costura IncludeDebugSymbols='false'>
         <ExcludeAssemblies>
+          Microsoft.Diagnostics.Tracing.TraceEvent
         </ExcludeAssemblies>
     </Costura>
 </Weavers>

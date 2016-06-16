@@ -6,7 +6,6 @@ import getIndexesDefinitionsCommand = require("commands/database/index/getIndexe
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
 import saveTransformerCommand = require("commands/database/transformers/saveTransformerCommand");
-import indexPriority = require("models/database/index/indexPriority");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
@@ -26,8 +25,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
     canActivate(args: any): any {
         if (this.isPaste) {
             return true;
-        }
-        else {
+        } else {
             var canActivateResult = $.Deferred();
             var getIndexDefinitionsPromise =
                 new getIndexesDefinitionsCommand(this.db)
@@ -61,7 +59,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
         // Overrides the base class' setInitialFocus and does nothing.
         // Doing nothing because we will focus the Ace Editor when it's initialized.
     }
-
+     
     enterKeyPressed(): boolean {
         // Overrides the base class' enterKeyPressed. Because the user might
         // edit the JSON, or even type some in manually, enter might really mean new line, not Save changes.
@@ -75,31 +73,31 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
     }
 
     saveAll() {
-        if (this.isPaste === true && !!this.json()) {
+        if (this.isPaste && this.json()) {
             var indexesAndTransformers: { Indexes: indexDefinitionListItemDto[]; Transformers: transformerDto[] };
             var indexesDefinitions: indexDefinitionDto[] = [];
             var transformersDefinitions: savedTransformerDto[] = [];
 
             try {
                 indexesAndTransformers = JSON.parse(this.json());
-                if (!!indexesAndTransformers.Indexes && indexesAndTransformers.Indexes.length > 0) {
+                if (indexesAndTransformers.Indexes && indexesAndTransformers.Indexes.length > 0) {
                     indexesDefinitions.pushAll(indexesAndTransformers.Indexes.map((index: indexDefinitionListItemDto) => {
                         return index.definition;
                     }));
                 }
 
-                if (!!indexesAndTransformers.Transformers && indexesAndTransformers.Transformers.length > 0) {
+                if (indexesAndTransformers.Transformers && indexesAndTransformers.Transformers.length > 0) {
                     transformersDefinitions.pushAll(indexesAndTransformers.Transformers.map((transformer: transformerDto) => {
                         return {
-                            "Transformer": {
-                                'Name': transformer.name,
-                                'TransformResults': transformer.definition.TransformResults,
-                                'LockMode':transformer.definition.LockMode
+                             Transformer: {
+                                Name: transformer.name,
+                                TransformResults: transformer.definition.TransformResults,
+                                LockMode: transformer.definition.LockMode
                             }
                         }
                     }));
                 }
-                if (indexesDefinitions.length == 0 && transformersDefinitions.length == 0) {
+                if (indexesDefinitions.length === 0 && transformersDefinitions.length === 0) {
                     throw "No indexes or transformers found in json string";
                 }
             } catch (e) {
@@ -113,7 +111,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
             var succeededTransformers: string[] = [];
             var failedTransformers: string[] = [];
 
-            if (indexesDefinitions.length >0) {
+            if (indexesDefinitions.length > 0) {
                 indexesDefinitions.forEach((index: indexDefinitionDto) => {
                     var curDeferred = $.Deferred();
                     allOperationsPromises.push(curDeferred);

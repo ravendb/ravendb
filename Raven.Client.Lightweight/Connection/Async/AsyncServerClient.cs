@@ -2652,7 +2652,9 @@ namespace Raven.Client.Connection.Async
                 }
                 catch (ErrorResponseException e)
                 {
-                    if (e.StatusCode == HttpStatusCode.NotFound) return null;
+                    if (e.StatusCode == HttpStatusCode.NotFound)
+                        return null;
+
                     throw;
                 }
             }

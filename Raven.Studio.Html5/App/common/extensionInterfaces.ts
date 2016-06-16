@@ -75,6 +75,7 @@ interface Array<T> {
 
 // String extensions
 interface String {
+    capitalizeFirstLetter: () => string;
     hashCode: () => number;
     replaceAll: (find, replace) => string;
     reverse: (input) => string;

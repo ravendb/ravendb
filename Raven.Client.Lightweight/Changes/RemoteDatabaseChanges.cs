@@ -91,7 +91,7 @@ namespace Raven.Client.Changes
             }
         }
 
-        protected override void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, DatabaseConnectionState>> connections)
+        protected override void NotifySubscribers(string type, RavenJObject value, List<DatabaseConnectionState> connections)
         {
             switch (type)
             {
@@ -99,7 +99,7 @@ namespace Raven.Client.Changes
                     var documentChangeNotification = value.JsonDeserialization<DocumentChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(documentChangeNotification);
+                        counter.Send(documentChangeNotification);
                     }
                     break;
 
@@ -107,7 +107,7 @@ namespace Raven.Client.Changes
                     var bulkInsertChangeNotification = value.JsonDeserialization<BulkInsertChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(bulkInsertChangeNotification);
+                        counter.Send(bulkInsertChangeNotification);
                     }
                     break;
 
@@ -115,21 +115,21 @@ namespace Raven.Client.Changes
                     var indexChangeNotification = value.JsonDeserialization<IndexChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(indexChangeNotification);
+                        counter.Send(indexChangeNotification);
                     }
                     break;
                 case "TransformerChangeNotification":
                     var transformerChangeNotification = value.JsonDeserialization<TransformerChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(transformerChangeNotification);
+                        counter.Send(transformerChangeNotification);
                     }
                     break;
                 case "ReplicationConflictNotification":
                     var replicationConflictNotification = value.JsonDeserialization<ReplicationConflictNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(replicationConflictNotification);
+                        counter.Send(replicationConflictNotification);
                     }
 
                     if (replicationConflictNotification.ItemType == ReplicationConflictTypes.DocumentReplicationConflict)
@@ -155,7 +155,7 @@ namespace Raven.Client.Changes
                     var dataSubscriptionChangeNotification = value.JsonDeserialization<DataSubscriptionChangeNotification>();
                     foreach (var counter in connections)
                     {
-                        counter.Value.Send(dataSubscriptionChangeNotification);
+                        counter.Send(dataSubscriptionChangeNotification);
                     }
                     break;
                 default:

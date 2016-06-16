@@ -330,7 +330,7 @@ namespace Rachis
             return ModifyTopology(requestedTopology);
         }
 
-        public Task AddToClusterAsync(NodeConnectionInfo node, bool nonVoting = false)
+        public Task AddToClusterAsync(NodeConnectionInfo node)
         {
             if (_currentTopology.Contains(node.Name))
                 throw new InvalidOperationException("Node " + node.Name + " is already in the cluster");
@@ -338,13 +338,33 @@ namespace Rachis
             var requestedTopology = new Topology(
                 _currentTopology.TopologyId,
                 _currentTopology.AllVotingNodes,
-                nonVoting ? _currentTopology.NonVotingNodes.Union(new[] { node }) : _currentTopology.NonVotingNodes,
-                nonVoting ? _currentTopology.PromotableNodes : _currentTopology.PromotableNodes.Union(new[] { node })
+                node.IsNoneVoter ? _currentTopology.NonVotingNodes.Union(new[] { node }) : _currentTopology.NonVotingNodes,
+                node.IsNoneVoter ? _currentTopology.PromotableNodes : _currentTopology.PromotableNodes.Union(new[] { node })
                 );
 
             if (_log.IsInfoEnabled)
             {
                 _log.Info("AddToClusterClusterAsync, requestedTopology: {0}", requestedTopology);
+            }
+            return ModifyTopology(requestedTopology);
+        }
+
+        public Task ModifyNodeVotingModeAsync(NodeConnectionInfo node, bool votingMode)
+        {
+            if (!_currentTopology.Contains(node.Name))
+                throw new InvalidOperationException("Node " + node.Name + " is not in the cluster");
+            node.IsNoneVoter = !votingMode;
+            var requestedTopology = new Topology(
+                _currentTopology.TopologyId,
+                votingMode ? _currentTopology.AllVotingNodes: _currentTopology.AllVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false),
+                votingMode ? _currentTopology.NonVotingNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false):
+                _currentTopology.NonVotingNodes.Union(new[] { node}),
+                votingMode ? _currentTopology.PromotableNodes.Union(new [] {node}) : _currentTopology.PromotableNodes.Where(x => string.Equals(x.Name, node.Name, StringComparison.OrdinalIgnoreCase) == false)
+                );
+
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info("ModifyNodeVotingModeAsync, requestedTopology: {0}", requestedTopology);
             }
             return ModifyTopology(requestedTopology);
         }

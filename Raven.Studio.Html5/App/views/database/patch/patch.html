@@ -3,7 +3,7 @@
     <div class="btn-toolbar" role="toolbar">
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <div class="btn-group" data-bind="with: patchDocument">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.isPatchingInProgress()">
                 <span data-bind="text: patchOnOption"></span>
                 <span class="caret"></span>
             </button>
@@ -14,7 +14,7 @@
             </ul>
         </div>
         <div class="btn-group">
-            <button data-bind="enable: savedPatches().length" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Load a saved patch"><i class="fa fa-arrow-up"></i> Load <span class="caret"></span></button>
+            <button data-bind="enable: savedPatches().length && !$root.isPatchingInProgress()" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Load a saved patch"><i class="fa fa-arrow-up"></i> Load <span class="caret"></span></button>
             <ul class="dropdown-menu" role="menu" data-bind="foreach: savedPatches">
                 <li>
                     <a href="#" data-bind="click: $root.usePatch.bind($root, $data)">
@@ -22,16 +22,16 @@
                     </a>
                 </li>
             </ul>
-            <button class="btn btn-default" title="Save the current patch" data-bind="click: savePatch, enable: (patchDocument().script())"><i class="fa fa-save"></i> Save</button>
+            <button class="btn btn-default" title="Save the current patch" data-bind="click: savePatch, enable: patchDocument().script() && !$root.isPatchingInProgress()"><i class="fa fa-save"></i> Save</button>
         </div>
 
         <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: recentPatches().length > 0">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: recentPatches().length > 0, disable: $root.isPatchingInProgress()">
                 Recent Patches <span class="caret"></span>
             </button>
             <ul class="dropdown-menu" role="menu" data-bind="foreach: recentPatches">
                 <li>
-                    <a href="#" data-bind="click: $root.useRecentPatch.bind($root, $data)">
+                    <a href="#" data-bind="click: $root.useRecentPatch.bind($root, $data), attr: { title: Script }">
                         <span data-bind="text: PatchOnOption"></span>
                         <span data-bind="visible: SelectedItem">
                             <span class="text-muted">|</span>
@@ -47,36 +47,51 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn btn-default" title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch, enable: isExecuteAllowed" accesskey="T"><i class="fa fa-question-circle"></i> Test</button>
+            <button class="btn btn-default" title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch, enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected()" accesskey="T"><i class="fa fa-question-circle"></i> Test</button>
         </div>
 
-        <div class="btn-group" data-bind="visible: (!!patchDocument()) && patchDocument().isDocumentPatch()">
-            <button class="btn btn-primary" title="Execute Patch (Alt+P)" accesskey="P" data-bind="click: executePatchOnSingle, enable: isExecuteAllowed">
+        <div class="btn-group" data-bind="visible: patchDocument() && patchDocument().isDocumentPatch()">
+            <button class="btn btn-primary" title="Execute Patch (Alt+P)" accesskey="P" data-bind="click: executePatchOnSingle, enable: isExecuteAllowed() && !$root.isPatchingInProgress()">
                 <i class="fa fa-play"></i> Patch
             </button>
         </div>
         <div class="btn-group" data-bind="visible: (!!patchDocument()) && (patchDocument().isCollectionPatch() || patchDocument().isIndexPatch())">
-            <button class="btn btn-primary" title="Patch the selected documents (Alt+S)" accesskey="S" data-bind="click: executePatchOnSelected, enable: isExecuteAllowed">
+            <button class="btn btn-primary" title="Patch the selected documents (Alt+S)" accesskey="S" data-bind="click: executePatchOnSelected, enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected()">
                 <i class="fa fa-play"></i> Patch Selected
             </button>
-            <button class="btn btn-primary" title="Patch all matching documents (Alt+A)" data-bind="click: executePatchOnAll, enable: (patchDocument().script())" accesskey="A">
+            <button class="btn btn-primary" title="Patch all matching documents (Alt+A)" data-bind="click: executePatchOnAll, enable: patchDocument().script() && !$root.isPatchingInProgress()" accesskey="A">
                 <i class="fa fa-forward"></i> Patch All
             </button>
         </div>
+        <button data-bind="visible: patchOperationId(), enable: !patchKillInProgress(), click: $root.killPatch.bind($root)" class="btn btn-primary">
+            <i data-bind="visible: !patchKillInProgress()" class="fa fa-fw fa-bolt"></i>
+            <i data-bind="visible: patchKillInProgress()" class="fa fa-fa fa-spin fa-spinner"></i> Stop patch
+        </button>
     </div>
-    <br />
+    <br/>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="progress" data-bind="css: { active: isPatchingInProgress() }, visible: showPatchingProgress() && (!!patchDocument()) && (patchDocument().isDocumentPatch() == false)">
+                <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuemin="0" aria-valuemax="100" 
+                     data-bind="style: {width: patchingProgressPercentage}, aria-valuenow: patchingProgress, css: { 'progress-bar-success' : patchSuccess(), 'progress-bar-danger': patchFailure() }">
+                    <span data-bind="text: patchingProgressText" />
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="form-inline">
+
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isDocumentPatch()">
             <label for="documentToPatch" class="padd-right-10">Document to Patch:</label>
             <span data-bind="with: patchDocument">
-                <input id="documentToPatch" accesskey="I" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }" />
+                <input id="documentToPatch" accesskey="I" type="text" class="form-control" data-bind="value: selectedItem, valueUpdate: 'afterkeydown', event: { keyup: $root.loadDocumentToTest.bind($root, $element.value) }, enable: !$root.isPatchingInProgress()" />
             </span>
         </div>
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isCollectionPatch()">
             <label for="collectionToPatch" class="padd-right-10">Collection to Patch:</label>
             <div class="btn-group" data-bind="with: patchDocument">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.isPatchingInProgress()">
                     <span data-bind="text: selectedItem"></span>
                     <span class="caret" data-bind="visible: $root.collections().length > 1"></span>
                 </button>
@@ -90,28 +105,22 @@
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
             <label for="indexToPatch" class="padd-right-10">Index to Patch:</label>
             <div class="btn-group" data-bind="with: patchDocument">
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="disable: $root.isPatchingInProgress()">
                     <span data-bind="text: selectedItem"></span>
-                    <span class="caret" data-bind="visible: $root.indexNames().length > 1"></span>
+                    <span class="caret" data-bind="visible: $root.indices().length > 1"></span>
                 </button>
                 <ul id="indexToPatch" class="dropdown-menu" role="menu">
-                    <!-- ko foreach: $root.indexNamesToSelect -->
-                    <li data-bind="click: $root.useIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                    <!-- ko foreach: $root.indicesToSelect -->
+                    <li data-bind="click: $root.useIndex.bind($root, $data.name)"><a href="#" data-bind="text: name"></a></li>
                     <!-- /ko -->
                 </ul>
+                <span class="text-height-fix padd-left-10" data-bind="visible: $root.isMapReduceIndexSelected()">
+                    <i class="fa fa-warning text-warning"></i> <span class="text-muted">'Test' and 'Patch selected' are not available for MapReduce indexes.</span>
+                </span>
             </div>
         </div>
     </div>
     <div class="form-horizontal">
-        <div class="form-group">
-            <div class="col-md-12">
-                <div class="progress" data-bind="css: { active: isPatchingInProgress() }, visible: showPatchingProgress() && (!!patchDocument()) && (patchDocument().isDocumentPatch() == false)">
-                    <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-bind="style: {width: patchingProgressPercentage}, aria-valuenow: patchingProgress">
-                        <span data-bind="text: patchingProgressText" />
-                    </div>
-                </div>
-            </div>
-        </div>
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
             <div class="col-md-9">
                 <div>
@@ -125,7 +134,7 @@
                 </div>
                 <div>
                     <div data-bind="with: patchDocument">
-                        <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: $root.queryText, typeName:'queryText', allowResize: true, minHeight: 160, maxHeight: 200, completer:$root.queryCompleter, lang:'ace/mode/lucene', completerHostObject:$root}, valueUpdate: 'afterkeydown'"></pre>
+                        <pre id="queryEditor" class="form-control editor" data-bind="aceEditor: { code: $root.queryText, readOnly: $root.isPatchingInProgress(), typeName:'queryText', allowResize: true, minHeight: 160, maxHeight: 200, completer:$root.queryCompleter, lang:'ace/mode/lucene', completerHostObject:$root}, valueUpdate: 'afterkeydown'"></pre>
                     </div>
                 </div>
             </div>
@@ -143,7 +152,7 @@
                 <div>
                     <div class="row">
                         <div class="col-md-12" data-bind="with: patchDocument">
-                            <pre class="form-control" data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
+                            <pre class="form-control" data-bind="aceEditor: { code: script, lang:'ace/mode/javascript', readOnly: $root.isPatchingInProgress() }" style="height: 160px;"></pre>
                         </div>
                     </div>
                 </div>
@@ -164,20 +173,20 @@
                         <tbody data-bind="foreach: parameters">
                             <tr>
                                 <td>
-                                    <input id="parametersName" type="text" class="form-control" data-bind="value: key" />
+                                    <input id="parametersName" type="text" class="form-control" data-bind="value: key, disable: $root.isPatchingInProgress()" />
                                 </td>
                                 <td>
-                                    <input id="parametersValue" type="text" class="form-control" data-bind="value: value" />
+                                    <input id="parametersValue" type="text" class="form-control" data-bind="value: value, disable: $root.isPatchingInProgress()" />
                                 </td>
                                 <td>
-                                    <button type="button" class="close" data-bind="click: $parent.removeParameter.bind($parent, $data)" title="Remove this parameter">
+                                    <button type="button" class="close" data-bind="click: $parent.removeParameter.bind($parent, $data), disable: $root.isPatchingInProgress()" title="Remove this parameter">
                                         <i class="fa fa-times"></i>
                                     </button>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-                    <button type="button" class="btn btn-default" data-bind="click: createParameter" title="Add a parameter">
+                    <button type="button" class="btn btn-default" data-bind="click: createParameter, disable: $root.isPatchingInProgress()" title="Add a parameter">
                         <i class="fa fa-plus"></i> Add parameter
                     </button>
                 </div>

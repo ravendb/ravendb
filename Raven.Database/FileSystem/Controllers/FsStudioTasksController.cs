@@ -34,7 +34,6 @@ namespace Raven.Database.FileSystem.Controllers
     {
 
         [HttpGet]
-        [RavenRoute("studio-tasks/check-sufficient-diskspace")]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/check-sufficient-diskspace")]
         public async Task<HttpResponseMessage> CheckSufficientDiskspaceBeforeImport(long fileSize)
         {
@@ -178,7 +177,7 @@ namespace Raven.Database.FileSystem.Controllers
                 smugglerOptions.NoneDefualtFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
-                FileName = fileName + ".ravendump"
+                FileName = fileName + ".ravenfsdump"
             };
 
             return new CompletedTask<HttpResponseMessage>(result);

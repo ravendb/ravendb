@@ -20,7 +20,7 @@ namespace Raven.Tests.Issues
 {
     public class ReplicationAlerts : ReplicationBase
     {
-        protected string DumpFile = "dump.ravendump";
+        protected string DumpFile = "dump.ravendbdump";
 
         public ReplicationAlerts()
         {

@@ -1,7 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import index = require("models/database/index/index");
-import indexPriority = require("models/database/index/indexPriority");
 
 class saveIndexDefinitionCommand extends commandBase {
 

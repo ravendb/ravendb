@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
@@ -24,7 +25,7 @@ namespace Voron.Impl
         private readonly long _id;
 
         private readonly WriteAheadJournal _journal;
-        private Dictionary<Tuple<Tree, MemorySlice>, Tree> _multiValueTrees;
+        private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
         private readonly HashSet<long> _dirtyPages = new HashSet<long>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, long> _dirtyOverflowPages = new Dictionary<long, long>(NumericEqualityComparer.Instance);
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
@@ -151,7 +152,7 @@ namespace Voron.Impl
         {
             for (int i = 0; i < pages.NumberOfPages; i++)
             {
-                var page = _env.ScratchBufferPool.ReadPage(pages.ScratchFileNumber, pages.PositionInScratchBuffer+i);
+                var page = _env.ScratchBufferPool.ReadPage(this, pages.ScratchFileNumber, pages.PositionInScratchBuffer+i);
                 int numberOfPages = 1;
                 if (page.IsOverflow)
                 {
@@ -170,7 +171,7 @@ namespace Voron.Impl
         {
             var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPagesIncludingOverflow);
 
-            var dest = _env.ScratchBufferPool.AcquirePagePointer(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
+            var dest = _env.ScratchBufferPool.AcquirePagePointer(this, pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
             Memory.Copy(dest, page.Base, numberOfPagesIncludingOverflow * AbstractPager.PageSize);
 
             _allocatedPagesInTransaction++;
@@ -188,7 +189,7 @@ namespace Voron.Impl
         private void InitTransactionHeader()
         {
             var allocation = _env.ScratchBufferPool.Allocate(this, 1);
-            var page = _env.ScratchBufferPool.ReadPage(allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
+            var page = _env.ScratchBufferPool.ReadPage(this, allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
             
             _transactionHeaderPage = allocation;
 
@@ -309,11 +310,11 @@ namespace Voron.Impl
                     }
                 }
                
-                p = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
             }
             else
             {
-                p =  _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.Read(pageNumber);
+                p = _journal.ReadPage(this, pageNumber, _scratchPagerStates) ?? _dataPager.Read(this, pageNumber);
             }
 
             Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
@@ -357,7 +358,7 @@ namespace Voron.Impl
             var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
             _transactionPages.Add(pageFromScratchBuffer);
 
-            var page = _env.ScratchBufferPool.ReadPage(pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
+            var page = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber, pageFromScratchBuffer.PositionInScratchBuffer);
             page.PageNumber = pageNumber.Value;
 
             _allocatedPagesInTransaction++;
@@ -603,20 +604,22 @@ namespace Voron.Impl
             _freeSpace = freeSpace;
         }
 
-        internal void AddPagerState(PagerState state)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void EnsurePagerStateReference(PagerState state)
         {
-            _pagerStates.Add(state);
+            if (_pagerStates.Add(state))
+                state.AddRef();
         }
 
-        internal void AddMultiValueTree(Tree tree, MemorySlice key, Tree mvTree)
+        internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
         {
             if (_multiValueTrees == null)
-                _multiValueTrees = new Dictionary<Tuple<Tree, MemorySlice>, Tree>(new TreeAndSliceComparer());
+                _multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
             mvTree.IsMultiValueTree = true;
-            _multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
+            _multiValueTrees.Add(Tuple.Create(tree, key.Clone()), mvTree);
         }
 
-        internal bool TryGetMultiValueTree(Tree tree, MemorySlice key, out Tree mvTree)
+        internal bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
         {
             mvTree = null;
             if (_multiValueTrees == null)
@@ -624,7 +627,7 @@ namespace Voron.Impl
             return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
         }
 
-        internal bool TryRemoveMultiValueTree(Tree parentTree, MemorySlice key)
+        internal bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
         {
             var keyToRemove = Tuple.Create(parentTree, key);
             if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))

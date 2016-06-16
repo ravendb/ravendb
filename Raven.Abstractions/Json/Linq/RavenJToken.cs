@@ -18,6 +18,9 @@ namespace Raven.Json.Linq
     /// <summary>
     ///     Represents an abstract JSON token.
     /// </summary>
+
+
+
     public abstract class RavenJToken
     {
         private static readonly JsonSerializer defaultJsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -64,7 +67,7 @@ namespace Raven.Json.Linq
                         continue;
                     }
 
-                    var newVal = current.Value is RavenJArray ? (RavenJToken) new RavenJArray() : new RavenJObject();
+                    var newVal = current.Value is RavenJArray ? (RavenJToken)new RavenJArray() : new RavenJObject();
 
                     curObject.AddForCloning(current.Key, newVal);
 
@@ -326,7 +329,7 @@ namespace Raven.Json.Linq
         {
             return t == null ? 0 : t.GetDeepHashCode();
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal virtual bool DeepEquals(RavenJToken other)
         {
@@ -344,37 +347,48 @@ namespace Raven.Json.Linq
 
             var curType = JTokenType.None;
             var fieldName = string.Empty;
-            var otherStack = new Stack<RavenJToken>();
+            var otherStack = new Stack<RavenJTokenState>();
             var thisStack = new Stack<RavenJToken>();
             var fieldNameStack = new Stack<string>();
             var isEqual = true;
             thisStack.Push(this);
-            otherStack.Push(other);
+            otherStack.Push(new RavenJTokenState(other, curType));
 
             while (otherStack.Count > 0)
             {
-                var curOtherReader = otherStack.Pop();
+                var curOtherReader = otherStack.Peek();
+                if (curOtherReader.WasHere)
+                {
+                    curType = curOtherReader.CurType;
+                    otherStack.Pop();
+                    continue;
+                }
+
+                curOtherReader.CurType = curType;
+                curOtherReader.WasHere = true;
                 var curThisReader = thisStack.Pop();
+
                 string fieldArrName = string.Empty;
+
                 if (fieldNameStack.Count > 0)
                 {
                     fieldArrName = fieldNameStack.Pop();
                     fieldName = fieldArrName;
                 }
-                  
+
 
                 if (curOtherReader == null && curThisReader == null)
                     continue; // shouldn't happen, but we got an error report from a user about this
                 if (curOtherReader == null || curThisReader == null)
                     return false;
 
-                if (curThisReader.Type == curOtherReader.Type)
+                if (curThisReader.Type == curOtherReader.Token.Type)
                 {
-                    switch (curOtherReader.Type)
+                    switch (curOtherReader.Token.Type)
                     {
                         case JTokenType.Array:
-                            var selfArray = (RavenJArray) curThisReader;
-                            var otherArray = (RavenJArray) curOtherReader;
+                            var selfArray = (RavenJArray)curThisReader;
+                            var otherArray = (RavenJArray)curOtherReader.Token;
                             curType = JTokenType.Array;
                             if (selfArray.Length != otherArray.Length)
                             {
@@ -388,22 +402,22 @@ namespace Raven.Json.Linq
                                 for (var i = 0; i < selfArray.Length; i++)
                                 {
                                     thisStack.Push(selfArray[i]);
-                                    otherStack.Push(otherArray[i]);
+                                    otherStack.Push(new RavenJTokenState(otherArray[i], curType, i));
                                     fieldNameStack.Push(fieldName);
                                 }
                             }
                             break;
                         case JTokenType.Object:
-                            var selfObj = (RavenJObject) curThisReader;
-                            var otherObj = (RavenJObject) curOtherReader;
+                            var selfObj = (RavenJObject)curThisReader;
+                            var otherObj = (RavenJObject)curOtherReader.Token;
                             if (selfObj.Count != otherObj.Count)
                             {
                                 curType = JTokenType.Object;
 
                                 if (docChanges == null)
                                     return false;
-                               isEqual= docChanges.CompareDifferentLengthRavenJObjectData( otherObj, selfObj, fieldName);
-                                
+                                isEqual = docChanges.CompareDifferentLengthRavenJObjectData(otherObj, selfObj, fieldName);
+
                             }
                             else
                             {
@@ -412,15 +426,8 @@ namespace Raven.Json.Linq
                                 var origFieldName = fieldName;
                                 foreach (var kvp in selfObj.Properties)
                                 {
-                                    if (prevType == JTokenType.Object)
-                                    {
-                                        fieldName = origFieldName + "." + kvp.Key;  
-                                    }
-                                    else
-                                    {
-                                        fieldName = kvp.Key;
-                                    }
-                                   
+                                    fieldName = FieldName(prevType, origFieldName, kvp.Key, curOtherReader);
+
                                     RavenJToken token;
                                     if (otherObj.TryGetValue(kvp.Key, out token) == false)
                                     {
@@ -441,7 +448,7 @@ namespace Raven.Json.Linq
 
                                             docChanges.AddChanges(DocumentsChanges.ChangeType.NewField);
                                             isEqual = false;
-                                           
+
                                         }
 
                                         continue;
@@ -450,7 +457,7 @@ namespace Raven.Json.Linq
                                     {
                                         case JTokenType.Array:
                                         case JTokenType.Object:
-                                            otherStack.Push(token);
+                                            otherStack.Push(new RavenJTokenState(token, curType));
                                             thisStack.Push(kvp.Value);
                                             fieldNameStack.Push(fieldName);
                                             break;
@@ -475,54 +482,73 @@ namespace Raven.Json.Linq
                                             {
                                                 if (docChanges == null)
                                                     return false;
-                                                docChanges.AddChanges(kvp, token,fieldName);
+                                                docChanges.AddChanges(kvp, token, fieldName);
                                                 isEqual = false;
                                             }
 
                                             break;
                                     }
-                                } 
+                                }
                             }
                             break;
-                            default:
+                        default:
                             curType = curThisReader.Type;
-                                if (!curOtherReader.DeepEquals(curThisReader))
-                                {
-                                    if (docChanges == null)
-                                        return false;
-                                    docChanges.AddChanges( curThisReader, curOtherReader, fieldName);
-                                    isEqual = false;
-                                }
+                            if (!curOtherReader.Token.DeepEquals(curThisReader))
+                            {
+                                if (docChanges == null)
+                                    return false;
 
-                                break;
+                                fieldName = FieldName(curOtherReader.CurType, fieldName, curThisReader.ToString(), curOtherReader,false);
+                                docChanges.AddChanges(curThisReader, curOtherReader.Token, fieldName);
+                                isEqual = false;
                             }
 
+                            break;
                     }
+
+                }
                 else
+                {
+                    curType = curThisReader.Type;
+                    switch (curThisReader.Type)
                     {
-                        curType = curThisReader.Type;
-                        switch (curThisReader.Type)
-                        {
-                            case JTokenType.Guid:
-                                if (curOtherReader.Type != JTokenType.String)
-                                    return false;
-
-                                if (curThisReader.Value<string>() != curOtherReader.Value<string>())
-                                    return false;
-
-                                break;
-                            default:
+                        case JTokenType.Guid:
+                            if (curOtherReader.Token.Type != JTokenType.String)
                                 return false;
-                        }
+
+                            if (curThisReader.Value<string>() != curOtherReader.Token.Value<string>())
+                                return false;
+
+                            break;
+                        default:
+                            return false;
                     }
-                
+                }
+
             }
 
             return isEqual;
         }
 
-      
+        private static string FieldName(JTokenType prevType, string origFieldName, string key, RavenJTokenState curOtherReader,bool addKeyToFieldName = true)
+        {
+            string fieldName;
 
+            if (prevType == JTokenType.Object)
+            {
+                fieldName = string.Format("{0}.{1}", origFieldName, key);
+            }
+            else if (prevType == JTokenType.Array)
+            {
+                fieldName =addKeyToFieldName? string.Format("{0}[{1}].{2}", origFieldName, curOtherReader.Index, key):
+                                              string.Format("{0}[{1}]", origFieldName, curOtherReader.Index);
+            }
+            else
+            {
+                fieldName = key;
+            }
+            return fieldName;
+        }
 
         internal virtual int GetDeepHashCode()
         {
@@ -536,23 +562,23 @@ namespace Raven.Json.Linq
 
                 if (cur.Item2.Type == JTokenType.Array)
                 {
-                    var arr = (RavenJArray) cur.Item2;
+                    var arr = (RavenJArray)cur.Item2;
                     for (var i = 0; i < arr.Length; i++)
                     {
-                        stack.Push(Tuple.Create(cur.Item1 ^ (i*397), arr[i]));
+                        stack.Push(Tuple.Create(cur.Item1 ^ (i * 397), arr[i]));
                     }
                 }
                 else if (cur.Item2.Type == JTokenType.Object)
                 {
-                    var selfObj = (RavenJObject) cur.Item2;
+                    var selfObj = (RavenJObject)cur.Item2;
                     foreach (var kvp in selfObj.Properties)
                     {
-                        stack.Push(Tuple.Create(cur.Item1 ^ (397*kvp.Key.GetHashCode()), kvp.Value));
+                        stack.Push(Tuple.Create(cur.Item1 ^ (397 * kvp.Key.GetHashCode()), kvp.Value));
                     }
                 }
                 else // value
                 {
-                    ret ^= cur.Item1 ^ (cur.Item2.GetDeepHashCode()*397);
+                    ret ^= cur.Item1 ^ (cur.Item2.GetDeepHashCode() * 397);
                 }
             }
 
@@ -962,6 +988,23 @@ namespace Raven.Json.Linq
             }
 
             throw new Exception(StringUtils.FormatWith("Error reading RavenJToken from JsonReader. Unexpected token: {0}", CultureInfo.InvariantCulture, reader.TokenType));
+        }
+    }
+
+    public class RavenJTokenState
+    {
+        public JTokenType CurType;
+        public bool WasHere;
+        public int Index { get; }
+
+        public RavenJToken Token { get; }
+
+        public RavenJTokenState(RavenJToken token, JTokenType curType, int index = -1, bool wasHere = false)
+        {
+            Token = token;
+            CurType = curType;
+            WasHere = wasHere;
+            Index = index;
         }
     }
 }
