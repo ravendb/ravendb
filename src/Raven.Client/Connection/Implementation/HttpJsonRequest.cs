@@ -88,6 +88,8 @@ namespace Raven.Client.Connection.Implementation
         /// <value>The response headers.</value>
         public NameValueCollection ResponseHeaders { get; set; }
 
+        internal static readonly TimeSpan DefaultHttpClientTimeout = TimeSpan.FromSeconds(100);
+
         internal HttpJsonRequest(
             CreateHttpJsonRequestParams requestParams,
             HttpJsonRequestFactory factory)
@@ -104,7 +106,7 @@ namespace Raven.Client.Connection.Implementation
             }
             else
             {
-                Timeout = TimeSpan.FromSeconds(100); // default HttpClient timeout
+                Timeout = DefaultHttpClientTimeout;
 #if DEBUG
                 if (Debugger.IsAttached)
                 {
