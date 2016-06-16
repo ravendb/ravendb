@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.PeriodicExport
                     if (Directory.Exists(exportDirectory) == false)
                         Directory.CreateDirectory(exportDirectory);
 
-                    var dataExporter = new DatabaseDataExporter
+                    var dataExporter = new DatabaseDataExporter(_database)
                     {
                         Limit = _exportLimit,
                     };
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.PeriodicExport
                         }
                     }
 
-                    var exportResult = await dataExporter.Export(new DatabaseSmugglerFileDestination {FilePath = exportFilePath}).ConfigureAwait(false);
+                    var exportResult = dataExporter.Export(context, new DatabaseSmugglerFileDestination {FilePath = exportFilePath});
 
                     if (fullExport == false)
                     {

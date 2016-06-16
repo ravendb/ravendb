@@ -316,6 +316,17 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
+            {
+                yield return TableValueToDocument(context, result);
+            }
+        }
+
         public IEnumerable<Document> GetDocumentsAfter(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = "@" + collection;
@@ -749,6 +760,24 @@ namespace Raven.Server.Documents
                 ETag = newEtag,
                 Key = key
             };
+        }
+
+        public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
+        {
+            var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
+            using (var it = identities.Iterate())
+            {
+                if (it.Seek(Slice.BeforeAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    var name = it.CurrentKey.ToString();
+                    var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+                    yield return new KeyValuePair<string, long>(name, value);
+                } while (it.MoveNext());
+            }
         }
 
         private string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context)
