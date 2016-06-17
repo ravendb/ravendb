@@ -17,6 +17,7 @@ using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Bundles.SqlReplication
 {
@@ -515,6 +516,27 @@ namespace Raven.Database.Bundles.SqlReplication
                             colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType,false);
                             
                             colParam.Value = fieldValue;
+
+                            if (objectValue.ContainsKey("Size"))
+                            {
+                                var size = objectValue["Size"].Value<int>();
+                                colParam.Size = size;
+                            }
+                            return;
+                        }
+                        if (objectValue != null && objectValue.Keys.Count >= 2 && objectValue.ContainsKey("$ArrayType") && objectValue.ContainsKey("Values"))
+                        {
+                            var arrayTypeName = objectValue["$ArrayType"].Value<string>();
+                            var arrayType = Type.GetType(arrayTypeName);
+                            if (arrayType == null)
+                            {
+                                throw new Exception(string.Format("No type named '{0}' found. ", arrayTypeName));
+                            }
+                            var list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(arrayType));
+                            objectValue["Values"].Values<object>()
+                                .ForEach(v => list.Add(Convert.ChangeType(v, arrayType)));
+
+                            colParam.Value = list;
 
                             if (objectValue.ContainsKey("Size"))
                             {

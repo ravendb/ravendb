@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Npgsql;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Client.Embedded;
@@ -18,6 +18,7 @@ using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
 
@@ -39,7 +40,7 @@ var orderData = {
 	Id: documentId,
 	OrderLinesCount: this.OrderLines.length,
 	TotalCost: 0,
-    Quantities: this.OrderLines.map(function(l) {return l.Quantity})
+    Quantities: {$ArrayType: 'System.Int32', Values: this.OrderLines.map(function(l) {return l.Quantity;})}
 };
 replicateToorders(orderData);
 
@@ -449,6 +450,98 @@ replicateToOrders(orderData);");
                 }
 
                 AssertCounts(1, 2);
+
+                eventSlim.Reset();
+
+                store.DatabaseCommands.Delete("orders/1", null);
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+                AssertCounts(0, 0);
+
+            }
+        }
+        [Fact]
+        public void CanRep()
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                var sqlReplicationTask = store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>().First();
+                sqlReplicationTask
+                     .AfterReplicationCompleted += successCount =>
+                     {
+                         if (successCount != 0)
+                             eventSlim.Set();
+                     };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+						{
+							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+						}
+                    });
+                    session.SaveChanges();
+                }
+
+                SetupSqlReplication(store, defaultScript);
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+                Alert lastAlert;
+                if (sqlReplicationTask.Statistics.ContainsKey("OrdersAndLines"))
+                {
+                    lastAlert = sqlReplicationTask.Statistics["OrdersAndLines"].LastAlert;
+                    if (lastAlert != null)
+                        throw new AssertActualExpectedException(null, lastAlert, lastAlert.Message + lastAlert.Exception);
+                }
+
+                AssertCounts(1, 2);
+            }
+        }
+
+        [Fact]
+        public void CanReplicateEmptyList()
+        {
+            CreateRdbmsSchema();
+            using (var store = NewDocumentStore())
+            {
+                var eventSlim = new ManualResetEventSlim(false);
+                var sqlReplicationTask = store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>().First();
+                sqlReplicationTask
+                     .AfterReplicationCompleted += successCount =>
+                     {
+                         if (successCount != 0)
+                             eventSlim.Set();
+                     };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>()
+                    });
+                    session.SaveChanges();
+                }
+
+                SetupSqlReplication(store, defaultScript);
+
+                eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+                Alert lastAlert;
+                if (sqlReplicationTask.Statistics.ContainsKey("OrdersAndLines"))
+                {
+                    lastAlert = sqlReplicationTask.Statistics["OrdersAndLines"].LastAlert;
+                    if (lastAlert != null)
+                        throw new AssertActualExpectedException(null, lastAlert, lastAlert.Message + lastAlert.Exception);
+                }
+
+                AssertCounts(1, 0);
 
                 eventSlim.Reset();
 
