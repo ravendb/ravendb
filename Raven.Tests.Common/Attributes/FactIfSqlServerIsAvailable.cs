@@ -38,6 +38,7 @@ namespace Raven.Tests.Common.Attributes
         {
             foreach (var settings in new[]
             {
+                ConfigurationManager.ConnectionStrings["PostgreSQL"],
                 ConfigurationManager.ConnectionStrings["SqlExpress"],
                 ConfigurationManager.ConnectionStrings["LocalHost"],
                 ConfigurationManager.ConnectionStrings["CiHost"]

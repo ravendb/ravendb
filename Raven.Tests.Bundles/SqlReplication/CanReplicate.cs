@@ -36,21 +36,22 @@ namespace Raven.Tests.Bundles.SqlReplication
 
         private const string defaultScript = @"
 var orderData = {
-    Id: documentId,
-    OrderLinesCount: this.OrderLines.length,
-    TotalCost: 0
+	Id: documentId,
+	OrderLinesCount: this.OrderLines.length,
+	TotalCost: 0,
+    Quantities: this.OrderLines.map(function(l) {return l.Quantity})
 };
-replicateToOrders(orderData);
+replicateToorders(orderData);
 
 for (var i = 0; i < this.OrderLines.length; i++) {
-    var line = this.OrderLines[i];
-    orderData.TotalCost += line.Cost;
-    replicateToOrderLines({
-        OrderId: documentId,
-        Qty: line.Quantity,
-        Product: line.Product,
-        Cost: line.Cost
-    });
+	var line = this.OrderLines[i];
+	orderData.TotalCost += line.Cost;
+	replicateToorderlines({
+		OrderId: documentId,
+		Qty: line.Quantity,
+		Product: line.Product,
+		Cost: line.Cost
+	});
 }";
 
 
@@ -65,31 +66,30 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                 using (var dbCommand = con.CreateCommand())
                 {
                     dbCommand.CommandText = @"
-IF OBJECT_ID('Orders') is not null 
-    DROP TABLE [dbo].[Orders]
-IF OBJECT_ID('OrderLines') is not null 
-    DROP TABLE [dbo].[OrderLines]
+
+DROP TABLE If EXISTS orderlines;
+DROP TABLE If EXISTS orders;
 ";
                     dbCommand.ExecuteNonQuery();
 
                     dbCommand.CommandText = @"
-CREATE TABLE [dbo].[OrderLines]
+CREATE TABLE orderlines
 (
-    [Id] int identity primary key,
-    [OrderId] [nvarchar](50) NOT NULL,
-    [Qty] [int] NOT NULL,
-    [Product] [nvarchar](255) NOT NULL,
-    [Cost] [int] NOT NULL
-)
+	""Id"" serial primary key,
+	""OrderId"" text NOT NULL,
+	""Qty"" int NOT NULL,
+	""Product"" text NOT NULL,
+	""Cost"" int NOT NULL
+);
 
-CREATE TABLE [dbo].[Orders]
+CREATE TABLE orders
 (
-    [Id] [nvarchar](50) NOT NULL,
-    [OrderLinesCount] [int]  NULL,
-    [TotalCost] [int] NOT NULL,
-    [City] [nvarchar](50) NULL
-)
-";
+	""Id"" text NOT NULL,
+	""OrderLinesCount"" int  NULL,
+	""TotalCost"" int NOT NULL,
+    ""City"" text NULL,
+    ""Quantities"" int[] NULL
+);";
                     dbCommand.ExecuteNonQuery();
                 }
             }
@@ -415,8 +415,9 @@ replicateToOrders(orderData);");
             using (var store = NewDocumentStore())
             {
                 var eventSlim = new ManualResetEventSlim(false);
-                store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>()
-                     .First().AfterReplicationCompleted += successCount =>
+                var sqlReplicationTask = store.SystemDatabase.StartupTasks.OfType<SqlReplicationTask>().First();
+                sqlReplicationTask
+                     .AfterReplicationCompleted += successCount =>
                      {
                          if (successCount != 0)
                              eventSlim.Set();
@@ -438,6 +439,14 @@ replicateToOrders(orderData);");
                 SetupSqlReplication(store, defaultScript);
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
+
+                Alert lastAlert;
+                if (sqlReplicationTask.Statistics.ContainsKey("OrdersAndLines"))
+                {
+                    lastAlert = sqlReplicationTask.Statistics["OrdersAndLines"].LastAlert;
+                    if (lastAlert != null)
+                        throw new AssertActualExpectedException(null, lastAlert, lastAlert.Message + lastAlert.Exception);
+                }
 
                 AssertCounts(1, 2);
 
@@ -641,7 +650,7 @@ var nameArr = this.StepName.split('.');");
             throw lastException;
         }
 
-        private static void AssertCounts(int ordersCount, int orderLineCounts)
+        private static void AssertCounts(long ordersCount, long orderLineCounts)
         {
             var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
             using (var con = providerFactory.CreateConnection())
@@ -671,10 +680,10 @@ var nameArr = this.StepName.split('.');");
                     FactoryName = MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
                     RavenEntityName = "Orders",
                     SqlReplicationTables =
-                    {
-                        new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-                        new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
-                    },
+					{
+						new SqlReplicationTable {TableName = "orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+						new SqlReplicationTable {TableName = "orderlines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+					},
                     Script = script
                 });
                 session.SaveChanges();
