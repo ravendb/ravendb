@@ -1560,6 +1560,9 @@ namespace Raven.Client.Indexes
                     case "OfType":
                         Out("Where");
                         break;
+                    case nameof(AbstractIndexCreationTask.LoadDocument):
+                        Out("LoadDocument");
+                        break;
                     default:
                         Out(node.Method.Name);
                         if (node.Method.IsGenericMethod)
@@ -1616,6 +1619,14 @@ namespace Raven.Client.Indexes
                 }
                 num2++;
             }
+
+            if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
+            {
+                var type = node.Method.GetGenericArguments()[0];
+                var collection = convention.GetTypeTagName(type);
+                Out($", \"{collection}\"");
+            }
+
             Out(IsIndexerCall(node) ? "]" : ")");
 
             if (node.Type.IsValueType() && TypeExistsOnServer(node.Type))

@@ -7,9 +7,10 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly IEnumerable<Document> _docs;
 
-        public IndexedDocumentsEnumerator(IEnumerable<Document> docs)
+        public IndexedDocumentsEnumerator(IEnumerable<Document> docs, string collection)
         {
             _docs = docs;
+            CurrentIndexingScope.Current.SourceCollection = collection;
         }
 
         public IEnumerator<DynamicDocumentObject> GetEnumerator()
@@ -44,6 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 _previous = _inner.Current;
 
                 Current = _dynamicDocument;
+                CurrentIndexingScope.Current.Source = _dynamicDocument;
 
                 return true;
             }

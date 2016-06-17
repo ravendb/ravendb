@@ -17,7 +17,6 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
-using Constants = Raven.Abstractions.Data.Constants;
 using Sparrow;
 
 namespace Raven.Server.Documents
@@ -43,8 +42,6 @@ namespace Raven.Server.Documents
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
-        private const string NoCollectionSpecified = "Raven/Empty";
-        private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -160,7 +157,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree("Identities");
                     tx.CreateTree("Tombstones");
                     tx.CreateTree("ChangeVector");
-                    _docsSchema.Create(tx, SystemDocumentsCollection);
+                    _docsSchema.Create(tx, Document.SystemDocumentsCollection);
                     _lastEtag = ReadLastEtag(tx);
 
                     tx.Commit();
@@ -176,7 +173,7 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
-        }	   
+        }
 
         private static void AssertTransaction(DocumentsOperationContext context)
         {
@@ -198,8 +195,8 @@ namespace Raven.Server.Documents
                 int index = 0;
                 do
                 {
-                    var read = iter.CurrentKey.CreateReader().Read(buffer,0, 16);
-                    if(read != 16)
+                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, 16);
+                    if (read != 16)
                         throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
 
                     changeVector[index].DbId = new Guid(buffer);
@@ -213,7 +210,7 @@ namespace Raven.Server.Documents
         public void SetChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree("ChangeVector");
-            for(int i = 0; i < changeVector.Length; i++)
+            for (int i = 0; i < changeVector.Length; i++)
             {
                 var entry = changeVector[i];
                 tree.Add(Slice.External(context.Allocator, (byte*)&entry.DbId, (ushort)sizeof(Guid)),
@@ -311,7 +308,7 @@ namespace Raven.Server.Documents
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
-            {				
+            {
                 if (start > 0)
                 {
                     start--;
@@ -458,7 +455,7 @@ namespace Raven.Server.Documents
         }
 
         private Slice GetSliceFromKey(DocumentsOperationContext context, string key)
-        {            
+        {
             // REVIEW: Can we do better here?
 
             var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
@@ -730,7 +727,7 @@ namespace Raven.Server.Documents
 
                 int oldSize;
                 var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
-                var oldCollectionName = GetCollectionFromMetadata(key, oldDoc, out isSystemDocument);
+                var oldCollectionName = Document.GetCollectionName(key, oldDoc, out isSystemDocument);
                 if (oldCollectionName != originalCollectionName)
                     throw new InvalidOperationException(
                         $"Changing '{key}' from '{oldCollectionName}' to '{originalCollectionName}' via update is not supported.{System.Environment.NewLine}" +
@@ -803,32 +800,13 @@ namespace Raven.Server.Documents
 
         private static string GetCollectionName(string key, BlittableJsonReaderObject document, out string originalCollectionName, out bool isSystemDocument)
         {
-            var collectionName = GetCollectionFromMetadata(key, document, out isSystemDocument);
+            var collectionName = Document.GetCollectionName(key, document, out isSystemDocument);
 
             originalCollectionName = collectionName;
 
             // TODO: we have to have some way to distinguish between dynamic tree names
             // and our fixed ones, otherwise a collection call Docs will corrupt our state
             return "@" + collectionName;
-        }
-
-        private static string GetCollectionFromMetadata(string key, BlittableJsonReaderObject document, out bool isSystemDocument)
-        {
-            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
-            {
-                isSystemDocument = true;
-                return SystemDocumentsCollection;
-            }
-
-            isSystemDocument = false;
-            string collectionName;
-            BlittableJsonReaderObject metadata;
-            if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                metadata.TryGet(Constants.Headers.RavenEntityName, out collectionName) == false)
-            {
-                collectionName = NoCollectionSpecified;
-            }
-            return collectionName;
         }
 
         public long IdentityFor(DocumentsOperationContext ctx, string key)
@@ -878,14 +856,14 @@ namespace Raven.Server.Documents
 
             try
             {
-            var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
+                var collectionTable = new Table(_docsSchema, collectionName, context.Transaction.InnerTransaction);
 
-            return new CollectionStat
-            {
-                Name = collectionName.Substring(1),
-                Count = collectionTable.NumberOfEntries
-            };
-        }
+                return new CollectionStat
+                {
+                    Name = collectionName.Substring(1),
+                    Count = collectionTable.NumberOfEntries
+                };
+            }
             catch (InvalidDataException)
             {
                 return new CollectionStat

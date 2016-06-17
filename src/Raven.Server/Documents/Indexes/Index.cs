@@ -520,6 +520,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenWriteTransaction())
             using (InitializeIndexingWork(indexContext))
+            using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext))
             {
                 var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
@@ -545,6 +546,8 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                 }
+
+                _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
 
                 using (stats.For("Storage_Commit"))
                     tx.Commit();

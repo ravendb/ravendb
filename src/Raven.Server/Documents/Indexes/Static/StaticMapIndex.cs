@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -17,9 +18,19 @@ namespace Raven.Server.Documents.Indexes.Static
             _compiled = compiled;
         }
 
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
+        {
+            return new IIndexingWork[]
+            {
+                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
+                new HandleReferences(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing),
+                new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, DocumentDatabase.Configuration.Indexing, null),
+            };
+        }
+
         public override IEnumerable<object> EnumerateMap(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext)
         {
-            var indexingEnumerator = new IndexedDocumentsEnumerator(documents);
+            var indexingEnumerator = new IndexedDocumentsEnumerator(documents, collection);
 
             foreach (var indexingFunc in _compiled.Maps[collection])
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -26,16 +27,16 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections.Generic")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Linq")),
-            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static"))
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static")),
         };
 
         private static readonly MetadataReference[] References =
         {
-            MetadataReference.CreateFromFile(typeof (object).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (Enumerable).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (StaticIndexCompiler).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (DynamicAttribute).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof (BoostedValue).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(StaticIndexCompiler).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(DynamicAttribute).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
         };
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var formatedCompilationUnit = compilationUnit; //Formatter.Format(compilationUnit, new AdhocWorkspace());
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: cSharpSafeName  + "." + Guid.NewGuid() + ".index.dll",
+                assemblyName: cSharpSafeName + "." + Guid.NewGuid() + ".index.dll",
                 syntaxTrees: new[] { SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString()) }, // TODO [ppekrol] for some reason formatedCompilationUnit.SyntaxTree does not work
                 references: References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
