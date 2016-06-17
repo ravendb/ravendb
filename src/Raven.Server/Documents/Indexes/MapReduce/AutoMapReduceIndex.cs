@@ -82,9 +82,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             foreach (var mapEntry in GetMapEntriesForDocument(tombstone.Key, documentMapEntries))
             {
                 var state = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
-                
-                fixed (long* ptr = &mapEntry.Id)
-                    state.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)ptr, sizeof(long)));
+
+                var entryId = mapEntry.Id;
+                state.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)&entryId, sizeof(long)));
 
                 _mapReduceWorkContext.EntryDeleted(mapEntry);
             }
@@ -228,9 +228,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     foreach (var mapEntry in mapEntries)
                     {
                         var previousState = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
+                        var entryId = mapEntry.Id;
 
-                        fixed (long* ptr = &mapEntry.Id)
-                            previousState.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)ptr, sizeof(long)));
+                        previousState.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)&entryId, sizeof(long)));
 
                         documentMapEntries.Delete(mapEntry.Id);
 
