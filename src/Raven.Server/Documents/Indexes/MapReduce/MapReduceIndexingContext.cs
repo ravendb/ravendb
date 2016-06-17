@@ -26,9 +26,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EntryDeleted(MapEntry deletedEntry)
+        public void EntryDeleted(long deletedEntryId)
         {
-            _idsOfDeletedEntries.Enqueue(deletedEntry.Id);
+            _idsOfDeletedEntries.Enqueue(deletedEntryId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

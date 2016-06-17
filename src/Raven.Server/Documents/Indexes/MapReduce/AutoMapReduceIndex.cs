@@ -26,6 +26,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private readonly MapReduceIndexingContext _mapReduceWorkContext = new MapReduceIndexingContext();
 
+        private readonly MapResult[] _singleOutputList = new MapResult[1];
+
         private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
             : base(indexId, IndexType.AutoMapReduce, definition)
         {
@@ -86,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 var entryId = mapEntry.Id;
                 state.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)&entryId, sizeof(long)));
 
-                _mapReduceWorkContext.EntryDeleted(mapEntry);
+                _mapReduceWorkContext.EntryDeleted(mapEntry.Id);
             }
 
             _mapReduceWorkContext.MapEntries.DeleteFixedTreeFor(tombstone.Key, sizeof(ulong));
@@ -186,7 +188,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (var mappedresult = indexContext.ReadObject(mappedResult, document.Key))
             {
-                PutMappedResult(mappedresult, document.Key, reduceHashKey, state, indexContext);
+                _singleOutputList[0] = new MapResult
+                {
+                    Data = mappedresult,
+                    ReduceKeyHash = reduceHashKey,
+                    State = state
+                };
+
+                PutMapResults(document.Key, _singleOutputList, indexContext);
             }
 
             DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark();
@@ -208,46 +217,81 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return tx.CreateTree("MapEntries");
         }
 
-        private unsafe void PutMappedResult(BlittableJsonReaderObject mappedResult, LazyStringValue documentKey, ulong reduceKeyHash, ReduceKeyState state, TransactionOperationContext indexContext)
+        private unsafe void PutMapResults(LazyStringValue documentKey, IEnumerable<MapResult> mappedResults, TransactionOperationContext indexContext)
         {
             var documentMapEntries = _mapReduceWorkContext.MapEntries.FixedTreeFor(documentKey, sizeof(ulong));
 
-            long id = -1;
+            Dictionary<ulong, Queue<long>> existingIdsPerReduceKey = null;
 
             if (documentMapEntries.NumberOfEntries > 0)
             {
+                existingIdsPerReduceKey = new Dictionary<ulong, Queue<long>>();
+
                 var mapEntries = GetMapEntriesForDocument(documentKey, documentMapEntries);
 
-                if (mapEntries.Count == 1 && mapEntries[0].ReduceKeyHash == reduceKeyHash)
+                foreach (var mapEntry in mapEntries)
                 {
-                    // update of existing entry, reduce key remained the same - we are going to overwrite the map result only
-                    id = mapEntries[0].Id;
+                    Queue<long> ids;
+                    if (existingIdsPerReduceKey.TryGetValue(mapEntry.ReduceKeyHash, out ids) == false)
+                    {
+                        ids = new Queue<long>();
+                        existingIdsPerReduceKey[mapEntry.ReduceKeyHash] = ids;
+                    }
+
+                    ids.Enqueue(mapEntry.Id);
+                }
+            }
+
+            foreach (var mapResult in mappedResults)
+            {
+                var reduceKeyHash = mapResult.ReduceKeyHash;
+
+                long id;
+
+                Queue<long> availableIds;
+                if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.TryGetValue(reduceKeyHash, out availableIds))
+                {
+                    // reuse id of an old entry
+                    id = availableIds.Dequeue();
+
+                    if (availableIds.Count == 0)
+                        existingIdsPerReduceKey.Remove(reduceKeyHash);
                 }
                 else
                 {
-                    foreach (var mapEntry in mapEntries)
+                    id = _mapReduceWorkContext.GetNextIdentifier();
+                    
+                    documentMapEntries.Add(id, Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong)));
+                }
+
+                var pos = mapResult.State.Tree.DirectAdd(Slice.External(indexContext.Allocator, (byte*)&id, sizeof(long)), mapResult.Data.Size);
+
+                mapResult.Data.CopyTo(pos);
+            }
+
+            if (existingIdsPerReduceKey != null && existingIdsPerReduceKey.Count > 0)
+            {
+                // need to remove remaining old entries
+
+                foreach (var stillExisting in existingIdsPerReduceKey)
+                {
+                    var reduceKeyHash = stillExisting.Key;
+                    var ids = stillExisting.Value;
+
+                    var oldState = GetReduceKeyState(reduceKeyHash, indexContext, create: false);
+
+                    while (ids.Count > 0)
                     {
-                        var previousState = GetReduceKeyState(mapEntry.ReduceKeyHash, indexContext, create: false);
-                        var entryId = mapEntry.Id;
+                        var idToDelete = ids.Dequeue();
 
-                        previousState.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)&entryId, sizeof(long)));
+                        oldState.Tree.Delete(Slice.External(indexContext.Allocator, (byte*)&idToDelete, sizeof(long)));
 
-                        documentMapEntries.Delete(mapEntry.Id);
+                        documentMapEntries.Delete(idToDelete);
 
-                        _mapReduceWorkContext.EntryDeleted(mapEntry);
-                    }
+                        _mapReduceWorkContext.EntryDeleted(idToDelete);
+                    } 
                 }
             }
-
-            if (id == -1)
-            {
-                id = _mapReduceWorkContext.GetNextIdentifier();
-                documentMapEntries.Add(id, Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong)));
-            }
-
-            var pos = state.Tree.DirectAdd(Slice.External(indexContext.Allocator, (byte*)&id, sizeof(long)), mappedResult.Size);
-
-            mappedResult.CopyTo(pos);
         }
 
         public static unsafe List<MapEntry> GetMapEntriesForDocument(LazyStringValue documentKey, FixedSizeTree documentMapEntries)
