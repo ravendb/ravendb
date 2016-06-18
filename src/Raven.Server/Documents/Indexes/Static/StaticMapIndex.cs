@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly StaticIndexBase _compiled;
 
-        public StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
+        private StaticMapIndex(int indexId, StaticMapIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.Map, definition)
         {
             _compiled = compiled;

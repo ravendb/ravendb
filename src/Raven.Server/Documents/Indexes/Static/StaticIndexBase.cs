@@ -59,5 +59,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
                 keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
+
+        public IndexingFunc Reduce;
+
+        public void SetReduce(string collection, IndexingFunc reduce)
+        {
+            Reduce = reduce;
+        }
     }
 }

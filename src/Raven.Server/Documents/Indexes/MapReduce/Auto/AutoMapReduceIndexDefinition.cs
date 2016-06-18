@@ -4,11 +4,10 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
 using Raven.Server.ServerWide.Context;
-
 using Sparrow.Json;
 using Voron;
 
-namespace Raven.Server.Documents.Indexes.MapReduce
+namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {

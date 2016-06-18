@@ -106,10 +106,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
         {
             var statements = new List<StatementSyntax>();
-            statements.AddRange(definition.Maps.Select(map => HandleMap(map, definition)));
+            statements.AddRange(definition.Maps.Select(HandleMap));
 
-            //if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
-            //    statements.Add(HandleReduceFunction(definition));
+            if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
+                statements.Add(HandleReduce(definition.Reduce));
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
-        private static StatementSyntax HandleMap(string map, IndexDefinition definition)
+        private static StatementSyntax HandleMap(string map)
         {
             try
             {
@@ -140,6 +140,31 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     IndexDefinitionProperty = "Maps",
                     ProblematicText = map
+                };
+            }
+        }
+
+        private static StatementSyntax HandleReduce(string reduce)
+        {
+            try
+            {
+                var expression = SyntaxFactory.ParseExpression(reduce);
+                var queryExpression = expression as QueryExpressionSyntax;
+                if (queryExpression != null)
+                    return HandleSyntaxInMap(new QuerySyntaxMapRewriter(), queryExpression);
+
+                var invocationExpression = expression as InvocationExpressionSyntax;
+                if (invocationExpression != null)
+                    return HandleSyntaxInMap(new MethodSyntaxMapRewriter(), invocationExpression);
+
+                throw new InvalidOperationException("Not supported expression type.");
+            }
+            catch (Exception ex)
+            {
+                throw new IndexCompilationException(ex.Message, ex)
+                {
+                    IndexDefinitionProperty = "Reduce",
+                    ProblematicText = reduce
                 };
             }
         }

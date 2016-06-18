@@ -14,6 +14,7 @@ using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
