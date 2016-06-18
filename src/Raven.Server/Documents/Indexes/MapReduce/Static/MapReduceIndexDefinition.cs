@@ -14,7 +14,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         protected override void PersistFields(TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
-            throw new System.NotImplementedException();
+            PersistMapFields(context, writer);
+
+            // TODO arek - groupby fields, definitions etc
         }
 
         protected override void FillIndexDefinition(IndexDefinition indexDefinition)

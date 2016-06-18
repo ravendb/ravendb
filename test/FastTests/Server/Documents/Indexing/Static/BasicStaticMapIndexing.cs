@@ -14,7 +14,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
-    public class BasicStaticIndexing : RavenLowLevelTestBase
+    public class BasicStaticMapIndexing : RavenLowLevelTestBase
     {
         [Fact]
         public async Task The_easiest_static_index()
@@ -159,11 +159,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                     }
                 }
             }
-        }
-
-        private static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)
-        {
-            return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
     }
 }

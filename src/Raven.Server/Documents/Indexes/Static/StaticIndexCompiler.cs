@@ -151,11 +151,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce);
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInMap(new QuerySyntaxMapRewriter(), queryExpression);
+                    return HandleSyntaxInReduce(new QuerySyntaxMapRewriter(), queryExpression);
 
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInMap(new MethodSyntaxMapRewriter(), invocationExpression);
+                    return HandleSyntaxInReduce(new MethodSyntaxMapRewriter(), invocationExpression);
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -180,6 +180,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return RoslynHelper.This("AddMap") // this.AddMap("Users", docs => from doc in docs ... )
                 .Invoke(collection, indexingFunction).AsExpressionStatement();
+        }
+
+        private static StatementSyntax HandleSyntaxInReduce(CSharpSyntaxRewriter reduceRewriter, ExpressionSyntax expression)
+        {
+            var rewrittenExpression = (CSharpSyntaxNode)reduceRewriter.Visit(expression);
+
+            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("results")), rewrittenExpression);
+
+            return RoslynHelper.This("SetReduce")
+                .Invoke(indexingFunction).AsExpressionStatement();
         }
 
         private static string GetCSharpSafeName(IndexDefinition definition)

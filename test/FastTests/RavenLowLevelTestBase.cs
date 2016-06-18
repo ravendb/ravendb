@@ -13,7 +13,8 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 
 using Sparrow.Collections;
-
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests
@@ -84,6 +85,11 @@ namespace FastTests
             RavenTestHelper.DeletePaths(_pathsToDelete, exceptionAggregator);
             if (alreadyHasException == false)
                 exceptionAggregator.ThrowIfNeeded();
+        }
+
+        protected static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)
+        {
+            return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
     }
 }

@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IndexingFunc Reduce;
 
-        public void SetReduce(string collection, IndexingFunc reduce)
+        public void SetReduce(IndexingFunc reduce)
         {
             Reduce = reduce;
         }

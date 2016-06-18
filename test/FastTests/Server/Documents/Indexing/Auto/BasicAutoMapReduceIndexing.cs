@@ -11,19 +11,17 @@ using Raven.Client.Data.Indexes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
-namespace FastTests.Server.Documents.Indexing
+namespace FastTests.Server.Documents.Indexing.Auto
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class BasicMapReduce : RavenLowLevelTestBase
+    public class BasicAutoMapReduceIndexing : RavenLowLevelTestBase
     {
         [Fact]
         public async Task CanUseSimpleReduction()

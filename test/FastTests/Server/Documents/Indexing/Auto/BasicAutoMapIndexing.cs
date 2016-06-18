@@ -16,15 +16,14 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Constants = Raven.Abstractions.Data.Constants;
 
-namespace FastTests.Server.Documents.Indexing
+namespace FastTests.Server.Documents.Indexing.Auto
 {
-    public class BasicIndexing : RavenLowLevelTestBase
+    public class BasicAutoMapIndexing : RavenLowLevelTestBase
     {
         [Fact]
         public async Task CheckDispose()
@@ -1137,11 +1136,6 @@ namespace FastTests.Server.Documents.Indexing
 
                 // TODO arek: verify that alert was created as well
             }
-        }
-
-        private static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)
-        {
-            return context.ReadObject(value, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
     }
 }
