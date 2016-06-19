@@ -4,6 +4,7 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -54,7 +55,18 @@ namespace Raven.Server.Documents
         {
             _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
 
-            ExpiredDocumentsCleaner?.Dispose();
+            var exceptionAggregator = new ExceptionAggregator(_log, $"Could not dispose {nameof(BundleLoader)}");
+            exceptionAggregator.Execute(() =>
+            {
+                ExpiredDocumentsCleaner?.Dispose();
+                ExpiredDocumentsCleaner = null;
+            });
+            exceptionAggregator.Execute(() =>
+            {
+                PeriodicExportRunner?.Dispose();
+                PeriodicExportRunner = null;
+            });
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

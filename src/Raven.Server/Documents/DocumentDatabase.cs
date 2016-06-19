@@ -64,8 +64,6 @@ namespace Raven.Server.Documents
 
         public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
 
-        public PeriodicExportRunner PeriodicExportRunner { get; private set; }
-
         public DocumentsNotifications Notifications { get; }
 
         public MetricsCountersManager Metrics { get; }
@@ -97,7 +95,6 @@ namespace Raven.Server.Documents
 
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
-            PeriodicExportRunner.Initialize();
 
             try
             {
@@ -144,12 +141,6 @@ namespace Raven.Server.Documents
             {
                 DocumentTombstoneCleaner?.Dispose();
                 DocumentTombstoneCleaner = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                PeriodicExportRunner?.Dispose();
-                PeriodicExportRunner = null;
             });
 
             exceptionAggregator.Execute(() =>

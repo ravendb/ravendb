@@ -1,8 +1,6 @@
 using System.IO.Compression;
-using System.Threading.Tasks;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 

@@ -174,7 +174,8 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
 
         private static void LoadEndpointsFromReader(TextReader reader)
         {
-            var document = new XmlDocument();
+            throw new NotImplementedException();
+           /* var document = new XmlDocument();
             document.Load(reader);
 
             foreach (XmlElement node in document.SelectNodes("//Regions/Region"))
@@ -183,7 +184,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
                 Endpoints.Add(nodeName, nodeName);
             }
 
-            _endpointsLoaded = true;
+            _endpointsLoaded = true;*/
         }
     }
 }
