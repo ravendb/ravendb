@@ -30,7 +30,8 @@
             </button>
             <ul class="dropdown-menu"  role="menu">
                 <li>
-                    <a title="Replaces current index when specified condition is met" href="#" data-bind="visible: !editedIndex().isSideBySideIndex() && !editedIndex().isTestIndex(), click: replaceIndex">
+                    <a title="Replaces current index when specified condition is met" href="#" 
+                       data-bind="visible: !editedIndex().isSideBySideIndex() && !editedIndex().isTestIndex() && canSaveSideBySideIndex(), click: replaceIndex">
                         <i class="fa fa-reply fa-fw"></i> Side-by-side indexing
                     </a>
                 </li>

@@ -1004,6 +1004,21 @@ namespace Raven.Database.Indexing
             UpdateIndexMappingFile();
         }
 
+        public void RenameIndex(IndexDefinition existingIndex, string newIndexName)
+        {
+            var indexId = existingIndex.IndexId;
+            var value = GetIndexInstance(indexId);
+
+            if (log.IsDebugEnabled)
+                log.Debug("Renaming index {0} -> {1}", value.PublicName, newIndexName);
+
+
+            // since all we have to do in storage layer is to update mapping file
+            // we simply call UpdateIndexMappingFile
+            // mapping was already updated in IndexDefinitionStorage.RenameIndex method.
+            UpdateIndexMappingFile();
+        }
+
         public void DeleteIndexData(int id)
         {
             var dirOnDisk = Path.Combine(path, id.ToString(CultureInfo.InvariantCulture));

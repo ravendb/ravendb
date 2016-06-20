@@ -13,7 +13,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -917,5 +916,40 @@ namespace Raven.Database.Actions
             }
         }
 
+        public void RenameIndex(IndexDefinition instance, string newIndexName)
+        {
+            switch (instance.LockMode)
+            {
+                case IndexLockMode.LockedIgnore:
+                    return;
+                case IndexLockMode.LockedError:
+                    throw new InvalidOperationException("An attempt to rename an index, locked with LockedError was detected.");
+            }
+
+            using (Database.IndexDefinitionStorage.TryRemoveIndexContext())
+            {
+                var existingIndexName = instance.Name;
+                if (Database.IndexDefinitionStorage.RenameIndex(existingIndexName, newIndexName))
+                {
+                    Database.IndexStorage.RenameIndex(instance, newIndexName);
+
+                    TransactionalStorage.Batch(actions =>
+                    {
+                        var scriptedIndexSetup = actions.Documents.DocumentByKey(ScriptedIndexResults.IdPrefix + existingIndexName);
+
+                        if (scriptedIndexSetup != null)
+                        {
+                            actions.Documents.AddDocument(ScriptedIndexResults.IdPrefix + newIndexName, null, scriptedIndexSetup.DataAsJson, scriptedIndexSetup.Metadata);
+
+                            Etag etag;
+                            RavenJObject metadata;
+                            actions.Documents.DeleteDocument(ScriptedIndexResults.IdPrefix + existingIndexName, scriptedIndexSetup.Etag, out metadata, out etag);
+                        }
+
+                        WorkContext.HandleIndexRename(existingIndexName, newIndexName, actions);
+                    });
+                }
+            }
+        }
     }
 }

@@ -610,6 +610,21 @@ public bool Contains(string indexName)
             return null;
         }
 
+        internal bool RenameIndex(string existingIndexName, string newIndexName)
+        {
+            var index = GetIndexDefinition(existingIndexName);
+            if (index == null)
+                return false;
+
+            int _;
+            indexNameToId.TryRemove(index.Name, out _);
+
+            index.Name = newIndexName;
+            CreateAndPersistIndex(index);
+            AddIndex(index.IndexId, index);
+            return true;
+        }
+
         internal bool ReplaceIndex(string indexName, string indexToSwapName)
         {
             var index = GetIndexDefinition(indexName);

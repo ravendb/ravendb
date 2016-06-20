@@ -2,11 +2,9 @@ import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import indexDefinition = require("models/database/index/indexDefinition");
-import indexPriority = require("models/database/index/indexPriority");
 import luceneField = require("models/database/index/luceneField");
 import spatialIndexField = require("models/database/index/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import jsonUtil = require("common/jsonUtil");
@@ -25,6 +23,7 @@ import replaceIndexDialog = require("viewmodels/database/indexes/replaceIndexDia
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
+import renameIndexCommand = require("commands/database/index/renameIndexCommand");
 import saveScriptedIndexesCommand = require("commands/database/documents/saveScriptedIndexesCommand");
 import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
@@ -32,6 +31,7 @@ import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import getCSharpIndexDefinitionCommand = require("commands/database/index/getCSharpIndexDefinitionCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
+import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
 
 class editIndex extends viewModelBase { 
 
@@ -51,6 +51,7 @@ class editIndex extends viewModelBase {
     indexAutoCompleter: indexAceAutoCompleteProvider;
     loadedIndexName = ko.observable<string>();
     originalIndexName: string;
+    canSaveSideBySideIndex: KnockoutComputed<boolean>;
     // Scripted Index Part
     isScriptedIndexBundleActive = ko.observable<boolean>(false);
     scriptedIndex = ko.observable<scriptedIndexModel>(null);
@@ -90,6 +91,12 @@ class editIndex extends viewModelBase {
         });
 
         this.editedIndex(this.createNewIndexDefinition());
+        this.canSaveSideBySideIndex = ko.computed(() => {
+            var isEdit = this.isEditingExistingIndex();
+            var loadedIndex = this.loadedIndexName();
+            var editedName = this.editedIndex().name();
+            return isEdit && (loadedIndex === editedName);
+        });
     }
 
     canActivate(indexToEditName: string) {
@@ -232,7 +239,21 @@ class editIndex extends viewModelBase {
 
         if (editedIndex.name()) {
             var index = editedIndex.toDto();
-            this.saveIndex(index);
+
+            if (this.isEditingExistingIndex() && index.Name !== this.loadedIndexName()) {
+                // user changed index name on edit page, ask him what to do: rename or duplicate
+                var dialog = new renameOrDuplicateIndexDialog(this.loadedIndexName(), this.editedIndex().name());
+
+                dialog.getSaveAsNewTask()
+                    .done(() => this.saveIndex(index));
+
+                dialog.getRenameTask()
+                    .done(() => this.renameIndex(this.loadedIndexName(), index.Name));
+
+                app.showDialog(dialog);
+            } else {
+                this.saveIndex(index);
+            }
         }
     }
 
@@ -467,6 +488,15 @@ class editIndex extends viewModelBase {
             
             this.saveIndex(indexDef);
         }
+    }
+
+    private renameIndex(existingIndexName: string, newIndexName: string): JQueryPromise<any> {
+        return new renameIndexCommand(existingIndexName, newIndexName, this.activeDatabase())
+            .execute()
+            .done(() => {
+                this.initializeDirtyFlag();
+                this.updateUrl(newIndexName, false);
+            });
     }
 
     private saveIndex(index: indexDefinitionDto): JQueryPromise<any> {

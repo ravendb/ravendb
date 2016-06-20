@@ -397,6 +397,25 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPost]
+        [RavenRoute("indexes-rename/{*id}")]
+        [RavenRoute("databases/{databaseName}/indexes-rename/{*id}")]
+        public HttpResponseMessage Rename(string id)
+        {
+            var newIndexName = GetQueryStringValue("newName");
+
+            var instance = Database.Indexes.GetIndexDefinition(id);
+            if (instance == null)
+                throw new IndexDoesNotExistsException(string.Format("Index '{0}' does not exist.", id));
+
+            if (Database.Indexes.GetIndexDefinition(newIndexName) != null)
+                throw new InvalidOperationException($"Cannot rename to {newIndexName}. Index already exists.");
+
+            Database.Indexes.RenameIndex(instance, newIndexName);
+
+            return GetEmptyMessage();
+        }
+
+        [HttpPost]
         [RavenRoute("indexes/set-priority/{*id}")]
         [RavenRoute("databases/{databaseName}/indexes/set-priority/{*id}")]
         public HttpResponseMessage SetPriority(string id)
