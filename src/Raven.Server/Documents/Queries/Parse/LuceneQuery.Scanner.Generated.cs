@@ -1775,7 +1775,15 @@ return (int)Token.ALL_DOC;
 return (int)Token.AND;
             break;
         case 109: // Recognized '{QuotedTerm}',	Shortest string "\"\""
-yylval.s = yytext; return (int)Token.QUOTED_TERM;
+if(InMethod)
+                                    {
+                                        yylval.s = DiscardEscapeChar(yytext,true); 
+                                    }
+                                    else
+                                    {
+                                        yylval.s = yytext; 
+                                    }
+                                    return (int)Token.QUOTED_TERM;
             break;
         case 110: // Recognized '{QuotedWildcardTerm}',	Shortest string "\"*\""
 yylval.s = yytext; return (int)Token.QUOTED_WILDCARD_TERM;

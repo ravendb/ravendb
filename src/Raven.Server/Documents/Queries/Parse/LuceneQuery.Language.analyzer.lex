@@ -57,7 +57,17 @@ DateTime {Digit}{4}-{Digit}{2}-{Digit}{2}T{Digit}{2}\:{Digit}{2}\:{Digit}{2}\.{D
 {DateTime}						{ yylval.s = yytext; return (int)Token.DATETIME;}
 {Method}						{ yylval.s = yytext; return (int)Token.METHOD;}
 {UnanalizedTerm}				{ yylval.s = DiscardEscapeChar(yytext); return (int)Token.UNANALIZED_TERM;}
-{QuotedTerm}					{ yylval.s = yytext; return (int)Token.QUOTED_TERM;}
+{QuotedTerm}					{ 
+                                    if(InMethod)
+                                    {
+                                        yylval.s = DiscardEscapeChar(yytext,true); 
+                                    }
+                                    else
+                                    {
+                                        yylval.s = yytext; 
+                                    }
+                                    return (int)Token.QUOTED_TERM;
+                                }
 {QuotedWildcardTerm}			{ yylval.s = yytext; return (int)Token.QUOTED_WILDCARD_TERM;}
 {Comment}						{/* skip */}
 {Decimal}						{ yylval.s = yytext; return (int)Token.FLOAT_NUMBER;}
