@@ -5,10 +5,10 @@
 //  See accompanying file GPLEXcopyright.rtf.
 //
 //  GPLEX Version:  1.2.2
-//  Machine:  TALWEISS-PC
-//  DateTime: 8/2/2015 10:00:56 AM
+//  Machine:  TAL-PC
+//  DateTime: 6/19/2016 4:05:53 PM
 //  UserName: Tal
-//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 8/2/2015 9:25:31 AM>
+//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 6/19/2016 4:05:37 PM>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: verbose, parser, stack, minimize
@@ -1777,7 +1777,15 @@ return (int)Token.ALL_DOC;
 return (int)Token.AND;
             break;
         case 109: // Recognized '{QuotedTerm}',	Shortest string "\"\""
-yylval.s = yytext; return (int)Token.QUOTED_TERM;
+if(InMethod)
+                                    {
+                                        yylval.s = DiscardEscapeChar(yytext,true); 
+                                    }
+                                    else
+                                    {
+                                        yylval.s = yytext; 
+                                    }
+                                    return (int)Token.QUOTED_TERM;
             break;
         case 110: // Recognized '{QuotedWildcardTerm}',	Shortest string "\"*\""
 yylval.s = yytext; return (int)Token.QUOTED_WILDCARD_TERM;
