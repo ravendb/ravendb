@@ -6,7 +6,6 @@ using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -18,15 +17,15 @@ namespace Raven.Server.Documents.Indexes.Workers
         protected readonly ILog Log = LogManager.GetLogger(typeof(CleanupDeletedDocuments));
 
         private readonly Index _index;
-        private readonly StaticMapIndex _staticIndex;
         private readonly IndexingConfiguration _configuration;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
 
-        public HandleReferences(StaticMapIndex index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+        private readonly Reference _reference = new Reference();
+
+        public HandleReferences(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
         {
             _index = index;
-            _staticIndex = index;
             _configuration = configuration;
             _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
@@ -75,8 +74,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 using (databaseContext.OpenReadTransaction())
                 {
-                    var reference = new Reference();
-                    IEnumerable<Reference> references = null;
+                    IEnumerable<Reference> references;
                     switch (actionType)
                     {
                         case ActionType.Document:
@@ -84,10 +82,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 .GetDocumentsAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
                                 .Select(document =>
                                 {
-                                    reference.Key = document.Key;
-                                    reference.Etag = document.Etag;
+                                    _reference.Key = document.Key;
+                                    _reference.Etag = document.Etag;
 
-                                    return reference;
+                                    return _reference;
                                 });
                             break;
                         case ActionType.Tombstone:
@@ -95,10 +93,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 .GetTombstonesAfter(databaseContext, referencedCollection, lastReferenceEtag + 1, 0, pageSize)
                                 .Select(tombstone =>
                                 {
-                                    reference.Key = tombstone.Key;
-                                    reference.Etag = tombstone.Etag;
+                                    _reference.Key = tombstone.Key;
+                                    _reference.Etag = tombstone.Etag;
 
-                                    return reference;
+                                    return _reference;
                                 });
                             break;
                         default:
