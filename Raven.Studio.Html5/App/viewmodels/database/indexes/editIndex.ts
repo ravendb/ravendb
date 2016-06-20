@@ -508,6 +508,11 @@ class editIndex extends viewModelBase {
         }
 
         return $.when.apply($, commands).done(() => {
+
+            if (this.scriptedIndex()) {
+                this.fetchOrCreateScriptedIndex(); // reload scripted index to obtain fresh etag and metadata
+            }
+            
             this.initializeDirtyFlag();
             this.editedIndex().name.valueHasMutated();
             var isSavingMergedIndex = this.mergeSuggestion() != null;
