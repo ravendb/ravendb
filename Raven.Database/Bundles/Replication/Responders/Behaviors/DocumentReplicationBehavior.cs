@@ -41,6 +41,7 @@ namespace Raven.Bundles.Replication.Responders
         protected override CreatedConflict CreateConflict(string id, string newDocumentConflictId,
             string existingDocumentConflictId, JsonDocument existingItem, RavenJObject existingMetadata)
         {
+            existingMetadata.Add(Constants.RavenReplicationConflictDocument, true);
             existingMetadata.Add(Constants.RavenReplicationConflict, true);
             Actions.Documents.AddDocument(existingDocumentConflictId, Etag.Empty, existingItem.DataAsJson, existingItem.Metadata);
             var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Etag.Empty : existingItem.Etag;

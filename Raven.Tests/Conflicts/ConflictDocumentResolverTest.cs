@@ -31,6 +31,16 @@ namespace Raven.Tests.Conflicts
                     {"Name", "Rahien"}
                 }, new RavenJObject());
 
+                store1.DatabaseCommands.Put("users/2", null, new RavenJObject
+                {
+                    {"Name", "Raven"}
+                }, new RavenJObject());
+
+                store2.DatabaseCommands.Put("users/2", null, new RavenJObject
+                {
+                    {"Name", "RavenDB"}
+                }, new RavenJObject());
+
                 var list = new BlockingCollection<ReplicationConflictNotification>();
                 var taskObservable = store2.Changes();
                 taskObservable.Task.Wait();
@@ -59,6 +69,55 @@ namespace Raven.Tests.Conflicts
         }
 
         [Fact]
+        public void ConflictResolutionWithGetResolveToLocalPatch()
+        {
+            DocumentStore store2;
+            InitializeForConflict(out store2);
+
+            store2.DatabaseCommands.Put(Constants.RavenReplicationConfig, null, new RavenJObject
+            {
+                {"DocumentConflictResolution", "ResolveToLocal"},
+                {"AttachmentConflictResolution", "ResolveToLocal"}
+            }, new RavenJObject());
+
+
+            store2.DatabaseCommands.Patch("users/1", new ScriptedPatchRequest
+            {
+                Script = "this.touch = 2;"
+            }); ;
+
+            var user = store2.DatabaseCommands.Get("users/1");
+            RavenJToken value;
+            user.DataAsJson.TryGetValue("Name", out value);
+            Assert.Equal("Rahien", value.Value<string>());
+
+            user.DataAsJson.TryGetValue("touch", out value);
+            Assert.Equal(2, value.Value<int>());
+            store2.Dispose();
+        }
+
+        [Fact]
+        public void ConflictResolutionWithMultiLoad()
+        {
+            DocumentStore store2;
+            InitializeForConflict(out store2);
+
+            store2.DatabaseCommands.Put(Constants.RavenReplicationConfig, null, new RavenJObject
+            {
+                {"DocumentConflictResolution", "ResolveToRemote"},
+                {"AttachmentConflictResolution", "ResolveToRemote"}
+            }, new RavenJObject());
+
+            using (var session = store2.OpenSession())
+            {
+                var user = session.Load<dynamic>(new[] { "users/1", "users/2" });
+                Assert.Equal("Ayende", user[0].Name);
+                Assert.Equal("Raven", user[1].Name);
+            }
+            store2.Dispose();
+        }
+
+        [Fact]
         public void ConflictResolutionWithLoadResolveToRemote()
         {
             DocumentStore store2;
@@ -73,7 +132,7 @@ namespace Raven.Tests.Conflicts
             using (var session = store2.OpenSession())
             {
                 var user = session.Load<dynamic>("users/1");
-                Assert.Equal(user.Name, "Ayende");
+                Assert.Equal("Ayende", user.Name);
             }
             store2.Dispose();
         }
@@ -93,7 +152,7 @@ namespace Raven.Tests.Conflicts
             var user = store2.DatabaseCommands.Get("users/1");
             RavenJToken value;
             user.DataAsJson.TryGetValue("Name", out value);
-            Assert.Equal(value.Value<string>(), "Ayende");
+            Assert.Equal("Ayende", value.Value<string>());
             store2.Dispose();
         }
 
@@ -115,7 +174,7 @@ namespace Raven.Tests.Conflicts
             using (var session = store2.OpenSession())
             {
                 var user = session.Load<dynamic>("users/1");
-                Assert.Equal(user.Name, "Rahien");
+                Assert.Equal("Rahien", user.Name);
             }
             store2.Dispose();
         }
@@ -135,7 +194,7 @@ namespace Raven.Tests.Conflicts
             var user = store2.DatabaseCommands.Get("users/1");
             RavenJToken value;
             user.DataAsJson.TryGetValue("Name", out value);
-            Assert.Equal(value.Value<string>(), "Rahien");
+            Assert.Equal("Rahien", value.Value<string>());
             store2.Dispose();
         }
 
@@ -154,7 +213,7 @@ namespace Raven.Tests.Conflicts
             var user = store2.DatabaseCommands.Get("users/1");
             RavenJToken value;
             user.DataAsJson.TryGetValue("Name", out value);
-            Assert.Equal(value.Value<string>(), "Rahien");
+            Assert.Equal("Rahien", value.Value<string>());
             store2.Dispose();
         }
 
@@ -173,7 +232,7 @@ namespace Raven.Tests.Conflicts
             using (var session = store2.OpenSession())
             {
                 var user = session.Load<dynamic>("users/1");
-                Assert.Equal(user.Name, "Rahien");
+                Assert.Equal("Rahien", user.Name);
             }
             store2.Dispose();
         }

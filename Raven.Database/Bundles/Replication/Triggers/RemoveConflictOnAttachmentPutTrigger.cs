@@ -27,6 +27,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
             using (Database.DisableAllTriggersForCurrentThread())
             {
                 metadata.Remove(Constants.RavenReplicationConflict);// you can't put conflicts
+                metadata.Remove(Constants.RavenReplicationConflictDocument);
 
                 var oldVersion = Database.Attachments.GetStatic(key);
                 if (oldVersion == null)

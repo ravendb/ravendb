@@ -34,6 +34,7 @@ namespace Raven.Database.Bundles.Replication.Triggers
                 }
 
                 metadata.Remove(Constants.RavenReplicationConflict);// you can't put conflicts
+                metadata.Remove(Constants.RavenReplicationConflictDocument);
 
                 var oldVersion = Database.Documents.Get(key, transactionInformation);
                 if (oldVersion == null)
